@@ -1,0 +1,19 @@
+---
+description: Muster Station & Duties edit/delete permissions - HOD only
+globs: **/MusterStation*.tsx,**/musterStations*.ts
+alwaysApply: false
+---
+
+# Muster Station & Duties Permissions
+
+## Rule
+
+- **Create, Edit, and Delete** for Muster Station & Duties: **ONLY HOD** can perform these actions.
+- Crew can view published muster stations and download PDFs.
+
+## Implementation
+
+- HOD = `user?.role === 'HOD'`
+- Create button: only visible when `isHOD`
+- Edit and Delete buttons per muster station card: only visible when `isHOD`
+- CreateMusterStationScreen (create and edit): HOD guard; non-HOD sees "Only HODs can create or edit muster stations."

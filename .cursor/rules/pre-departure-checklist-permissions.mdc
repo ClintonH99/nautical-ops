@@ -1,0 +1,22 @@
+---
+description: Pre-Departure Checklist edit permissions - HOD vs Captain
+globs: **/PreDepartureChecklist*.tsx,**/AddEditPreDepartureChecklist*.tsx
+alwaysApply: false
+---
+
+# Pre-Departure Checklist Permissions
+
+## Rule
+
+- **Department checklists** (Bridge, Engineering, Exterior, Interior, Galley): **ONLY HOD** can edit and delete.
+- **Captain's checklist** (All Departments, `department === null`): **ONLY the Captain** can edit and delete.
+
+## Implementation
+
+- Captain = `user?.position?.toLowerCase() === 'captain'`
+- HOD = `user?.role === 'HOD'`
+- Captain's checklist = checklist with `department === null`
+
+When adding permission checks, use:
+- `canEditDepartmentChecklist` = `isHOD` for department-specific checklists
+- `canEditCaptainChecklist` = `isCaptain` for the Captain's checklist (All Departments)

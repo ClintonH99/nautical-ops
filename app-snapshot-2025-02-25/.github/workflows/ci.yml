@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript check (QC Gate 1)
+        run: npx tsc --noEmit
+
+      - name: Expo dependency check (QC Gate 2)
+        run: npx expo install --check
+
+      - name: Expo export / build validation (QC Gate 3)
+        run: npx expo export --platform ios

@@ -1,0 +1,20 @@
+---
+description: Shopping List - Department display under title, non-clickable
+globs: **/ShoppingList*.tsx,**/AddEditShoppingList*.tsx
+alwaysApply: false
+---
+
+# Shopping List Department Display
+
+## Rule
+
+For the Shopping List page and all content within:
+
+- The **department icon/badge** on each shopping list entry must be **under the title**
+- The department display must **NOT** be a clickable button
+
+## Implementation
+
+- Department badge: use a `View` (not `TouchableOpacity`) for display only
+- Position: below the list title in a column layout
+- Do not wrap the department in a touchable or make it open modals/pickers when tapped
