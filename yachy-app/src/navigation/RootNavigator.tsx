@@ -72,6 +72,7 @@ import { CreateVesselScreen, CaptainWelcomeScreen } from '../screens';
 import { MainTabsNavigator } from './MainTabsNavigator';
 import { useAuthStore, useDepartmentColorStore, useThemeStore, BACKGROUND_THEMES } from '../store';
 import authService from '../services/auth';
+import { startRealtimeSync, stopRealtimeSync } from '../services/realtimeSync';
 import { COLORS } from '../constants/theme';
 
 const Stack = createNativeStackNavigator();
@@ -96,7 +97,12 @@ export const RootNavigator = () => {
       try {
         const session = await authService.getSession();
         if (mounted && session?.user) {
-          const userData = await authService.getUserProfile(session.user.id);
+          let userData = await authService.getUserProfile(session.user.id);
+          const isCaptain = userData?.position?.toLowerCase().includes('captain');
+          if (mounted && userData && isCaptain && !userData.vesselId) {
+            const refetch = await authService.getUserProfile(session.user.id);
+            if (mounted && refetch?.vesselId) userData = refetch;
+          }
           if (mounted) setUser(userData);
         }
       } catch (error) {
@@ -113,8 +119,14 @@ export const RootNavigator = () => {
       setLoading(false);
     }, 5000);
 
-    const { data: authListener } = authService.onAuthStateChange((user) => {
-      setUser(user);
+    const { data: authListener } = authService.onAuthStateChange(async (user) => {
+      if (user && user.position?.toLowerCase().includes('captain') && !user.vesselId) {
+        const refetch = await authService.getUserProfile(user.id);
+        if (refetch?.vesselId) setUser(refetch);
+        else setUser(user);
+      } else {
+        setUser(user);
+      }
       setLoading(false);
     });
 
@@ -131,6 +143,18 @@ export const RootNavigator = () => {
     loadTheme();
     if (isAuthenticated) loadDepartmentColorOverrides();
   }, [isAuthenticated, loadDepartmentColorOverrides, loadTheme]);
+
+  // Realtime sync: keep app and web in sync when data changes on either platform
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      startRealtimeSync(user.id, user.vesselId, {
+        onUserUpdated: (u) => setUser(u ?? null),
+      });
+    } else {
+      stopRealtimeSync();
+    }
+    return () => stopRealtimeSync();
+  }, [isAuthenticated, user?.id, user?.vesselId, setUser]);
 
   if (isLoading) {
     return (

@@ -50,7 +50,12 @@ class AuthService {
       }
       
       if (data.user) {
-        let userData = await this.getUserProfile(data.user.id);
+        const PROFILE_TIMEOUT_MS = 15000;
+        const userDataPromise = this.getUserProfile(data.user.id);
+        const timeoutPromise = new Promise<null>((_, reject) =>
+          setTimeout(() => reject(new Error('Profile load timed out. Please try again.')), PROFILE_TIMEOUT_MS)
+        );
+        let userData = await Promise.race([userDataPromise, timeoutPromise]);
         // If auth succeeded but no profile exists (edge case), create one
         if (!userData) {
           userData = await this.ensureOAuthUserProfile(data.user);
