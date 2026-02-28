@@ -1,0 +1,9 @@
+{
+  "installCommand": "cd yachy-app && npm install",
+  "buildCommand": "cd yachy-app && npx expo export --platform web",
+  "outputDirectory": "yachy-app/dist",
+  "framework": null,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
