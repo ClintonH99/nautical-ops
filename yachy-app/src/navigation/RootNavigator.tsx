@@ -8,7 +8,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { 
-  LoginScreen, 
+  LoginScreen,
+  LinkLoginScreen,
   CreateAccountChoiceScreen,
   RegisterScreen, 
   RegisterCaptainScreen, 
@@ -67,6 +68,7 @@ import {
   CreateSafetyEquipmentScreen,
   RulesScreen,
   CreateRulesScreen,
+  LinkWebsiteScanScreen,
 } from '../screens';
 import { CreateVesselScreen, CaptainWelcomeScreen } from '../screens';
 import { MainTabsNavigator } from './MainTabsNavigator';
@@ -189,6 +191,11 @@ export const RootNavigator = () => {
               options={{ headerShown: false }}
             />
             <Stack.Screen 
+              name="LinkLogin" 
+              component={LinkLoginScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen 
               name="CreateAccountChoice" 
               component={CreateAccountChoiceScreen}
               options={{ headerShown: false }}
@@ -226,6 +233,11 @@ export const RootNavigator = () => {
               name="MainTabs" 
               component={MainTabsNavigator}
               options={{ headerShown: false }}
+            />
+            <Stack.Screen 
+              name="LinkWebsiteScan" 
+              component={LinkWebsiteScanScreen}
+              options={{ title: 'Link Website', headerShown: true }}
             />
             <Stack.Screen 
               name="JoinVessel" 

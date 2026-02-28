@@ -11,6 +11,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  Platform,
 } from 'react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useFocusEffect } from '@react-navigation/native';
@@ -102,6 +103,17 @@ export const SettingsScreen = ({ navigation }: any) => {
           onPress: () => navigation.navigate('NotificationSettings'),
           disabled: false,
         },
+        ...(Platform.OS !== 'web'
+          ? [
+              {
+                icon: '🔗',
+                label: 'Link website',
+                description: 'Scan QR on website to sign in from your laptop',
+                onPress: () => navigation.navigate('LinkWebsiteScan'),
+                disabled: false,
+              },
+            ]
+          : []),
         {
           icon: '📱',
           label: 'About',

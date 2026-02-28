@@ -32,7 +32,7 @@
       "@react-native-community/datetimepicker",
       "expo-notifications",
       "expo-web-browser",
-      "expo-apple-authentication"
+      "expo-apple-authentication",["expo-camera",{"cameraPermission":"Allow Nautical Ops to access your camera","barcodeScannerEnabled":true}]
     ],
     "extra": {
       "eas": {

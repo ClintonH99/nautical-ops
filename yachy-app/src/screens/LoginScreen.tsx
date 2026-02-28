@@ -151,6 +151,15 @@ export const LoginScreen = ({ navigation }: any) => {
               variant="primary"
               style={styles.signInButton}
             />
+            {Platform.OS === 'web' && (
+              <Button
+                title="Sign in with QR code"
+                onPress={() => navigation.navigate('LinkLogin')}
+                variant="outline"
+                fullWidth
+                style={styles.qrButton}
+              />
+            )}
             {loginError ? (
               <Text style={styles.loginError}>{loginError}</Text>
             ) : null}
@@ -270,6 +279,9 @@ const styles = StyleSheet.create({
   },
   signInButton: {
     marginTop: SPACING.md,
+  },
+  qrButton: {
+    marginTop: SPACING.sm,
   },
   loginError: {
     marginTop: SPACING.md,
