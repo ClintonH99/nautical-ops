@@ -97,6 +97,8 @@ export const RootNavigator = () => {
 
   useEffect(() => {
     let mounted = true;
+    const MAX_AUTH_WAIT_MS = 4000;
+
     const checkAuth = async () => {
       try {
         const session = await authService.getSession();
@@ -118,12 +120,18 @@ export const RootNavigator = () => {
       }
     };
 
-    checkAuth();
+    // Cap auth check so the app never hangs (e.g. slow/hanging Supabase on web)
+    const timeoutPromise = new Promise<void>((resolve) => {
+      setTimeout(() => resolve(), MAX_AUTH_WAIT_MS);
+    });
+    Promise.race([checkAuth(), timeoutPromise]).then(() => {
+      if (mounted) setLoading(false);
+    });
 
-    // Fallback: ensure loading clears after timeout (e.g. if getSession hangs)
-    const timeout = setTimeout(() => {
-      setLoading(false);
-    }, 5000);
+    // Fallback: ensure loading always clears
+    const fallback = setTimeout(() => {
+      if (mounted) setLoading(false);
+    }, MAX_AUTH_WAIT_MS + 1000);
 
     const { data: authListener } = authService.onAuthStateChange(async (user) => {
       if (user && user.position?.toLowerCase().includes('captain') && !user.vesselId) {
@@ -138,7 +146,7 @@ export const RootNavigator = () => {
 
     return () => {
       mounted = false;
-      clearTimeout(timeout);
+      clearTimeout(fallback);
       authListener?.subscription?.unsubscribe();
     };
   }, []);
