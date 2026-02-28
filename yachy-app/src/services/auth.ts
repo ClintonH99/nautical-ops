@@ -103,26 +103,26 @@ class AuthService {
       fetch('http://127.0.0.1:7242/ingest/4078e384-3658-4a9c-ad3e-69711ac24e59',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'02e7fe'},body:JSON.stringify({sessionId:'02e7fe',location:'auth.ts:google:beforeBrowser',message:'before openAuthSessionAsync',data:{},hypothesisId:'H3',timestamp:Date.now()})}).catch(()=>{});
       // #endregion
 
-      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo) as { type: string; url?: string };
       // #region agent log
       console.log('[GoogleAuth] browser returned, type:', result.type, 'hasUrl:', !!result.url, 'urlStart:', result.url?.substring(0, 50));
       // #endregion
       if (result.type !== 'success' || !result.url) {
         return { user: null, session: null };
       }
-
-      const { params, errorCode } = QueryParams.getQueryParams(result.url);
+      const authUrl = result.url;
+      const { params, errorCode } = QueryParams.getQueryParams(authUrl);
       if (errorCode) throw new Error(errorCode);
       let access_token = (params as any)?.access_token;
       let refresh_token = (params as any)?.refresh_token;
-      if (!access_token && result.url.includes('#')) {
-        const hash = result.url.split('#')[1];
+      if (!access_token && authUrl.includes('#')) {
+        const hash = authUrl.split('#')[1];
         const hashParams = new URLSearchParams(hash);
         access_token = hashParams.get('access_token') ?? undefined;
         refresh_token = hashParams.get('refresh_token') ?? undefined;
       }
       // #region agent log
-      console.log('[GoogleAuth] tokens:', access_token ? 'have access_token' : 'NO access_token', 'hash parse:', result.url.includes('#'));
+      console.log('[GoogleAuth] tokens:', access_token ? 'have access_token' : 'NO access_token', 'hash parse:', authUrl.includes('#'));
       // #endregion
       if (!access_token) return { user: null, session: null };
 
