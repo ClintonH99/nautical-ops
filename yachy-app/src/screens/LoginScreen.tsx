@@ -39,6 +39,7 @@ export const LoginScreen = ({ navigation }: any) => {
   const [errors, setErrors] = useState({ email: '', password: '' });
 
   const setUser = useAuthStore((state) => state.setUser);
+  const [loginError, setLoginError] = useState('');
 
   const validateForm = () => {
     let valid = true;
@@ -65,6 +66,7 @@ export const LoginScreen = ({ navigation }: any) => {
   };
 
   const handleLogin = async () => {
+    setLoginError('');
     if (!validateForm()) return;
 
     setLoading(true);
@@ -74,10 +76,15 @@ export const LoginScreen = ({ navigation }: any) => {
       if (user) {
         setUser(user);
       } else {
-        Alert.alert('Error', 'Invalid credentials');
+        const msg = 'Invalid credentials';
+        setLoginError(msg);
+        if (Platform.OS !== 'web') Alert.alert('Error', msg);
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to sign in');
+      const msg = error.message || 'Failed to sign in';
+      setLoginError(msg);
+      if (Platform.OS !== 'web') Alert.alert('Error', msg);
+      else if (typeof window !== 'undefined') window.alert(`Error: ${msg}`);
     } finally {
       setLoading(false);
     }
@@ -144,6 +151,9 @@ export const LoginScreen = ({ navigation }: any) => {
               variant="primary"
               style={styles.signInButton}
             />
+            {loginError ? (
+              <Text style={styles.loginError}>{loginError}</Text>
+            ) : null}
           </View>
 
           {/* Create account */}
@@ -260,6 +270,12 @@ const styles = StyleSheet.create({
   },
   signInButton: {
     marginTop: SPACING.md,
+  },
+  loginError: {
+    marginTop: SPACING.md,
+    fontSize: FONTS.sm,
+    color: COLORS.danger,
+    textAlign: 'center',
   },
   createSection: {
     marginBottom: SPACING.xl,
