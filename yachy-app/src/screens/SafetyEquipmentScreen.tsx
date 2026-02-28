@@ -54,6 +54,7 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
+  const isHOD = user?.role === 'HOD';
   const [items, setItems] = useState<SafetyEquipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -86,10 +87,12 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
   };
 
   const onEdit = (item: SafetyEquipment) => {
+    if (!isHOD) return;
     navigation.navigate('CreateSafetyEquipment', { equipmentId: item.id });
   };
 
   const onDelete = (item: SafetyEquipment) => {
+    if (!isHOD) return;
     Alert.alert(
       'Delete safety equipment',
       `Delete "${item.title}"?`,
@@ -122,13 +125,16 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
           key={item.id}
           style={[styles.card, { backgroundColor: themeColors.surface }]}
           onPress={() => onEdit(item)}
-          activeOpacity={0.8}
+          activeOpacity={isHOD ? 0.8 : 1}
+          disabled={!isHOD}
         >
           <View style={styles.cardHeader}>
             <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>{item.title}</Text>
-            <TouchableOpacity onPress={() => onDelete(item)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-            </TouchableOpacity>
+            {isHOD && (
+              <TouchableOpacity onPress={() => onDelete(item)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
+              </TouchableOpacity>
+            )}
           </View>
           <SafetyEquipmentPreview data={item.data} themeColors={themeColors} />
           <TouchableOpacity style={styles.downloadBtn} onPress={() => onDownloadPdf(item)} disabled={!!exportingId}>
@@ -136,10 +142,12 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
           </TouchableOpacity>
         </TouchableOpacity>
       ))}
-      {items.length === 0 && <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>No published plans yet. Create one below.</Text>}
-      <View style={styles.createSection}>
-        <Button title="Create" onPress={() => navigation.navigate('CreateSafetyEquipment')} variant="primary" fullWidth />
-      </View>
+      {items.length === 0 && <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>No published plans yet.{isHOD ? ' Create one below.' : ''}</Text>}
+      {isHOD && (
+        <View style={styles.createSection}>
+          <Button title="Create" onPress={() => navigation.navigate('CreateSafetyEquipment')} variant="primary" fullWidth />
+        </View>
+      )}
     </ScrollView>
   );
 };

@@ -9,6 +9,7 @@ export { RegisterCaptainScreen } from './RegisterCaptainScreen';
 export { RegisterCrewScreen } from './RegisterCrewScreen';
 export { HomeScreen } from './HomeScreen';
 export { CreateVesselScreen } from './CreateVesselScreen';
+export { CaptainWelcomeScreen } from './CaptainWelcomeScreen';
 export { JoinVesselScreen } from './JoinVesselScreen';
 export { SettingsScreen } from './SettingsScreen';
 export { ProfileScreen } from './ProfileScreen';

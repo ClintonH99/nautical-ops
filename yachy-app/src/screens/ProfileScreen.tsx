@@ -3,7 +3,7 @@
  * View and edit user profile (photo, name, position, department)
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -35,6 +35,20 @@ export const ProfileScreen = ({ navigation }: any) => {
   const [position, setPosition] = useState(user?.position || '');
   const [department, setDepartment] = useState<Department>(user?.department || 'BRIDGE');
   const [profilePhoto, setProfilePhoto] = useState(user?.profilePhoto);
+  const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
+  const [localPreviewUri, setLocalPreviewUri] = useState<string | null>(null);
+
+  useEffect(() => {
+    setProfilePhoto(user?.profilePhoto);
+    if (user?.profilePhoto) {
+      setPhotoLoadFailed(false);
+    } else {
+      setPhotoLoadFailed(true);
+    }
+    setLocalPreviewUri(null);
+  }, [user?.profilePhoto, user?.id]);
+
+  const displayPhotoUri = localPreviewUri || profilePhoto || (user?.id ? userService.getProfilePhotoUrl(user.id) : null);
 
   const departments: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -59,14 +73,17 @@ export const ProfileScreen = ({ navigation }: any) => {
       });
 
       if (!result.canceled && result.assets[0]) {
+        setLocalPreviewUri(result.assets[0].uri);
         setIsUploadingPhoto(true);
         try {
-          // Upload photo
+          // Upload photo (replaces previous; each upload is separate)
           const photoUrl = await userService.uploadProfilePhoto(
             user!.id,
             result.assets[0].uri
           );
+          setLocalPreviewUri(null);
           setProfilePhoto(photoUrl);
+          setPhotoLoadFailed(false);
 
           // Update user profile immediately
           const updatedUser = await userService.updateProfile(user!.id, {
@@ -80,6 +97,7 @@ export const ProfileScreen = ({ navigation }: any) => {
           Alert.alert('Success', 'Profile photo updated!');
         } catch (error) {
           console.error('Upload error:', error);
+          setLocalPreviewUri(null);
           Alert.alert('Error', 'Failed to upload photo. Please try again.');
         } finally {
           setIsUploadingPhoto(false);
@@ -103,10 +121,9 @@ export const ProfileScreen = ({ navigation }: any) => {
           onPress: async () => {
             setIsUploadingPhoto(true);
             try {
-              if (profilePhoto) {
-                await userService.deleteProfilePhoto(profilePhoto);
-              }
+              await userService.deleteProfilePhoto(user!.id);
               setProfilePhoto(undefined);
+              setPhotoLoadFailed(true);
 
               const updatedUser = await userService.updateProfile(user!.id, {
                 profilePhoto: '',
@@ -181,8 +198,12 @@ export const ProfileScreen = ({ navigation }: any) => {
               <View style={styles.photoLoading}>
                 <ActivityIndicator size="large" color={COLORS.primary} />
               </View>
-            ) : profilePhoto ? (
-              <Image source={{ uri: profilePhoto }} style={styles.photo} />
+            ) : displayPhotoUri && !photoLoadFailed ? (
+              <Image
+                source={{ uri: displayPhotoUri }}
+                style={styles.photo}
+                onError={() => !localPreviewUri && setPhotoLoadFailed(true)}
+              />
             ) : (
               <View style={styles.photoPlaceholder}>
                 <Text style={styles.photoPlaceholderText}>

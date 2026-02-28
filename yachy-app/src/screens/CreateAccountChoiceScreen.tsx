@@ -29,7 +29,7 @@ const MARITIME = {
   crewBorder: 'rgba(13, 148, 136, 0.4)',
 };
 
-const CAPTAIN_BENEFITS = ['Create & manage your vessel', 'Generate invite codes for crew', 'Full operations control'];
+const CAPTAIN_BENEFITS = ['Master of Vessel (MOV)', 'Create & manage your vessel', 'Generate invite codes for crew', 'Full operations control'];
 const CREW_BENEFITS = ['Join with captain\'s invite code', 'Access tasks & maintenance logs', 'Stay connected onboard'];
 
 export const CreateAccountChoiceScreen = ({ navigation }: any) => {
@@ -58,7 +58,7 @@ export const CreateAccountChoiceScreen = ({ navigation }: any) => {
             <View style={[styles.iconBadge, { backgroundColor: MARITIME.captainBorder }]}>
               <Ionicons name="boat-outline" size={28} color={MARITIME.accentGold} />
             </View>
-            <Text style={styles.optionTitle}>Captain</Text>
+            <Text style={styles.optionTitle}>Captain (MOV)</Text>
             <Text style={styles.optionSubtitle}>Vessel owner or person in charge</Text>
             <Text style={styles.optionDescription}>
               Set up your vessel, add your crew, and manage day‑to‑day operations from one place.
@@ -108,7 +108,7 @@ export const CreateAccountChoiceScreen = ({ navigation }: any) => {
         </View>
 
         <Text style={styles.footerHint}>
-          Not sure? Captains create vessels and invite others. Crew join with a code.
+          Not sure? Captains (MOV) create vessels and invite others. Crew join with a code.
         </Text>
       </ScrollView>
     </View>

@@ -3,7 +3,7 @@
  * Main hub for profile and vessel management
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -16,12 +16,15 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore, useThemeStore, BACKGROUND_THEMES } from '../store';
 import { Button } from '../components';
 import authService from '../services/auth';
+import userService from '../services/user';
 
 export const SettingsScreen = ({ navigation }: any) => {
   const { user, logout } = useAuthStore();
   const backgroundTheme = useThemeStore((s) => s.backgroundTheme);
   const themeColors = BACKGROUND_THEMES[backgroundTheme];
   const isHOD = user?.role === 'HOD';
+  const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
+  const profilePhotoUrl = user?.profilePhoto || (user?.id ? userService.getProfilePhotoUrl(user.id) : null);
 
   const settingsSections = [
     {
@@ -103,12 +106,16 @@ export const SettingsScreen = ({ navigation }: any) => {
         {/* User Header */}
         <View style={[styles.userHeader, { backgroundColor: themeColors.surface }]}>
           <View style={styles.avatarContainer}>
-            {user?.profilePhoto ? (
-              <Image source={{ uri: user.profilePhoto }} style={styles.avatar} />
+            {profilePhotoUrl && !photoLoadFailed ? (
+              <Image
+                source={{ uri: profilePhotoUrl }}
+                style={styles.avatar}
+                onError={() => setPhotoLoadFailed(true)}
+              />
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Text style={styles.avatarText}>
-                  {user?.name.charAt(0).toUpperCase()}
+                  {user?.name?.charAt(0).toUpperCase()}
                 </Text>
               </View>
             )}

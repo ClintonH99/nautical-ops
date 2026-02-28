@@ -52,7 +52,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
   const checklistId = route?.params?.checklistId as string | undefined;
   const isEdit = !!checklistId;
   const isHOD = user?.role === 'HOD';
-  const isCaptain = user?.position?.toLowerCase() === 'captain';
+  const isCaptain = user?.position?.toLowerCase().includes('captain');
 
   // Captain's checklist (All Departments): only captain can edit. Department checklists: only HOD.
   const canEdit = (dept: Department | null) =>

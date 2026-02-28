@@ -57,7 +57,6 @@ export const UpcomingTasksScreen = ({ navigation }: any) => {
     { value: 'INTERIOR', label: 'Interior' },
     { value: 'GALLEY', label: 'Galley' },
   ];
-  const isHOD = user?.role === 'HOD';
 
   const loadTasks = useCallback(async () => {
     if (!vesselId) return;
@@ -87,12 +86,10 @@ export const UpcomingTasksScreen = ({ navigation }: any) => {
     new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
   const onEdit = (task: VesselTask) => {
-    if (!isHOD) return;
     navigation.navigate('AddEditTask', { category: task.category, taskId: task.id });
   };
 
   const onDelete = (task: VesselTask) => {
-    if (!isHOD) return;
     Alert.alert(
       'Delete task',
       `Delete "${task.title}"?`,
@@ -140,7 +137,6 @@ export const UpcomingTasksScreen = ({ navigation }: any) => {
         style={[styles.card, { backgroundColor: themeColors.surface, borderLeftColor: borderColor }]}
         onPress={() => onEdit(item)}
         activeOpacity={0.8}
-        disabled={!isHOD}
       >
         <View style={styles.cardHeader}>
           <Text
@@ -149,14 +145,12 @@ export const UpcomingTasksScreen = ({ navigation }: any) => {
           >
             {item.title}
           </Text>
-          {isHOD && (
-            <TouchableOpacity
-              onPress={() => onDelete(item)}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            onPress={() => onDelete(item)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
+          </TouchableOpacity>
         </View>
         <View style={styles.cardMeta}>
           <Text style={[styles.deptBadge, { color: themeColors.textSecondary }]}>{item.department.charAt(0) + item.department.slice(1).toLowerCase()}</Text>

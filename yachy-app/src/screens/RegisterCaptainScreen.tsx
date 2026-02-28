@@ -94,18 +94,15 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
         email: formData.email,
         password: formData.password,
         name: formData.name,
-        position: 'Captain', // Default position for captains
+        position: 'Captain (MOV)', // Master of Vessel - distinguishes hierarchy: Captain > HOD > Crew
         department: 'BRIDGE', // Default department for captains
         // No invite code or vesselId - captain will create vessel after login
       });
 
       if (user) {
         setUser(user);
-        Alert.alert(
-          'Success',
-          'Captain account created! You can now create your vessel and invite your crew.',
-          [{ text: 'OK' }]
-        );
+        // User will land on CaptainWelcomeScreen (captain without vessel)
+        // which offers "Create a Vessel" - no Alert needed
       }
     } catch (error: any) {
       console.error('Captain registration error:', error);
@@ -143,12 +140,12 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
             />
           </View>
 
-          <Text style={styles.title}>Create Captain Account</Text>
+          <Text style={styles.title}>Create Captain (MOV) Account</Text>
           <Text style={styles.subtitle}>Set up your account and create your vessel</Text>
 
           <View style={styles.infoBanner}>
             <Text style={styles.infoBannerText}>
-              As a Captain, you'll create your vessel and receive an invite code to share with your crew.
+              As Captain (Master of Vessel), you'll create your vessel and receive an invite code to share with your crew.
             </Text>
           </View>
 
@@ -193,7 +190,7 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
             />
 
             <Button
-              title="Create Captain Account"
+              title="Create Captain (MOV) Account"
               onPress={handleRegister}
               loading={loading}
               fullWidth

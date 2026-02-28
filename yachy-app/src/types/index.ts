@@ -40,6 +40,7 @@ export interface User {
   name: string;
   position: string;
   department: Department;
+  department2?: Department | null; // Optional second department for dual-role crew (e.g. deck/stew)
   role: UserRole;
   vesselId?: string; // Optional - user can join vessel later
   profilePhoto?: string;

@@ -259,6 +259,9 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
             <Text style={[styles.photoHint, { color: themeColors.textSecondary }]}>
               Updates the banner shown on the home screen
             </Text>
+            <Text style={[styles.photoHint, { color: themeColors.textSecondary, marginTop: SPACING.xs }]}>
+              Close and Re-Open the App if picture does not update automatically
+            </Text>
           </View>
         </View>
 
@@ -362,16 +365,16 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
           <View style={[styles.infoCard, { backgroundColor: themeColors.surfaceAlt }]}>
             <Text style={[styles.infoTitle, { color: themeColors.textPrimary }]}>💡 About Invite Codes</Text>
             <Text style={[styles.infoText, { color: themeColors.textPrimary }]}>
-              • Share this code with crew members to join your vessel
+              • Each code is valid for one crew member only
             </Text>
             <Text style={[styles.infoText, { color: themeColors.textPrimary }]}>
-              • Crew will use this code during registration
+              • Code automatically regenerates after each join — share the new code for the next crew member
             </Text>
             <Text style={[styles.infoText, { color: themeColors.textPrimary }]}>
-              • New crew members automatically get CREW role
+              • Crew use this code during registration or in Join Vessel
             </Text>
             <Text style={[styles.infoText, { color: themeColors.textPrimary }]}>
-              • You can regenerate the code anytime
+              • You can manually regenerate the code anytime
             </Text>
           </View>
         </View>

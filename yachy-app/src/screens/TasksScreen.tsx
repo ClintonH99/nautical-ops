@@ -30,7 +30,6 @@ export const TasksScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
-  const isHOD = user?.role === 'HOD';
 
   useEffect(() => {
     const runMonthlyCleanup = async () => {
@@ -63,15 +62,13 @@ export const TasksScreen = ({ navigation }: any) => {
       <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
         Choose a category to view and manage tasks
       </Text>
-      {isHOD && (
-        <Button
-          title="Create Task"
-          onPress={() => navigation.navigate('AddEditTask', {})}
-          variant="primary"
-          fullWidth
-          style={styles.createButton}
-        />
-      )}
+      <Button
+        title="Create Task"
+        onPress={() => navigation.navigate('AddEditTask', {})}
+        variant="primary"
+        fullWidth
+        style={styles.createButton}
+      />
 
       <TouchableOpacity
         style={[styles.card, { backgroundColor: themeColors.surface }]}

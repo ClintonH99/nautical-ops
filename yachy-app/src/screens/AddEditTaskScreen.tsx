@@ -1,6 +1,6 @@
 /**
  * Add / Edit Task Screen
- * Task Title, Task Notes, Done by Date (optional). HOD only.
+ * Task Title, Task Notes, Done by Date (optional). Crew and HODs can create and edit.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -53,7 +53,6 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
   const [saving, setSaving] = useState(false);
 
   const vesselId = user?.vesselId ?? null;
-  const isHOD = user?.role === 'HOD';
   const isEdit = !!taskId;
   const categoryLabel = CATEGORY_LABELS[category];
 
@@ -115,10 +114,6 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
       Alert.alert('Error', 'You must be in a vessel to create tasks.');
       return;
     }
-    if (!isHOD) {
-      Alert.alert('Access denied', 'Only HODs can create or edit tasks.');
-      return;
-    }
 
     setSaving(true);
     try {
@@ -154,14 +149,6 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
       setSaving(false);
     }
   };
-
-  if (!isHOD) {
-    return (
-      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Only HODs can add or edit tasks.</Text>
-      </View>
-    );
-  }
 
   if (!vesselId) {
     return (

@@ -13,7 +13,7 @@ alwaysApply: false
 
 ## Implementation
 
-- Captain = `user?.position?.toLowerCase() === 'captain'`
+- Captain = `user?.position?.toLowerCase().includes('captain')` (position is e.g. "Captain (MOV)")
 - HOD = `user?.role === 'HOD'`
 - Captain's checklist = checklist with `department === null`
 

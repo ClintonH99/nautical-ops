@@ -28,6 +28,7 @@ export const CrewManagementScreen = ({ navigation }: any) => {
   const [crew, setCrew] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [photoLoadFailedIds, setPhotoLoadFailedIds] = useState<Set<string>>(new Set());
 
   // Check if user is HOD
   const isHOD = currentUser?.role === 'HOD';
@@ -53,6 +54,7 @@ export const CrewManagementScreen = ({ navigation }: any) => {
     try {
       const crewData = await userService.getVesselCrew(currentUser.vesselId);
       setCrew(crewData);
+      setPhotoLoadFailedIds(new Set());
     } catch (error) {
       console.error('Load data error:', error);
       Alert.alert('Error', 'Failed to load crew members');
@@ -140,8 +142,15 @@ export const CrewManagementScreen = ({ navigation }: any) => {
   const getDepartmentColor = (department: Department) =>
     getDeptColor(department, overrides);
 
+  const formatDepartmentDisplay = (user: User) => {
+    const dept1 = user.department ? (user.department.charAt(0) + user.department.slice(1).toLowerCase()) : '';
+    const dept2 = user.department2 ? (user.department2.charAt(0) + user.department2.slice(1).toLowerCase()) : '';
+    return [dept1, dept2].filter(Boolean).join(', ') || '—';
+  };
+
   const renderCrewMember = ({ item }: { item: User }) => {
     const isCurrentUser = item.id === currentUser?.id;
+    const departmentDisplay = formatDepartmentDisplay(item);
 
     return (
       <TouchableOpacity
@@ -149,7 +158,7 @@ export const CrewManagementScreen = ({ navigation }: any) => {
         onPress={() => {
           Alert.alert(
             item.name,
-            `${item.position}\n${item.department}\n\nEmail: ${item.email}\nRole: ${item.role}`,
+            `${item.position}\n${departmentDisplay}\n\nEmail: ${item.email}\nRole: ${item.role}`,
             [
               { text: 'Close', style: 'cancel' },
               ...(!isCurrentUser
@@ -171,8 +180,12 @@ export const CrewManagementScreen = ({ navigation }: any) => {
         activeOpacity={0.7}
       >
         <View style={styles.crewCardLeft}>
-          {item.profilePhoto ? (
-            <Image source={{ uri: item.profilePhoto }} style={styles.avatar} />
+          {!photoLoadFailedIds.has(item.id) ? (
+            <Image
+              source={{ uri: item.profilePhoto || userService.getProfilePhotoUrl(item.id) }}
+              style={styles.avatar}
+              onError={() => setPhotoLoadFailedIds((prev) => new Set(prev).add(item.id))}
+            />
           ) : (
             <View style={styles.avatarPlaceholder}>
               <Text style={styles.avatarText}>
@@ -184,25 +197,41 @@ export const CrewManagementScreen = ({ navigation }: any) => {
           <View style={styles.crewInfo}>
             <View style={styles.crewNameRow}>
               <Text style={[styles.crewName, { color: themeColors.textPrimary }]}>{item.name}</Text>
+              {departmentDisplay !== '—' && (
+                <Text style={[styles.departmentLabel, { color: themeColors.textSecondary }]}>
+                  {' - '}{departmentDisplay}
+                </Text>
+              )}
               {isCurrentUser && <Text style={styles.youBadge}>YOU</Text>}
             </View>
             <Text style={[styles.crewPosition, { color: themeColors.textSecondary }]}>{item.position}</Text>
             <View style={styles.crewBadges}>
-              <View
-                style={[
-                  styles.departmentBadge,
-                  { backgroundColor: getDepartmentColor(item.department) },
-                ]}
-              >
-                <Text style={styles.departmentText}>{item.department}</Text>
-              </View>
+              {[item.department, item.department2].filter(Boolean).map((dept) => (
+                <View
+                  key={dept}
+                  style={[
+                    styles.departmentBadge,
+                    { backgroundColor: getDepartmentColor(dept!) },
+                  ]}
+                >
+                  <Text style={styles.departmentText}>
+                    {dept!.charAt(0) + dept!.slice(1).toLowerCase()}
+                  </Text>
+                </View>
+              ))}
               <View
                 style={[
                   styles.roleBadge,
-                  item.role === 'HOD' ? styles.roleBadgeHOD : styles.roleBadgeCrew,
+                  item.position?.toLowerCase().includes('captain')
+                    ? styles.roleBadgeMOV
+                    : item.role === 'HOD'
+                      ? styles.roleBadgeHOD
+                      : styles.roleBadgeCrew,
                 ]}
               >
-                <Text style={styles.roleText}>{item.role}</Text>
+                <Text style={styles.roleText}>
+                  {item.position?.toLowerCase().includes('captain') ? 'MOV' : item.role}
+                </Text>
               </View>
             </View>
           </View>
@@ -424,6 +453,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginRight: SPACING.xs,
   },
+  departmentLabel: {
+    fontSize: FONTS.sm,
+    marginRight: SPACING.xs,
+    flex: 1,
+  },
   youBadge: {
     fontSize: FONTS.xs,
     fontWeight: 'bold',
@@ -457,7 +491,10 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.sm,
   },
   roleBadgeHOD: {
-    backgroundColor: '#F59E0B', // Amber
+    backgroundColor: COLORS.primary,
+  },
+  roleBadgeMOV: {
+    backgroundColor: '#c9a227', // Gold – Master of Vessel
   },
   roleBadgeCrew: {
     backgroundColor: COLORS.textSecondary,

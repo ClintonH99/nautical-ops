@@ -100,6 +100,7 @@ class UserService {
         name: user.name,
         position: user.position,
         department: user.department,
+        department2: user.department_2 ?? null,
         role: user.role,
         vesselId: user.vessel_id,
         profilePhoto: user.profile_photo,
@@ -156,59 +157,48 @@ class UserService {
   }
 
   /**
-   * Upload profile photo to Supabase Storage
+   * Return the public URL for a user's profile photo.
+   * Mirrors vesselService.getBannerPublicUrl - deterministic path per user.
+   */
+  getProfilePhotoUrl(userId: string): string {
+    const { data } = supabase.storage
+      .from('profile-photos')
+      .getPublicUrl(`${userId}/avatar.jpg`);
+    return data.publicUrl;
+  }
+
+  /**
+   * Upload profile photo to Supabase Storage.
+   * Mirrors vesselService.uploadBannerImage - path: {userId}/avatar.jpg
    */
   async uploadProfilePhoto(userId: string, fileUri: string): Promise<string> {
-    try {
-      // Create file path
-      const fileName = `${userId}-${Date.now()}.jpg`;
-      const filePath = `profile-photos/${fileName}`;
+    const response = await fetch(fileUri);
+    const blob = await response.blob();
+    const arrayBuffer = await new Response(blob).arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
 
-      // Fetch the file from local URI
-      const response = await fetch(fileUri);
-      const blob = await response.blob();
+    const { error } = await supabase.storage
+      .from('profile-photos')
+      .upload(`${userId}/avatar.jpg`, uint8Array, {
+        contentType: 'image/jpeg',
+        upsert: true,
+      });
 
-      // Upload to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('profile-photos')
-        .upload(filePath, blob, {
-          contentType: 'image/jpeg',
-          upsert: true,
-        });
+    if (error) throw error;
 
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('profile-photos')
-        .getPublicUrl(filePath);
-
-      return urlData.publicUrl;
-    } catch (error) {
-      console.error('Upload profile photo error:', error);
-      throw error;
-    }
+    return `${this.getProfilePhotoUrl(userId)}?t=${Date.now()}`;
   }
 
   /**
    * Delete profile photo from Supabase Storage
    */
-  async deleteProfilePhoto(photoUrl: string): Promise<void> {
-    try {
-      // Extract file path from URL
-      const urlParts = photoUrl.split('/profile-photos/');
-      if (urlParts.length < 2) return;
+  async deleteProfilePhoto(userId: string): Promise<void> {
+    const { error } = await supabase.storage
+      .from('profile-photos')
+      .remove([`${userId}/avatar.jpg`]);
 
-      const filePath = `profile-photos/${urlParts[1]}`;
-
-      const { error } = await supabase.storage
-        .from('profile-photos')
-        .remove([filePath]);
-
-      if (error) throw error;
-    } catch (error) {
+    if (error) {
       console.error('Delete profile photo error:', error);
-      // Don't throw - photo deletion is not critical
     }
   }
 }

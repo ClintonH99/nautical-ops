@@ -29,6 +29,7 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
+  const isHOD = user?.role === 'HOD';
   const equipmentId = route.params?.equipmentId as string | undefined;
   const isEdit = !!equipmentId;
   const [loading, setLoading] = useState(isEdit);
@@ -97,7 +98,7 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
   };
 
   const onPublish = async () => {
-    if (!vesselId) return;
+    if (!vesselId || !isHOD) return;
     try {
       const payload = build();
       const planTitle = title || vesselName || 'Safety Equipment';
@@ -113,6 +114,7 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
   };
 
   if (!vesselId) return <View style={[styles.center, { backgroundColor: themeColors.background }]}><Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel.</Text></View>;
+  if (!isHOD) return <View style={[styles.center, { backgroundColor: themeColors.background }]}><Text style={[styles.message, { color: themeColors.textSecondary }]}>Only HODs can create or edit safety equipment plans.</Text></View>;
   if (loading) return <View style={[styles.center, { backgroundColor: themeColors.background }]}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
 
   return (

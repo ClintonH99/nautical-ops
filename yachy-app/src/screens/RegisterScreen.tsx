@@ -125,7 +125,12 @@ export const RegisterScreen = ({ navigation, route }: any) => {
         Alert.alert('Success', `Account created successfully! ${roleMessage}`);
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to create account');
+      const msg = error?.message?.toLowerCase() || '';
+      const isInviteCodeError = msg.includes('invite code') || msg.includes('vessel not found') || msg.includes('cannot coerce') || msg.includes('expired');
+      Alert.alert(
+        'Invalid Invite Code',
+        isInviteCodeError ? 'Request new code from the Captain.' : (error.message || 'Failed to create account.')
+      );
     } finally {
       setLoading(false);
     }

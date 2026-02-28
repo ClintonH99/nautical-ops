@@ -58,10 +58,12 @@ export const JoinVesselScreen = ({ navigation }: any) => {
         );
       }
     } catch (error: any) {
-      console.error('Join vessel error:', error);
+      const msg = error?.message?.toLowerCase() || '';
+      const isInviteCodeError = msg.includes('invite code') || msg.includes('vessel not found') || msg.includes('cannot coerce') || msg.includes('expired');
+      if (!isInviteCodeError) console.error('Join vessel error:', error);
       Alert.alert(
-        'Error',
-        error.message || 'Failed to join vessel. Please check your invite code and try again.'
+        'Invalid Invite Code',
+        isInviteCodeError ? 'Request new code from the Captain.' : (error.message || 'Failed to join vessel.')
       );
     } finally {
       setLoading(false);

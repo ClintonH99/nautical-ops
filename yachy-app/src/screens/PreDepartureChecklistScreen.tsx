@@ -51,7 +51,7 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
 
   const vesselId = user?.vesselId ?? null;
   const isHOD = user?.role === 'HOD';
-  const isCaptain = user?.position?.toLowerCase() === 'captain';
+  const isCaptain = user?.position?.toLowerCase().includes('captain');
 
   const canEditChecklist = (checklist: PreDepartureChecklist) =>
     checklist.department === null ? isCaptain : isHOD;

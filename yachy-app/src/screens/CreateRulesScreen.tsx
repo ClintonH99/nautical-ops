@@ -27,6 +27,7 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
+  const isHOD = user?.role === 'HOD';
   const ruleId = route.params?.ruleId as string | undefined;
   const isEdit = !!ruleId;
   const [loading, setLoading] = useState(isEdit);
@@ -78,7 +79,7 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
   };
 
   const onPublish = async () => {
-    if (!vesselId) return;
+    if (!vesselId || !isHOD) return;
     const t = title || 'General Rules';
     try {
       if (isEdit && ruleId) {
@@ -97,6 +98,13 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
         <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to create rules.</Text>
+      </View>
+    );
+  }
+  if (!isHOD) {
+    return (
+      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Only HODs can create or edit rules.</Text>
       </View>
     );
   }

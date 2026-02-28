@@ -105,7 +105,7 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
   const [urgencyDropdownOpen, setUrgencyDropdownOpen] = useState(false);
 
   const vesselId = user?.vesselId ?? null;
-  const isHOD = user?.role === 'HOD';
+  const isHOD = user?.role === 'HOD'; // Used for yard jobs - tasks are editable by all crew
 
   const [visibleDepartments, setVisibleDepartments] = useState<Record<Department, boolean>>({
     BRIDGE: true,
@@ -205,7 +205,6 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
   };
 
   const onEdit = (task: VesselTask) => {
-    if (!isHOD) return;
     navigation.navigate('AddEditTask', { category: task.category, taskId: task.id });
   };
 
@@ -364,7 +363,6 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
                     style={[styles.taskCard, { backgroundColor: themeColors.surface, borderLeftColor: urgencyColor }]}
                     onPress={() => onEdit(task)}
                     activeOpacity={0.8}
-                    disabled={!isHOD}
                   >
                     <View style={styles.taskHeader}>
                       <Text

@@ -68,7 +68,7 @@ import {
   RulesScreen,
   CreateRulesScreen,
 } from '../screens';
-import { CreateVesselScreen } from '../screens/CreateVesselScreen';
+import { CreateVesselScreen, CaptainWelcomeScreen } from '../screens';
 import { MainTabsNavigator } from './MainTabsNavigator';
 import { useAuthStore, useDepartmentColorStore, useThemeStore, BACKGROUND_THEMES } from '../store';
 import authService from '../services/auth';
@@ -77,7 +77,16 @@ import { COLORS } from '../constants/theme';
 const Stack = createNativeStackNavigator();
 
 export const RootNavigator = () => {
-  const { isAuthenticated, isLoading, setUser, setLoading } = useAuthStore();
+  const { isAuthenticated, isLoading, setUser, setLoading, user } = useAuthStore();
+  // CaptainWelcome: ONLY captains (position includes captain) with no vessel
+  // Crew (position does NOT include 'captain') NEVER see CaptainWelcome - they join vessels
+  const isCaptain = user?.position?.toLowerCase().includes('captain') ?? false;
+  const isCaptainWithoutVessel = isAuthenticated && !user?.vesselId && isCaptain;
+  const initialRoute = !isAuthenticated
+    ? 'Login'
+    : user?.vesselId || !isCaptain
+      ? 'MainTabs'   // Has vessel OR is crew (not captain) -> always Home
+      : 'CaptainWelcome';
   const backgroundTheme = useThemeStore((s) => s.backgroundTheme);
   const themeColors = BACKGROUND_THEMES[backgroundTheme];
 
@@ -134,6 +143,7 @@ export const RootNavigator = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator
+        initialRouteName={initialRoute}
         screenOptions={{
           headerStyle: {
             backgroundColor: themeColors.background,
@@ -184,6 +194,11 @@ export const RootNavigator = () => {
           // Main App Stack (tabs = Home, Explore, Profile)
           <>
             <Stack.Screen 
+              name="CaptainWelcome" 
+              component={CaptainWelcomeScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen 
               name="MainTabs" 
               component={MainTabsNavigator}
               options={{ headerShown: false }}
@@ -199,10 +214,7 @@ export const RootNavigator = () => {
             <Stack.Screen 
               name="CreateVessel" 
               component={CreateVesselScreen}
-              options={{ 
-                title: 'Create Vessel',
-                headerShown: true,
-              }}
+              options={{ headerShown: false }}
             />
             <Stack.Screen 
               name="Settings" 

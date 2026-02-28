@@ -158,6 +158,7 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
     <ScrollView
       style={[styles.container, { backgroundColor: themeColors.background }]}
       contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
       }

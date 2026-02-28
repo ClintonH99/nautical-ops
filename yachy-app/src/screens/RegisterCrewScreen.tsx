@@ -7,7 +7,6 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
@@ -48,7 +47,7 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
     password: '',
     confirmPassword: '',
     position: '',
-    department: '' as Department | '',
+    departments: [] as Department[], // Up to 2 departments for dual-role (e.g. deck/stew)
     inviteCode: '',
   });
   const [loading, setLoading] = useState(false);
@@ -98,8 +97,11 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
       valid = false;
     }
 
-    if (!formData.department) {
-      newErrors.department = 'Department is required';
+    if (formData.departments.length === 0) {
+      newErrors.department = 'Select at least one department';
+      valid = false;
+    } else if (formData.departments.length > 2) {
+      newErrors.department = 'Select up to 2 departments';
       valid = false;
     }
 
@@ -123,7 +125,8 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
         password: formData.password,
         name: formData.name,
         position: formData.position,
-        department: formData.department as string,
+        department: formData.departments[0],
+        department2: formData.departments[1] || null,
         inviteCode: formData.inviteCode,
       });
 
@@ -132,17 +135,17 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
         Alert.alert(
           'Success',
           'Welcome aboard! Your crew account has been created.',
-          [
-            { 
-              text: 'OK',
-              onPress: () => navigation.replace('Home')
-            }
-          ]
+          [{ text: 'OK' }]
         );
       }
     } catch (error: any) {
-      console.error('Crew registration error:', error);
-      Alert.alert('Error', error.message || 'Failed to create account. Please check your invite code.');
+      const msg = error?.message?.toLowerCase() || '';
+      const isInviteCodeError = msg.includes('invite code') || msg.includes('vessel not found') || msg.includes('cannot coerce') || msg.includes('expired');
+      if (!isInviteCodeError) console.error('Crew registration error:', error);
+      Alert.alert(
+        'Invalid Invite Code',
+        isInviteCodeError ? 'Request new code from the Captain.' : (error.message || 'Failed to create account.')
+      );
     } finally {
       setLoading(false);
     }
@@ -167,14 +170,6 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
           >
             <Ionicons name="chevron-back" size={28} color={MARITIME.textOnDark} />
           </TouchableOpacity>
-
-          <View style={styles.header}>
-            <Image
-              source={require('../../assets/yachy-logo.png')}
-              style={styles.headerLogo}
-              resizeMode="contain"
-            />
-          </View>
 
           <Text style={styles.title}>Create Crew Account</Text>
           <Text style={styles.subtitle}>Join your vessel using an invite code</Text>
@@ -235,20 +230,44 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
 
             <View style={styles.departmentSection}>
               <Text style={[styles.label, { color: COLORS.textPrimary }]}>Department</Text>
+              <Text style={[styles.departmentHint, { color: MARITIME.textMuted }]}>
+                Select the department you report to. i.e. If you're Deck/Stew, choose Exterior/Interior.
+              </Text>
               <View style={styles.departmentButtons}>
-                {DEPARTMENTS.map((dept) => (
-                  <Button
-                    key={dept.value}
-                    title={dept.label}
-                    variant={
-                      formData.department === dept.value ? 'primary' : 'outline'
-                    }
-                    size="small"
-                    onPress={() => updateField('department', dept.value)}
-                    style={styles.departmentButton}
-                  />
-                ))}
+                {DEPARTMENTS.map((dept) => {
+                  const isSelected = formData.departments.includes(dept.value as Department);
+                  const canSelect = isSelected || formData.departments.length < 2;
+                  return (
+                    <Button
+                      key={dept.value}
+                      title={dept.label}
+                      variant={isSelected ? 'primary' : 'outline'}
+                      size="small"
+                      onPress={() => {
+                        if (isSelected) {
+                          setFormData({
+                            ...formData,
+                            departments: formData.departments.filter((d) => d !== dept.value),
+                          });
+                          if (errors.department) setErrors({ ...errors, department: '' });
+                        } else if (canSelect) {
+                          setFormData({
+                            ...formData,
+                            departments: [...formData.departments, dept.value as Department],
+                          });
+                          if (errors.department) setErrors({ ...errors, department: '' });
+                        }
+                      }}
+                      style={styles.departmentButton}
+                    />
+                  );
+                })}
               </View>
+              {formData.departments.length > 0 && (
+                <Text style={[styles.selectedDepts, { color: MARITIME.textMuted }]}>
+                  Selected: {formData.departments.map((d) => DEPARTMENTS.find((x) => x.value === d)?.label ?? d).join(', ')}
+                </Text>
+              )}
               {errors.department && (
                 <Text style={styles.error}>{errors.department}</Text>
               )}
@@ -313,16 +332,6 @@ const styles = StyleSheet.create({
     left: SPACING.lg,
     zIndex: 10,
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: SPACING.lg,
-    backgroundColor: 'transparent',
-  },
-  headerLogo: {
-    width: 140,
-    height: 84,
-    backgroundColor: 'transparent',
-  },
   title: {
     fontSize: FONTS['2xl'],
     fontWeight: '700',
@@ -365,6 +374,16 @@ const styles = StyleSheet.create({
   },
   departmentSection: {
     marginBottom: SPACING.md,
+  },
+  departmentHint: {
+    fontSize: FONTS.xs,
+    marginBottom: SPACING.sm,
+    lineHeight: 18,
+  },
+  selectedDepts: {
+    fontSize: FONTS.xs,
+    marginTop: SPACING.xs,
+    fontStyle: 'italic',
   },
   departmentButtons: {
     flexDirection: 'row',
