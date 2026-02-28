@@ -1,0 +1,125 @@
+---
+description: Date and time picker pattern for iOS and Android
+globs: src/**/*.tsx
+alwaysApply: false
+---
+
+# Date / Time Picker Pattern
+
+Always use `@react-native-community/datetimepicker` with the following pattern.
+
+## iOS — use `display="compact"`
+Renders as a small native pill that expands on tap and **auto-collapses** after selection. No show/hide state needed.
+
+## Android — use trigger + show/hide state + `display="default"`
+Shows a native dialog on tap.
+
+## Template
+
+```tsx
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+
+// State (only needed for Android)
+const [showDatePicker, setShowDatePicker] = useState(false);
+const [showTimePicker, setShowTimePicker] = useState(false);
+
+// Date field
+<View style={styles.fieldContainer}>
+  <Text style={styles.label}>Date</Text>
+  {Platform.OS === 'ios' ? (
+    <View style={styles.pickerTrigger}>
+      <Text style={styles.pickerValue}>{formatDate(date)}</Text>
+      <DateTimePicker
+        value={date}
+        mode="date"
+        display="compact"
+        onChange={(_: DateTimePickerEvent, selected?: Date) => {
+          if (selected) setDate(selected);
+        }}
+      />
+    </View>
+  ) : (
+    <>
+      <TouchableOpacity style={styles.pickerTrigger} onPress={() => setShowDatePicker(true)} activeOpacity={0.7}>
+        <Text style={styles.pickerValue}>{formatDate(date)}</Text>
+        <Text style={styles.pickerIcon}>📅</Text>
+      </TouchableOpacity>
+      {showDatePicker && (
+        <DateTimePicker
+          value={date}
+          mode="date"
+          display="default"
+          onChange={(_: DateTimePickerEvent, selected?: Date) => {
+            setShowDatePicker(false);
+            if (selected) setDate(selected);
+          }}
+        />
+      )}
+    </>
+  )}
+</View>
+
+// Time field
+<View style={styles.fieldContainer}>
+  <Text style={styles.label}>Time</Text>
+  {Platform.OS === 'ios' ? (
+    <View style={styles.pickerTrigger}>
+      <Text style={styles.pickerValue}>{formatTime(time)}</Text>
+      <DateTimePicker
+        value={time}
+        mode="time"
+        display="compact"
+        onChange={(_: DateTimePickerEvent, selected?: Date) => {
+          if (selected) setTime(selected);
+        }}
+      />
+    </View>
+  ) : (
+    <>
+      <TouchableOpacity style={styles.pickerTrigger} onPress={() => setShowTimePicker(true)} activeOpacity={0.7}>
+        <Text style={styles.pickerValue}>{formatTime(time)}</Text>
+        <Text style={styles.pickerIcon}>🕐</Text>
+      </TouchableOpacity>
+      {showTimePicker && (
+        <DateTimePicker
+          value={time}
+          mode="time"
+          is24Hour
+          display="default"
+          onChange={(_: DateTimePickerEvent, selected?: Date) => {
+            setShowTimePicker(false);
+            if (selected) setTime(selected);
+          }}
+        />
+      )}
+    </>
+  )}
+</View>
+```
+
+## Required styles
+```tsx
+pickerTrigger: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  height: SIZES.inputHeight,
+  backgroundColor: COLORS.surface,
+  borderWidth: 1,
+  borderColor: COLORS.border,
+  borderRadius: BORDER_RADIUS.md,
+  paddingHorizontal: SPACING.md,
+},
+pickerValue: {
+  fontSize: FONTS.base,
+  color: COLORS.textPrimary,
+},
+pickerIcon: {
+  fontSize: 18,
+},
+```
+
+## Notes
+- Never use `display="inline"` or `display="spinner"` on iOS — these stay expanded after selection
+- Do NOT use `is24Hour` with `display="compact"` (TypeScript error)
+- Always import `DateTimePickerEvent` for typed onChange callbacks

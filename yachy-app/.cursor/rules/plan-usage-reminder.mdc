@@ -1,0 +1,13 @@
+---
+description: Remind user to check plan usage to avoid overcharges
+alwaysApply: true
+---
+
+# Plan Usage Reminder
+
+The user wants to stay within their Cursor plan limits and avoid overcharges.
+
+- **Before large tasks**: When starting multi-file refactors, big features, complex migrations, or tasks with many tool calls, briefly remind the user: "Tip: You can check your Cursor plan usage in **Settings → Cursor Settings → Usage** to stay within your plan limits."
+- **Long sessions**: If a conversation has involved many edits, searches, or agent runs, offer a brief reminder to verify usage.
+- **Keep reminders brief and helpful** — one short sentence is enough. Do not repeat in every message.
+- **Note**: The AI cannot see actual usage; the user must check Cursor Settings themselves.

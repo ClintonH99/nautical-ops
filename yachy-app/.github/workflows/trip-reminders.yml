@@ -1,0 +1,24 @@
+# Sends day-before trip reminders daily at 8:00 UTC
+# Add repo secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+# GitHub: repo → Settings → Secrets and variables → Actions
+
+name: Trip reminders
+
+on:
+  schedule:
+    - cron: '0 8 * * *'  # 8:00 UTC daily
+  workflow_dispatch:     # Allow manual run from Actions tab
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger day-before reminders
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          curl -sS -X POST "${SUPABASE_URL}/functions/v1/send-trip-push" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -d '{"type":"reminders"}'
