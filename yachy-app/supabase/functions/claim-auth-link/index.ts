@@ -26,10 +26,14 @@ Deno.serve(async (req) => {
     if (userError || !user?.email) {
       return new Response(JSON.stringify({ error: 'Invalid session' }), { status: 401, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
     }
-    const { code } = (await req.json()) as { code?: string };
+    const body = (await req.json()) as { code?: string; redirect_to?: string };
+    const code = body?.code;
     if (!code || typeof code !== 'string') {
       return new Response(JSON.stringify({ error: 'Missing code' }), { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
     }
+    const redirectTo = typeof body.redirect_to === 'string' && body.redirect_to
+      ? body.redirect_to
+      : 'https://www.nautical-ops.com';
     const { data: row } = await supabaseAdmin.from('auth_links').select('expires_at').eq('code', code).single();
     if (!row) {
       return new Response(JSON.stringify({ error: 'Invalid or expired code' }), { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
@@ -40,7 +44,7 @@ Deno.serve(async (req) => {
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email: user.email,
-      options: { redirectTo: 'https://www.nautical-ops.com' },
+      options: { redirectTo },
     });
     if (linkError || !linkData?.properties?.action_link) {
       console.error('generateLink error:', linkError);

@@ -42,12 +42,9 @@ export const LinkLoginScreen = ({ navigation }: any) => {
     setCode(result.code);
     setClaiming(true);
     try {
-      const { default: QRCode } = await import('qrcode');
-      const dataUrl = await QRCode.toDataURL(`${WEB_ORIGIN}/link?code=${result.code}`, {
-        width: 256,
-        margin: 2,
-      });
-      setQrDataUrl(dataUrl);
+      const qrContent = `${WEB_ORIGIN}/link?code=${result.code}`;
+      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(qrContent)}`;
+      setQrDataUrl(qrApiUrl);
     } catch {
       setError('Failed to generate QR code');
     }
@@ -72,8 +69,10 @@ export const LinkLoginScreen = ({ navigation }: any) => {
           setError('Failed to sign in');
         }
       }
-      if ('error' in result && result.error !== 'pending') {
+      // Only show error for explicit API errors, not transient network issues
+      if ('error' in result && result.error && result.error !== 'pending') {
         setError(result.error);
+        setClaiming(false);
       }
     }, 2500);
     return () => clearInterval(interval);
@@ -86,9 +85,9 @@ export const LinkLoginScreen = ({ navigation }: any) => {
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.title}>Sign in with QR code</Text>
+        <Text style={styles.title}>Sign in with your phone</Text>
         <Text style={styles.subtitle}>
-          Open the Nautical Ops app on your phone, go to Settings → Link website, and scan this code.
+          Use your phone app—no credentials on this device. Open Nautical Ops on your phone, go to Settings → Link website, and scan this code.
         </Text>
 
         {error && (
@@ -118,8 +117,17 @@ export const LinkLoginScreen = ({ navigation }: any) => {
           <Text style={styles.refreshText}>Generate new code</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backText}>← Back to sign in</Text>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Login')}
+          style={styles.backButton}
+        >
+          <Text style={styles.backText}>← Back to sign in with email</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('CreateAccountChoice')}
+          style={styles.backButton}
+        >
+          <Text style={styles.backText}>New? Create account</Text>
         </TouchableOpacity>
       </View>
     </View>

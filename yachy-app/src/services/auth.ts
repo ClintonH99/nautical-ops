@@ -76,12 +76,7 @@ class AuthService {
   async signInWithGoogle(): Promise<{ user: User | null; session: any }> {
     try {
       WebBrowser.maybeCompleteAuthSession();
-      // #region agent log
-      const _redirectTo = makeRedirectUri({ preferLocalhost: false });
-      console.log('[GoogleAuth] redirectTo:', _redirectTo);
-      fetch('http://127.0.0.1:7242/ingest/4078e384-3658-4a9c-ad3e-69711ac24e59',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'02e7fe'},body:JSON.stringify({sessionId:'02e7fe',location:'auth.ts:google:redirectTo',message:'redirectTo',data:{redirectTo:_redirectTo},hypothesisId:'H1,H4',timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-      const redirectTo = _redirectTo;
+      const redirectTo = makeRedirectUri({ preferLocalhost: false });
       const isLocalhost = redirectTo.includes('localhost') || redirectTo.includes('127.0.0.1');
       if (Platform.OS !== 'web' && Device.isDevice && isLocalhost) {
         throw new Error(
@@ -90,10 +85,6 @@ class AuthService {
         );
       }
 
-      // #region agent log
-      console.log('[GoogleAuth] calling signInWithOAuth...');
-      fetch('http://127.0.0.1:7242/ingest/4078e384-3658-4a9c-ad3e-69711ac24e59',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'02e7fe'},body:JSON.stringify({sessionId:'02e7fe',location:'auth.ts:google:beforeOAuth',message:'before signInWithOAuth',data:{},hypothesisId:'H2',timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -103,15 +94,8 @@ class AuthService {
       });
       if (error) throw error;
       if (!data?.url) throw new Error('No OAuth URL returned');
-      // #region agent log
-      console.log('[GoogleAuth] got OAuth URL, opening browser...');
-      fetch('http://127.0.0.1:7242/ingest/4078e384-3658-4a9c-ad3e-69711ac24e59',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'02e7fe'},body:JSON.stringify({sessionId:'02e7fe',location:'auth.ts:google:beforeBrowser',message:'before openAuthSessionAsync',data:{},hypothesisId:'H3',timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
 
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo) as { type: string; url?: string };
-      // #region agent log
-      console.log('[GoogleAuth] browser returned, type:', result.type, 'hasUrl:', !!result.url, 'urlStart:', result.url?.substring(0, 50));
-      // #endregion
       if (result.type !== 'success' || !result.url) {
         return { user: null, session: null };
       }
@@ -126,14 +110,8 @@ class AuthService {
         access_token = hashParams.get('access_token') ?? undefined;
         refresh_token = hashParams.get('refresh_token') ?? undefined;
       }
-      // #region agent log
-      console.log('[GoogleAuth] tokens:', access_token ? 'have access_token' : 'NO access_token', 'hash parse:', authUrl.includes('#'));
-      // #endregion
       if (!access_token) return { user: null, session: null };
 
-      // #region agent log
-      console.log('[GoogleAuth] calling setSession...');
-      // #endregion
       const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
         access_token,
         refresh_token: refresh_token ?? '',
@@ -141,9 +119,6 @@ class AuthService {
       if (sessionError) throw sessionError;
       if (!sessionData.user) return { user: null, session: null };
 
-      // #region agent log
-      console.log('[GoogleAuth] setSession OK, ensuring profile...');
-      // #endregion
       const userData = await this.ensureOAuthUserProfile(sessionData.user);
       return { user: userData, session: sessionData.session };
     } catch (error: any) {

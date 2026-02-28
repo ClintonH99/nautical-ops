@@ -174,8 +174,9 @@ class VesselService {
   /**
    * Upload a banner image for the vessel to Supabase Storage.
    * Stores as vessel-banners/<vesselId>/banner.jpg
+   * Returns the public URL with cache-bust param (like profile photo) so the image refreshes.
    */
-  async uploadBannerImage(vesselId: string, localUri: string): Promise<void> {
+  async uploadBannerImage(vesselId: string, localUri: string): Promise<string> {
     const response = await fetch(localUri);
     const blob = await response.blob();
     const arrayBuffer = await new Response(blob).arrayBuffer();
@@ -189,16 +190,20 @@ class VesselService {
       });
 
     if (error) throw error;
+
+    return `${this.getBannerPublicUrl(vesselId)}?t=${Date.now()}`;
   }
 
   /**
    * Return the public URL for a vessel's banner image.
+   * Optional cacheBust param appends ?t= for cache busting (use after upload or on refetch).
    */
-  getBannerPublicUrl(vesselId: string): string {
+  getBannerPublicUrl(vesselId: string, cacheBust?: number): string {
     const { data } = supabase.storage
       .from('vessel-banners')
       .getPublicUrl(`${vesselId}/banner.jpg`);
-    return data.publicUrl;
+    const base = data.publicUrl;
+    return cacheBust != null ? `${base}?t=${cacheBust}` : base;
   }
 
   /**

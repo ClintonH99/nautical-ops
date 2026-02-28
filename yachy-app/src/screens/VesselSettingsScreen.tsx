@@ -257,10 +257,7 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
               disabled={isUploadingBanner}
             />
             <Text style={[styles.photoHint, { color: themeColors.textSecondary }]}>
-              Updates the banner shown on the home screen
-            </Text>
-            <Text style={[styles.photoHint, { color: themeColors.textSecondary, marginTop: SPACING.xs }]}>
-              Close and Re-Open the App if picture does not update automatically
+              Updates the banner shown on the home screen. Changes appear when you return to Home.
             </Text>
           </View>
         </View>

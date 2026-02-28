@@ -79,17 +79,19 @@ import { COLORS } from '../constants/theme';
 
 const Stack = createNativeStackNavigator();
 
+// ROUTING RULE: Users with an account AND assigned to a vessel always go to Home (MainTabs).
+// CaptainWelcome (create vessel) is ONLY for captains who have no vessel yet.
 export const RootNavigator = () => {
   const { isAuthenticated, isLoading, setUser, setLoading, user } = useAuthStore();
-  // CaptainWelcome: ONLY captains (position includes captain) with no vessel
-  // Crew (position does NOT include 'captain') NEVER see CaptainWelcome - they join vessels
   const isCaptain = user?.position?.toLowerCase().includes('captain') ?? false;
-  const isCaptainWithoutVessel = isAuthenticated && !user?.vesselId && isCaptain;
+  const hasVessel = !!user?.vesselId;
   const initialRoute = !isAuthenticated
     ? 'Login'
-    : user?.vesselId || !isCaptain
-      ? 'MainTabs'   // Has vessel OR is crew (not captain) -> always Home
-      : 'CaptainWelcome';
+    : hasVessel
+      ? 'MainTabs'
+    : !isCaptain
+      ? 'MainTabs'
+    : 'CaptainWelcome';
   const backgroundTheme = useThemeStore((s) => s.backgroundTheme);
   const themeColors = BACKGROUND_THEMES[backgroundTheme];
 
@@ -100,12 +102,14 @@ export const RootNavigator = () => {
         const session = await authService.getSession();
         if (mounted && session?.user) {
           let userData = await authService.getUserProfile(session.user.id);
-          const isCaptain = userData?.position?.toLowerCase().includes('captain');
-          if (mounted && userData && isCaptain && !userData.vesselId) {
-            const refetch = await authService.getUserProfile(session.user.id);
-            if (mounted && refetch?.vesselId) userData = refetch;
+          if (mounted && userData) {
+            const isCaptain = userData.position?.toLowerCase().includes('captain');
+            if (isCaptain && !userData.vesselId) {
+              const refetch = await authService.getUserProfile(session.user.id);
+              if (mounted && refetch?.vesselId) userData = refetch;
+            }
+            setUser(userData);
           }
-          if (mounted) setUser(userData);
         }
       } catch (error) {
         console.error('Auth check error:', error);

@@ -17,13 +17,24 @@ import { COLORS, FONTS, SPACING } from '../constants/theme';
 import { claimAuthLink } from '../services/authLinkService';
 import authService from '../services/auth';
 
-function parseCodeFromQrData(data: string): string | null {
+function parseCodeFromQrData(data: string): { code: string; redirectTo?: string } | null {
   try {
+    let code: string | null = null;
+    let redirectTo: string | undefined;
     if (data.includes('code=')) {
       const match = data.match(/[?&]code=([A-Za-z0-9]+)/);
-      return match ? match[1] : null;
+      code = match ? match[1] : null;
+      try {
+        const url = data.startsWith('http') ? data : `https://${data}`;
+        const u = new URL(url);
+        redirectTo = `${u.origin}`;
+      } catch {
+        // ignore
+      }
+    } else if (data.length <= 20) {
+      code = data;
     }
-    return data.length <= 20 ? data : null;
+    return code ? { code, redirectTo } : null;
   } catch {
     return null;
   }
@@ -65,8 +76,8 @@ export const LinkWebsiteScanScreen = ({ navigation }: any) => {
 
   const handleBarCodeScanned = async ({ data }: { type: string; data: string }) => {
     if (scanned || claiming) return;
-    const code = parseCodeFromQrData(data);
-    if (!code) return;
+    const parsed = parseCodeFromQrData(data);
+    if (!parsed) return;
     setScanned(true);
     setClaiming(true);
     try {
@@ -77,7 +88,7 @@ export const LinkWebsiteScanScreen = ({ navigation }: any) => {
         setClaiming(false);
         return;
       }
-      const result = await claimAuthLink(code, session.access_token);
+      const result = await claimAuthLink(parsed.code, session.access_token, parsed.redirectTo);
       if ('success' in result) {
         Alert.alert('Success', 'Website linked. You can now sign in on the website.', [
           { text: 'OK', onPress: () => navigation.goBack() },

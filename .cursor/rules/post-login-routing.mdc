@@ -1,0 +1,24 @@
+---
+description: Post-login routing rule - users with vessel go to Home
+globs: "**/RootNavigator.tsx,**/auth.ts"
+alwaysApply: false
+---
+
+# Post-Login Routing Rule
+
+**Rule:** Users who have an account AND are assigned to a vessel must always be taken directly to the Home screen (MainTabs) after login.
+
+## Implementation
+
+- **Users WITH vessel** (`user.vesselId` truthy) → Home (MainTabs)
+- **Crew** (position does not include "captain") → Home (MainTabs)
+- **Captains WITHOUT vessel** → CaptainWelcome (create vessel flow)
+
+## Never
+
+- Route users who have `vesselId` to CaptainWelcome or CreateVessel
+- Assume a user needs to create a vessel without checking `vesselId` first
+
+## Applies To
+
+All login methods: email/password, magic link, QR code sign-in, OAuth (Google, Apple).

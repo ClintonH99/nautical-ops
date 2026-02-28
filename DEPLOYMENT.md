@@ -41,3 +41,13 @@ Push to GitHub → website updates automatically. Here’s how to set it up.
 
 - `vercel.json` in the project root configures install, build, and output.
 - Ensure your Supabase **Site URL** and **Redirect URLs** include `https://www.nautical-ops.com` (see `yachy-app/WEB_DEPLOYMENT_SETUP.md`).
+
+## Troubleshooting: "Sign in with QR code" not generating
+
+If the QR code page shows "Generating QR code…" forever or an error:
+
+1. **Add Vercel env vars** (required for production): Vercel → Settings → Environment Variables → add `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`, then **Redeploy**.
+
+2. **Deploy Supabase Edge Functions**: `cd yachy-app && supabase functions deploy create-auth-code get-auth-link claim-auth-link`
+
+3. **Ensure `auth_links` table exists** in Supabase (run `supabase/migrations/CREATE_AUTH_LINKS_TABLE.sql`).

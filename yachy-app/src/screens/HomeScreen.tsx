@@ -113,7 +113,7 @@ export const HomeScreen = ({ navigation }: any) => {
   const backgroundTheme = useThemeStore((s) => s.backgroundTheme);
   const themeColors = BACKGROUND_THEMES[backgroundTheme];
   const [vesselName, setVesselName] = useState<string | null>(null);
-  const [bannerImageUrl, setBannerImageUrl] = useState<string | null>(null);
+  const [bannerCacheBust, setBannerCacheBust] = useState<number | null>(null);
   const [loadingVessel, setLoadingVessel] = useState(false);
   const [bannerLoadFailed, setBannerLoadFailed] = useState(false);
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -147,6 +147,13 @@ export const HomeScreen = ({ navigation }: any) => {
 
   useFocusEffect(useCallback(() => { if (hasVessel) loadTrips(); }, [hasVessel, loadTrips]));
 
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.vesselId) return;
+      setBannerCacheBust(Date.now());
+    }, [user?.vesselId])
+  );
+
   useEffect(() => {
     const fetchVessel = async () => {
       if (user?.vesselId) {
@@ -154,9 +161,7 @@ export const HomeScreen = ({ navigation }: any) => {
         try {
           const vessel = await vesselService.getVessel(user.vesselId);
           if (vessel) setVesselName(vessel.name);
-          const url = vesselService.getBannerPublicUrl(user.vesselId);
           setBannerLoadFailed(false);
-          setBannerImageUrl(url);
         } catch (error) {
           console.error('Error fetching vessel:', error);
         } finally {
@@ -166,6 +171,8 @@ export const HomeScreen = ({ navigation }: any) => {
     };
     fetchVessel();
   }, [user?.vesselId]);
+
+  const bannerImageUrl = vesselId ? vesselService.getBannerPublicUrl(vesselId, bannerCacheBust ?? undefined) : null;
 
   return (
     <>

@@ -107,10 +107,10 @@ export const SettingsScreen = ({ navigation }: any) => {
           ? [
               {
                 icon: '🔗',
-                label: 'Link website',
+                label: 'Link website (Coming soon)',
                 description: 'Scan QR on website to sign in from your laptop',
-                onPress: () => navigation.navigate('LinkWebsiteScan'),
-                disabled: false,
+                onPress: () => {},
+                disabled: true,
               },
             ]
           : []),

@@ -35,6 +35,7 @@ export const LoginScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({ email: '', password: '' });
 
@@ -153,11 +154,12 @@ export const LoginScreen = ({ navigation }: any) => {
             />
             {Platform.OS === 'web' && (
               <Button
-                title="Sign in with QR code"
-                onPress={() => navigation.navigate('LinkLogin')}
+                title="Sign in with QR code (Coming soon)"
+                onPress={() => {}}
                 variant="outline"
                 fullWidth
                 style={styles.qrButton}
+                disabled
               />
             )}
             {loginError ? (

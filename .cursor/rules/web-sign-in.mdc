@@ -1,0 +1,28 @@
+---
+description: Web sign-in uses phone app only - no credentials on laptop
+globs: "**/LoginScreen.tsx,**/LinkLoginScreen.tsx,**/RootNavigator.tsx"
+alwaysApply: false
+---
+
+# Web Sign-In Rule
+
+**Rule:** On the website, users do NOT sign in with email/password. They use their phone app's credentials to gain access.
+
+## Implementation
+
+- **Web (platform === 'web')**: Default to LinkLogin (QR code) screen. Users scan the QR with the phone app (Settings → Link website) to authenticate the web session using the phone's existing session.
+- **LoginScreen on web**: Redirects to LinkLogin—never show email/password form.
+- **Copy**: Emphasize "Use your phone app—no credentials on this device."
+
+## Never
+
+- Show email/password as the primary sign-in option on web
+- Allow web users to enter credentials on the laptop; the session comes from the phone
+
+## Flow
+
+1. User opens website on laptop
+2. Website shows QR code (LinkLogin)
+3. User opens phone app, goes to Settings → Link website, scans QR
+4. Phone app claims the code with the user's session
+5. Website receives the session and user is signed in
