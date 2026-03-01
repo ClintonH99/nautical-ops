@@ -1,0 +1,28 @@
+---
+description: ADMIN folder is the source of truth - always reference before building or changing the app
+alwaysApply: true
+---
+
+# ADMIN Folder - Mandatory Reference
+
+## Rule
+
+Before building, changing, or fixing any part of the app, you **MUST** read and apply the contents of the **ADMIN** folder as the source of truth.
+
+## What ADMIN Contains
+
+- **ADMIN/App Design/** - Fonts, colors, button styles, and all visual/design specs
+- **ADMIN/Rules/** - Rules that govern how the app is built and maintained
+- **ADMIN/Authorizations/** - User hierarchy, roles, permissions, and access rules
+
+## When to Reference
+
+- When adding new features
+- When fixing bugs or UI issues
+- When changing styles, layouts, or components
+- When implementing or modifying permissions or role-based access
+- When onboarding or changing user flows
+
+## Behavior
+
+Everything in ADMIN applies to **current and all future users** and changes. Treat ADMIN as the single source of truth. If ADMIN conflicts with existing code, ADMIN wins. Always consult ADMIN before starting any build or fix task.

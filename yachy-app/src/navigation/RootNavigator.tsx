@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { 
@@ -95,11 +95,20 @@ export const RootNavigator = () => {
   const backgroundTheme = useThemeStore((s) => s.backgroundTheme);
   const themeColors = BACKGROUND_THEMES[backgroundTheme];
 
+  const loadTheme = useThemeStore((s) => s.loadTheme);
+
   useEffect(() => {
     let mounted = true;
     const MAX_AUTH_WAIT_MS = 4000;
 
-    const checkAuth = async () => {
+    const bootstrap = async () => {
+      try {
+        await loadTheme();
+      } catch {
+        /* theme load is non-critical */
+      }
+      if (!mounted) return;
+
       try {
         const session = await authService.getSession();
         if (mounted && session?.user) {
@@ -114,7 +123,7 @@ export const RootNavigator = () => {
           }
         }
       } catch (error) {
-        console.error('Auth check error:', error);
+        if (__DEV__) console.error('Auth check error:', error);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -124,7 +133,7 @@ export const RootNavigator = () => {
     const timeoutPromise = new Promise<void>((resolve) => {
       setTimeout(() => resolve(), MAX_AUTH_WAIT_MS);
     });
-    Promise.race([checkAuth(), timeoutPromise]).then(() => {
+    Promise.race([bootstrap(), timeoutPromise]).then(() => {
       if (mounted) setLoading(false);
     });
 
@@ -149,14 +158,12 @@ export const RootNavigator = () => {
       clearTimeout(fallback);
       authListener?.subscription?.unsubscribe();
     };
-  }, []);
+  }, [loadTheme]);
 
   const loadDepartmentColorOverrides = useDepartmentColorStore((s) => s.loadOverrides);
-  const loadTheme = useThemeStore((s) => s.loadTheme);
   useEffect(() => {
-    loadTheme();
     if (isAuthenticated) loadDepartmentColorOverrides();
-  }, [isAuthenticated, loadDepartmentColorOverrides, loadTheme]);
+  }, [isAuthenticated, loadDepartmentColorOverrides]);
 
   // Realtime sync: keep app and web in sync when data changes on either platform
   useEffect(() => {
@@ -178,8 +185,22 @@ export const RootNavigator = () => {
     );
   }
 
+  const navTheme = {
+    ...DefaultTheme,
+    dark: themeColors.isDark,
+    colors: {
+      ...DefaultTheme.colors,
+      primary: COLORS.primary,
+      background: themeColors.background,
+      card: themeColors.background,
+      text: themeColors.textPrimary,
+      border: themeColors.surfaceAlt,
+      notification: COLORS.danger,
+    },
+  };
+
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navTheme}>
       <Stack.Navigator
         initialRouteName={initialRoute}
         screenOptions={{

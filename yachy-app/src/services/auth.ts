@@ -65,7 +65,7 @@ class AuthService {
 
       return { user: null, session: null };
     } catch (error) {
-      console.error('Sign in error:', error);
+      if (__DEV__) console.error('Sign in error:', error);
       throw error;
     }
   }
@@ -122,7 +122,7 @@ class AuthService {
       const userData = await this.ensureOAuthUserProfile(sessionData.user);
       return { user: userData, session: sessionData.session };
     } catch (error: any) {
-      console.error('Google sign in error:', error);
+      if (__DEV__) console.error('Google sign in error:', error);
       throw error;
     }
   }
@@ -179,7 +179,7 @@ class AuthService {
       if (error?.code === 'ERR_REQUEST_CANCELED') {
         return { user: null, session: null };
       }
-      console.error('Apple sign in error:', error);
+      if (__DEV__) console.error('Apple sign in error:', error);
       throw error;
     }
   }
@@ -218,7 +218,7 @@ class AuthService {
 
     const { error } = await supabase.from('users').insert([userProfile]);
     if (error) {
-      console.error('OAuth profile creation error:', error);
+      if (__DEV__) console.error('OAuth profile creation error:', error);
       return null;
     }
 
@@ -240,10 +240,12 @@ class AuthService {
    */
   async signUp({ email, password, name, position, department, department2, inviteCode, vesselId }: RegisterData) {
     try {
-      console.log('🚀 Starting signup process...');
-      console.log('📧 Email:', email);
-      console.log('🎫 Invite Code:', inviteCode || 'None');
-      console.log('⚓ Vessel ID:', vesselId || 'None');
+      if (__DEV__) {
+        console.log('🚀 Starting signup process...');
+        console.log('📧 Email:', email);
+        console.log('🎫 Invite Code:', inviteCode || 'None');
+        console.log('⚓ Vessel ID:', vesselId || 'None');
+      }
 
       // For CREW with invite code: validate FIRST before creating any user
       // This ensures we never reserve the email if the invite code is invalid
@@ -252,7 +254,7 @@ class AuthService {
         const vessel = await this.validateInviteCode(inviteCode);
         if (!vessel) throw new Error('Invalid invite code');
         validatedVessel = vessel;
-        console.log('✅ Invite code valid! Vessel:', vessel.name);
+        if (__DEV__) console.log('✅ Invite code valid! Vessel:', vessel.name);
       }
 
       // Create the auth user (only after invite code validated for crew)
@@ -262,7 +264,7 @@ class AuthService {
       });
 
       if (authError) {
-        console.error('❌ Auth signup error:', authError.message);
+        if (__DEV__) console.error('❌ Auth signup error:', authError.message);
         if (authError.message.includes('already registered') || authError.message.includes('User already registered')) {
           throw new Error('This email is already registered. Please use a different email or sign in instead.');
         }
@@ -270,7 +272,7 @@ class AuthService {
       }
 
       if (authData.user) {
-        console.log('✅ Auth user created:', authData.user.id);
+        if (__DEV__) console.log('✅ Auth user created:', authData.user.id);
 
         const role = vesselId ? 'HOD' : 'CREW';
         const userProfile: any = {
@@ -293,26 +295,26 @@ class AuthService {
           joinedViaInviteCode = true;
         }
 
-        console.log('💾 Creating user profile with vessel_id:', userProfile.vessel_id || 'null');
+        if (__DEV__) console.log('💾 Creating user profile with vessel_id:', userProfile.vessel_id || 'null');
 
         const { error: profileError } = await supabase
           .from('users')
           .insert([userProfile]);
 
         if (profileError) {
-          console.error('❌ Profile creation error:', profileError);
+          if (__DEV__) console.error('❌ Profile creation error:', profileError);
           throw profileError;
         }
 
-        console.log('✅ User profile created successfully!');
+        if (__DEV__) console.log('✅ User profile created successfully!');
 
         // Regenerate invite code so it's single-use: one code per crew member
         if (joinedViaInviteCode && userProfile.vessel_id) {
           try {
             const newCode = await vesselService.regenerateInviteCode(userProfile.vessel_id);
-            console.log('🔄 Invite code regenerated for next crew member:', newCode);
+            if (__DEV__) console.log('🔄 Invite code regenerated for next crew member:', newCode);
           } catch (regenError) {
-            console.error('⚠️ Failed to regenerate invite code (non-fatal):', regenError);
+            if (__DEV__) console.error('⚠️ Failed to regenerate invite code (non-fatal):', regenError);
           }
         }
 
@@ -331,7 +333,7 @@ class AuthService {
           updatedAt: userProfile.updated_at,
         };
 
-        console.log('🎉 Signup complete! User:', mappedUser.name, 'Vessel ID:', mappedUser.vesselId);
+        if (__DEV__) console.log('🎉 Signup complete! User:', mappedUser.name, 'Vessel ID:', mappedUser.vesselId);
 
         return { user: mappedUser, session: authData.session };
       }
@@ -340,7 +342,7 @@ class AuthService {
     } catch (error: any) {
       const msg = error?.message?.toLowerCase() || '';
       const isInviteCodeError = msg.includes('invite code') || msg.includes('vessel not found') || msg.includes('cannot coerce') || msg.includes('expired');
-      if (!isInviteCodeError) console.error('❌ Sign up error:', error.message || error);
+      if (!isInviteCodeError && __DEV__) console.error('❌ Sign up error:', error.message || error);
       throw error;
     }
   }
@@ -353,7 +355,7 @@ class AuthService {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
     } catch (error) {
-      console.error('Sign out error:', error);
+      if (__DEV__) console.error('Sign out error:', error);
       throw error;
     }
   }
@@ -367,7 +369,7 @@ class AuthService {
       if (error) throw error;
       return data.session;
     } catch (error) {
-      console.error('Get session error:', error);
+      if (__DEV__) console.error('Get session error:', error);
       return null;
     }
   }
@@ -387,7 +389,7 @@ class AuthService {
       
       // If no user found, return null (user doesn't have a profile yet)
       if (!data) {
-        console.log('No user profile found for:', userId);
+        if (__DEV__) console.log('No user profile found for:', userId);
         return null;
       }
       
@@ -406,7 +408,7 @@ class AuthService {
         updatedAt: data.updated_at,
       } as User;
     } catch (error) {
-      console.error('Get user profile error:', error);
+      if (__DEV__) console.error('Get user profile error:', error);
       return null;
     }
   }
@@ -416,7 +418,7 @@ class AuthService {
    */
   async validateInviteCode(inviteCode: string) {
     try {
-      console.log('🔍 Validating invite code in database:', inviteCode);
+      if (__DEV__) console.log('🔍 Validating invite code in database:', inviteCode);
       
       const { data, error } = await supabase
         .from('vessels')
@@ -432,19 +434,21 @@ class AuthService {
         throw new Error('Invalid invite code');
       }
 
-      console.log('✅ Vessel found:', data.name, 'ID:', data.id);
+      if (__DEV__) console.log('✅ Vessel found:', data.name, 'ID:', data.id);
 
       // Check if invite code is expired
       const expiryDate = new Date(data.invite_expiry);
       const now = new Date();
-      console.log('📅 Expiry date:', expiryDate.toISOString());
-      console.log('📅 Current date:', now.toISOString());
+      if (__DEV__) {
+        console.log('📅 Expiry date:', expiryDate.toISOString());
+        console.log('📅 Current date:', now.toISOString());
+      }
       
       if (expiryDate < now) {
         throw new Error('Invite code has expired');
       }
 
-      console.log('✅ Invite code is valid and not expired');
+      if (__DEV__) console.log('✅ Invite code is valid and not expired');
       return data;
     } catch (error: any) {
       throw error;
@@ -477,9 +481,9 @@ class AuthService {
       // Regenerate invite code so it's single-use: one code per crew member
       try {
         await vesselService.regenerateInviteCode(vessel.id);
-        console.log('🔄 Invite code regenerated for next crew member');
+        if (__DEV__) console.log('🔄 Invite code regenerated for next crew member');
       } catch (regenError) {
-        console.error('⚠️ Failed to regenerate invite code (non-fatal):', regenError);
+        if (__DEV__) console.error('⚠️ Failed to regenerate invite code (non-fatal):', regenError);
       }
 
       // Return updated user profile
@@ -487,7 +491,7 @@ class AuthService {
     } catch (error: any) {
       const msg = error?.message?.toLowerCase() || '';
       const isInviteCodeError = msg.includes('invite code') || msg.includes('vessel not found') || msg.includes('cannot coerce') || msg.includes('expired');
-      if (!isInviteCodeError) console.error('Join vessel error:', error);
+      if (!isInviteCodeError && __DEV__) console.error('Join vessel error:', error);
       throw error;
     }
   }

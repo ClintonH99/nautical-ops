@@ -120,7 +120,7 @@ export const SettingsScreen = ({ navigation }: any) => {
           description: 'App version and information',
           onPress: () => {
             // TODO: Implement about screen
-            console.log('About screen coming soon');
+            if (__DEV__) console.log('About screen coming soon');
           },
           disabled: true,
         },

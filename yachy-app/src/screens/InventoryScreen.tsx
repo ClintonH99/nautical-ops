@@ -17,14 +17,13 @@ import {
   Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import inventoryService, { InventoryItem } from '../services/inventory';
 import { Department } from '../types';
 import { exportInventoryToPdf } from '../utils/inventoryPdf';
-import { Button, Input } from '../components';
+import { Button, Input, ButtonTagCard, ButtonTagRow } from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -307,61 +306,34 @@ export const InventoryScreen = ({ navigation }: any) => {
       ) : (
         filteredItems.map((item) => {
           const selected = selectedIds.has(item.id);
+          const dateStr = item.createdAt
+            ? new Date(item.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })
+            : '';
           return (
-          <TouchableOpacity
-            key={item.id}
-            style={[styles.card, { backgroundColor: themeColors.surface }, exportMode && selected && styles.cardSelected]}
-            onPress={() => {
-              if (exportMode) toggleSelect(item.id);
-              else navigation.navigate('AddEditInventoryItem', { itemId: item.id });
-            }}
-            activeOpacity={0.8}
-          >
-            <View style={styles.cardContent}>
-              <View style={styles.cardHeader}>
-                <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
-                  {item.title}
+            <ButtonTagCard
+              key={item.id}
+              headerTitle={item.title ?? ''}
+              showCheckbox={exportMode}
+              checked={selected}
+              onToggleSelect={() => toggleSelect(item.id)}
+              selected={exportMode && selected}
+              onEdit={() => navigation.navigate('AddEditInventoryItem', { itemId: item.id })}
+              onDelete={() => handleDelete(item)}
+              onPress={!exportMode ? () => navigation.navigate('AddEditInventoryItem', { itemId: item.id }) : undefined}
+            >
+              {dateStr ? <ButtonTagRow label="Date" value={dateStr} /> : null}
+              <View style={[styles.deptBadge, { backgroundColor: getDepartmentColor(item.department, overrides) }]}>
+                <Text style={styles.deptBadgeText}>
+                  {(item.department ?? 'INTERIOR').charAt(0) + (item.department ?? 'INTERIOR').slice(1).toLowerCase()}
                 </Text>
-                <View
-                  style={[
-                    styles.deptBadge,
-                    { backgroundColor: getDepartmentColor(item.department, overrides) },
-                  ]}
-                >
-                  <Text style={styles.deptBadgeText}>
-                    {(item.department ?? 'INTERIOR').charAt(0) + (item.department ?? 'INTERIOR').slice(1).toLowerCase()}
-                  </Text>
-                </View>
               </View>
-              {item.location ? (
-                <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>📍 {item.location}</Text>
-              ) : null}
-              {item.description ? (
-                <Text style={[styles.cardDesc, { color: themeColors.textSecondary }]} numberOfLines={2}>
-                  {item.description}
-                </Text>
-              ) : null}
-              <Text style={[styles.cardRows, { color: themeColors.textSecondary }]}>
-                {(item.items?.length ?? 0)} {(item.items?.length ?? 0) === 1 ? 'row' : 'rows'} (Amount · Item)
-              </Text>
-            </View>
-            {exportMode ? (
-              <View style={[styles.checkbox, selected && styles.checkboxChecked]}>
-                {selected ? <Text style={styles.checkboxTick}>✓</Text> : null}
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.deleteBtn}
-                onPress={(e) => {
-                  e?.stopPropagation?.();
-                  handleDelete(item);
-                }}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="trash-outline" size={22} color={COLORS.danger} />
-              </TouchableOpacity>
-            )}
-          </TouchableOpacity>
+              <ButtonTagRow label="Location" value={item.location ?? ''} />
+              <ButtonTagRow label="Description" value={item.description ?? ''} />
+              <ButtonTagRow
+                label="Items"
+                value={`${item.items?.length ?? 0} ${(item.items?.length ?? 0) === 1 ? 'row' : 'rows'} (Amount · Item)`}
+              />
+            </ButtonTagCard>
           );
         })
       )}
@@ -402,41 +374,12 @@ const styles = StyleSheet.create({
   modalItemTextSelected: { color: COLORS.primary, fontWeight: '600' },
   loader: { marginVertical: SPACING.xl },
   empty: { fontSize: FONTS.base, paddingVertical: SPACING.xl },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  cardSelected: { borderWidth: 2, borderColor: COLORS.primary },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    marginRight: SPACING.sm,
-    marginTop: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxChecked: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  checkboxTick: { color: COLORS.white, fontSize: 12, fontWeight: '700' },
-  deleteBtn: { padding: SPACING.sm, marginLeft: SPACING.xs },
-  cardContent: { flex: 1, minWidth: 0 },
-  cardHeader: { marginBottom: SPACING.sm },
-  cardTitle: { fontSize: FONTS.lg, fontWeight: '600' },
   deptBadge: {
     paddingHorizontal: SPACING.sm,
     paddingVertical: 4,
     borderRadius: BORDER_RADIUS.sm,
     marginTop: SPACING.xs,
+    marginBottom: SPACING.sm,
     alignSelf: 'flex-start',
   },
   deptBadgeText: { fontSize: FONTS.xs, fontWeight: '600', color: COLORS.white },

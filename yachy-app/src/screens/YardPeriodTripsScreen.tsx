@@ -16,12 +16,11 @@ import {
 } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import tripsService from '../services/trips';
 import { Trip, Department } from '../types';
-import { Button } from '../components';
+import { Button, ButtonTagCard, ButtonTagRow } from '../components';
 import { useVesselTripColors } from '../hooks/useVesselTripColors';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { DEFAULT_COLORS } from '../services/tripColors';
@@ -156,46 +155,24 @@ export const YardPeriodTripsScreen = ({ navigation }: any) => {
     );
   };
 
-  const renderItem = ({ item }: { item: Trip }) => (
-    <TouchableOpacity
-      style={[styles.card, { backgroundColor: themeColors.surface, borderLeftColor: cardColor }]}
-      onPress={() => onEdit(item)}
-      activeOpacity={0.8}
-      disabled={!isHOD}
-    >
-      <View style={styles.cardHeader}>
-        <View style={styles.cardTitleBlock}>
-          <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>{item.title}</Text>
-          {item.department && (
-            <View
-              style={[
-                styles.deptBadge,
-                { backgroundColor: getDepartmentColor(item.department, overrides) },
-              ]}
-            >
-              <Text style={styles.deptBadgeText}>
-                {item.department.charAt(0) + item.department.slice(1).toLowerCase()}
-              </Text>
-            </View>
-          )}
-        </View>
-        {isHOD && (
-          <TouchableOpacity
-            onPress={() => onDelete(item)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-          </TouchableOpacity>
-        )}
-      </View>
-      <Text style={[styles.cardDates, { color: themeColors.textSecondary }]}>
-        {formatDate(item.startDate)} – {formatDate(item.endDate)}
-      </Text>
-      {item.notes ? (
-        <Text style={[styles.cardNotes, { color: themeColors.textSecondary }]} numberOfLines={2}>{item.notes}</Text>
-      ) : null}
-    </TouchableOpacity>
-  );
+  const renderItem = ({ item }: { item: Trip }) => {
+    const deptLabel = item.department
+      ? item.department.charAt(0) + item.department.slice(1).toLowerCase()
+      : '';
+    return (
+      <ButtonTagCard
+        headerTitle={item.title ?? ''}
+        accentColor={cardColor}
+        onEdit={isHOD ? () => onEdit(item) : undefined}
+        onDelete={isHOD ? () => onDelete(item) : undefined}
+        onPress={isHOD ? () => onEdit(item) : undefined}
+      >
+        <ButtonTagRow label="Date" value={`${formatDate(item.startDate)} – ${formatDate(item.endDate)}`} />
+        <ButtonTagRow label="Department" value={deptLabel} />
+        <ButtonTagRow label="Notes" value={item.notes ?? ''} />
+      </ButtonTagCard>
+    );
+  };
 
   if (!vesselId) {
     return (
@@ -349,55 +326,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.sm,
     paddingBottom: SIZES.bottomScrollPadding,
-  },
-  card: {
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
-    borderLeftWidth: 4,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: SPACING.xs,
-  },
-  cardTitleBlock: {
-    flex: 1,
-    minWidth: 0,
-  },
-  cardTitle: {
-    fontSize: FONTS.lg,
-    fontWeight: '600',
-  },
-  deptBadge: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 4,
-    borderRadius: BORDER_RADIUS.sm,
-    marginTop: SPACING.xs,
-    alignSelf: 'flex-start',
-  },
-  deptBadgeText: {
-    fontSize: FONTS.xs,
-    fontWeight: '600',
-    color: COLORS.white,
-  },
-  deleteBtn: {
-    fontSize: FONTS.sm,
-    color: COLORS.danger,
-  },
-  cardDates: {
-    fontSize: FONTS.sm,
-    marginBottom: SPACING.xs,
-  },
-  cardNotes: {
-    fontSize: FONTS.sm,
-    color: COLORS.textTertiary,
   },
   empty: {
     flex: 1,

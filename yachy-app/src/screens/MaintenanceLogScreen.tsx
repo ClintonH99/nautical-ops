@@ -19,7 +19,6 @@ import {
   Pressable,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -29,12 +28,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import maintenanceLogsService from '../services/maintenanceLogs';
 import vesselService from '../services/vessel';
 import { MaintenanceLog } from '../types';
-import { Button } from '../components';
-
-const COLUMN_WIDTH = 110;
-const DATE_WIDTH = 88;
-const ACTIONS_WIDTH = 90;
-const CHECKBOX_WIDTH = 44;
+import { Button, ButtonTagCard, ButtonTagRow } from '../components';
 
 const FILTER_KEYS = [
   { key: 'equipment', label: 'Equipment' },
@@ -70,33 +64,6 @@ function getLogFilterValue(log: MaintenanceLog, filterKey: FilterKey, formatDate
     default:
       return '—';
   }
-}
-
-function Checkbox({
-  checked,
-  onPress,
-  disabled,
-  themeColors,
-}: {
-  checked: boolean;
-  onPress: () => void;
-  disabled?: boolean;
-  themeColors: { surface: string };
-}) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      disabled={disabled}
-      style={[
-        styles.checkbox,
-        { backgroundColor: checked ? undefined : themeColors.surface },
-        checked && styles.checkboxChecked,
-      ]}
-      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-    >
-      {checked && <Text style={styles.checkmark}>✓</Text>}
-    </TouchableOpacity>
-  );
 }
 
 function escapeHtml(s: string): string {
@@ -479,69 +446,37 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
           }
           showsVerticalScrollIndicator
         >
-          <ScrollView
-            horizontal
-            style={styles.tableScroll}
-            contentContainerStyle={styles.tableContent}
-            showsHorizontalScrollIndicator
-          >
-          <View style={styles.table}>
-            <View style={[styles.row, styles.headerRow]}>
-              <View style={[styles.cellView, styles.headerCellView, styles.checkboxHeaderCell, { width: CHECKBOX_WIDTH }]}>
-                <Checkbox
-                  checked={filteredLogs.length > 0 && filteredLogs.every((l) => selectedIds.has(l.id))}
-                  onPress={toggleSelectAll}
-                  disabled={filteredLogs.length === 0}
-                  themeColors={themeColors}
-                />
-              </View>
-              <Text style={[styles.cell, styles.headerCell, { width: COLUMN_WIDTH }]}>Equipment</Text>
-              <Text style={[styles.cell, styles.headerCell, { width: 72 }]}>Location</Text>
-              <Text style={[styles.cell, styles.headerCell, { width: COLUMN_WIDTH }]}>Serial #</Text>
-              <Text style={[styles.cell, styles.headerCell, { width: 70 }]}>Hrs</Text>
-              <Text style={[styles.cell, styles.headerCell, { width: 70 }]}>Hrs next</Text>
-              <Text style={[styles.cell, styles.headerCell, { width: COLUMN_WIDTH }]}>Service done</Text>
-              <Text style={[styles.cell, styles.headerCell, { width: COLUMN_WIDTH }]}>Notes</Text>
-              <Text style={[styles.cell, styles.headerCell, { width: COLUMN_WIDTH }]}>Done by</Text>
-              <Text style={[styles.cell, styles.headerCell, { width: DATE_WIDTH }]}>Date</Text>
-              <View style={[styles.cellView, styles.headerCellView, { width: ACTIONS_WIDTH }]} />
+          {filteredLogs.length === 0 ? (
+            <View style={styles.filterEmptyRow}>
+              <Text style={[styles.filterEmptyText, { color: themeColors.textSecondary }]}>No logs match the current filters</Text>
             </View>
-            {filteredLogs.length === 0 ? (
-              <View style={styles.filterEmptyRow}>
-                <Text style={[styles.filterEmptyText, { color: themeColors.textSecondary }]}>No logs match the current filters</Text>
-              </View>
-            ) : (
-            filteredLogs.map((log) => (
-              <View key={log.id} style={styles.row}>
-                <View style={[styles.cell, styles.checkboxCell, { width: CHECKBOX_WIDTH }]}>
-                  <Checkbox
-                    checked={selectedIds.has(log.id)}
-                    onPress={() => toggleSelect(log.id)}
-                    themeColors={themeColors}
-                  />
-                </View>
-                <Text style={[styles.cell, { width: COLUMN_WIDTH, color: themeColors.textPrimary }]} numberOfLines={2}>{log.equipment}</Text>
-                <Text style={[styles.cell, { width: 72, color: themeColors.textPrimary }]} numberOfLines={1}>{log.portStarboardNa || '—'}</Text>
-                <Text style={[styles.cell, { width: COLUMN_WIDTH, color: themeColors.textPrimary }]} numberOfLines={1}>{log.serialNumber || '—'}</Text>
-                <Text style={[styles.cell, { width: 70, color: themeColors.textPrimary }]} numberOfLines={1}>{log.hoursOfService || '—'}</Text>
-                <Text style={[styles.cell, { width: 70, color: themeColors.textPrimary }]} numberOfLines={1}>{log.hoursAtNextService || '—'}</Text>
-                <Text style={[styles.cell, { width: COLUMN_WIDTH, color: themeColors.textPrimary }]} numberOfLines={2}>{log.whatServiceDone || '—'}</Text>
-                <Text style={[styles.cell, { width: COLUMN_WIDTH, color: themeColors.textPrimary }]} numberOfLines={2}>{log.notes || '—'}</Text>
-                <Text style={[styles.cell, { width: COLUMN_WIDTH, color: themeColors.textPrimary }]} numberOfLines={1}>{log.serviceDoneBy || '—'}</Text>
-                <Text style={[styles.cell, { width: DATE_WIDTH }, styles.dateCell, { color: themeColors.textSecondary }]}>{formatDate(log.createdAt)}</Text>
-                <View style={[styles.cell, styles.actionsCell, { width: ACTIONS_WIDTH }]}>
-                  <TouchableOpacity onPress={() => onDelete(log)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => onEdit(log)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <Text style={styles.editBtn}>Edit</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))
-            )}
-          </View>
-          </ScrollView>
+          ) : (
+            filteredLogs.map((log) => {
+              const selected = selectedIds.has(log.id);
+              const dateStr = formatDate(log.createdAt);
+              return (
+                <ButtonTagCard
+                  key={log.id}
+                  headerTitle={log.equipment ?? ''}
+                  showCheckbox
+                  checked={selected}
+                  onToggleSelect={() => toggleSelect(log.id)}
+                  selected={selected}
+                  onEdit={() => onEdit(log)}
+                  onDelete={() => onDelete(log)}
+                  footer={log.serviceDoneBy ? `Done by ${log.serviceDoneBy}` : undefined}
+                >
+                  <ButtonTagRow label="Date" value={dateStr} />
+                  <ButtonTagRow label="Location" value={log.portStarboardNa ?? ''} />
+                  <ButtonTagRow label="Serial #" value={log.serialNumber ?? ''} />
+                  <ButtonTagRow label="Hrs service" value={log.hoursOfService ?? ''} />
+                  <ButtonTagRow label="Hrs next" value={log.hoursAtNextService ?? ''} />
+                  <ButtonTagRow label="Service done" value={log.whatServiceDone ?? ''} />
+                  <ButtonTagRow label="Notes" value={log.notes ?? ''} />
+                </ButtonTagCard>
+              );
+            })
+          )}
         </ScrollView>
       )}
     </View>
@@ -701,86 +636,6 @@ const styles = StyleSheet.create({
   },
   verticalScrollContent: {
     flexGrow: 1,
-  },
-  tableScroll: {
-    flexGrow: 0,
-  },
-  tableContent: {
     paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.lg,
-  },
-  table: {
-    minWidth: CHECKBOX_WIDTH + 2 * COLUMN_WIDTH * 3 + 70 * 2 + DATE_WIDTH + ACTIONS_WIDTH,
-  },
-  row: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray200,
-    alignItems: 'center',
-    minHeight: 44,
-  },
-  headerRow: {
-    backgroundColor: COLORS.primary,
-    borderBottomWidth: 2,
-    borderBottomColor: COLORS.primary,
-  },
-  cell: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    fontSize: FONTS.sm,
-  },
-  cellView: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-  },
-  headerCell: {
-    color: COLORS.white,
-    fontWeight: '600' as const,
-    fontSize: FONTS.xs,
-  },
-  headerCellView: {
-    /* layout only, no text props - for View */
-  },
-  dateCell: {},
-  actionsCell: {
-    flexDirection: 'row',
-    gap: SPACING.xs,
-    justifyContent: 'flex-start',
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderWidth: 2,
-    borderColor: COLORS.gray400,
-    borderRadius: BORDER_RADIUS.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  checkmark: {
-    color: COLORS.white,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  checkboxHeaderCell: {
-    justifyContent: 'center',
-    paddingVertical: SPACING.xs,
-  },
-  checkboxCell: {
-    justifyContent: 'center',
-    paddingVertical: SPACING.xs,
-  },
-  editBtn: {
-    fontSize: FONTS.xs,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  deleteBtn: {
-    fontSize: FONTS.xs,
-    color: COLORS.danger,
-    fontWeight: '600',
   },
 });

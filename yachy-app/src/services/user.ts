@@ -68,7 +68,7 @@ class UserService {
    */
   async getVesselCrew(vesselId: string): Promise<User[]> {
     try {
-      console.log('🔍 getVesselCrew - Fetching crew for vessel:', vesselId);
+      if (__DEV__) console.log('🔍 getVesselCrew - Fetching crew for vessel:', vesselId);
       
       const { data, error } = await supabase
         .from('users')
@@ -77,19 +77,23 @@ class UserService {
         .order('created_at', { ascending: true });
 
       if (error) {
-        console.error('❌ getVesselCrew - Error:', error);
+        if (__DEV__) console.error('❌ getVesselCrew - Error:', error);
         throw error;
       }
 
-      console.log('✅ getVesselCrew - Raw data received:', data?.length || 0, 'users');
-      console.log('📋 getVesselCrew - Data:', JSON.stringify(data, null, 2));
+      if (__DEV__) {
+        console.log('✅ getVesselCrew - Raw data received:', data?.length || 0, 'users');
+        console.log('📋 getVesselCrew - Data:', JSON.stringify(data, null, 2));
+      }
 
       if (!data || data.length === 0) {
-        console.warn('⚠️ getVesselCrew - No crew members found for vessel:', vesselId);
-        console.log('💡 This could mean:');
-        console.log('   1. No crew has joined this vessel yet');
-        console.log('   2. RLS policy is blocking the query');
-        console.log('   3. vessel_id mismatch in database');
+        if (__DEV__) {
+          console.warn('⚠️ getVesselCrew - No crew members found for vessel:', vesselId);
+          console.log('💡 This could mean:');
+          console.log('   1. No crew has joined this vessel yet');
+          console.log('   2. RLS policy is blocking the query');
+          console.log('   3. vessel_id mismatch in database');
+        }
         return [];
       }
 
@@ -108,10 +112,10 @@ class UserService {
         updatedAt: user.updated_at,
       })) as User[];
 
-      console.log('✅ getVesselCrew - Returning', mappedUsers.length, 'crew members');
+      if (__DEV__) console.log('✅ getVesselCrew - Returning', mappedUsers.length, 'crew members');
       return mappedUsers;
     } catch (error) {
-      console.error('❌ Get vessel crew error:', error);
+      if (__DEV__) console.error('❌ Get vessel crew error:', error);
       throw error;
     }
   }

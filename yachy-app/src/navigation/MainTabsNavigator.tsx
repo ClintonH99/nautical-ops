@@ -21,16 +21,13 @@ import { HomeScreen } from '../screens/HomeScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { CategoriesScreen } from '../screens/CategoriesScreen';
 import { COLORS, SHADOWS } from '../constants/theme';
+import { useThemeColors } from '../hooks/useThemeColors';
 
 const Tab = createBottomTabNavigator();
 const DESKTOP_BREAKPOINT = 768;
 
 const PILL_HEIGHT = 64;
 const PILL_MARGIN_H = 20;
-/** Translucent dark gray (iOS-style) */
-const PILL_BG = 'rgba(44, 44, 46, 0.92)';
-/** Selected tab: light gray pill */
-const SELECTED_PILL_BG = 'rgba(255, 255, 255, 0.2)';
 
 /** Assign each button to a screen. Change these to reassign. */
 const BUTTON_CONFIG = [
@@ -44,16 +41,30 @@ function CustomPillBar(props: BottomTabBarProps) {
   const { state, navigation } = props;
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= DESKTOP_BREAKPOINT;
+  const themeColors = useThemeColors();
+  const selectedBg = themeColors.isDark ? 'rgba(255, 255, 255, 0.1)' : themeColors.surfaceAlt;
+  const pillBg = themeColors.isDark ? '#1E293B' : themeColors.surface;
+  const barBg = themeColors.isDark ? '#0F172A' : themeColors.background;
 
   if (isDesktop) return null;
 
   return (
     <View
       style={[
+        styles.tabBarContainer,
+        {
+          backgroundColor: barBg,
+          paddingBottom: insets.bottom,
+        },
+      ]}
+      pointerEvents="box-none"
+    >
+    <View
+      style={[
         styles.pill,
         {
-          bottom: insets.bottom + 12,
           marginHorizontal: PILL_MARGIN_H,
+          backgroundColor: pillBg,
         },
       ]}
     >
@@ -69,14 +80,19 @@ function CustomPillBar(props: BottomTabBarProps) {
             accessibilityRole="button"
             accessibilityState={{ selected: focused }}
           >
-            <View style={[styles.buttonInner, focused && styles.buttonInnerSelected]}>
+            <View
+              style={[
+                styles.buttonInner,
+                focused && { backgroundColor: selectedBg, borderRadius: 9999 },
+              ]}
+            >
               <Ionicons
                 name={config.icon}
                 size={24}
-                color={COLORS.white}
+                color={themeColors.textPrimary}
                 style={{ opacity: focused ? 1 : 0.65 }}
               />
-              <Text style={[styles.label, !focused && styles.labelUnselected]}>
+              <Text style={[styles.label, { color: themeColors.textPrimary }, !focused && styles.labelUnselected]}>
                 {config.label}
               </Text>
             </View>
@@ -84,22 +100,39 @@ function CustomPillBar(props: BottomTabBarProps) {
         );
       })}
     </View>
+    </View>
   );
 }
 
 /** Desktop sidebar: use parent nav to switch tabs via MainTabs */
 function DesktopSidebar() {
   const navigation = useNavigation<any>();
+  const themeColors = useThemeColors();
   const index = useNavigationState((state) => {
     const main = state?.routes?.find((r: any) => r.name === 'MainTabs');
     return main?.state?.index ?? 0;
   });
 
   return (
-    <View style={styles.sidebar}>
-      <View style={styles.sidebarHeader}>
+    <View
+      style={[
+        styles.sidebar,
+        {
+          backgroundColor: themeColors.surface,
+          borderRightColor: themeColors.surfaceAlt,
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.sidebarHeader,
+          { borderBottomColor: themeColors.surfaceAlt },
+        ]}
+      >
         <Ionicons name="boat-outline" size={28} color={COLORS.primary} />
-        <Text style={styles.sidebarTitle}>Nautical Ops</Text>
+        <Text style={[styles.sidebarTitle, { color: themeColors.textPrimary }]}>
+          Nautical Ops
+        </Text>
       </View>
       {BUTTON_CONFIG.map((config, i) => {
         const focused = index === i;
@@ -114,9 +147,14 @@ function DesktopSidebar() {
             <Ionicons
               name={config.icon}
               size={22}
-              color={focused ? COLORS.primary : COLORS.textSecondary}
+              color={focused ? COLORS.primary : themeColors.textSecondary}
             />
-            <Text style={[styles.sidebarLabel, focused && styles.sidebarLabelActive]}>
+            <Text
+              style={[
+                styles.sidebarLabel,
+                { color: focused ? COLORS.primary : themeColors.textSecondary },
+              ]}
+            >
               {config.label}
             </Text>
           </Pressable>
@@ -130,7 +168,9 @@ export const MainTabsNavigator = () => {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= DESKTOP_BREAKPOINT;
+  const themeColors = useThemeColors();
   const bottomPadding = isDesktop ? 0 : PILL_HEIGHT + insets.bottom + 24;
+  const tabBarBg = themeColors.isDark ? '#0F172A' : themeColors.background;
 
   if (isDesktop) {
     return (
@@ -159,6 +199,8 @@ export const MainTabsNavigator = () => {
       screenOptions={{
         headerShown: false,
         sceneStyle: { paddingBottom: bottomPadding },
+        tabBarStyle: { backgroundColor: tabBarBg },
+        tabBarShowLabel: true,
       }}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
@@ -169,15 +211,19 @@ export const MainTabsNavigator = () => {
 };
 
 const styles = StyleSheet.create({
-  pill: {
+  tabBarContainer: {
     position: 'absolute',
+    bottom: 0,
     left: 0,
     right: 0,
+    paddingTop: 12,
+    paddingHorizontal: 0,
+  },
+  pill: {
     height: PILL_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    backgroundColor: PILL_BG,
     borderRadius: 9999,
     ...(Platform.OS === 'ios' ? SHADOWS.lg : { elevation: 12 }),
   },
@@ -194,14 +240,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 20,
   },
-  buttonInnerSelected: {
-    backgroundColor: SELECTED_PILL_BG,
-    borderRadius: 9999,
-  },
   label: {
     fontSize: 11,
     fontWeight: '600',
-    color: COLORS.white,
     marginTop: 2,
   },
   labelUnselected: {

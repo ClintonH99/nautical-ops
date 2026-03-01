@@ -109,7 +109,13 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
       headerRight: () => (
         <TouchableOpacity
           onPress={() => navigation.navigate('TripColorSettings')}
-          style={{ marginRight: SPACING.md }}
+          style={{
+            marginRight: SPACING.md,
+            paddingVertical: SPACING.sm,
+            paddingHorizontal: SPACING.md,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
         >
           <Text style={[styles.headerButtonText, { color: themeColors.textPrimary }]}>Edit colors</Text>
         </TouchableOpacity>

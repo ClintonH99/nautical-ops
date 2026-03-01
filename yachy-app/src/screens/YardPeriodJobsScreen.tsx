@@ -18,7 +18,6 @@ import {
   Pressable,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -26,7 +25,7 @@ import yardJobsService from '../services/yardJobs';
 import { YardPeriodJob, Department } from '../types';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
-import { Button } from '../components';
+import { Button, ButtonTagCard, ButtonTagRow } from '../components';
 import { getTaskUrgencyColor } from '../utils/taskUrgency';
 
 export const YardPeriodJobsScreen = ({ navigation }: any) => {
@@ -152,71 +151,38 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
       ? getPriorityColor(item.priority)
       : getTaskUrgencyColor(item.doneByDate, item.createdAt, item.status);
     const isComplete = item.status === 'COMPLETED';
+    const deptLabel = item.department
+      ? item.department.charAt(0) + item.department.slice(1).toLowerCase()
+      : '';
 
+    const dateVal = item.doneByDate
+      ? `${formatDate(item.doneByDate)}${isComplete ? ' ✓' : ''}`
+      : item.createdAt
+        ? formatDate(item.createdAt)
+        : '';
     return (
-      <TouchableOpacity
-        style={[styles.card, { backgroundColor: themeColors.surface, borderLeftColor: borderColor }]}
-        onPress={() => onEdit(item)}
-        activeOpacity={0.8}
-        disabled={!isHOD}
+      <ButtonTagCard
+        headerTitle={item.jobTitle ?? ''}
+        accentColor={borderColor}
+        onEdit={isHOD ? () => onEdit(item) : undefined}
+        onDelete={isHOD ? () => onDelete(item) : undefined}
+        onPress={isHOD ? () => onEdit(item) : undefined}
+        footer={isComplete && item.completedByName ? `Completed by ${item.completedByName}` : undefined}
       >
-        <View style={styles.cardHeader}>
-          <Text
-            style={[styles.cardTitle, isComplete && styles.cardTitleComplete, { color: isComplete ? themeColors.textSecondary : themeColors.textPrimary }]}
-            numberOfLines={1}
-          >
-            {item.jobTitle}
-          </Text>
-          {item.department && (
-            <View
-              style={[
-                styles.deptBadge,
-                { backgroundColor: getDepartmentColor(item.department, overrides) },
-              ]}
-            >
-              <Text style={styles.deptBadgeText}>
-                {item.department.charAt(0) + item.department.slice(1).toLowerCase()}
-              </Text>
-            </View>
-          )}
-          {isHOD && (
-            <TouchableOpacity
-              onPress={() => onDelete(item)}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-            </TouchableOpacity>
-          )}
-        </View>
-        {item.yardLocation ? (
-          <Text style={[styles.cardSubtext, { color: themeColors.textSecondary }]}>📍 {item.yardLocation}</Text>
-        ) : null}
-        {item.contractorCompanyName ? (
-          <Text style={[styles.cardSubtext, { color: themeColors.textSecondary }]}>🏢 {item.contractorCompanyName}</Text>
-        ) : null}
-        {item.doneByDate && (
-          <Text style={[styles.cardDate, { color: themeColors.textSecondary }]}>
-            Done by: {formatDate(item.doneByDate)}
-            {isComplete && ' ✓'}
-          </Text>
-        )}
-        {isComplete && item.completedByName && (
-          <Text style={[styles.completedBy, { color: themeColors.textSecondary }]}>Completed by: {item.completedByName}</Text>
-        )}
-        {item.jobDescription ? (
-          <Text style={[styles.cardNotes, { color: themeColors.textSecondary }]} numberOfLines={2}>
-            {item.jobDescription}
-          </Text>
-        ) : null}
+        {dateVal ? <ButtonTagRow label="Date" value={dateVal} /> : null}
+        <ButtonTagRow label="Department" value={deptLabel} />
+        <ButtonTagRow label="Yard Location" value={item.yardLocation ?? ''} />
+        <ButtonTagRow label="Contractor" value={item.contractorCompanyName ?? ''} />
+        <ButtonTagRow label="Description" value={item.jobDescription ?? ''} />
         {!isComplete && (
           <TouchableOpacity
             style={styles.completeBtn}
-            onPress={() => onMarkComplete(item)}
+            onPress={(e) => { e?.stopPropagation?.(); onMarkComplete(item); }}
           >
             <Text style={styles.completeBtnText}>Mark complete</Text>
           </TouchableOpacity>
         )}
-      </TouchableOpacity>
+      </ButtonTagCard>
     );
   };
 
@@ -505,64 +471,6 @@ const styles = StyleSheet.create({
   emptyFilterHint: {
     fontSize: FONTS.sm,
     marginTop: SPACING.xs,
-  },
-  card: {
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
-    borderLeftWidth: 4,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: SPACING.xs,
-    marginBottom: SPACING.xs,
-  },
-  deptBadge: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  deptBadgeText: {
-    fontSize: FONTS.xs,
-    color: COLORS.white,
-    fontWeight: '600',
-  },
-  cardTitle: {
-    fontSize: FONTS.lg,
-    fontWeight: '600',
-    flex: 1,
-  },
-  cardTitleComplete: {
-    textDecorationLine: 'line-through',
-  },
-  deleteBtn: {
-    fontSize: FONTS.sm,
-    color: COLORS.danger,
-  },
-  cardSubtext: {
-    fontSize: FONTS.sm,
-    marginBottom: SPACING.xs,
-  },
-  cardDate: {
-    fontSize: FONTS.sm,
-    marginBottom: SPACING.xs,
-  },
-  completedBy: {
-    fontSize: FONTS.sm,
-    color: COLORS.success,
-    marginTop: SPACING.xs,
-  },
-  cardNotes: {
-    fontSize: FONTS.sm,
-    color: COLORS.textTertiary,
   },
   completeBtn: {
     marginTop: SPACING.sm,

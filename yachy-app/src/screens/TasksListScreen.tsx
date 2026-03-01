@@ -17,13 +17,13 @@ import {
   Pressable,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import vesselTasksService from '../services/vesselTasks';
 import { VesselTask, TaskCategory, Department } from '../types';
 import { getTaskUrgencyColor } from '../utils/taskUrgency';
+import { ButtonTagCard, ButtonTagRow } from '../components';
 
 const CATEGORY_LABELS: Record<TaskCategory, string> = {
   DAILY: 'Daily',
@@ -135,58 +135,35 @@ export const TasksListScreen = ({ navigation, route }: any) => {
       item.status
     );
     const isComplete = item.status === 'COMPLETED';
+    const recurringLabel = item.recurring
+      ? item.recurring === '7_DAYS' ? 'Every 7 days' : item.recurring === '14_DAYS' ? 'Every 14 days' : 'Every 30 days'
+      : '';
 
+    const dateVal = item.doneByDate
+      ? `${formatDate(item.doneByDate)}${isComplete ? ' ✓' : ''}`
+      : '';
     return (
-      <TouchableOpacity
-        style={[styles.card, { backgroundColor: themeColors.surface, borderLeftColor: borderColor }]}
+      <ButtonTagCard
+        headerTitle={item.title ?? ''}
+        accentColor={borderColor}
+        onEdit={() => onEdit(item)}
+        onDelete={() => onDelete(item)}
         onPress={() => onEdit(item)}
-        activeOpacity={0.8}
+        footer={isComplete && item.completedByName ? `Completed by ${item.completedByName}` : undefined}
       >
-        <View style={styles.cardHeader}>
-          <Text
-            style={[styles.cardTitle, isComplete && styles.cardTitleComplete]}
-            numberOfLines={1}
-          >
-            {item.title}
-          </Text>
-          <TouchableOpacity
-            onPress={() => onDelete(item)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.cardMeta}>
-          <Text style={[styles.deptBadge, { color: themeColors.textSecondary }]}>{item.department.charAt(0) + item.department.slice(1).toLowerCase()}</Text>
-          {item.doneByDate && (
-            <Text style={styles.cardDate}>
-              Done by: {formatDate(item.doneByDate)}
-              {isComplete && ' ✓'}
-            </Text>
-          )}
-          {item.recurring && (
-            <Text style={styles.recurringBadge}>
-              {item.recurring === '7_DAYS' ? 'Every 7 days' : item.recurring === '14_DAYS' ? 'Every 14 days' : 'Every 30 days'}
-            </Text>
-          )}
-        </View>
-        {isComplete && item.completedByName && (
-          <Text style={styles.completedBy}>Completed by: {item.completedByName}</Text>
-        )}
-        {item.notes ? (
-          <Text style={styles.cardNotes} numberOfLines={2}>
-            {item.notes}
-          </Text>
-        ) : null}
+        {dateVal ? <ButtonTagRow label="Date" value={dateVal} /> : null}
+        <ButtonTagRow label="Department" value={item.department.charAt(0) + item.department.slice(1).toLowerCase()} />
+        <ButtonTagRow label="Recurring" value={recurringLabel} />
+        <ButtonTagRow label="Notes" value={item.notes ?? ''} />
         {!isComplete && (
           <TouchableOpacity
             style={styles.completeBtn}
-            onPress={() => onMarkComplete(item)}
+            onPress={(e) => { e?.stopPropagation?.(); onMarkComplete(item); }}
           >
             <Text style={styles.completeBtnText}>Mark complete</Text>
           </TouchableOpacity>
         )}
-      </TouchableOpacity>
+      </ButtonTagCard>
     );
   };
 
@@ -305,71 +282,6 @@ const styles = StyleSheet.create({
   },
   listEmpty: {
     flexGrow: 1,
-  },
-  card: {
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
-    borderLeftWidth: 4,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.xs,
-  },
-  cardTitle: {
-    fontSize: FONTS.lg,
-    fontWeight: '600',
-    flex: 1,
-  },
-  cardTitleComplete: {
-    textDecorationLine: 'line-through',
-    color: COLORS.textSecondary,
-  },
-  deleteBtn: {
-    fontSize: FONTS.sm,
-    color: COLORS.danger,
-  },
-  cardMeta: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
-    alignItems: 'center',
-    marginBottom: SPACING.xs,
-  },
-  deptBadge: {
-    fontSize: FONTS.xs,
-    backgroundColor: COLORS.gray100,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  cardDate: {
-    fontSize: FONTS.sm,
-    color: COLORS.textSecondary,
-  },
-  recurringBadge: {
-    fontSize: FONTS.xs,
-    color: COLORS.primary,
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  completedBy: {
-    fontSize: FONTS.sm,
-    color: COLORS.success,
-    marginTop: SPACING.xs,
-  },
-  cardNotes: {
-    fontSize: FONTS.sm,
-    color: COLORS.textTertiary,
   },
   completeBtn: {
     marginTop: SPACING.sm,

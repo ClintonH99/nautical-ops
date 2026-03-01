@@ -17,14 +17,13 @@ import {
   Pressable,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import preDepartureChecklistsService from '../services/preDepartureChecklists';
 import vesselService from '../services/vessel';
 import { PreDepartureChecklist, Department } from '../types';
-import { Button } from '../components';
+import { Button, ButtonTagCard, ButtonTagRow } from '../components';
 import { generatePreDepartureChecklistPdf } from '../utils/preDepartureChecklistPdf';
 
 const CAPTAIN_CHECKLIST_MAX_ITEMS = 15;
@@ -198,48 +197,19 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
       : 'All';
     const isSelected = selectedIds.has(item.id);
     return (
-      <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
-        <TouchableOpacity
-          style={[styles.cardCheckbox, isSelected && styles.cardCheckboxSelected]}
-          onPress={() => toggleSelection(item.id)}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.checkboxIcon, styles.cardCheckboxIcon]}>{isSelected ? '✓' : ''}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.cardContent}
-          onPress={() => onEdit(item)}
-          activeOpacity={0.8}
-        >
-        <View style={styles.cardHeader}>
-          <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
-            {item.title}
-          </Text>
-          <Text style={[styles.cardDateHeader, { color: themeColors.textSecondary }]}>{formatDate(item.createdAt)}</Text>
-          {canEditChecklist(item) && (
-            <TouchableOpacity
-              onPress={() => onDelete(item)}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-            </TouchableOpacity>
-          )}
-        </View>
-        <View style={styles.cardMeta}>
-          <Text style={[styles.deptBadge, { color: themeColors.textSecondary }]}>{deptLabel}</Text>
-          <Text style={[styles.cardProgress, { color: themeColors.textSecondary }]}>{count} items</Text>
-        </View>
-        <View style={styles.cardActions}>
-          <TouchableOpacity
-            style={[styles.cardActionBtn, styles.cardActionBtnView]}
-            onPress={() => onView(item)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.cardActionBtnText}>View</Text>
-          </TouchableOpacity>
-        </View>
-        </TouchableOpacity>
-      </View>
+      <ButtonTagCard
+        headerTitle={item.title ?? ''}
+        showCheckbox
+        checked={isSelected}
+        onToggleSelect={() => toggleSelection(item.id)}
+        selected={isSelected}
+        onEdit={() => onEdit(item)}
+        onDelete={canEditChecklist(item) ? () => onDelete(item) : undefined}
+      >
+        <ButtonTagRow label="Date" value={formatDate(item.createdAt)} />
+        <ButtonTagRow label="Department" value={deptLabel} />
+        <ButtonTagRow label="Items" value={`${count} items`} />
+      </ButtonTagCard>
     );
   };
 
@@ -615,83 +585,6 @@ const styles = StyleSheet.create({
   listEmpty: {
     flexGrow: 1,
   },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: SPACING.sm,
-  },
-  cardCheckbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: COLORS.gray300,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SPACING.sm,
-    marginTop: 2,
-  },
-  cardCheckboxSelected: {
-    backgroundColor: COLORS.gray100,
-    borderColor: COLORS.primary,
-  },
-  cardCheckboxIcon: {
-    color: COLORS.primary,
-    fontSize: 12,
-  },
-  cardContent: { flex: 1 },
-  cardTitle: { fontSize: FONTS.lg, fontWeight: '600', flex: 1, minWidth: 0 },
-  cardDateHeader: { fontSize: FONTS.sm, flexShrink: 0 },
-  cardMeta: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
-    alignItems: 'center',
-    marginTop: SPACING.xs,
-  },
-  deptBadge: {
-    fontSize: FONTS.xs,
-    backgroundColor: COLORS.gray100,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  cardActions: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-    marginTop: SPACING.md,
-    paddingTop: SPACING.sm,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.gray200,
-  },
-  cardActionBtn: {
-    paddingVertical: SPACING.xs,
-    paddingHorizontal: SPACING.md,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  cardActionBtnView: {
-    backgroundColor: COLORS.gray100,
-  },
-  cardActionBtnText: {
-    fontSize: FONTS.sm,
-    fontWeight: '600',
-    color: COLORS.primary,
-  },
-  cardProgress: { fontSize: FONTS.sm },
   empty: {
     flex: 1,
     justifyContent: 'center',

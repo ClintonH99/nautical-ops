@@ -5,10 +5,47 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
+const ALLOWED_ORIGINS = [
+  'https://www.nautical-ops.com',
+  'https://nautical-ops.com',
+  'https://nautical-ops.vercel.app',
+];
+
+function corsHeaders(req: Request, extra: Record<string, string> = {}): Record<string, string> {
+  const origin = req.headers.get('Origin') || '';
+  const allowed = ALLOWED_ORIGINS.includes(origin)
+    || (origin.endsWith('.vercel.app') && origin.startsWith('https://'))
+    || (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:'));
+  const allowOrigin = allowed && origin ? origin : ALLOWED_ORIGINS[0];
+  return { 'Access-Control-Allow-Origin': allowOrigin, ...extra };
+}
+
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 );
+
+// Simple in-memory rate limit: max 10 code creations per minute per key (IP or origin)
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const rateLimitMap = new Map<string, number[]>();
+
+function getRateLimitKey(req: Request): string {
+  return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || req.headers.get('cf-connecting-ip')
+    || req.headers.get('Origin')
+    || 'unknown';
+}
+
+function isRateLimited(key: string): boolean {
+  const now = Date.now();
+  let timestamps = rateLimitMap.get(key) || [];
+  timestamps = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+  if (timestamps.length >= RATE_LIMIT_MAX) return true;
+  timestamps.push(now);
+  rateLimitMap.set(key, timestamps);
+  return false;
+}
 
 function randomCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -19,10 +56,17 @@ function randomCode(): string {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' } });
+    return new Response(null, { status: 204, headers: corsHeaders(req, { 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' }) });
   }
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: corsHeaders(req, { 'Content-Type': 'application/json' }) });
+  }
+  const rateKey = getRateLimitKey(req);
+  if (isRateLimited(rateKey)) {
+    return new Response(JSON.stringify({ error: 'Too many requests. Try again in a minute.' }), {
+      status: 429,
+      headers: corsHeaders(req, { 'Content-Type': 'application/json' }),
+    });
   }
   try {
     const expiresAt = new Date();
@@ -39,13 +83,13 @@ Deno.serve(async (req) => {
     }
     return new Response(JSON.stringify({ code }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      headers: corsHeaders(req, { 'Content-Type': 'application/json' }),
     });
   } catch (e) {
     console.error('create-auth-code:', e);
     return new Response(JSON.stringify({ error: String(e) }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      headers: corsHeaders(req, { 'Content-Type': 'application/json' }),
     });
   }
 });

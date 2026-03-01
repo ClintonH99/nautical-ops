@@ -15,12 +15,11 @@ import {
   Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import tripsService from '../services/trips';
 import { Trip } from '../types';
-import { Button } from '../components';
+import { Button, ButtonTagCard, ButtonTagRow } from '../components';
 import { useVesselTripColors } from '../hooks/useVesselTripColors';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { DEFAULT_COLORS } from '../services/tripColors';
@@ -67,13 +66,19 @@ export const BossTripsScreen = ({ navigation }: any) => {
       headerRight: () => (
         <TouchableOpacity
           onPress={() => navigation.navigate('TripColorSettings')}
-          style={{ marginRight: SPACING.md }}
+          style={{
+            marginRight: SPACING.md,
+            paddingVertical: SPACING.sm,
+            paddingHorizontal: SPACING.md,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
         >
-          <Text style={styles.headerButtonText}>Edit colors</Text>
+          <Text style={[styles.headerButtonText, { color: themeColors.textPrimary }]}>Edit colors</Text>
         </TouchableOpacity>
       ),
     });
-  }, [navigation, isHOD]);
+  }, [navigation, isHOD, themeColors.textPrimary]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -117,30 +122,16 @@ export const BossTripsScreen = ({ navigation }: any) => {
   };
 
   const renderItem = ({ item }: { item: Trip }) => (
-    <TouchableOpacity
-      style={[styles.card, { backgroundColor: themeColors.surface, borderLeftColor: cardColor }]}
-      onPress={() => onEdit(item)}
-      activeOpacity={0.8}
-      disabled={!isHOD}
+    <ButtonTagCard
+      headerTitle={item.title ?? ''}
+      accentColor={cardColor}
+      onEdit={isHOD ? () => onEdit(item) : undefined}
+      onDelete={isHOD ? () => onDelete(item) : undefined}
+      onPress={isHOD ? () => onEdit(item) : undefined}
     >
-      <View style={styles.cardHeader}>
-        <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>{item.title}</Text>
-        {isHOD && (
-          <TouchableOpacity
-            onPress={() => onDelete(item)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-          </TouchableOpacity>
-        )}
-      </View>
-      <Text style={[styles.cardDates, { color: themeColors.textSecondary }]}>
-        {formatDate(item.startDate)} – {formatDate(item.endDate)}
-      </Text>
-      {item.notes ? (
-        <Text style={styles.cardNotes} numberOfLines={2}>{item.notes}</Text>
-      ) : null}
-    </TouchableOpacity>
+      <ButtonTagRow label="Date" value={`${formatDate(item.startDate)} – ${formatDate(item.endDate)}`} />
+      <ButtonTagRow label="Notes" value={item.notes ?? ''} />
+    </ButtonTagCard>
   );
 
   if (!vesselId) {
@@ -215,40 +206,6 @@ const styles = StyleSheet.create({
     paddingTop: SPACING.sm,
     paddingBottom: SIZES.bottomScrollPadding,
   },
-  card: {
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
-    borderLeftWidth: 4,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.xs,
-  },
-  cardTitle: {
-    fontSize: FONTS.lg,
-    fontWeight: '600',
-    flex: 1,
-  },
-  deleteBtn: {
-    fontSize: FONTS.sm,
-    color: COLORS.danger,
-  },
-  cardDates: {
-    fontSize: FONTS.sm,
-    marginBottom: SPACING.xs,
-  },
-  cardNotes: {
-    fontSize: FONTS.sm,
-    color: COLORS.textTertiary,
-  },
   empty: {
     flex: 1,
     justifyContent: 'center',
@@ -266,7 +223,6 @@ const styles = StyleSheet.create({
   emptyBtn: {},
   headerButtonText: {
     fontSize: FONTS.sm,
-    color: COLORS.white,
     fontWeight: '600',
   },
 });
