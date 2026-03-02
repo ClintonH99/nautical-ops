@@ -7,7 +7,6 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
@@ -132,14 +131,6 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
             <Ionicons name="chevron-back" size={28} color={MARITIME.textOnDark} />
           </TouchableOpacity>
 
-          <View style={styles.header}>
-            <Image
-              source={require('../../assets/yachy-logo.png')}
-              style={styles.headerLogo}
-              resizeMode="contain"
-            />
-          </View>
-
           <Text style={styles.title}>Create Captain (MOV) Account</Text>
           <Text style={styles.subtitle}>Set up your account and create your vessel</Text>
 
@@ -230,21 +221,12 @@ const styles = StyleSheet.create({
     left: SPACING.lg,
     zIndex: 10,
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: SPACING.lg,
-    backgroundColor: 'transparent',
-  },
-  headerLogo: {
-    width: 140,
-    height: 84,
-    backgroundColor: 'transparent',
-  },
   title: {
     fontSize: FONTS['2xl'],
     fontWeight: '700',
     color: MARITIME.textOnDark,
     textAlign: 'center',
+    marginTop: 48,
     marginBottom: SPACING.xs,
     letterSpacing: -0.3,
   },

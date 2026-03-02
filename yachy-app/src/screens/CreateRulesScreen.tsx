@@ -124,7 +124,7 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator
       >
-        <Text style={[styles.label, { color: themeColors.textSecondary }]}>Rule Title</Text>
+        <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Rule Title</Text>
         <TextInput
           style={[styles.input, { backgroundColor: themeColors.surface, color: themeColors.textPrimary }]}
           value={title}
@@ -132,7 +132,7 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
           placeholder="eg. Deck/Interior Team or Miami to Nassau"
           placeholderTextColor={COLORS.textTertiary}
         />
-        <Text style={[styles.label, { color: themeColors.textSecondary }]}>Rules</Text>
+        <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Rules</Text>
         {rules.map((r, i) => (
           <View key={i} style={styles.ruleRow}>
             <TextInput

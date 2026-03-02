@@ -149,7 +149,7 @@ export const RegisterScreen = ({ navigation, route }: any) => {
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Create Account</Text>
-            <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+            <Text style={[styles.subtitle, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>
               {isVesselCreator ? 'Set up your captain account' : 'Join the crew'}
             </Text>
           </View>
@@ -241,7 +241,7 @@ export const RegisterScreen = ({ navigation, route }: any) => {
             {/* Info message for regular users */}
             {!isVesselCreator && (
               <View style={styles.inviteCodeInfo}>
-                <Text style={[styles.inviteCodeInfoText, { color: themeColors.textSecondary }]}>
+                <Text style={[styles.inviteCodeInfoText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>
                   💡 You can join a vessel after creating your account
                 </Text>
               </View>

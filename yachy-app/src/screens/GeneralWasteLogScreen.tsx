@@ -133,9 +133,9 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
       <View style={styles.actionBar}>
         <Button title="Add Log" onPress={onAdd} variant="primary" style={styles.actionBtn} />
         <Button
-          title={exportingPdf ? 'Exporting…' : selectedIds.size > 0 ? `Download PDF (${selectedIds.size})` : 'Download PDF'}
+          title={exportingPdf ? 'Exporting…' : selectedIds.size > 0 ? `Export to PDF (${selectedIds.size})` : 'Export to PDF'}
           onPress={onExportPdf}
-          variant="outline"
+          variant={themeColors.isDark ? 'outlineLight' : 'outline'}
           style={styles.actionBtn}
           disabled={exportingPdf || selectedIds.size === 0}
         />
@@ -145,10 +145,11 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
         <>
           <View style={styles.searchRow}>
             <Input
+              variant="search"
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder="Search by date, location, description…"
-              style={[styles.searchInput, { backgroundColor: themeColors.surface }]}
+              style={styles.searchInput}
               returnKeyType="search"
             />
           </View>

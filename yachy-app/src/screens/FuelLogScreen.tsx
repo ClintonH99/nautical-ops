@@ -132,9 +132,9 @@ export const FuelLogScreen = ({ navigation }: any) => {
       <View style={styles.actionBar}>
         <Button title="Add Log" onPress={onAdd} variant="primary" style={styles.actionBtn} />
         <Button
-          title={exportingPdf ? 'Exporting…' : selectedIds.size > 0 ? `Download PDF (${selectedIds.size})` : 'Download PDF'}
+          title={exportingPdf ? 'Exporting…' : selectedIds.size > 0 ? `Export to PDF (${selectedIds.size})` : 'Export to PDF'}
           onPress={onExportPdf}
-          variant="outline"
+          variant={themeColors.isDark ? 'outlineLight' : 'outline'}
           style={styles.actionBtn}
           disabled={exportingPdf || selectedIds.size === 0}
         />
@@ -144,10 +144,11 @@ export const FuelLogScreen = ({ navigation }: any) => {
         <>
           <View style={styles.searchRow}>
             <Input
+              variant="search"
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder="Search by date, time, location…"
-              style={[styles.searchInput, { backgroundColor: themeColors.surface }]}
+              style={styles.searchInput}
               returnKeyType="search"
             />
           </View>
@@ -195,18 +196,18 @@ export const FuelLogScreen = ({ navigation }: any) => {
                   <ButtonTagRow label="Time" value={log.logTime ?? ''} />
                   <View style={[styles.statsRow, { backgroundColor: themeColors.background }]}>
                     <View style={styles.statBox}>
-                      <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>Amount</Text>
+                      <Text style={[styles.statLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Amount</Text>
                       <Text style={[styles.statValue, { color: themeColors.textPrimary }]}>{log.amountOfFuel} gal</Text>
                     </View>
                     <View style={styles.statDivider} />
                     <View style={styles.statBox}>
-                      <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>Per Gallon</Text>
+                      <Text style={[styles.statLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Per Gallon</Text>
                       <Text style={[styles.statValue, { color: themeColors.textPrimary }]}>{formatCurrency(log.pricePerGallon)}</Text>
                     </View>
                     <View style={styles.statDivider} />
                     <View style={styles.statBox}>
-                      <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>Total</Text>
-                      <Text style={[styles.statValue, styles.totalValue]}>{formatCurrency(log.totalPrice)}</Text>
+                      <Text style={[styles.statLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Total</Text>
+                      <Text style={[styles.statValue, styles.totalValue, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>{formatCurrency(log.totalPrice)}</Text>
                     </View>
                   </View>
                 </ButtonTagCard>
@@ -247,5 +248,5 @@ const styles = StyleSheet.create({
   statDivider: { width: 1, backgroundColor: COLORS.gray200, marginVertical: 2 },
   statLabel: { fontSize: FONTS.xs, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 2 },
   statValue: { fontSize: FONTS.base, fontWeight: '600' },
-  totalValue: { color: COLORS.primary, fontWeight: '700' },
+  totalValue: { fontWeight: '700' },
 });

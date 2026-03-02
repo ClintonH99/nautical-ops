@@ -88,10 +88,10 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
       {/* Watch Keeping Rules - same style as Coming Soon on Home */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Watch Keeping Rules</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Watch Keeping Rules</Text>
           {isHOD && (
             <TouchableOpacity onPress={openEditModal} style={styles.editRulesBtn}>
-              <Text style={styles.editRulesBtnText}>Edit</Text>
+              <Text style={[styles.editRulesBtnText, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Edit</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -223,7 +223,6 @@ const styles = StyleSheet.create({
   editRulesBtnText: {
     fontSize: FONTS.base,
     fontWeight: '600',
-    color: COLORS.primary,
   },
   featureList: {
     gap: SPACING.sm,

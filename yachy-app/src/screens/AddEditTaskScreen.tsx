@@ -91,17 +91,18 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
   const markedDates: Record<string, { selected?: boolean; selectedColor?: string }> =
     doneByDate ? { [doneByDate]: { selected: true, selectedColor: COLORS.primary } } : {};
 
+  const calendarTextColor = themeColors.isDark ? COLORS.white : COLORS.black;
   const calendarTheme = {
     backgroundColor: themeColors.surface,
     calendarBackground: themeColors.surface,
-    textSectionTitleColor: themeColors.textSecondary,
+    textSectionTitleColor: calendarTextColor,
     selectedDayBackgroundColor: COLORS.primary,
     selectedDayTextColor: COLORS.white,
-    todayTextColor: COLORS.primary,
-    dayTextColor: themeColors.textPrimary,
-    textDisabledColor: COLORS.gray400,
-    arrowColor: COLORS.primary,
-    monthTextColor: COLORS.primary,
+    todayTextColor: calendarTextColor,
+    dayTextColor: calendarTextColor,
+    textDisabledColor: calendarTextColor,
+    arrowColor: calendarTextColor,
+    monthTextColor: calendarTextColor,
   };
 
   const handleSave = async () => {
@@ -153,7 +154,7 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to add tasks.</Text>
+        <Text style={[styles.message, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Join a vessel to add tasks.</Text>
       </View>
     );
   }
@@ -178,7 +179,7 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
         keyboardShouldPersistTaps="handled"
       >
         <Text style={[styles.label, { color: themeColors.textPrimary }]}>Department</Text>
-        <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
+        <Text style={[styles.hint, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>
           Tasks are scoped by department. Crew will filter by their department to see only relevant tasks.
         </Text>
         <View style={styles.categoryRow}>
@@ -254,7 +255,7 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
           <Text style={[styles.recurringToggleText, { color: themeColors.textPrimary }]}>
             {recurring ? RECURRING_OPTIONS.find((o) => o.value === recurring)?.label ?? 'Selected' : 'Off'}
           </Text>
-          <Text style={[styles.recurringChevron, { color: themeColors.textSecondary }]}>{recurringExpanded ? '▲' : '▼'}</Text>
+          <Text style={[styles.recurringChevron, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>{recurringExpanded ? '▲' : '▼'}</Text>
         </TouchableOpacity>
         {recurringExpanded && (
           <View style={styles.recurringOptions}>
@@ -286,7 +287,7 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
           </View>
         )}
         <Text style={[styles.label, { color: themeColors.textPrimary }]}>Done by date (optional)</Text>
-        <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
+        <Text style={[styles.hint, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>
           Tasks with a deadline change color as time passes (green → yellow → red).
         </Text>
         <View style={[styles.calendarWrap, { backgroundColor: themeColors.surface }]}>
@@ -323,7 +324,7 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
             onPress={() => navigation.goBack()}
             disabled={saving}
           >
-            <Text style={[styles.cancelText, { color: themeColors.textSecondary }]}>Cancel</Text>
+            <Text style={[styles.cancelText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Cancel</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

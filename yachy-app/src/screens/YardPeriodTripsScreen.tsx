@@ -107,17 +107,18 @@ export const YardPeriodTripsScreen = ({ navigation }: any) => {
     [trips, cardColor, getDeptColor]
   );
 
+  const calendarTextColor = themeColors.isDark ? COLORS.white : COLORS.black;
   const calendarTheme = {
     backgroundColor: themeColors.surface,
     calendarBackground: themeColors.surface,
-    textSectionTitleColor: themeColors.textSecondary,
+    textSectionTitleColor: calendarTextColor,
     selectedDayBackgroundColor: cardColor,
     selectedDayTextColor: COLORS.white,
-    todayTextColor: COLORS.primary,
-    dayTextColor: themeColors.textPrimary,
-    textDisabledColor: COLORS.gray400,
-    arrowColor: COLORS.primary,
-    monthTextColor: themeColors.textPrimary,
+    todayTextColor: calendarTextColor,
+    dayTextColor: calendarTextColor,
+    textDisabledColor: calendarTextColor,
+    arrowColor: calendarTextColor,
+    monthTextColor: calendarTextColor,
     textDayHeaderFontSize: FONTS.sm,
     textMonthFontSize: FONTS.lg,
     textDayFontSize: FONTS.base,
@@ -168,7 +169,7 @@ export const YardPeriodTripsScreen = ({ navigation }: any) => {
         onPress={isHOD ? () => onEdit(item) : undefined}
       >
         <ButtonTagRow label="Date" value={`${formatDate(item.startDate)} – ${formatDate(item.endDate)}`} />
-        <ButtonTagRow label="Department" value={deptLabel} />
+        <ButtonTagRow label="Department" value={deptLabel} badgeColor={item.department ? getDepartmentColor(item.department, overrides) : undefined} />
         <ButtonTagRow label="Notes" value={item.notes ?? ''} />
       </ButtonTagCard>
     );

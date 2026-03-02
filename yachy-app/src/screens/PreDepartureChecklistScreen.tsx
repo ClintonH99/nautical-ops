@@ -19,7 +19,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { useAuthStore } from '../store';
+import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import preDepartureChecklistsService from '../services/preDepartureChecklists';
 import vesselService from '../services/vessel';
 import { PreDepartureChecklist, Department } from '../types';
@@ -40,6 +40,7 @@ const DEPARTMENT_OPTIONS: { value: Department | ''; label: string }[] = [
 export const PreDepartureChecklistScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
+  const overrides = useDepartmentColorStore((s) => s.overrides);
   const [checklists, setChecklists] = useState<PreDepartureChecklist[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -207,7 +208,7 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
         onDelete={canEditChecklist(item) ? () => onDelete(item) : undefined}
       >
         <ButtonTagRow label="Date" value={formatDate(item.createdAt)} />
-        <ButtonTagRow label="Department" value={deptLabel} />
+        <ButtonTagRow label="Department" value={deptLabel} badgeColor={item.department ? getDepartmentColor(item.department, overrides) : undefined} />
         <ButtonTagRow label="Items" value={`${count} items`} />
       </ButtonTagCard>
     );
@@ -232,8 +233,8 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
   const ListHeader = (
     <>
       <View style={styles.boardHeader}>
-        <Text style={[styles.boardTitle, { color: COLORS.primary }]}>Pre-Departure Checklist</Text>
-        <Text style={[styles.boardHint, { color: themeColors.textSecondary }]}>
+        <Text style={[styles.boardTitle, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Pre-Departure Checklist</Text>
+        <Text style={[styles.boardHint, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>
           {isHOD
             ? 'Add tasks for crew to complete before each departure. Read and do.'
             : 'Tasks to complete before departure. Read and do.'}
@@ -252,7 +253,7 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
                 : 'Export to PDF'
           }
           onPress={onExportPdf}
-          variant="outline"
+          variant={themeColors.isDark ? 'outlineLight' : 'outline'}
           fullWidth
           disabled={exportingPdf || selectedChecklists.length === 0}
           style={styles.exportBtn}
@@ -369,7 +370,7 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
               <Text style={[styles.emptyTitle, { color: themeColors.textPrimary }]}>
                 {filteredChecklists.length === 0 && checklists.length > 0 ? 'No matching checklists' : 'No checklists yet'}
               </Text>
-              <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
+              <Text style={[styles.emptyText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>
                 {filteredChecklists.length === 0 && checklists.length > 0
                   ? 'Try a different department filter.'
                   : (isHOD || isCaptain)

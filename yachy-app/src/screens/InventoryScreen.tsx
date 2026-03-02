@@ -192,10 +192,11 @@ export const InventoryScreen = ({ navigation }: any) => {
     >
       <View style={styles.searchRow}>
         <Input
+          variant="search"
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholder="Search by item, title, location…"
-          style={[styles.searchInput, { backgroundColor: themeColors.surface }]}
+          style={styles.searchInput}
           returnKeyType="search"
         />
       </View>
@@ -216,7 +217,7 @@ export const InventoryScreen = ({ navigation }: any) => {
               setExportMode(true);
             }
           }}
-          variant="outline"
+          variant={themeColors.isDark ? 'outlineLight' : 'outline'}
           fullWidth
           style={styles.exportBtn}
         />
@@ -227,7 +228,7 @@ export const InventoryScreen = ({ navigation }: any) => {
             Tap items to select, then export.
           </Text>
           <Button
-            title={exporting ? 'Exporting…' : `Export selected (${selectedItems.length})`}
+            title={exporting ? 'Exporting…' : `Export to PDF (${selectedItems.length})`}
             onPress={handleExportPdf}
             disabled={exporting || selectedItems.length === 0}
             variant="primary"

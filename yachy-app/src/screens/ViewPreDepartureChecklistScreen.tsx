@@ -15,7 +15,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { useAuthStore } from '../store';
+import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import preDepartureChecklistsService from '../services/preDepartureChecklists';
 import { PreDepartureChecklist, Department } from '../types';
 
@@ -30,6 +30,7 @@ const DEPARTMENT_OPTIONS: { value: Department | null; label: string }[] = [
 
 export const ViewPreDepartureChecklistScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
+  const overrides = useDepartmentColorStore((s) => s.overrides);
   const checklistId = route?.params?.checklistId as string;
 
   const [checklist, setChecklist] = useState<PreDepartureChecklist | null>(null);
@@ -92,7 +93,14 @@ export const ViewPreDepartureChecklistScreen = ({ navigation, route }: any) => {
       <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
         <Text style={[styles.title, { color: themeColors.textPrimary }]}>{checklist.title}</Text>
         <View style={styles.meta}>
-          <Text style={[styles.deptBadge, { color: themeColors.textSecondary }]}>{deptLabel}</Text>
+          <View
+            style={[
+              styles.deptBadge,
+              { backgroundColor: checklist.department ? getDepartmentColor(checklist.department, overrides) : COLORS.gray400 },
+            ]}
+          >
+            <Text style={styles.deptBadgeText}>{deptLabel}</Text>
+          </View>
           <Text style={[styles.date, { color: themeColors.textSecondary }]}>{formatDate(checklist.createdAt)}</Text>
         </View>
 
@@ -147,12 +155,11 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   deptBadge: {
-    fontSize: FONTS.xs,
-    backgroundColor: COLORS.gray100,
     paddingHorizontal: SPACING.sm,
     paddingVertical: 2,
     borderRadius: BORDER_RADIUS.sm,
   },
+  deptBadgeText: { fontSize: FONTS.xs, fontWeight: '600', color: COLORS.white },
   date: { fontSize: FONTS.sm },
   itemsSection: {},
   itemsLabel: {

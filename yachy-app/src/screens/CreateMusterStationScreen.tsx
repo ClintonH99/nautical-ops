@@ -42,6 +42,15 @@ const EMPTY_CREW = {
   medical: '',
 };
 
+const CREW_DUTY_LABELS: Record<keyof typeof EMPTY_CREW, string> = {
+  roleName: 'Role name',
+  fire: 'Fire',
+  manOverboard: 'Man Overboard',
+  grounding: 'Grounding',
+  abandonShip: 'Abandon Ship',
+  medical: 'Medical',
+};
+
 export const CreateMusterStationScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
@@ -176,7 +185,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to create a muster station.</Text>
+        <Text style={[styles.message, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Join a vessel to create a muster station.</Text>
       </View>
     );
   }
@@ -184,7 +193,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
   if (!isHOD) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Only HODs can create or edit muster stations.</Text>
+        <Text style={[styles.message, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Only HODs can create or edit muster stations.</Text>
       </View>
     );
   }
@@ -205,7 +214,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator
       >
-        <Text style={[styles.label, { color: themeColors.textSecondary }]}>Muster station location</Text>
+        <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Muster station location</Text>
         <TextInput
           style={[styles.input, { backgroundColor: themeColors.surface, color: themeColors.textPrimary }]}
           value={musterStation}
@@ -213,7 +222,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
           placeholder="e.g. Sundeck"
           placeholderTextColor={COLORS.textTertiary}
         />
-        <Text style={[styles.label, { color: themeColors.textSecondary }]}>Medical chest locations</Text>
+        <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Medical Bags Locations</Text>
         {medicalChest.map((loc, i) => (
           <View key={i} style={styles.row}>
             <TextInput
@@ -232,7 +241,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
           <Text style={styles.add}>+ Add location</Text>
         </TouchableOpacity>
 
-        <Text style={[styles.label, { color: themeColors.textSecondary }]}>Grab bag locations</Text>
+        <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Grab bag locations</Text>
         {grabBag.map((loc, i) => (
           <View key={i} style={styles.row}>
             <TextInput
@@ -251,7 +260,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
           <Text style={styles.add}>+ Add location</Text>
         </TouchableOpacity>
 
-        <Text style={[styles.label, { color: themeColors.textSecondary }]}>Grab bag contents</Text>
+        <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Grab bag contents</Text>
         <TextInput
           style={[styles.input, styles.textArea, { backgroundColor: themeColors.surface, color: themeColors.textPrimary }]}
           value={grabBagContents}
@@ -261,7 +270,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
           multiline
         />
 
-        <Text style={[styles.label, { color: themeColors.textSecondary }]}>Life rings</Text>
+        <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Life rings</Text>
         {lifeRings.map((loc, i) => (
           <View key={i} style={styles.row}>
             <TextInput
@@ -283,7 +292,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
         <Text style={[styles.section, { color: themeColors.textPrimary }]}>Emergency signals</Text>
         {(Object.keys(emergencySignals) as (keyof typeof DEFAULT_SIGNALS)[]).map((k) => (
           <View key={k}>
-            <Text style={[styles.smlabel, { color: themeColors.textSecondary }]}>{k}</Text>
+            <Text style={[styles.smlabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>{k}</Text>
             <TextInput
               style={[styles.input, { backgroundColor: themeColors.surface, color: themeColors.textPrimary }]}
               value={emergencySignals[k]}
@@ -314,7 +323,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
                 style={[styles.input, styles.sm, { backgroundColor: themeColors.surface, color: themeColors.textPrimary }]}
                 value={c[f]}
                 onChangeText={(v) => setCrew(i, f, v)}
-                placeholder={f}
+                placeholder={CREW_DUTY_LABELS[f]}
                 placeholderTextColor={COLORS.textTertiary}
               />
             ))}

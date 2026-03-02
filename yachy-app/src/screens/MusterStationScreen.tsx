@@ -41,7 +41,7 @@ function MusterStationPreview({ data, themeColors }: { data: MusterStationData; 
         <View style={styles.previewMetaWrap}>
           {medical.length > 0 && (
             <Text style={[styles.previewMeta, { color: themeColors.textSecondary }]} numberOfLines={1}>
-              Medical: {medical.join(', ')}
+              Medical bags: {medical.join(', ')}
             </Text>
           )}
           {grabBag.length > 0 && (
@@ -183,7 +183,7 @@ export const MusterStationScreen = ({ navigation }: any) => {
             {exportingId === item.id ? (
               <ActivityIndicator size="small" color={COLORS.primary} />
             ) : (
-              <Text style={styles.downloadBtnText}>Download PDF</Text>
+              <Text style={[styles.downloadBtnText, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Export to PDF</Text>
             )}
           </TouchableOpacity>
         </TouchableOpacity>

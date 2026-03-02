@@ -135,17 +135,18 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
     ? getMarkedRange(startDate, endDate, accentColor)
     : {};
 
+  const calendarTextColor = themeColors.isDark ? COLORS.white : COLORS.black;
   const calendarTheme = {
-    backgroundColor: COLORS.white,
-    calendarBackground: COLORS.white,
-    textSectionTitleColor: COLORS.textSecondary,
+    backgroundColor: themeColors.surface,
+    calendarBackground: themeColors.surface,
+    textSectionTitleColor: calendarTextColor,
     selectedDayBackgroundColor: accentColor,
     selectedDayTextColor: COLORS.white,
-    todayTextColor: COLORS.primary,
-    dayTextColor: COLORS.textPrimary,
-    textDisabledColor: COLORS.gray400,
-    arrowColor: COLORS.primary,
-    monthTextColor: COLORS.primary,
+    todayTextColor: calendarTextColor,
+    dayTextColor: calendarTextColor,
+    textDisabledColor: calendarTextColor,
+    arrowColor: calendarTextColor,
+    monthTextColor: calendarTextColor,
   };
 
   const handleSave = async () => {
@@ -286,7 +287,7 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
           </>
         )}
         <Text style={[styles.label, { color: themeColors.textPrimary }]}>Select dates</Text>
-        <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
+        <Text style={[styles.hint, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>
           {!startDate
             ? 'Tap a start date on the calendar'
             : !endDate
@@ -326,7 +327,7 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
             onPress={() => navigation.goBack()}
             disabled={saving}
           >
-            <Text style={[styles.cancelText, { color: themeColors.textSecondary }]}>Cancel</Text>
+            <Text style={[styles.cancelText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Cancel</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

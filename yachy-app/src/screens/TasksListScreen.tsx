@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
-import { useAuthStore } from '../store';
+import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import vesselTasksService from '../services/vesselTasks';
 import { VesselTask, TaskCategory, Department } from '../types';
@@ -34,6 +34,7 @@ const CATEGORY_LABELS: Record<TaskCategory, string> = {
 export const TasksListScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
+  const overrides = useDepartmentColorStore((s) => s.overrides);
   const category = (route.params?.category ?? 'DAILY') as TaskCategory;
   const categoryLabel = CATEGORY_LABELS[category];
 
@@ -152,7 +153,7 @@ export const TasksListScreen = ({ navigation, route }: any) => {
         footer={isComplete && item.completedByName ? `Completed by ${item.completedByName}` : undefined}
       >
         {dateVal ? <ButtonTagRow label="Date" value={dateVal} /> : null}
-        <ButtonTagRow label="Department" value={item.department.charAt(0) + item.department.slice(1).toLowerCase()} />
+        <ButtonTagRow label="Department" value={item.department.charAt(0) + item.department.slice(1).toLowerCase()} badgeColor={getDepartmentColor(item.department, overrides)} />
         <ButtonTagRow label="Recurring" value={recurringLabel} />
         <ButtonTagRow label="Notes" value={item.notes ?? ''} />
         {!isComplete && (

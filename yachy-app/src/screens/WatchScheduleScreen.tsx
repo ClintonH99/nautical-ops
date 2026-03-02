@@ -245,7 +245,7 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
             showsVerticalScrollIndicator
           >
             <View style={[styles.viewHeader, { backgroundColor: themeColors.surface }]}>
-              <Text style={styles.viewTitle}>Watch Schedule</Text>
+              <Text style={[styles.viewTitle, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Watch Schedule</Text>
               <Text style={[styles.viewDate, { color: themeColors.textSecondary }]}>
                 {formatLocalDateString(viewingSchedule.forDate, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
               </Text>
@@ -270,7 +270,7 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
                 onPress={() => exportWatchSchedulePdf(viewingSchedule)}
                 disabled={exportingPdf}
               >
-                <Text style={styles.exportBtnText}>{exportingPdf ? 'Exporting...' : 'Export as PDF'}</Text>
+                <Text style={styles.exportBtnText}>{exportingPdf ? 'Exporting...' : 'Export to PDF'}</Text>
               </TouchableOpacity>
               {isHOD && (
                 <>

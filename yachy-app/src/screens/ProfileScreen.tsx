@@ -242,7 +242,7 @@ export const ProfileScreen = ({ navigation }: any) => {
             <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>Profile Information</Text>
             {!isEditing && (
               <TouchableOpacity onPress={() => setIsEditing(true)}>
-                <Text style={styles.editButton}>Edit</Text>
+                <Text style={[styles.editButton, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Edit</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -250,7 +250,7 @@ export const ProfileScreen = ({ navigation }: any) => {
           <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
             {/* Name */}
             <View style={styles.field}>
-              <Text style={[styles.label, { color: themeColors.textSecondary }]}>Name</Text>
+              <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Name</Text>
               {isEditing ? (
                 <TextInput
                   style={[styles.input, { backgroundColor: themeColors.background, color: themeColors.textPrimary }]}
@@ -266,7 +266,7 @@ export const ProfileScreen = ({ navigation }: any) => {
 
             {/* Position */}
             <View style={styles.field}>
-              <Text style={[styles.label, { color: themeColors.textSecondary }]}>Position</Text>
+              <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Position</Text>
               {isEditing ? (
                 <TextInput
                   style={[styles.input, { backgroundColor: themeColors.background, color: themeColors.textPrimary }]}
@@ -282,7 +282,7 @@ export const ProfileScreen = ({ navigation }: any) => {
 
             {/* Department */}
             <View style={styles.field}>
-              <Text style={[styles.label, { color: themeColors.textSecondary }]}>Department</Text>
+              <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Department</Text>
               {isEditing ? (
                 <View style={styles.departmentSelector}>
                   {departments.map((dept) => (
@@ -312,7 +312,7 @@ export const ProfileScreen = ({ navigation }: any) => {
 
             {/* Email (read-only) */}
             <View style={[styles.field, styles.fieldLast]}>
-              <Text style={[styles.label, { color: themeColors.textSecondary }]}>Email</Text>
+              <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Email</Text>
               <Text style={[styles.value, styles.valueDisabled, { color: themeColors.textSecondary }]}>{user?.email}</Text>
             </View>
           </View>
@@ -323,13 +323,19 @@ export const ProfileScreen = ({ navigation }: any) => {
           <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>Account Information</Text>
           <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
             <View style={styles.field}>
-              <Text style={[styles.label, { color: themeColors.textSecondary }]}>Role</Text>
+              <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Role</Text>
               <View style={styles.roleBadge}>
-                <Text style={styles.roleText}>{user?.role}</Text>
+                <Text style={[styles.roleText, { textTransform: 'none' }]}>
+                  {user?.position?.toLowerCase().includes('captain')
+                    ? 'MOV (Master of Vessel)'
+                    : user?.role === 'HOD'
+                      ? 'HOD (Head of Department)'
+                      : 'Crew'}
+                </Text>
               </View>
             </View>
             <View style={[styles.field, styles.fieldLast]}>
-              <Text style={[styles.label, { color: themeColors.textSecondary }]}>Member Since</Text>
+              <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Member Since</Text>
               <Text style={[styles.value, { color: themeColors.textPrimary }]}>
                 {user?.createdAt
                   ? new Date(user.createdAt).toLocaleDateString('en-US', {
@@ -522,7 +528,6 @@ const styles = StyleSheet.create({
   },
   editButton: {
     fontSize: FONTS.base,
-    color: COLORS.primary,
     fontWeight: '600',
   },
   card: {

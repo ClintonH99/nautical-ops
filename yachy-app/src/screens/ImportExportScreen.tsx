@@ -235,7 +235,7 @@ export const ImportExportScreen = ({ navigation }: any) => {
         <Button
           title={downloading === type ? 'Creating…' : 'Download Template'}
           onPress={() => handleDownload(type)}
-          variant="outline"
+          variant={themeColors.isDark ? 'outlineLight' : 'outline'}
           disabled={!!downloading}
           loading={downloading === type}
           style={styles.btn}
@@ -290,7 +290,7 @@ export const ImportExportScreen = ({ navigation }: any) => {
             <Button
               title={downloading === 'inventory' ? 'Creating…' : 'Download Template'}
               onPress={() => handleDownload('inventory')}
-              variant="outline"
+              variant={themeColors.isDark ? 'outlineLight' : 'outline'}
               disabled={!!downloading}
               loading={downloading === 'inventory'}
               style={styles.btn}

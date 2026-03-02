@@ -311,14 +311,15 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
         filteredContractors.map((contractor) => (
           <View key={contractor.id} style={[styles.card, { backgroundColor: themeColors.surface }]}>
             <TouchableOpacity
-              style={styles.cardHeader}
               onPress={() => navigation.navigate('AddEditContractor', { contractorId: contractor.id })}
               activeOpacity={0.8}
             >
-              <View style={styles.cardTitleAndDept}>
-                <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
+              <View style={styles.cardTitleBar}>
+                <Text style={styles.cardTitleBarText} numberOfLines={1}>
                   {contractor.companyName}
                 </Text>
+              </View>
+              <View style={styles.cardHeader}>
                 <View
                   style={[
                     styles.deptBadge,
@@ -330,37 +331,37 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
                       (contractor.department ?? 'INTERIOR').slice(1).toLowerCase()}
                   </Text>
                 </View>
-              </View>
-              <View style={styles.cardActions}>
-                <TouchableOpacity onPress={() => onDelete(contractor)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => navigation.navigate('AddEditContractor', { contractorId: contractor.id })} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Text style={styles.editBtn}>Edit</Text>
-                </TouchableOpacity>
+                <View style={styles.cardActions}>
+                  <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); onDelete(contractor); }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => navigation.navigate('AddEditContractor', { contractorId: contractor.id })} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Text style={[styles.editBtn, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Edit</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </TouchableOpacity>
             {contractor.knownFor ? (
               <View style={styles.cardRow}>
-                <Text style={[styles.cardLabel, { color: themeColors.textSecondary }]}>Know For</Text>
+                <Text style={[styles.cardLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Know For</Text>
                 <Text style={[styles.cardValue, { color: themeColors.textPrimary }]}>{contractor.knownFor}</Text>
               </View>
             ) : null}
             {contractor.companyAddress ? (
               <View style={styles.cardRow}>
-                <Text style={[styles.cardLabel, { color: themeColors.textSecondary }]}>Address</Text>
+                <Text style={[styles.cardLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Address</Text>
                 <Text style={[styles.cardValue, { color: themeColors.textPrimary }]}>{contractor.companyAddress}</Text>
               </View>
             ) : null}
             {contractor.description ? (
               <View style={styles.cardRow}>
-                <Text style={[styles.cardLabel, { color: themeColors.textSecondary }]}>Description</Text>
+                <Text style={[styles.cardLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Description</Text>
                 <Text style={[styles.cardValue, { color: themeColors.textPrimary }]} numberOfLines={2}>{contractor.description}</Text>
               </View>
             ) : null}
             {contractor.contacts.length > 0 && (
               <View style={styles.cardRow}>
-                <Text style={[styles.cardLabel, { color: themeColors.textSecondary }]}>Contact(s)</Text>
+                <Text style={[styles.cardLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Contact(s)</Text>
                 {contractor.contacts.map((c, i) => (
                   <Text key={i} style={[styles.cardValue, { color: themeColors.textPrimary }]}>
                     {[c.name, c.mobile, c.email].filter(Boolean).join(' · ')}
@@ -440,15 +441,30 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
+    overflow: 'hidden',
   },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.sm },
+  cardTitleBar: {
+    backgroundColor: COLORS.primary,
+    marginHorizontal: -SPACING.lg,
+    marginTop: -SPACING.lg,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardTitleBarText: {
+    fontSize: FONTS.lg,
+    fontWeight: '600',
+    color: COLORS.white,
+  },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACING.sm, marginBottom: SPACING.sm },
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: SPACING.sm },
   cardTitleAndDept: { flex: 1, flexDirection: 'column', alignItems: 'flex-start', gap: SPACING.xs },
   cardTitle: { fontSize: FONTS.lg, fontWeight: '600', flex: 1 },
   deptBadge: { paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: BORDER_RADIUS.sm },
   deptBadgeText: { fontSize: FONTS.xs, fontWeight: '600', color: COLORS.white },
   cardActions: { flexDirection: 'row', gap: SPACING.md },
-  editBtn: { fontSize: FONTS.sm, color: COLORS.primary, fontWeight: '600' },
+  editBtn: { fontSize: FONTS.sm, fontWeight: '600' },
   deleteBtn: { fontSize: FONTS.sm, color: COLORS.danger, fontWeight: '600' },
   cardRow: { marginBottom: SPACING.sm },
   cardLabel: { fontSize: FONTS.xs, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },

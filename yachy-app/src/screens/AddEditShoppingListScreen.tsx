@@ -189,7 +189,7 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
         />
         {!isEdit && (
           <View style={styles.deptDisplay}>
-            <Text style={[styles.deptLabel, { color: themeColors.textSecondary }]}>Department</Text>
+            <Text style={[styles.deptLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Department</Text>
             <View
               style={[
                 styles.deptBadge,

@@ -74,11 +74,11 @@ export const GuestTripsScreen = ({ navigation }: any) => {
             alignItems: 'center',
           }}
         >
-          <Text style={[styles.headerButtonText, { color: themeColors.textPrimary }]}>Edit colors</Text>
+          <Text style={[styles.headerButtonText, { color: themeColors.isDark ? COLORS.white : themeColors.textPrimary }]}>Edit colors</Text>
         </TouchableOpacity>
       ),
     });
-  }, [navigation, isHOD, themeColors.textPrimary]);
+  }, [navigation, isHOD, themeColors]);
 
   const onRefresh = () => {
     setRefreshing(true);

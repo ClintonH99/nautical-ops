@@ -499,7 +499,7 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
               <View style={styles.createNewActions}>
                 <Button title="Add" onPress={handleSaveNewEquipment} variant="primary" style={styles.createNewAddBtn} />
                 <TouchableOpacity onPress={() => { setCreateNewVisible(false); setNewEquipmentName(''); }}>
-                  <Text style={[styles.cancelText, { color: themeColors.textSecondary }]}>Cancel</Text>
+                  <Text style={[styles.cancelText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Cancel</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -592,7 +592,7 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
               <View style={styles.createNewActions}>
                 <Button title="Add" onPress={handleSaveNewLocation} variant="primary" style={styles.createNewAddBtn} />
                 <TouchableOpacity onPress={() => { setAddNewLocationVisible(false); setNewLocationName(''); }}>
-                  <Text style={[styles.cancelText, { color: themeColors.textSecondary }]}>Cancel</Text>
+                  <Text style={[styles.cancelText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Cancel</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -635,9 +635,9 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
                   : 'Select equipment and location first'}
               </Text>
               {!equipment && !location ? (
-                <Text style={[styles.previousEmpty, { color: themeColors.textSecondary }]}>Choose equipment and location to see serial numbers for that combination.</Text>
+                <Text style={[styles.previousEmpty, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Choose equipment and location to see serial numbers for that combination.</Text>
               ) : previousSerialNumbers.length === 0 ? (
-                <Text style={[styles.previousEmpty, { color: themeColors.textSecondary }]}>No previous entries for this combination yet. Save a log to add one.</Text>
+                <Text style={[styles.previousEmpty, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>No previous entries for this combination yet. Save a log to add one.</Text>
               ) : (
                 <ScrollView style={styles.dropdownList} keyboardShouldPersistTaps="handled">
                   {previousSerialNumbers.map((sn) => (
@@ -712,7 +712,7 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
             onPress={() => navigation.goBack()}
             disabled={saving}
           >
-            <Text style={[styles.cancelText, { color: themeColors.textSecondary }]}>Cancel</Text>
+            <Text style={[styles.cancelText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Cancel</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

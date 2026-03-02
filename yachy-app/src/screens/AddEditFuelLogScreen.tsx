@@ -307,7 +307,7 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
             onPress={() => navigation.goBack()}
             disabled={saving}
           >
-            <Text style={[styles.cancelText, { color: themeColors.textSecondary }]}>Cancel</Text>
+            <Text style={[styles.cancelText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Cancel</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

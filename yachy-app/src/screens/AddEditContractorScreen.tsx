@@ -263,7 +263,7 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
         <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>Contact Person(s)</Text>
         {contacts.map((contact, index) => (
           <View key={index} style={[styles.contactBlock, { backgroundColor: themeColors.surface }]}>
-            <Text style={[styles.contactBlockLabel, { color: themeColors.textSecondary }]}>Contact {index + 1}</Text>
+            <Text style={[styles.contactBlockLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Contact {index + 1}</Text>
             <Input
               label="Name"
               value={contact.name}

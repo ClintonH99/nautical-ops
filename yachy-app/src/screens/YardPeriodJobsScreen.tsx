@@ -170,7 +170,7 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
         footer={isComplete && item.completedByName ? `Completed by ${item.completedByName}` : undefined}
       >
         {dateVal ? <ButtonTagRow label="Date" value={dateVal} /> : null}
-        <ButtonTagRow label="Department" value={deptLabel} />
+        <ButtonTagRow label="Department" value={deptLabel} badgeColor={getDepartmentColor(item.department ?? 'INTERIOR', overrides)} />
         <ButtonTagRow label="Yard Location" value={item.yardLocation ?? ''} />
         <ButtonTagRow label="Contractor" value={item.contractorCompanyName ?? ''} />
         <ButtonTagRow label="Description" value={item.jobDescription ?? ''} />
@@ -210,7 +210,7 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
         <Text style={styles.calendarCardIcon}>📅</Text>
         <View style={styles.calendarCardContent}>
         <Text style={[styles.calendarCardTitle, { color: themeColors.textPrimary }]}>Yard Period Calendar</Text>
-        <Text style={[styles.calendarCardHint, { color: themeColors.textSecondary }]}>Calendar view with department & urgency filters</Text>
+        <Text style={[styles.calendarCardHint, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Calendar view with department & urgency filters</Text>
         </View>
       </TouchableOpacity>
       <View style={styles.filterBar}>
@@ -325,8 +325,8 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
           ListEmptyComponent={
             jobs.length > 0 ? (
               <View style={styles.emptyFilter}>
-                <Text style={[styles.emptyFilterText, { color: themeColors.textSecondary }]}>No jobs in selected departments</Text>
-                <Text style={[styles.emptyFilterHint, { color: themeColors.textSecondary }]}>Tap the Department dropdown to choose</Text>
+                <Text style={[styles.emptyFilterText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>No jobs in selected departments</Text>
+                <Text style={[styles.emptyFilterHint, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Tap the Department dropdown to choose</Text>
               </View>
             ) : null
           }

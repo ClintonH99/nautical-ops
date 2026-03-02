@@ -261,14 +261,14 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
                 onPress={() => setWeightUnit('kgs')}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.unitLabel, { color: themeColors.textSecondary }, weightUnit === 'kgs' && styles.unitLabelSelected]}>kgs</Text>
+                <Text style={[styles.unitLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }, weightUnit === 'kgs' && styles.unitLabelSelected]}>kgs</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.unitBtn, weightUnit === 'lbs' && styles.unitBtnSelected]}
                 onPress={() => setWeightUnit('lbs')}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.unitLabel, { color: themeColors.textSecondary }, weightUnit === 'lbs' && styles.unitLabelSelected]}>lbs</Text>
+                <Text style={[styles.unitLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }, weightUnit === 'lbs' && styles.unitLabelSelected]}>lbs</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -298,7 +298,7 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
             onPress={() => navigation.goBack()}
             disabled={saving}
           >
-            <Text style={[styles.cancelText, { color: themeColors.textSecondary }]}>Cancel</Text>
+            <Text style={[styles.cancelText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Cancel</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

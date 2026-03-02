@@ -184,17 +184,18 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
     return { tasks: dayTasks, yardJobs: dayJobs };
   }, [filteredTasks, filteredYardJobs, selectedDate]);
 
+  const calendarTextColor = themeColors.isDark ? COLORS.white : COLORS.black;
   const calendarTheme = {
     backgroundColor: themeColors.surface,
     calendarBackground: themeColors.surface,
-    textSectionTitleColor: themeColors.textSecondary,
+    textSectionTitleColor: calendarTextColor,
     selectedDayBackgroundColor: COLORS.primary,
     selectedDayTextColor: COLORS.white,
-    todayTextColor: COLORS.primary,
-    dayTextColor: themeColors.textPrimary,
-    textDisabledColor: COLORS.gray400,
-    arrowColor: COLORS.primary,
-    monthTextColor: COLORS.primary,
+    todayTextColor: calendarTextColor,
+    dayTextColor: calendarTextColor,
+    textDisabledColor: calendarTextColor,
+    arrowColor: calendarTextColor,
+    monthTextColor: calendarTextColor,
     textDayHeaderFontSize: FONTS.sm,
     textMonthFontSize: FONTS.lg,
     textDayFontSize: FONTS.base,

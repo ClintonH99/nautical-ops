@@ -117,7 +117,7 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
             alignItems: 'center',
           }}
         >
-          <Text style={[styles.headerButtonText, { color: themeColors.textPrimary }]}>Edit colors</Text>
+          <Text style={[styles.headerButtonText, { color: themeColors.isDark ? COLORS.white : themeColors.textPrimary }]}>Edit colors</Text>
         </TouchableOpacity>
       ),
     });
@@ -136,17 +136,18 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
   const tomorrowStr = tomorrow.toISOString().slice(0, 10);
   const tripsStartingTomorrow = trips.filter((t) => t.startDate === tomorrowStr);
 
+  const calendarTextColor = themeColors.isDark ? COLORS.white : COLORS.black;
   const calendarTheme = {
     backgroundColor: themeColors.surface,
     calendarBackground: themeColors.surface,
-    textSectionTitleColor: themeColors.textSecondary,
+    textSectionTitleColor: calendarTextColor,
     selectedDayBackgroundColor: COLORS.primary,
     selectedDayTextColor: COLORS.white,
-    todayTextColor: COLORS.primary,
-    dayTextColor: themeColors.textPrimary,
-    textDisabledColor: COLORS.gray400,
-    arrowColor: COLORS.primary,
-    monthTextColor: COLORS.primary,
+    todayTextColor: calendarTextColor,
+    dayTextColor: calendarTextColor,
+    textDisabledColor: calendarTextColor,
+    arrowColor: calendarTextColor,
+    monthTextColor: calendarTextColor,
     textDayHeaderFontSize: FONTS.sm,
     textMonthFontSize: FONTS.lg,
     textDayFontSize: FONTS.base,
@@ -168,7 +169,7 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
       }
     >
-      <Text style={[styles.sectionTitle, { color: COLORS.primary }]}>Calendar</Text>
+      <Text style={[styles.sectionTitle, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Calendar</Text>
       <View style={[styles.calendarCard, { backgroundColor: themeColors.surface }]}>
         {loading ? (
           <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
@@ -235,7 +236,7 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
         </TouchableOpacity>
       </View>
 
-      <Text style={[styles.sectionTitle, { color: COLORS.primary }]}>Trip types</Text>
+      <Text style={[styles.sectionTitle, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Trip types</Text>
       <Text style={[styles.filterHint, { color: COLORS.textTertiary }]}>Tap card to open • Tap Show/Hide to filter calendar</Text>
       <View style={styles.optionsRow}>
         <View style={[styles.optionCard, { backgroundColor: themeColors.surface, borderLeftColor: c.guest }]}>
@@ -384,8 +385,6 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    borderLeftWidth: 4,
-    borderLeftColor: COLORS.secondary,
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,

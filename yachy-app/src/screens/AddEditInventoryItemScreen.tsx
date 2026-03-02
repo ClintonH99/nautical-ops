@@ -162,7 +162,7 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
         showsVerticalScrollIndicator={false}
       >
         <Text style={[styles.label, { color: themeColors.textPrimary }]}>Department</Text>
-        <Text style={[styles.hint, { color: themeColors.textSecondary }]}>Which department is this for?</Text>
+        <Text style={[styles.hint, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Which department is this for?</Text>
         <View style={styles.deptRow}>
           {DEPARTMENTS.map((dept) => (
             <TouchableOpacity
@@ -213,7 +213,7 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
           style={styles.descriptionInput}
         />
 
-        <Text style={[styles.tableLabel, { color: themeColors.textSecondary }]}>Amount & Item</Text>
+        <Text style={[styles.tableLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Amount & Item</Text>
         <View style={[styles.table, { backgroundColor: themeColors.surface }]}>
           <View style={[styles.tableHeader, { backgroundColor: themeColors.surfaceAlt }]}>
             <Text style={[styles.tableHeaderCell, styles.amountCol, { color: themeColors.textPrimary }]}>Amount</Text>

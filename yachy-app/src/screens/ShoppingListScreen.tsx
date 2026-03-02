@@ -221,6 +221,7 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
             variant="text"
             size="small"
             style={styles.editBtnMaster}
+            textStyle={{ color: themeColors.isDark ? COLORS.white : COLORS.primary }}
           />
         </View>
       </View>
@@ -343,6 +344,7 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
                   onPress={() => navigation.navigate('AddEditShoppingList', { listId: list.id })}
                   variant="text"
                   size="small"
+                  textStyle={{ color: themeColors.isDark ? COLORS.white : COLORS.primary }}
                 />
               </View>
             </View>

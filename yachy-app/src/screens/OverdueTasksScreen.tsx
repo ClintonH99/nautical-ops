@@ -19,7 +19,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
-import { useAuthStore } from '../store';
+import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import vesselTasksService from '../services/vesselTasks';
 import { VesselTask, TaskCategory, Department } from '../types';
@@ -33,6 +33,7 @@ const CATEGORY_LABELS: Record<TaskCategory, string> = {
 export const OverdueTasksScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
+  const overrides = useDepartmentColorStore((s) => s.overrides);
   const [tasks, setTasks] = useState<VesselTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -138,7 +139,9 @@ export const OverdueTasksScreen = ({ navigation }: any) => {
         </TouchableOpacity>
       </View>
       <View style={styles.cardMeta}>
-        <Text style={[styles.deptBadge, { color: themeColors.textSecondary }]}>{item.department.charAt(0) + item.department.slice(1).toLowerCase()}</Text>
+        <View style={[styles.deptBadge, { backgroundColor: getDepartmentColor(item.department, overrides) }]}>
+          <Text style={styles.deptBadgeText}>{item.department.charAt(0) + item.department.slice(1).toLowerCase()}</Text>
+        </View>
         <Text style={styles.cardDate}>Was due: {item.doneByDate ? formatDate(item.doneByDate) : ''}</Text>
         <Text style={styles.categoryBadge}>{CATEGORY_LABELS[item.category]}</Text>
       </View>
@@ -375,12 +378,11 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xs,
   },
   deptBadge: {
-    fontSize: FONTS.xs,
-    backgroundColor: COLORS.gray100,
     paddingHorizontal: SPACING.sm,
     paddingVertical: 2,
     borderRadius: BORDER_RADIUS.sm,
   },
+  deptBadgeText: { fontSize: FONTS.xs, fontWeight: '600', color: COLORS.white },
   cardDate: {
     fontSize: FONTS.sm,
     color: COLORS.danger,

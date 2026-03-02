@@ -120,7 +120,7 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
   return (
     <KeyboardAvoidingView style={[styles.container, { backgroundColor: themeColors.background }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={[styles.label, { color: themeColors.textSecondary }]}>Plan title</Text>
+        <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Plan title</Text>
         <TextInput style={[styles.input, { backgroundColor: themeColors.surface, color: themeColors.textPrimary }]} value={title} onChangeText={setTitle} placeholder="Safety Equipment Locations" placeholderTextColor={COLORS.textTertiary} />
         {CATEGORIES.map((key) => (
           <View key={key} style={styles.cat}>

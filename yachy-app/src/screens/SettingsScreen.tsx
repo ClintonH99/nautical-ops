@@ -154,7 +154,13 @@ export const SettingsScreen = ({ navigation }: any) => {
               {user?.position} • {user?.department}
             </Text>
             <View style={styles.roleBadge}>
-              <Text style={styles.roleText}>{user?.role}</Text>
+              <Text style={[styles.roleText, { textTransform: 'none' }]}>
+                {user?.position?.toLowerCase().includes('captain')
+                  ? 'MOV (Master of Vessel)'
+                  : user?.role === 'HOD'
+                    ? 'HOD (Head of Department)'
+                    : 'Crew'}
+              </Text>
             </View>
           </View>
         </View>

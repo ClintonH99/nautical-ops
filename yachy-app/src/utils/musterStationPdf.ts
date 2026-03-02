@@ -58,7 +58,7 @@ export async function generateMusterStationPdf(data: MusterStationData, filename
     '<div class="loc"><strong>Muster Station:</strong> ' +
     escapeHtml(data.musterStation || '-') +
     '</div>' +
-    '<div class="loc"><strong>Medical Chest:</strong> ' +
+    '<div class="loc"><strong>Medical Bags:</strong> ' +
     loc(data.medicalChest || []) +
     '</div>' +
     '<div class="loc"><strong>Grab Bag:</strong> ' +

@@ -121,7 +121,7 @@ export const RulesScreen = ({ navigation }: any) => {
           </View>
           <RulesPreview rules={item.data?.rules ?? []} themeColors={themeColors} />
           <TouchableOpacity style={styles.downloadBtn} onPress={() => onDownloadPdf(item)} disabled={!!exportingId}>
-            {exportingId === item.id ? <ActivityIndicator size="small" color={COLORS.primary} /> : <Text style={styles.downloadBtnText}>Download PDF</Text>}
+            {exportingId === item.id ? <ActivityIndicator size="small" color={COLORS.primary} /> : <Text style={[styles.downloadBtnText, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Export to PDF</Text>}
           </TouchableOpacity>
         </TouchableOpacity>
       ))}

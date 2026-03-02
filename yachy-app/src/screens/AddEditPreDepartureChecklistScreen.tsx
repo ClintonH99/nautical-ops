@@ -319,7 +319,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
                         }}
                       >
                         <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>{t.title}</Text>
-                        <Text style={[styles.modalItemSub, { color: themeColors.textSecondary }]}>{t.startDate} – {t.endDate}</Text>
+                        <Text style={[styles.modalItemSub, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>{t.startDate} – {t.endDate}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -363,7 +363,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
             )}
           </>
         ) : (
-          <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
+          <Text style={[styles.hint, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>
             Save the checklist to add and manage items. Default items will be added on creation.
           </Text>
         )}
@@ -379,7 +379,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
             fullWidth
           />
           <TouchableOpacity style={styles.cancelBtn} onPress={() => navigation.goBack()} disabled={saving}>
-            <Text style={[styles.cancelText, { color: themeColors.textSecondary }]}>Cancel</Text>
+            <Text style={[styles.cancelText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Cancel</Text>
           </TouchableOpacity>
         </View>
         )}

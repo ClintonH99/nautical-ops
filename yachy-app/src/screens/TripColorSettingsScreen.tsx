@@ -128,7 +128,7 @@ export const TripColorSettingsScreen = ({ navigation }: any) => {
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>
-      <Text style={[styles.intro, { color: themeColors.textSecondary }]}>
+      <Text style={[styles.intro, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>
         Choose a color for each trip type. These colors appear on the Upcoming Trips calendar.
       </Text>
 

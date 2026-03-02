@@ -208,7 +208,7 @@ export const RootNavigator = () => {
             backgroundColor: themeColors.background,
           },
           headerShadowVisible: false,
-          headerTintColor: themeColors.textPrimary,
+          headerTintColor: themeColors.isDark ? COLORS.white : themeColors.textPrimary,
           headerTitleStyle: {
             fontWeight: 'bold',
           },

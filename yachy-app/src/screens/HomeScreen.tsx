@@ -265,14 +265,14 @@ export const HomeScreen = ({ navigation }: any) => {
                     theme={{
                       backgroundColor: 'transparent',
                       calendarBackground: 'transparent',
-                      textSectionTitleColor: themeColors.textSecondary,
+                      textSectionTitleColor: themeColors.isDark ? COLORS.white : COLORS.black,
                       selectedDayBackgroundColor: CALENDAR_ACCENT,
                       selectedDayTextColor: COLORS.white,
-                      todayTextColor: CALENDAR_ACCENT,
-                      dayTextColor: themeColors.textPrimary,
-                      textDisabledColor: themeColors.textSecondary,
-                      arrowColor: CALENDAR_ACCENT,
-                      monthTextColor: themeColors.textPrimary,
+                      todayTextColor: themeColors.isDark ? COLORS.white : COLORS.black,
+                      dayTextColor: themeColors.isDark ? COLORS.white : COLORS.black,
+                      textDisabledColor: themeColors.isDark ? COLORS.white : COLORS.black,
+                      arrowColor: themeColors.isDark ? COLORS.white : COLORS.black,
+                      monthTextColor: themeColors.isDark ? COLORS.white : COLORS.black,
                       textDayHeaderFontSize: 11,
                       textMonthFontSize: 16,
                       textDayFontSize: 14,
@@ -320,29 +320,29 @@ export const HomeScreen = ({ navigation }: any) => {
                   <Text style={[styles.seeAll, { color: themeColors.textSecondary }]}>See all</Text>
                 </TouchableOpacity>
               </View>
-              <View style={styles.categoryRow}>
+              <View style={styles.quickAccessStack}>
                 {HOME_CATEGORIES.map((cat) => (
                   <TouchableOpacity
                     key={cat.key}
-                    style={[styles.quickAccessButton, { backgroundColor: themeColors.surface }]}
+                    style={[styles.quickAccessCard, { backgroundColor: themeColors.surface }]}
                     onPress={() => navigation.navigate(cat.nav)}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.quickAccessIcon}>{cat.icon}</Text>
-                    <Text style={[styles.quickAccessLabel, { color: themeColors.textPrimary }]} numberOfLines={1}>{cat.label}</Text>
-                    <Text style={[styles.quickAccessChevron, { color: themeColors.textSecondary }]}>›</Text>
+                    <Text style={styles.quickAccessCardIcon}>{cat.icon}</Text>
+                    <Text style={[styles.quickAccessCardLabel, { color: themeColors.textPrimary }]} numberOfLines={1}>{cat.label}</Text>
+                    <Text style={[styles.quickAccessCardChevron, { color: themeColors.textSecondary }]}>›</Text>
                   </TouchableOpacity>
                 ))}
+                <TouchableOpacity
+                  style={[styles.quickAccessCard, { backgroundColor: themeColors.surface }]}
+                  onPress={() => navigation.navigate('VesselCrewSafety')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.quickAccessCardIcon}>🦺</Text>
+                  <Text style={[styles.quickAccessCardLabel, { color: themeColors.textPrimary }]}>Vessel & Crew Safety</Text>
+                  <Text style={[styles.quickAccessCardChevron, { color: themeColors.textSecondary }]}>›</Text>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                style={[styles.logButton, { backgroundColor: themeColors.surface }]}
-                onPress={() => navigation.navigate('VesselCrewSafety')}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.logButtonIcon}>🦺</Text>
-                <Text style={[styles.logButtonLabel, { color: themeColors.textPrimary }]}>Vessel & Crew Safety</Text>
-                <Text style={[styles.logButtonChevron, { color: themeColors.textSecondary }]}>›</Text>
-              </TouchableOpacity>
             </View>
           </>
         )}
@@ -515,24 +515,21 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   seeAll: { fontSize: FONTS.sm, fontWeight: '600', color: COLORS.primary },
-  categoryRow: {
-    flexDirection: 'row',
+  quickAccessStack: {
     gap: SPACING.md,
-    marginBottom: SPACING.md,
   },
-  quickAccessButton: {
-    flex: 1,
+  quickAccessCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
     minHeight: 48,
     ...SHADOWS.sm,
   },
-  quickAccessIcon: { fontSize: 18, marginRight: SPACING.xs },
-  quickAccessLabel: { flex: 1, fontSize: FONTS.sm, fontWeight: '600' },
-  quickAccessChevron: { fontSize: 14, fontWeight: '300' },
+  quickAccessCardIcon: { fontSize: 20, marginRight: SPACING.sm },
+  quickAccessCardLabel: { flex: 1, fontSize: FONTS.base, fontWeight: '600' },
+  quickAccessCardChevron: { fontSize: 16, fontWeight: '300' },
   categoryTile: {
     width: CATEGORY_SIZE,
     height: CATEGORY_SIZE,
@@ -552,18 +549,6 @@ const styles = StyleSheet.create({
   },
   categoryFallback: { alignItems: 'center', justifyContent: 'center' },
   categoryIcon: { fontSize: 32, marginBottom: 4 },
-  logButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-    minHeight: 48,
-    ...SHADOWS.sm,
-  },
-  logButtonIcon: { fontSize: 20, marginRight: SPACING.sm },
-  logButtonLabel: { flex: 1, fontSize: FONTS.base, fontWeight: '600' },
-  logButtonChevron: { fontSize: 16, fontWeight: '300' },
   categoryLabel: {
     fontSize: FONTS.xs,
     fontWeight: '700',

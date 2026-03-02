@@ -86,17 +86,18 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
         }
       : {};
 
+  const calendarTextColor = themeColors.isDark ? COLORS.white : COLORS.black;
   const calendarTheme = {
     backgroundColor: themeColors.surface,
     calendarBackground: themeColors.surface,
-    textSectionTitleColor: themeColors.textSecondary,
+    textSectionTitleColor: calendarTextColor,
     selectedDayBackgroundColor: COLORS.primary,
     selectedDayTextColor: COLORS.white,
-    todayTextColor: COLORS.primary,
-    dayTextColor: themeColors.textPrimary,
-    textDisabledColor: COLORS.gray400,
-    arrowColor: COLORS.primary,
-    monthTextColor: COLORS.primary,
+    todayTextColor: calendarTextColor,
+    dayTextColor: calendarTextColor,
+    textDisabledColor: calendarTextColor,
+    arrowColor: calendarTextColor,
+    monthTextColor: calendarTextColor,
   };
 
   const handleSave = async () => {
@@ -205,7 +206,7 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
           numberOfLines={3}
         />
         <Text style={[styles.label, { color: themeColors.textPrimary }]}>Department</Text>
-        <Text style={[styles.hint, { color: themeColors.textSecondary }]}>Which department is this job for?</Text>
+        <Text style={[styles.hint, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Which department is this job for?</Text>
         <View style={styles.chipRow}>
           {(['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'] as Department[]).map((dept) => (
             <TouchableOpacity
@@ -232,7 +233,7 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
           ))}
         </View>
         <Text style={[styles.label, { color: themeColors.textPrimary }]}>Urgency / Priority</Text>
-        <Text style={[styles.hint, { color: themeColors.textSecondary }]}>How urgent is this job?</Text>
+        <Text style={[styles.hint, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>How urgent is this job?</Text>
         <View style={styles.priorityRow}>
           {(['GREEN', 'YELLOW', 'RED'] as YardJobPriority[]).map((p) => {
             const isSelected = priority === p;
@@ -281,7 +282,7 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
           placeholder="Phone, email, or other contact info"
         />
         <Text style={[styles.label, { color: themeColors.textPrimary }]}>Done by date (optional)</Text>
-        <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
+        <Text style={[styles.hint, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>
           Jobs with a deadline change color as time passes (green → yellow → red).
         </Text>
         <View style={[styles.calendarWrap, { backgroundColor: themeColors.surface }]}>
@@ -301,7 +302,7 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
             style={styles.clearDate}
             onPress={() => setDoneByDate(null)}
           >
-            <Text style={[styles.clearDateText, { color: themeColors.textSecondary }]}>Clear deadline</Text>
+            <Text style={[styles.clearDateText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Clear deadline</Text>
           </TouchableOpacity>
         )}
         <View style={styles.actions}>
@@ -318,7 +319,7 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
             onPress={() => navigation.goBack()}
             disabled={saving}
           >
-            <Text style={[styles.cancelText, { color: themeColors.textSecondary }]}>Cancel</Text>
+            <Text style={[styles.cancelText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Cancel</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

@@ -98,7 +98,7 @@ export function ButtonTagCard({
           {headerLeft ?? (headerTitle != null ? (
             <View style={styles.cardMeta}>
               {headerTitle != null && (
-                <Text style={[styles.cardTitle, { color: COLORS.primary }]} numberOfLines={1}>
+                <Text style={[styles.cardTitle, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]} numberOfLines={1}>
                   {headerTitle}
                 </Text>
               )}
@@ -119,7 +119,7 @@ export function ButtonTagCard({
               onPress={(e) => { e.stopPropagation(); onEdit(); }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={styles.editBtn}>Edit</Text>
+              <Text style={[styles.editBtn, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Edit</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -136,7 +136,7 @@ export function ButtonTagCard({
   );
 }
 
-export function ButtonTagRow({ label, value }: { label: string; value: string }) {
+export function ButtonTagRow({ label, value, badgeColor }: { label: string; value: string; badgeColor?: string }) {
   const themeColors = useThemeColors();
   if (!value) return null;
   return (
@@ -144,9 +144,15 @@ export function ButtonTagRow({ label, value }: { label: string; value: string })
       <Text style={[styles.cardLabel, { color: themeColors.textSecondary }]}>
         {label}
       </Text>
-      <Text style={[styles.cardValue, { color: themeColors.textPrimary }]}>
-        {value}
-      </Text>
+      {badgeColor ? (
+        <View style={[styles.deptBadge, { backgroundColor: badgeColor }]}>
+          <Text style={styles.deptBadgeText}>{value}</Text>
+        </View>
+      ) : (
+        <Text style={[styles.cardValue, { color: themeColors.textPrimary }]}>
+          {value}
+        </Text>
+      )}
     </View>
   );
 }
@@ -175,7 +181,7 @@ const styles = StyleSheet.create({
   cardMeta: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, flex: 1, minWidth: 0 },
   cardTitle: { fontSize: FONTS.base, fontWeight: '700' },
   cardActions: { flexDirection: 'row', gap: SPACING.md },
-  editBtn: { fontSize: FONTS.sm, color: COLORS.primary, fontWeight: '600' },
+  editBtn: { fontSize: FONTS.sm, fontWeight: '600' },
   cardRow: { marginBottom: SPACING.sm },
   cardLabel: {
     fontSize: FONTS.xs,
@@ -185,6 +191,8 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   cardValue: { fontSize: FONTS.base, lineHeight: 20 },
+  deptBadge: { alignSelf: 'flex-start', paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: BORDER_RADIUS.sm },
+  deptBadgeText: { fontSize: FONTS.xs, fontWeight: '600', color: COLORS.white },
   cardCreatedBy: { fontSize: FONTS.xs, marginTop: SPACING.xs, fontStyle: 'italic' },
   checkbox: {
     width: 22,

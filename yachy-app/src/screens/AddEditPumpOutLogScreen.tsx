@@ -191,7 +191,7 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
                   <View style={[styles.radio, selected && styles.radioSelected]}>
                     {selected && <View style={styles.radioDot} />}
                   </View>
-                  <Text style={[styles.optionLabel, { color: themeColors.textSecondary }, selected && styles.optionLabelSelected]}>
+                  <Text style={[styles.optionLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }, selected && styles.optionLabelSelected]}>
                     {opt.label}
                   </Text>
                 </TouchableOpacity>
@@ -330,7 +330,7 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
             onPress={() => navigation.goBack()}
             disabled={saving}
           >
-            <Text style={[styles.cancelText, { color: themeColors.textSecondary }]}>Cancel</Text>
+            <Text style={[styles.cancelText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Cancel</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

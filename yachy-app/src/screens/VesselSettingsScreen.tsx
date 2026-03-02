@@ -224,7 +224,7 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: themeColors.background }]}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={[styles.loadingText, { color: themeColors.textSecondary }]}>Loading vessel settings...</Text>
+        <Text style={[styles.loadingText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Loading vessel settings...</Text>
       </View>
     );
   }
@@ -256,7 +256,7 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
               fullWidth
               disabled={isUploadingBanner}
             />
-            <Text style={[styles.photoHint, { color: themeColors.textSecondary }]}>
+            <Text style={[styles.photoHint, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>
               Updates the banner shown on the home screen. Changes appear when you return to Home.
             </Text>
           </View>
@@ -268,7 +268,7 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
             <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Vessel Name</Text>
             {!isEditingName && (
               <TouchableOpacity onPress={() => setIsEditingName(true)}>
-                <Text style={[styles.editButton, { color: COLORS.primary }]}>Edit</Text>
+                <Text style={[styles.editButton, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Edit</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -316,11 +316,11 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
           <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
             {/* Code Display */}
             <View style={styles.codeContainer}>
-              <Text style={[styles.codeLabel, { color: themeColors.textSecondary }]}>Current Code</Text>
+              <Text style={[styles.codeLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Current Code</Text>
               <View style={styles.codeBox}>
                 <Text style={styles.codeText}>{vessel.inviteCode}</Text>
               </View>
-              <Text style={[styles.expiryText, { color: themeColors.textSecondary }]}>
+              <Text style={[styles.expiryText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>
                 {formatExpiry(vessel.inviteExpiry)}
               </Text>
             </View>
@@ -352,7 +352,7 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                 fullWidth
                 disabled={isRegeneratingCode}
               />
-              <Text style={[styles.regenerateWarning, { color: themeColors.textSecondary }]}>
+              <Text style={[styles.regenerateWarning, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>
                 ⚠️ This will expire the current code
               </Text>
             </View>
@@ -381,11 +381,11 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
           <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Vessel Information</Text>
           <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
             <View style={styles.infoRow}>
-              <Text style={[styles.infoRowLabel, { color: themeColors.textSecondary }]}>Vessel ID</Text>
+              <Text style={[styles.infoRowLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Vessel ID</Text>
               <Text style={[styles.infoRowValue, { color: themeColors.textPrimary }]}>{vessel.id.slice(0, 8)}...</Text>
             </View>
             <View style={styles.infoRow}>
-              <Text style={[styles.infoRowLabel, { color: themeColors.textSecondary }]}>Created</Text>
+              <Text style={[styles.infoRowLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Created</Text>
               <Text style={[styles.infoRowValue, { color: themeColors.textPrimary }]}>
                 {new Date(vessel.createdAt).toLocaleDateString('en-US', {
                   year: 'numeric',
@@ -395,7 +395,7 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
               </Text>
             </View>
             <View style={[styles.infoRow, styles.infoRowLast]}>
-              <Text style={[styles.infoRowLabel, { color: themeColors.textSecondary }]}>Last Updated</Text>
+              <Text style={[styles.infoRowLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Last Updated</Text>
               <Text style={[styles.infoRowValue, { color: themeColors.textPrimary }]}>
                 {new Date(vessel.updatedAt).toLocaleDateString('en-US', {
                   year: 'numeric',
