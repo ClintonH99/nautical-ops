@@ -16,7 +16,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, Input } from '../components';
+import { Button, Input, ConsentCheckbox } from '../components';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { Department } from '../types';
 import authService from '../services/auth';
@@ -52,6 +52,7 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>({});
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const setUser = useAuthStore((state) => state.setUser);
 
@@ -111,6 +112,11 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
       valid = false;
     }
 
+    if (!acceptedTerms) {
+      newErrors.terms = 'You must agree to the Terms & Conditions and Privacy Policy';
+      valid = false;
+    }
+
     setErrors(newErrors);
     return valid;
   };
@@ -120,7 +126,7 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
 
     setLoading(true);
     try {
-      const { user, session } = await authService.signUp({
+      const { user } = await authService.signUp({
         email: formData.email,
         password: formData.password,
         name: formData.name,
@@ -143,7 +149,7 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
       const isInviteCodeError = msg.includes('invite code') || msg.includes('vessel not found') || msg.includes('cannot coerce') || msg.includes('expired');
       if (!isInviteCodeError) console.error('Crew registration error:', error);
       Alert.alert(
-        'Invalid Invite Code',
+        isInviteCodeError ? 'Invalid Invite Code' : 'Error',
         isInviteCodeError ? 'Request new code from the Captain.' : (error.message || 'Failed to create account.')
       );
     } finally {
@@ -180,6 +186,7 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
             </Text>
           </View>
 
+          <>
           <View style={[styles.formCard, { backgroundColor: MARITIME.formCardBg, borderColor: MARITIME.formCardBorder }]}>
             <Input
               label="Full Name"
@@ -206,6 +213,7 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
               value={formData.password}
               onChangeText={(value) => updateField('password', value)}
               secureTextEntry
+              showPasswordToggle
               autoCapitalize="none"
               error={errors.password}
             />
@@ -216,6 +224,7 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
               value={formData.confirmPassword}
               onChangeText={(value) => updateField('confirmPassword', value)}
               secureTextEntry
+              showPasswordToggle
               autoCapitalize="none"
               error={errors.confirmPassword}
             />
@@ -241,8 +250,9 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
                     <Button
                       key={dept.value}
                       title={dept.label}
-                      variant={isSelected ? 'primary' : 'outline'}
+                      variant="outline"
                       size="small"
+                      style={isSelected ? { ...styles.departmentButton, ...styles.departmentButtonSelected } : styles.departmentButton}
                       onPress={() => {
                         if (isSelected) {
                           setFormData({
@@ -258,7 +268,6 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
                           if (errors.department) setErrors({ ...errors, department: '' });
                         }
                       }}
-                      style={styles.departmentButton}
                     />
                   );
                 })}
@@ -284,6 +293,15 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
               error={errors.inviteCode}
             />
 
+            <ConsentCheckbox
+              checked={acceptedTerms}
+              onToggle={() => setAcceptedTerms((v) => !v)}
+              onPressTerms={() => navigation.navigate('TermsConditions')}
+              onPressPrivacy={() => navigation.navigate('PrivacyPolicy')}
+              textColor={COLORS.textPrimary}
+              error={errors.terms}
+            />
+
             <Button
               title="Create Crew Account"
               onPress={handleRegister}
@@ -306,6 +324,7 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
               Ask your captain for the vessel's invite code, or create a captain account if you're starting your own vessel.
             </Text>
           </View>
+          </>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -394,6 +413,9 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: '45%',
     marginBottom: SPACING.sm,
+  },
+  departmentButtonSelected: {
+    borderWidth: 2,
   },
   registerButton: {
     marginTop: SPACING.md,

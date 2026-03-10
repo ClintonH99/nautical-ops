@@ -16,7 +16,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, Input } from '../components';
+import { Button, Input, ConsentCheckbox } from '../components';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import authService from '../services/auth';
 import { useAuthStore } from '../store';
@@ -40,6 +40,7 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>({});
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const setUser = useAuthStore((state) => state.setUser);
 
@@ -80,6 +81,11 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
       valid = false;
     }
 
+    if (!acceptedTerms) {
+      newErrors.terms = 'You must agree to the Terms & Conditions and Privacy Policy';
+      valid = false;
+    }
+
     setErrors(newErrors);
     return valid;
   };
@@ -89,7 +95,7 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
 
     setLoading(true);
     try {
-      const { user, session } = await authService.signUp({
+      const { user } = await authService.signUp({
         email: formData.email,
         password: formData.password,
         name: formData.name,
@@ -100,8 +106,6 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
 
       if (user) {
         setUser(user);
-        // User will land on CaptainWelcomeScreen (captain without vessel)
-        // which offers "Create a Vessel" - no Alert needed
       }
     } catch (error: any) {
       console.error('Captain registration error:', error);
@@ -131,7 +135,7 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
             <Ionicons name="chevron-back" size={28} color={MARITIME.textOnDark} />
           </TouchableOpacity>
 
-          <Text style={styles.title}>Create Captain (MOV) Account</Text>
+          <Text style={styles.title}>Create Captain Account</Text>
           <Text style={styles.subtitle}>Set up your account and create your vessel</Text>
 
           <View style={styles.infoBanner}>
@@ -140,6 +144,7 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
             </Text>
           </View>
 
+          <>
           <View style={[styles.formCard, { backgroundColor: MARITIME.formCardBg, borderColor: MARITIME.formCardBorder }]}>
             <Input
               label="Full Name"
@@ -166,6 +171,7 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
               value={formData.password}
               onChangeText={(value) => updateField('password', value)}
               secureTextEntry
+              showPasswordToggle
               autoCapitalize="none"
               error={errors.password}
             />
@@ -176,12 +182,22 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
               value={formData.confirmPassword}
               onChangeText={(value) => updateField('confirmPassword', value)}
               secureTextEntry
+              showPasswordToggle
               autoCapitalize="none"
               error={errors.confirmPassword}
             />
 
+            <ConsentCheckbox
+              checked={acceptedTerms}
+              onToggle={() => setAcceptedTerms((v) => !v)}
+              onPressTerms={() => navigation.navigate('TermsConditions')}
+              onPressPrivacy={() => navigation.navigate('PrivacyPolicy')}
+              textColor={COLORS.textPrimary}
+              error={errors.terms}
+            />
+
             <Button
-              title="Create Captain (MOV) Account"
+              title="Create Captain Account"
               onPress={handleRegister}
               loading={loading}
               fullWidth
@@ -195,6 +211,7 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
               <Text style={styles.footerLink}>Sign In</Text>
             </TouchableOpacity>
           </View>
+          </>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>

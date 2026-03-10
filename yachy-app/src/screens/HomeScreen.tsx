@@ -18,20 +18,21 @@ import { Calendar } from 'react-native-calendars';
 import { useFocusEffect } from '@react-navigation/native';
 import { Button } from '../components';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES, SHADOWS } from '../constants/theme';
-import { useAuthStore, useThemeStore, BACKGROUND_THEMES, useDepartmentColorStore, getDepartmentColor } from '../store';
+import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
+import { useThemeColors } from '../hooks/useThemeColors';
 import vesselService from '../services/vessel';
 import tripsService from '../services/trips';
 import { useVesselTripColors, getTripTypeColorMap } from '../hooks/useVesselTripColors';
 import { DEFAULT_COLORS } from '../services/tripColors';
 import type { Trip, TripType, Department } from '../types';
+import { parseLocalDate, toYYYYMMDD } from '../utils';
 
 const { width } = Dimensions.get('window');
 const CATEGORY_SIZE = (width - SPACING.xl * 2 - SPACING.md * 2) / 3;
 const BANNER_HEIGHT = 220;
 
-// Default vessel banner when none set
-const DEFAULT_BANNER_IMAGE =
-  'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=1200';
+// Default vessel banner when none set (per ADMIN/Rules/DEFAULT_VESSEL_BANNER.md)
+const DEFAULT_BANNER_IMAGE = require('../../assets/default-vessel-banner.png');
 
 const CATEGORY_IMAGES: Record<string, string> = {
   trips: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400',
@@ -44,10 +45,10 @@ type MarkedDates = { [date: string]: { startingDay?: boolean; endingDay?: boolea
 function getMarkedDatesFromTrips(trips: Trip[], typeColorMap: Record<string, string>): MarkedDates {
   const byDate: Record<string, Set<TripType>> = {};
   trips.forEach((trip) => {
-    const start = new Date(trip.startDate);
-    const end = new Date(trip.endDate);
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      const key = d.toISOString().slice(0, 10);
+    const start = parseLocalDate(trip.startDate);
+    const end = parseLocalDate(trip.endDate);
+    for (let d = new Date(start.getTime()); d <= end; d.setDate(d.getDate() + 1)) {
+      const key = toYYYYMMDD(d);
       if (!byDate[key]) byDate[key] = new Set();
       byDate[key].add(trip.type);
     }
@@ -74,10 +75,10 @@ function getMarkedDatesFromYardPeriodTrips(
   const marked: MarkedDates = {};
   yardTrips.forEach((trip) => {
     const color = trip.department ? getDeptColor(trip.department) : defaultColor;
-    const start = new Date(trip.startDate);
-    const end = new Date(trip.endDate);
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      const key = d.toISOString().slice(0, 10);
+    const start = parseLocalDate(trip.startDate);
+    const end = parseLocalDate(trip.endDate);
+    for (let d = new Date(start.getTime()); d <= end; d.setDate(d.getDate() + 1)) {
+      const key = toYYYYMMDD(d);
       marked[key] = {
         startingDay: key === trip.startDate,
         endingDay: key === trip.endDate,
@@ -110,8 +111,7 @@ const TRIP_TYPE_LABELS: Record<string, string> = {
 
 export const HomeScreen = ({ navigation }: any) => {
   const { user } = useAuthStore();
-  const backgroundTheme = useThemeStore((s) => s.backgroundTheme);
-  const themeColors = BACKGROUND_THEMES[backgroundTheme];
+  const themeColors = useThemeColors();
   const [vesselName, setVesselName] = useState<string | null>(null);
   const [bannerCacheBust, setBannerCacheBust] = useState<number | null>(null);
   const [loadingVessel, setLoadingVessel] = useState(false);
@@ -182,7 +182,7 @@ export const HomeScreen = ({ navigation }: any) => {
         {hasVessel && (
           <View style={styles.bannerWrap}>
             <ImageBackground
-              source={{ uri: !bannerLoadFailed && bannerImageUrl ? bannerImageUrl : DEFAULT_BANNER_IMAGE }}
+              source={!bannerLoadFailed && bannerImageUrl ? { uri: bannerImageUrl } : DEFAULT_BANNER_IMAGE}
               style={styles.bannerImage}
               imageStyle={styles.bannerImageStyle}
               onError={() => {
@@ -259,6 +259,7 @@ export const HomeScreen = ({ navigation }: any) => {
                   <ActivityIndicator size="small" color={CALENDAR_ACCENT} style={styles.tripsLoader} />
                 ) : (
                   <Calendar
+                    key={themeColors.isDark ? 'dark' : 'light'}
                     current={new Date().toISOString().slice(0, 10)}
                     markedDates={markedDates}
                     markingType="period"
@@ -278,6 +279,7 @@ export const HomeScreen = ({ navigation }: any) => {
                       textDayFontSize: 14,
                     }}
                     hideExtraDays
+                    hideArrows={false}
                     style={styles.tripsCalendarInner}
                   />
                 )}
@@ -412,7 +414,6 @@ const styles = StyleSheet.create({
   },
   tripsCalendarCard: {
     borderRadius: 16,
-    overflow: 'hidden',
     marginBottom: SPACING.xl,
     borderWidth: 1,
     ...SHADOWS.lg,

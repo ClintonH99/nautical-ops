@@ -23,6 +23,7 @@ import { Button, ButtonTagCard, ButtonTagRow } from '../components';
 import { useVesselTripColors } from '../hooks/useVesselTripColors';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { DEFAULT_COLORS } from '../services/tripColors';
+import { formatLocalDateString } from '../utils';
 
 const TRIP_TYPE = 'DELIVERY' as const;
 
@@ -85,9 +86,7 @@ export const DeliveryTripsScreen = ({ navigation }: any) => {
     loadTrips();
   };
 
-  const formatDate = (d: string) => {
-    return new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-  };
+  const formatDate = (d: string) => formatLocalDateString(d);
 
   const onAdd = () => {
     navigation.navigate('AddEditTrip', { type: TRIP_TYPE });

@@ -12,7 +12,7 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { Button, Input } from '../components';
+import { Button, Input, ConsentCheckbox } from '../components';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { Department } from '../types';
 import authService from '../services/auth';
@@ -41,6 +41,8 @@ export const RegisterScreen = ({ navigation, route }: any) => {
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>({});
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [confirmSentEmail, setConfirmSentEmail] = useState<string | null>(null);
 
   const setUser = useAuthStore((state) => state.setUser);
 
@@ -95,6 +97,11 @@ export const RegisterScreen = ({ navigation, route }: any) => {
       valid = false;
     }
 
+    if (!acceptedTerms) {
+      newErrors.terms = 'You must agree to the Terms & Conditions and Privacy Policy';
+      valid = false;
+    }
+
     // Invite code is now completely optional
     // Users can register without it and join a vessel later
 
@@ -118,11 +125,15 @@ export const RegisterScreen = ({ navigation, route }: any) => {
       });
 
       if (user) {
-        setUser(user);
-        const roleMessage = formData.vesselId 
-          ? 'Your vessel is ready! You are the Head of Department.'
-          : 'Welcome aboard!';
-        Alert.alert('Success', `Account created successfully! ${roleMessage}`);
+        if (!session) {
+          setConfirmSentEmail(formData.email);
+        } else {
+          setUser(user);
+          const roleMessage = formData.vesselId 
+            ? 'Your vessel is ready! You are the Head of Department.'
+            : 'Welcome aboard!';
+          Alert.alert('Success', `Account created successfully! ${roleMessage}`);
+        }
       }
     } catch (error: any) {
       const msg = error?.message?.toLowerCase() || '';
@@ -154,6 +165,24 @@ export const RegisterScreen = ({ navigation, route }: any) => {
             </Text>
           </View>
 
+          {confirmSentEmail ? (
+            <View style={styles.confirmBanner}>
+              <Text style={styles.confirmBannerText}>
+                Confirmation email has been sent to {confirmSentEmail}. Please verify your email before signing in.
+              </Text>
+              <Button
+                title="Go to Login"
+                onPress={() => {
+                  setConfirmSentEmail(null);
+                  navigation.navigate('Login');
+                }}
+                variant="primary"
+                fullWidth
+                style={styles.confirmBannerButton}
+              />
+            </View>
+          ) : (
+          <>
           {/* Form */}
           <View style={styles.form}>
             <Input
@@ -181,6 +210,7 @@ export const RegisterScreen = ({ navigation, route }: any) => {
               value={formData.password}
               onChangeText={(value) => updateField('password', value)}
               secureTextEntry
+              showPasswordToggle
               autoCapitalize="none"
               error={errors.password}
             />
@@ -191,6 +221,7 @@ export const RegisterScreen = ({ navigation, route }: any) => {
               value={formData.confirmPassword}
               onChangeText={(value) => updateField('confirmPassword', value)}
               secureTextEntry
+              showPasswordToggle
               autoCapitalize="none"
               error={errors.confirmPassword}
             />
@@ -211,12 +242,10 @@ export const RegisterScreen = ({ navigation, route }: any) => {
                   <Button
                     key={dept.value}
                     title={dept.label}
-                    variant={
-                      formData.department === dept.value ? 'primary' : 'outline'
-                    }
+                    variant="outline"
                     size="small"
                     onPress={() => updateField('department', dept.value)}
-                    style={styles.departmentButton}
+                    style={formData.department === dept.value ? { ...styles.departmentButton, ...styles.departmentButtonSelected } : styles.departmentButton}
                   />
                 ))}
               </View>
@@ -254,6 +283,15 @@ export const RegisterScreen = ({ navigation, route }: any) => {
               </View>
             )}
 
+            <ConsentCheckbox
+              checked={acceptedTerms}
+              onToggle={() => setAcceptedTerms((v) => !v)}
+              onPressTerms={() => navigation.navigate('TermsConditions')}
+              onPressPrivacy={() => navigation.navigate('PrivacyPolicy')}
+              textColor={themeColors.textPrimary}
+              error={errors.terms}
+            />
+
             <Button
               title="Create Account"
               onPress={handleRegister}
@@ -273,6 +311,8 @@ export const RegisterScreen = ({ navigation, route }: any) => {
               size="small"
             />
           </View>
+          </>
+          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -326,6 +366,9 @@ const styles = StyleSheet.create({
     minWidth: '45%',
     marginBottom: SPACING.sm,
   },
+  departmentButtonSelected: {
+    borderWidth: 2,
+  },
   inviteCodeInfo: {
     backgroundColor: COLORS.primaryLight,
     padding: SPACING.md,
@@ -378,5 +421,22 @@ const styles = StyleSheet.create({
     fontSize: FONTS.xs,
     color: COLORS.danger,
     marginTop: SPACING.xs,
+  },
+  confirmBanner: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    borderWidth: 1,
+    borderColor: COLORS.success,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.lg,
+    marginBottom: SPACING.xl,
+  },
+  confirmBannerText: {
+    fontSize: FONTS.base,
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.md,
+    lineHeight: 22,
+  },
+  confirmBannerButton: {
+    marginTop: 0,
   },
 });

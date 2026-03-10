@@ -12,6 +12,14 @@ All calendars in the app (current and newly added) **must** use:
 - When `themeColors.isDark` is **true**: use `COLORS.white` for text colors (`dayTextColor`, `textDisabledColor`, `textSectionTitleColor`, `monthTextColor`, `arrowColor`, `todayTextColor`)
 - When `themeColors.isDark` is **false**: use `COLORS.black` or `themeColors.textPrimary` for text colors
 
+## Month Navigation Arrows
+
+Calendar month navigation arrows **must** always remain visible.
+
+- Do not use `overflow: 'hidden'` on calendar wrapper containers if it clips the header or arrows
+- Explicitly set `hideArrows={false}` on Calendar components
+- Ensure `arrowColor` provides contrast against the calendar background (already in theme)
+
 ## Scope
 
 Applies to: HomeScreen, UpcomingTripsScreen, YardPeriodTripsScreen, TasksCalendarScreen, AddEditTaskScreen, AddEditTripScreen, CreateWatchTimetableScreen, and any future screens that add calendar components.

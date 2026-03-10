@@ -2,6 +2,7 @@
  * Screens Barrel Export
  */
 
+export { WelcomeScreen } from './WelcomeScreen';
 export { LoginScreen } from './LoginScreen';
 export { LinkLoginScreen } from './LinkLoginScreen';
 export { LinkWebsiteScanScreen } from './LinkWebsiteScanScreen';
@@ -51,6 +52,8 @@ export { AddEditInventoryItemScreen } from './AddEditInventoryItemScreen';
 export { DepartmentColorSettingsScreen } from './DepartmentColorSettingsScreen';
 export { ThemeSettingsScreen } from './ThemeSettingsScreen';
 export { NotificationSettingsScreen } from './NotificationSettingsScreen';
+export { TermsConditionsScreen } from './TermsConditionsScreen';
+export { PrivacyPolicyScreen } from './PrivacyPolicyScreen';
 export { VesselLogsScreen } from './VesselLogsScreen';
 export { GeneralWasteLogScreen } from './GeneralWasteLogScreen';
 export { AddEditGeneralWasteLogScreen } from './AddEditGeneralWasteLogScreen';

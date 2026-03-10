@@ -72,7 +72,7 @@ export const CreateAccountChoiceScreen = ({ navigation }: any) => {
               ))}
             </View>
             <Button
-              title="Create captain account"
+              title="Create Captain Account"
               onPress={() => navigation.navigate('RegisterCaptain')}
               variant="primary"
               fullWidth
@@ -98,11 +98,11 @@ export const CreateAccountChoiceScreen = ({ navigation }: any) => {
               ))}
             </View>
             <Button
-              title="Create crew account"
+              title="Create Crew Account"
               onPress={() => navigation.navigate('RegisterCrew')}
-              variant="outline"
+              variant="primary"
               fullWidth
-              style={styles.optionButtonOutline}
+              style={styles.optionButton}
             />
           </View>
         </View>
@@ -218,10 +218,6 @@ const styles = StyleSheet.create({
   },
   optionButton: {
     marginTop: 0,
-  },
-  optionButtonOutline: {
-    marginTop: 0,
-    borderColor: MARITIME.accentTeal,
   },
   footerHint: {
     fontSize: FONTS.xs,

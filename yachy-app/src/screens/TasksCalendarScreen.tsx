@@ -331,6 +331,7 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
               onDayPress={({ dateString }) => setSelectedDate(dateString)}
               onMonthChange={onMonthChange}
               hideExtraDays
+              hideArrows={false}
             />
             <View style={styles.legend}>
               {DEPARTMENTS.filter((d) => visibleDepartments[d]).map((dept) => (

@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../components';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
@@ -52,14 +52,6 @@ export const CaptainWelcomeScreen = ({ navigation }: any) => {
             fullWidth
             style={styles.primaryButton}
           />
-
-          <TouchableOpacity
-            style={styles.skipLink}
-            onPress={() => navigation.navigate('MainTabs')}
-          >
-            <Text style={styles.skipText}>Go to Home instead</Text>
-            <Ionicons name="chevron-forward" size={16} color={MARITIME.textMuted} />
-          </TouchableOpacity>
         </View>
       </View>
     </View>
@@ -131,17 +123,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   primaryButton: {
-    marginBottom: SPACING.lg,
-  },
-  skipLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.xs,
-    paddingVertical: SPACING.sm,
-  },
-  skipText: {
-    fontSize: FONTS.sm,
-    color: MARITIME.textMuted,
+    marginBottom: 0,
   },
 });

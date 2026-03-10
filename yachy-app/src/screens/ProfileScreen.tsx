@@ -578,8 +578,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
   },
   departmentChipActive: {
-    backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
+    borderWidth: 2,
   },
   departmentChipText: {
     fontSize: FONTS.sm,
@@ -587,7 +587,8 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   departmentChipTextActive: {
-    color: COLORS.white,
+    color: COLORS.primary,
+    fontWeight: '700',
   },
   roleBadge: {
     alignSelf: 'flex-start',

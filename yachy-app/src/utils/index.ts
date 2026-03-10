@@ -46,6 +46,12 @@ export const parseLocalDate = (dateStr: string): Date => {
 };
 
 /**
+ * Format a Date to YYYY-MM-DD using local date components (no timezone shift).
+ */
+export const toYYYYMMDD = (d: Date): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+/**
  * Format a YYYY-MM-DD string for display using local date (no timezone shift).
  */
 export const formatLocalDateString = (

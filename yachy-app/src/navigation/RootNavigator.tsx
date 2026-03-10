@@ -8,6 +8,7 @@ import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { 
+  WelcomeScreen,
   LoginScreen,
   LinkLoginScreen,
   CreateAccountChoiceScreen,
@@ -52,6 +53,8 @@ import {
   DepartmentColorSettingsScreen,
   ThemeSettingsScreen,
   NotificationSettingsScreen,
+  TermsConditionsScreen,
+  PrivacyPolicyScreen,
   VesselLogsScreen,
   GeneralWasteLogScreen,
   AddEditGeneralWasteLogScreen,
@@ -85,13 +88,22 @@ export const RootNavigator = () => {
   const { isAuthenticated, isLoading, setUser, setLoading, user } = useAuthStore();
   const isCaptain = user?.position?.toLowerCase().includes('captain') ?? false;
   const hasVessel = !!user?.vesselId;
+  // #region agent log
+  useEffect(() => {
+    try {
+      const ir = !isAuthenticated ? 'Welcome' : isCaptain && !hasVessel ? 'CaptainWelcome' : 'MainTabs';
+      const sk = isAuthenticated ? `main-${ir}` : 'auth';
+      fetch('http://127.0.0.1:7242/ingest/9107f27f-e433-4a01-9080-c66ba8017545',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3ce65b'},body:JSON.stringify({sessionId:'3ce65b',hypothesisId:'A',location:'RootNavigator.tsx:route',message:'RootNavigator route state',data:{isAuthenticated,hasVessel,isCaptain,initialRoute:ir,stackKey:sk},timestamp:Date.now()})}).catch(()=>{});
+    } catch (_) {}
+  }, [isAuthenticated, hasVessel, isCaptain]);
+  // #endregion
+  // Welcome screen shows on every app open (cold start) per ADMIN rule
+  // Per ADMIN rule: Crew members never see CaptainWelcome - go straight to MainTabs
   const initialRoute = !isAuthenticated
-    ? 'Login'
-    : hasVessel
-      ? 'MainTabs'
-    : !isCaptain
-      ? 'MainTabs'
-    : 'CaptainWelcome';
+    ? 'Welcome'
+    : isCaptain && !hasVessel
+      ? 'CaptainWelcome'
+      : 'MainTabs';
   const backgroundTheme = useThemeStore((s) => s.backgroundTheme);
   const themeColors = BACKGROUND_THEMES[backgroundTheme];
 
@@ -169,7 +181,11 @@ export const RootNavigator = () => {
   useEffect(() => {
     if (isAuthenticated && user?.id) {
       startRealtimeSync(user.id, user.vesselId, {
-        onUserUpdated: (u) => setUser(u ?? null),
+        onUserUpdated: (u) => {
+          // CreateVesselScreen defers setUser until "Go to Home" to avoid stack remount
+          if (useAuthStore.getState().deferUserUpdate) return;
+          setUser(u ?? null);
+        },
       });
     } else {
       stopRealtimeSync();
@@ -202,6 +218,7 @@ export const RootNavigator = () => {
   return (
     <NavigationContainer theme={navTheme}>
       <Stack.Navigator
+        key={isAuthenticated ? `main-${initialRoute}` : 'auth'}
         initialRouteName={initialRoute}
         screenOptions={{
           headerStyle: {
@@ -218,6 +235,11 @@ export const RootNavigator = () => {
         {!isAuthenticated ? (
           // Auth Stack
           <>
+            <Stack.Screen 
+              name="Welcome" 
+              component={WelcomeScreen}
+              options={{ headerShown: false }}
+            />
             <Stack.Screen 
               name="Login" 
               component={LoginScreen}
@@ -252,6 +274,16 @@ export const RootNavigator = () => {
               name="CreateVessel" 
               component={CreateVesselScreen}
               options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="TermsConditions"
+              component={TermsConditionsScreen}
+              options={{ title: 'Terms & Conditions', headerShown: true }}
+            />
+            <Stack.Screen
+              name="PrivacyPolicy"
+              component={PrivacyPolicyScreen}
+              options={{ title: 'Privacy Policy', headerShown: true }}
             />
           </>
         ) : (
@@ -587,11 +619,27 @@ export const RootNavigator = () => {
                 headerShown: true,
               }}
             />
-            <Stack.Screen 
-              name="NotificationSettings" 
+            <Stack.Screen
+              name="NotificationSettings"
               component={NotificationSettingsScreen}
-              options={{ 
+              options={{
                 title: 'Notifications',
+                headerShown: true,
+              }}
+            />
+            <Stack.Screen
+              name="TermsConditions"
+              component={TermsConditionsScreen}
+              options={{
+                title: 'Terms & Conditions',
+                headerShown: true,
+              }}
+            />
+            <Stack.Screen
+              name="PrivacyPolicy"
+              component={PrivacyPolicyScreen}
+              options={{
+                title: 'Privacy Policy',
                 headerShown: true,
               }}
             />

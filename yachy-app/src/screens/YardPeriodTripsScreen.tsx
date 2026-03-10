@@ -24,6 +24,7 @@ import { Button, ButtonTagCard, ButtonTagRow } from '../components';
 import { useVesselTripColors } from '../hooks/useVesselTripColors';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { DEFAULT_COLORS } from '../services/tripColors';
+import { parseLocalDate, toYYYYMMDD, formatLocalDateString } from '../utils';
 
 const TRIP_TYPE = 'YARD_PERIOD' as const;
 
@@ -39,10 +40,10 @@ function getMarkedDatesFromTrips(
   const marked: MarkedDates = {};
   trips.forEach((trip) => {
     const color = trip.department ? getDeptColor(trip.department) : defaultColor;
-    const start = new Date(trip.startDate);
-    const end = new Date(trip.endDate);
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      const key = d.toISOString().slice(0, 10);
+    const start = parseLocalDate(trip.startDate);
+    const end = parseLocalDate(trip.endDate);
+    for (let d = new Date(start.getTime()); d <= end; d.setDate(d.getDate() + 1)) {
+      const key = toYYYYMMDD(d);
       marked[key] = {
         startingDay: key === trip.startDate,
         endingDay: key === trip.endDate,
@@ -94,9 +95,7 @@ export const YardPeriodTripsScreen = ({ navigation }: any) => {
     loadTrips();
   };
 
-  const formatDate = (d: string) => {
-    return new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-  };
+  const formatDate = (d: string) => formatLocalDateString(d);
 
   const getDeptColor = useCallback(
     (dept: string) => getDepartmentColor(dept, overrides),
@@ -196,6 +195,7 @@ export const YardPeriodTripsScreen = ({ navigation }: any) => {
             theme={calendarTheme}
             onMonthChange={() => {}}
             hideExtraDays
+            hideArrows={false}
           />
         )}
         <View style={styles.legend}>
@@ -283,7 +283,6 @@ const styles = StyleSheet.create({
     marginHorizontal: SPACING.sm,
     marginTop: SPACING.lg,
     marginBottom: SPACING.lg,
-    overflow: 'hidden',
   },
   legend: {
     flexDirection: 'row',

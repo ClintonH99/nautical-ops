@@ -7,3 +7,4 @@ export { Input } from './Input';
 export { CategorySheet } from './CategorySheet';
 export { ImageBanner } from './ImageBanner';
 export { ButtonTagCard, ButtonTagRow } from './ButtonTagCard';
+export { ConsentCheckbox } from './ConsentCheckbox';

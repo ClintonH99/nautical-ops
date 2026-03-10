@@ -2,7 +2,7 @@
  * Reusable Text Input Component
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   TextInput,
@@ -11,6 +11,7 @@ import {
   TextInputProps,
   TouchableOpacity,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 
@@ -21,6 +22,7 @@ interface InputProps extends TextInputProps {
   rightIcon?: React.ReactNode;
   containerStyle?: any;
   variant?: 'default' | 'search';
+  showPasswordToggle?: boolean;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -32,12 +34,31 @@ export const Input: React.FC<InputProps> = ({
   style: inputStyle,
   multiline,
   variant = 'default',
+  showPasswordToggle = false,
+  secureTextEntry,
   ...textInputProps
 }) => {
   const themeColors = useThemeColors();
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const isSearch = variant === 'search';
   const bgColor = isSearch ? COLORS.white : (themeColors.isDark ? themeColors.surface : COLORS.surface);
   const textColor = isSearch ? COLORS.black : themeColors.textPrimary;
+
+  const effectiveSecureTextEntry = showPasswordToggle ? !passwordVisible : secureTextEntry;
+  const passwordToggleIcon = showPasswordToggle ? (
+    <TouchableOpacity
+      onPress={() => setPasswordVisible((v) => !v)}
+      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      style={styles.toggleTouch}
+    >
+      <Ionicons
+        name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
+        size={22}
+        color={themeColors.textSecondary}
+      />
+    </TouchableOpacity>
+  ) : null;
+
   return (
     <View style={[styles.container, containerStyle]}>
       {label && <Text style={[styles.label, { color: themeColors.textPrimary }]}>{label}</Text>}
@@ -55,9 +76,10 @@ export const Input: React.FC<InputProps> = ({
           style={[styles.input, { color: textColor }, multiline && styles.inputMultiline, isSearch && styles.inputSearch, inputStyle]}
           placeholderTextColor={isSearch ? COLORS.gray500 : COLORS.gray400}
           multiline={multiline}
+          secureTextEntry={effectiveSecureTextEntry}
           {...textInputProps}
         />
-        {rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>}
+        {(passwordToggleIcon && <View style={styles.rightIcon}>{passwordToggleIcon}</View>) || (rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>)}
       </View>
       {error && <Text style={styles.error}>{error}</Text>}
     </View>
@@ -116,6 +138,9 @@ const styles = StyleSheet.create({
   },
   rightIcon: {
     marginLeft: SPACING.sm,
+  },
+  toggleTouch: {
+    padding: SPACING.xs,
   },
   error: {
     fontSize: FONTS.xs,

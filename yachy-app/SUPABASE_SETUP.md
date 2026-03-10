@@ -187,12 +187,70 @@ CREATE POLICY "Users can manage inventory items" ON inventory_items
 
 1. Go to **Authentication** → **Providers**
 2. Enable **Email** (should be enabled by default)
-3. For Apple Sign-In (later):
-   - Enable "Apple" provider
-   - Follow Supabase's guide to set up Apple credentials
-4. For Google Sign-In (later):
-   - Enable "Google" provider
-   - Add OAuth credentials from Google Cloud Console
+3. For **Google Sign-In** and **Apple Sign-In**, see the detailed guides below.
+
+---
+
+## Google Sign-In Setup
+
+### 4a. Google Cloud Console
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com)
+2. Create or select a project (e.g. "Nautical Ops")
+3. **APIs & Services** → **Credentials** → **Create Credentials** → **OAuth client ID**
+4. If prompted, configure the OAuth consent screen (External user type is fine for most apps)
+5. Application type: **Web application**
+6. Add **Authorized redirect URIs**:
+   - `https://YOUR_PROJECT_REF.supabase.co/auth/v1/callback`
+   - Replace `YOUR_PROJECT_REF` with your Supabase project ref (e.g. `grtrcjgsvfsknpnlarxv`)
+   - Get the exact URL from Supabase Dashboard → **Authentication** → **URL Configuration**
+7. Click **Create** and copy the **Client ID** and **Client Secret**
+
+### 4b. Supabase Google Provider
+
+1. Supabase Dashboard → **Authentication** → **Providers** → **Google** → Enable
+2. Paste **Client ID** and **Client Secret** from Google Cloud
+3. Save
+
+### 4c. Redirect URLs in Supabase
+
+1. **Authentication** → **URL Configuration** → **Redirect URLs**
+2. Add these URLs (so the app can receive the OAuth callback):
+   - `nauticalops://` (for production app; uses app scheme from app.json)
+   - For Expo Go / development: the URL from `makeRedirectUri()` at runtime—often `exp://...` or `https://auth.expo.io/@owner/slug`
+   - For **physical device with tunnel**: run `npx expo start --tunnel`, then add the tunnel URL shown (e.g. `https://xxx.exp.direct/...`)
+
+**Note:** Google Sign-In on a physical device with `expo start` (no tunnel) often fails because the redirect URL is localhost. Use `npx expo start --tunnel` and add the tunnel URL to Supabase redirect URLs.
+
+---
+
+## Apple Sign-In Setup (iOS only)
+
+Requires an **Apple Developer account** ($99/year).
+
+### 5a. Apple Developer Portal
+
+1. Go to [developer.apple.com](https://developer.apple.com) and enroll
+2. **Certificates, IDs & Profiles** → **Identifiers** → **+** → **Services IDs**
+3. Create a Services ID (e.g. `com.nauticalops.app.signin`)
+4. Enable **Sign in with Apple**, configure with your App ID (bundle ID: `com.nauticalops.app`)
+5. **Keys** → **+** → Create a key for Sign in with Apple; download the `.p8` file (you can only download once)
+6. Note: **Key ID**, **Team ID**, **Services ID**, **Bundle ID**, and the private key (contents of `.p8`)
+
+### 5b. Supabase Apple Provider
+
+1. **Authentication** → **Providers** → **Apple** → Enable
+2. Enter:
+   - **Services ID** (from step 5a)
+   - **Secret Key** (contents of the `.p8` file)
+   - **Key ID**
+   - **Team ID** (from Apple Developer membership)
+   - **App ID / Bundle ID** (`com.nauticalops.app`)
+3. Save
+
+### 5c. App Configuration
+
+The app already has `usesAppleSignIn: true` and `expo-apple-authentication` in app.json. Apple Sign-In button appears on the Login screen on iOS only.
 
 ## Step 5: Storage for Photos (Optional for now)
 

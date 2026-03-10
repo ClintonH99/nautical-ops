@@ -41,10 +41,7 @@ class AuthService {
       if (error) {
         // Surface clearer messages for common Supabase auth errors
         if (error.message?.includes('Invalid login credentials')) {
-          throw new Error('Email or password is incorrect. Please check and try again.');
-        }
-        if (error.message?.includes('Email not confirmed')) {
-          throw new Error('Please check your email and click the confirmation link before signing in.');
+          throw new Error('Email Address or Password is Incorrect, Try Again.');
         }
         throw error;
       }
@@ -77,6 +74,15 @@ class AuthService {
     try {
       WebBrowser.maybeCompleteAuthSession();
       const redirectTo = makeRedirectUri({ preferLocalhost: false });
+      // #region agent log
+      try {
+        const hasSpace = redirectTo.includes(' ');
+        const firstChar = redirectTo.length ? redirectTo.charCodeAt(0) : -1;
+        const lastChar = redirectTo.length ? redirectTo.charCodeAt(redirectTo.length - 1) : -1;
+        if (__DEV__) console.log('[DEBUG H1,H5] redirectTo:', JSON.stringify(redirectTo), 'len:', redirectTo.length, 'hasSpace:', hasSpace);
+        fetch('http://127.0.0.1:7242/ingest/4078e384-3658-4a9c-ad3e-69711ac24e59',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c8c7a1'},body:JSON.stringify({sessionId:'c8c7a1',hypothesisId:'H1,H5',location:'auth.ts:79',message:'redirectTo value',data:{redirectTo,length:redirectTo.length,hasSpace,firstChar,lastChar,includesNauticalOps:redirectTo.includes('nautical-ops')},timestamp:Date.now()})}).catch(()=>{});
+      } catch (_) {}
+      // #endregion
       const isLocalhost = redirectTo.includes('localhost') || redirectTo.includes('127.0.0.1');
       if (Platform.OS !== 'web' && Device.isDevice && isLocalhost) {
         throw new Error(
@@ -94,8 +100,25 @@ class AuthService {
       });
       if (error) throw error;
       if (!data?.url) throw new Error('No OAuth URL returned');
+      // #region agent log
+      try {
+        let redirectParam = '';
+        try {
+          const u = new URL(data.url);
+          redirectParam = u.searchParams.get('redirect_uri') ?? u.searchParams.get('redirect_to') ?? u.searchParams.get('redirectTo') ?? '';
+        } catch (_) {}
+        fetch('http://127.0.0.1:7242/ingest/4078e384-3658-4a9c-ad3e-69711ac24e59',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c8c7a1'},body:JSON.stringify({sessionId:'c8c7a1',hypothesisId:'H3',location:'auth.ts:97',message:'OAuth URL redirect param',data:{redirectParam,hasSpace:redirectParam.includes(' '),includesNauticalOps:redirectParam.includes('nautical-ops')},timestamp:Date.now()})}).catch(()=>{});
+      } catch (_) {}
+      // #endregion
 
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo) as { type: string; url?: string };
+      // #region agent log
+      try {
+        const resUrl = result?.url ?? '';
+        const has500 = resUrl.includes('500') || resUrl.includes('unexpected_failure');
+        fetch('http://127.0.0.1:7242/ingest/4078e384-3658-4a9c-ad3e-69711ac24e59',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c8c7a1'},body:JSON.stringify({sessionId:'c8c7a1',hypothesisId:'H2,H3',location:'auth.ts:openAuthResult',message:'WebBrowser result',data:{type:result?.type,urlLength:resUrl.length,has500,urlHost:resUrl?.split('/')[2]},timestamp:Date.now()})}).catch(()=>{});
+      } catch (_) {}
+      // #endregion
       if (result.type !== 'success' || !result.url) {
         return { user: null, session: null };
       }
@@ -122,6 +145,11 @@ class AuthService {
       const userData = await this.ensureOAuthUserProfile(sessionData.user);
       return { user: userData, session: sessionData.session };
     } catch (error: any) {
+      // #region agent log
+      try {
+        fetch('http://127.0.0.1:7242/ingest/4078e384-3658-4a9c-ad3e-69711ac24e59',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c8c7a1'},body:JSON.stringify({sessionId:'c8c7a1',hypothesisId:'H1,H2,H3,H4,H5',location:'auth.ts:catch',message:'Google sign in error',data:{message:error?.message,code:error?.code,name:error?.name},timestamp:Date.now()})}).catch(()=>{});
+      } catch (_) {}
+      // #endregion
       if (__DEV__) console.error('Google sign in error:', error);
       throw error;
     }
@@ -266,7 +294,7 @@ class AuthService {
       if (authError) {
         if (__DEV__) console.error('❌ Auth signup error:', authError.message);
         if (authError.message.includes('already registered') || authError.message.includes('User already registered')) {
-          throw new Error('This email is already registered. Please use a different email or sign in instead.');
+          throw new Error('Email address already in use');
         }
         throw authError;
       }
@@ -303,6 +331,11 @@ class AuthService {
 
         if (profileError) {
           if (__DEV__) console.error('❌ Profile creation error:', profileError);
+          const code = (profileError as any)?.code;
+          const msg = (profileError as any)?.message?.toLowerCase() || '';
+          if (code === '23505' || msg.includes('users_email_key') || msg.includes('duplicate key')) {
+            throw new Error('Email address already in use');
+          }
           throw profileError;
         }
 

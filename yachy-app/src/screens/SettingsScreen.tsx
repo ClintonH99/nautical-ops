@@ -12,6 +12,8 @@ import {
   TouchableOpacity,
   Image,
   Platform,
+  Linking,
+  Alert,
 } from 'react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useFocusEffect } from '@react-navigation/native';
@@ -123,6 +125,42 @@ export const SettingsScreen = ({ navigation }: any) => {
             if (__DEV__) console.log('About screen coming soon');
           },
           disabled: true,
+        },
+      ],
+    },
+    {
+      title: 'Support',
+      items: [
+        {
+          icon: '💬',
+          label: 'Contact Support',
+          description: 'Email us for help or to report issues',
+          onPress: () => {
+            const url = 'mailto:support@nautical-ops.com';
+            Linking.openURL(url).catch(() =>
+              Alert.alert('Contact Support', 'Email: support@nautical-ops.com')
+            );
+          },
+          disabled: false,
+        },
+      ],
+    },
+    {
+      title: 'Legal',
+      items: [
+        {
+          icon: '📜',
+          label: 'Terms & Conditions',
+          description: 'Terms of use for Nautical Ops',
+          onPress: () => navigation.navigate('TermsConditions'),
+          disabled: false,
+        },
+        {
+          icon: '🔒',
+          label: 'Privacy Policy',
+          description: 'How we collect and protect your data',
+          onPress: () => navigation.navigate('PrivacyPolicy'),
+          disabled: false,
         },
       ],
     },

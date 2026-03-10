@@ -16,8 +16,11 @@ interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  /** When true, realtime sync must not call setUser (CreateVessel flow defers until "Go to Home") */
+  deferUserUpdate: boolean;
   setUser: (user: User | null) => void;
   setLoading: (loading: boolean) => void;
+  setDeferUserUpdate: (defer: boolean) => void;
   logout: () => void;
 }
 
@@ -25,9 +28,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
+  deferUserUpdate: false,
   setUser: (user) => set({ user, isAuthenticated: !!user }),
   setLoading: (loading) => set({ isLoading: loading }),
-  logout: () => set({ user: null, isAuthenticated: false }),
+  setDeferUserUpdate: (defer) => set({ deferUserUpdate: defer }),
+  logout: () => set({ user: null, isAuthenticated: false, deferUserUpdate: false }),
 }));
 
 // ===== APP STORE (General app state) =====

@@ -3,13 +3,15 @@
  * Professional yacht operations management app
  */
 
+import './src/lib/sentry';
 import { useEffect } from 'react';
 import { Platform, View, Text, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import * as Sentry from '@sentry/react-native';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { isSupabaseConfigured } from './src/services/supabase';
 
-export default function App() {
+function AppContent() {
   useEffect(() => {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       const style = document.createElement('style');
@@ -41,6 +43,9 @@ export default function App() {
     </>
   );
 }
+
+// Wrap with Sentry for crash reporting (no-op when DSN not configured)
+export default Sentry.wrap(AppContent);
 
 const styles = StyleSheet.create({
   configError: {

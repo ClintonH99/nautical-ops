@@ -77,7 +77,7 @@ export const LoginScreen = ({ navigation }: any) => {
       if (user) {
         setUser(user);
       } else {
-        const msg = 'Invalid credentials';
+        const msg = 'Email Address or Password is Incorrect, Try Again.';
         setLoginError(msg);
         if (Platform.OS !== 'web') Alert.alert('Error', msg);
       }
@@ -140,6 +140,7 @@ export const LoginScreen = ({ navigation }: any) => {
               value={password}
               onChangeText={setPassword}
               secureTextEntry
+              showPasswordToggle
               autoCapitalize="none"
               error={errors.password}
             />
@@ -175,12 +176,12 @@ export const LoginScreen = ({ navigation }: any) => {
               <View style={styles.dividerLine} />
             </View>
             <Text style={styles.createAccountPrompt}>
-              Create a captain or crew account and join the fleet.
+              Create a Captain or Crew Account and Join the Fleet.
             </Text>
             <Button
-              title="Create new account"
+              title="Create New Account"
               onPress={() => navigation.navigate('CreateAccountChoice')}
-              variant="outline"
+              variant="outlineLight"
               fullWidth
               style={styles.createAccountButton}
             />
@@ -188,7 +189,7 @@ export const LoginScreen = ({ navigation }: any) => {
 
           <View style={styles.footer}>
             <Ionicons name="shield-checkmark-outline" size={14} color={MARITIME.textMuted} />
-            <Text style={styles.footerText}> Secure sign-in · Built for yacht crews</Text>
+            <Text style={styles.footerText}> An App for Crew from Crew.</Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

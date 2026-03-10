@@ -14,10 +14,14 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
+      "bundleIdentifier": "com.nauticalops.app",
       "supportsTablet": true,
-      "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "buildNumber": "1"
     },
     "android": {
+      "package": "com.nauticalops.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -37,7 +41,8 @@
     "extra": {
       "eas": {
         "projectId": "eb067a9d-d949-45a2-b3a1-15867c609436"
-      }
+      },
+      "privacyUrl": "https://nautical-ops.com/privacy"
     },
     "owner": "clintonh99"
   }

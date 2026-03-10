@@ -33,6 +33,14 @@ const DEFAULT_SIGNALS = {
   medical: 'PA announcement – medical assistance required',
 };
 
+const EMERGENCY_SIGNAL_LABELS: Record<keyof typeof DEFAULT_SIGNALS, string> = {
+  fire: 'Fire',
+  manOverboard: 'Man Overboard',
+  grounding: 'Grounding',
+  abandonShip: 'Abandon Ship',
+  medical: 'Medical',
+};
+
 const EMPTY_CREW = {
   roleName: '',
   fire: '',
@@ -292,7 +300,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
         <Text style={[styles.section, { color: themeColors.textPrimary }]}>Emergency signals</Text>
         {(Object.keys(emergencySignals) as (keyof typeof DEFAULT_SIGNALS)[]).map((k) => (
           <View key={k}>
-            <Text style={[styles.smlabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>{k}</Text>
+            <Text style={[styles.smlabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>{EMERGENCY_SIGNAL_LABELS[k]}</Text>
             <TextInput
               style={[styles.input, { backgroundColor: themeColors.surface, color: themeColors.textPrimary }]}
               value={emergencySignals[k]}

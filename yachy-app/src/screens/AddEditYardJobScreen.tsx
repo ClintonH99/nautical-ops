@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
-import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
+import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import yardJobsService from '../services/yardJobs';
 import { Input, Button } from '../components';
@@ -26,7 +26,6 @@ import { Department, YardJobPriority } from '../types';
 export const AddEditYardJobScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
-  const overrides = useDepartmentColorStore((s) => s.overrides);
   const jobId = route.params?.jobId as string | undefined;
 
   const [jobTitle, setJobTitle] = useState('');
@@ -213,16 +212,15 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
               key={dept}
               style={[
                 styles.chip,
-                { backgroundColor: themeColors.surface },
+                { backgroundColor: themeColors.surface, borderColor: COLORS.border },
                 department === dept && styles.chipSelected,
-                { borderColor: getDepartmentColor(dept, overrides) },
               ]}
               onPress={() => setDepartment(dept)}
             >
               <Text
                 style={[
                   styles.chipText,
-                  { color: department === dept ? COLORS.white : themeColors.textPrimary },
+                  { color: themeColors.textPrimary },
                   department === dept && styles.chipTextSelected,
                 ]}
                 numberOfLines={1}
@@ -295,6 +293,7 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
             }
             theme={calendarTheme}
             hideExtraDays
+            hideArrows={false}
           />
         </View>
         {doneByDate && (
@@ -362,7 +361,6 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.sm,
     marginBottom: SPACING.sm,
-    overflow: 'hidden',
   },
   clearDate: {
     alignSelf: 'flex-start',
@@ -398,14 +396,16 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   chipSelected: {
-    backgroundColor: COLORS.primaryLight,
+    borderColor: COLORS.primary,
+    borderWidth: 2,
   },
   chipText: {
     fontSize: FONTS.sm,
     fontWeight: '600',
   },
   chipTextSelected: {
-    color: COLORS.white,
+    color: COLORS.primary,
+    fontWeight: '700',
   },
   priorityRow: {
     flexDirection: 'row',

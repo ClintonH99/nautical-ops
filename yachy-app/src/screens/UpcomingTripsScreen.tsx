@@ -22,6 +22,7 @@ import tripsService from '../services/trips';
 import { Trip, TripType } from '../types';
 import { useVesselTripColors, getTripTypeColorMap } from '../hooks/useVesselTripColors';
 import { DEFAULT_COLORS } from '../services/tripColors';
+import { parseLocalDate, toYYYYMMDD } from '../utils';
 
 // Full-day colored cells: period marking with same start/end = whole day in that color
 type MarkedDates = { [date: string]: { startingDay?: boolean; endingDay?: boolean; color: string; textColor?: string } };
@@ -33,10 +34,10 @@ function getMarkedDatesFromTrips(
   const byDate: Record<string, Set<TripType>> = {};
 
   trips.forEach((trip) => {
-    const start = new Date(trip.startDate);
-    const end = new Date(trip.endDate);
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      const key = d.toISOString().slice(0, 10);
+    const start = parseLocalDate(trip.startDate);
+    const end = parseLocalDate(trip.endDate);
+    for (let d = new Date(start.getTime()); d <= end; d.setDate(d.getDate() + 1)) {
+      const key = toYYYYMMDD(d);
       if (!byDate[key]) byDate[key] = new Set();
       byDate[key].add(trip.type);
     }
@@ -181,6 +182,7 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
             theme={calendarTheme}
             onMonthChange={() => {}}
             hideExtraDays
+            hideArrows={false}
           />
         )}
         <View style={styles.legend}>

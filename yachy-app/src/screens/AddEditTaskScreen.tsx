@@ -188,7 +188,7 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
               key={dept}
               style={[
                 styles.deptChip,
-                { backgroundColor: department === dept ? undefined : themeColors.surface },
+                { backgroundColor: themeColors.surface },
                 department === dept && styles.deptChipSelected,
               ]}
               onPress={() => setDepartment(dept)}
@@ -300,6 +300,7 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
             }
             theme={calendarTheme}
             hideExtraDays
+            hideArrows={false}
           />
         </View>
         {doneByDate && (
@@ -367,7 +368,6 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.sm,
     marginBottom: SPACING.sm,
-    overflow: 'hidden',
   },
   clearDate: {
     alignSelf: 'flex-start',
@@ -399,11 +399,13 @@ const styles = StyleSheet.create({
   deptChip: {
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.md,
-    backgroundColor: COLORS.gray100,
     borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   deptChipSelected: {
-    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+    borderWidth: 2,
   },
   deptChipText: {
     fontSize: FONTS.sm,
@@ -411,7 +413,8 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
   },
   deptChipTextSelected: {
-    color: COLORS.white,
+    color: COLORS.primary,
+    fontWeight: '700',
   },
   categoryChip: {
     flex: 1,

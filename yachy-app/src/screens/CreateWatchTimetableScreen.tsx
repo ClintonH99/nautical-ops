@@ -470,6 +470,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
                       monthTextColor: themeColors.isDark ? COLORS.white : COLORS.black,
                     }}
                     hideExtraDays
+                    hideArrows={false}
                   />
                   <TouchableOpacity
                     style={[styles.exportConfirmBtn, !exportDateSelected && styles.exportConfirmBtnDisabled]}

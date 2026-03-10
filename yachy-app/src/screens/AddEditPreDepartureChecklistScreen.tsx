@@ -27,6 +27,7 @@ import tripsService from '../services/trips';
 import { PreDepartureChecklistItem, Department } from '../types';
 import { Input, Button } from '../components';
 import { Trip } from '../types';
+import { formatLocalDateString } from '../utils';
 
 const DEPARTMENT_OPTIONS: { value: Department | null; label: string }[] = [
   { value: null, label: 'All Departments' },
@@ -319,7 +320,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
                         }}
                       >
                         <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>{t.title}</Text>
-                        <Text style={[styles.modalItemSub, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>{t.startDate} – {t.endDate}</Text>
+                        <Text style={[styles.modalItemSub, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>{formatLocalDateString(t.startDate)} – {formatLocalDateString(t.endDate)}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>

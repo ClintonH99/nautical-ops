@@ -20,6 +20,7 @@ import { useAuthStore } from '../store';
 import tripsService from '../services/trips';
 import { Trip } from '../types';
 import { Button, ButtonTagCard, ButtonTagRow } from '../components';
+import { formatLocalDateString } from '../utils';
 import { useVesselTripColors } from '../hooks/useVesselTripColors';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { DEFAULT_COLORS } from '../services/tripColors';
@@ -85,9 +86,7 @@ export const BossTripsScreen = ({ navigation }: any) => {
     loadTrips();
   };
 
-  const formatDate = (d: string) => {
-    return new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-  };
+  const formatDate = (d: string) => formatLocalDateString(d);
 
   const onAdd = () => {
     navigation.navigate('AddEditTrip', { type: TRIP_TYPE });

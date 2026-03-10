@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+defaults:
+  run:
+    working-directory: yachy-app
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -21,11 +25,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: TypeScript check (QC Gate 1)
-        run: npx tsc --noEmit
+      - name: Lint (QC Gate 1)
+        run: npm run lint
 
-      - name: Expo dependency check (QC Gate 2)
+      - name: TypeScript check (QC Gate 2)
+        run: npm run typecheck
+
+      - name: Run tests (QC Gate 2b)
+        run: npm run test
+
+      - name: Expo dependency check (QC Gate 3)
         run: npx expo install --check
 
-      - name: Expo export / build validation (QC Gate 3)
+      - name: Expo export / build validation (QC Gate 4)
         run: npx expo export --platform ios
+
+      - name: Dependency audit (QC Gate 5)
+        run: npm audit --audit-level=critical

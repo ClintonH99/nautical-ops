@@ -111,7 +111,7 @@ export const LinkWebsiteScanScreen = ({ navigation }: any) => {
         style={StyleSheet.absoluteFillObject}
         onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
         barcodeScannerSettings={{
-          barcodeTypes: ['qr', 'org.iso.QRCode'],
+          barcodeTypes: ['qr'],
         }}
       />
       <View style={styles.overlay}>

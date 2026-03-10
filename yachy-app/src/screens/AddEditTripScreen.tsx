@@ -26,15 +26,16 @@ import { TripType, Department } from '../types';
 import { Input, Button } from '../components';
 import { useVesselTripColors } from '../hooks/useVesselTripColors';
 import { DEFAULT_COLORS } from '../services/tripColors';
+import { parseLocalDate, toYYYYMMDD } from '../utils';
 
 type MarkedDates = { [date: string]: { startingDay?: boolean; endingDay?: boolean; color: string; textColor?: string } };
 
 function getMarkedRange(start: string, end: string, color: string): MarkedDates {
   const marked: MarkedDates = {};
-  const startD = new Date(start);
-  const endD = new Date(end);
-  for (let d = new Date(startD); d <= endD; d.setDate(d.getDate() + 1)) {
-    const key = d.toISOString().slice(0, 10);
+  const startD = parseLocalDate(start);
+  const endD = parseLocalDate(end);
+  for (let d = new Date(startD.getTime()); d <= endD; d.setDate(d.getDate() + 1)) {
+    const key = toYYYYMMDD(d);
     marked[key] = {
       startingDay: key === start,
       endingDay: key === end,
@@ -117,6 +118,12 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
   }, [tripId]);
 
   const onDayPress = (dateString: string) => {
+    if (step === 'end' && startDate && endDate && dateString === startDate) {
+      setStartDate(null);
+      setEndDate(null);
+      setStep('start');
+      return;
+    }
     if (step === 'start') {
       setStartDate(dateString);
       setEndDate(dateString);
@@ -296,13 +303,14 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
         </Text>
         <View style={[styles.calendarWrap, { backgroundColor: themeColors.surface }]}>
           <Calendar
-            current={startDate || new Date().toISOString().slice(0, 10)}
-            minDate={new Date().toISOString().slice(0, 10)}
+            current={startDate || toYYYYMMDD(new Date())}
+            minDate={toYYYYMMDD(new Date())}
             markedDates={markedDates}
             markingType="period"
             onDayPress={({ dateString }) => onDayPress(dateString)}
             theme={calendarTheme}
             hideExtraDays
+            hideArrows={false}
           />
         </View>
         <Input
@@ -405,7 +413,6 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.sm,
     marginBottom: SPACING.lg,
-    overflow: 'hidden',
   },
   actions: {
     marginTop: SPACING.md,

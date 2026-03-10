@@ -15,10 +15,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
-import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
+import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import inventoryService, { InventoryItemRow } from '../services/inventory';
 import { Department } from '../types';
@@ -31,11 +33,11 @@ const defaultRow: InventoryItemRow = { amount: '', item: '' };
 export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
-  const overrides = useDepartmentColorStore((s) => s.overrides);
   const itemId = route?.params?.itemId as string | undefined;
   const isEdit = !!itemId;
 
   const [department, setDepartment] = useState<Department>(user?.department ?? 'INTERIOR');
+  const [departmentDropdownOpen, setDepartmentDropdownOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
@@ -163,31 +165,44 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
       >
         <Text style={[styles.label, { color: themeColors.textPrimary }]}>Department</Text>
         <Text style={[styles.hint, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Which department is this for?</Text>
-        <View style={styles.deptRow}>
-          {DEPARTMENTS.map((dept) => (
-            <TouchableOpacity
-              key={dept}
-                style={[
-                  styles.chip,
-                  { borderColor: getDepartmentColor(dept, overrides) },
-                  department === dept && styles.chipSelected,
-                  department === dept && { backgroundColor: getDepartmentColor(dept, overrides) },
-                ]}
-              onPress={() => setDepartment(dept)}
-            >
-              <Text
-                style={[
-                  styles.chipText,
-                  { color: department === dept ? COLORS.textInverse : themeColors.textPrimary },
-                  department === dept && styles.chipTextSelected,
-                ]}
-                numberOfLines={1}
-              >
-                {dept.charAt(0) + dept.slice(1).toLowerCase()}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <TouchableOpacity
+          style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
+          onPress={() => setDepartmentDropdownOpen(!departmentDropdownOpen)}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
+            {department.charAt(0) + department.slice(1).toLowerCase()}
+          </Text>
+          <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>{departmentDropdownOpen ? '▲' : '▼'}</Text>
+        </TouchableOpacity>
+        {departmentDropdownOpen && (
+          <Modal visible transparent animationType="fade">
+            <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentDropdownOpen(false)}>
+              <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
+                {DEPARTMENTS.map((dept) => (
+                  <TouchableOpacity
+                    key={dept}
+                    style={[styles.modalItem, { backgroundColor: themeColors.surface }, department === dept && styles.modalItemSelected]}
+                    onPress={() => {
+                      setDepartment(dept);
+                      setDepartmentDropdownOpen(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.modalItemText,
+                        { color: themeColors.textPrimary },
+                        department === dept && styles.modalItemTextSelected,
+                      ]}
+                    >
+                      {dept.charAt(0) + dept.slice(1).toLowerCase()}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </Pressable>
+          </Modal>
+        )}
 
         <Input
           label="Title"
@@ -321,18 +336,25 @@ const styles = StyleSheet.create({
   message: { fontSize: FONTS.base, fontFamily: FONTS.regular },
   label: { fontSize: FONTS.sm, fontFamily: FONTS.medium, marginBottom: SPACING.xs },
   hint: { fontSize: FONTS.xs, fontFamily: FONTS.regular, marginBottom: SPACING.sm },
-  deptRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACING.lg },
-  chip: {
-    marginRight: SPACING.sm,
-    marginBottom: SPACING.sm,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
+  dropdown: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
     borderRadius: BORDER_RADIUS.md,
-    borderWidth: 2,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: SPACING.lg,
   },
-  chipSelected: { borderWidth: 2 },
-  chipText: { fontSize: FONTS.sm, fontFamily: FONTS.medium },
-  chipTextSelected: { color: COLORS.textInverse },
+  dropdownText: { fontSize: FONTS.base, fontWeight: '500' },
+  dropdownChevron: { fontSize: 10 },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
+  modalBox: { borderRadius: BORDER_RADIUS.lg, paddingVertical: SPACING.sm, minWidth: 200 },
+  modalItem: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg },
+  modalItemSelected: {},
+  modalItemText: { fontSize: FONTS.base },
+  modalItemTextSelected: { color: COLORS.primary, fontWeight: '600' },
   descriptionInput: { minHeight: 80, textAlignVertical: 'top' as const },
   tableLabel: {
     fontSize: FONTS.sm,

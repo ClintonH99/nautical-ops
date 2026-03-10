@@ -5,6 +5,7 @@ Professional operations management app for super/mega yachts worldwide.
 ## 🚢 About
 
 Yachy is designed to streamline yacht crew workflows including:
+
 - Task management with deadline tracking
 - Inventory management across all departments
 - Watch duties scheduling
@@ -16,6 +17,7 @@ Yachy is designed to streamline yacht crew workflows including:
 ## 📋 Current Status
 
 **✅ Completed:**
+
 - Project setup with React Native + Expo
 - TypeScript configuration
 - Authentication screens (Login & Register)
@@ -25,11 +27,13 @@ Yachy is designed to streamline yacht crew workflows including:
 - Supabase integration setup
 
 **🚧 In Progress:**
+
 - Tasks module
 - Inventory module
 - Main navigation tabs
 
 **📅 Coming Next:**
+
 - Calendar integration
 - Watch duties
 - Trips management
@@ -47,6 +51,7 @@ Yachy is designed to streamline yacht crew workflows including:
 ## 📦 Installation
 
 ### Prerequisites
+
 - Node.js (v18+)
 - npm or yarn
 - Xcode (for iOS development)
@@ -57,6 +62,7 @@ Yachy is designed to streamline yacht crew workflows including:
 1. **Clone the repository** (or you're already here!)
 
 2. **Install dependencies:**
+
 ```bash
 npm install
 ```
@@ -67,11 +73,13 @@ npm install
    - Add your Supabase URL and anon key to `.env`
 
 4. **Start the development server:**
+
 ```bash
 npm start
 ```
 
 5. **Run on iOS/Android:**
+
 ```bash
 # iOS
 npm run ios
@@ -104,6 +112,7 @@ yachy-app/
 ## 🎨 Design System
 
 The app uses a professional nautical-inspired design:
+
 - **Primary Color:** Deep navy blue (#1E3A8A)
 - **Status Colors:** Green (on track), Yellow (attention needed), Red (urgent)
 - **Module Colors:** Color-coded for calendar (trips, tasks, contractors, etc.)
@@ -111,24 +120,28 @@ The app uses a professional nautical-inspired design:
 ## 🔐 Authentication
 
 Currently supports:
+
 - Email/Password authentication
 - User roles (HOD vs Crew)
 - Department selection
 - Invite code validation
 
 **Coming Soon:**
+
 - Apple Sign-In
 - Google Sign-In
 
 ## 📱 Features in Detail
 
 ### Tasks Management
+
 - Create/assign tasks with deadlines
 - Color-coded priority (green/yellow/red based on time remaining)
 - HOD can create, crew can claim and complete
 - Notes and attachments support
 
 ### Inventory Tracking
+
 - Create categories by department
 - Track quantity and location
 - Photo support
@@ -136,20 +149,24 @@ Currently supports:
 - Full edit access for all crew
 
 ### Watch Duties
+
 - Schedule watch rotations
 - Task checklists for each watch
 - Personal checkboxes (local, resets daily)
 
 ### General Duties
+
 - Reference library organized by frequency (Daily/Weekly/Monthly/Quarterly)
 - Not auto-created, used as templates
 
 ### Trips
+
 - Boss trips and Guest trips
 - Itineraries with dates/locations
 - Guest preferences and special requests
 
 ### Calendar
+
 - Unified view of all activities
 - Filter by type (trips, tasks, contractors, duties)
 - Export to device calendar
@@ -157,6 +174,7 @@ Currently supports:
 ## 🔄 Offline Mode (Planned)
 
 The app will support:
+
 - Local data storage
 - Automatic sync when online
 - Queue-based sync for changes
@@ -184,6 +202,7 @@ See `PROJECT_SPEC.md` for detailed schema.
 ### Environment Variables
 
 Copy `.env.example` to `.env` and fill in your values:
+
 ```bash
 cp .env.example .env
 ```

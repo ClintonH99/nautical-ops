@@ -312,7 +312,9 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
                 : 'No lists for the selected department(s).'}
             </Text>
           ) : (
-            filteredLists.map((list) => (
+            filteredLists.map((list) => {
+              const dept = list.department ?? 'INTERIOR';
+              return (
           <View key={list.id} style={[styles.card, { backgroundColor: themeColors.surface }]}>
             <View style={styles.cardHeader}>
               <View style={styles.cardTitleBlock}>
@@ -324,14 +326,9 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
                     {list.title}
                   </Text>
                 </TouchableOpacity>
-                <View
-                  style={[
-                    styles.deptBadge,
-                    { backgroundColor: getDepartmentColor(list.department, overrides) },
-                  ]}
-                >
+                <View style={[styles.deptBadge, { backgroundColor: getDepartmentColor(dept, overrides) }]}>
                   <Text style={styles.deptBadgeText}>
-                    {list.department.charAt(0) + list.department.slice(1).toLowerCase()}
+                    {dept.charAt(0) + dept.slice(1).toLowerCase()}
                   </Text>
                 </View>
               </View>
@@ -378,7 +375,8 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
               )}
             </View>
           </View>
-        ))
+        );
+        })
       )}
       </View>
     </ScrollView>
