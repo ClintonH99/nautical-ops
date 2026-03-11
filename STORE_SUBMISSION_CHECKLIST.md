@@ -8,6 +8,8 @@ Phase 4 of Enterprise App Launch Readiness. Follow this checklist before submitt
 
 - [ ] Phase 1–3 complete (security, code quality, tests)
 - [ ] EAS project linked: `eb067a9d-d949-45a2-b3a1-15867c609436`
+- [ ] **EAS Secrets** (Expo dashboard → Project → Secrets): `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` for production builds; optionally `EXPO_PUBLIC_SENTRY_DSN` for crash reporting
+- [ ] **OAuth**: Supabase Auth → URL Configuration includes production redirect URLs (e.g. `https://nautical-ops.com`, `nauticalops://`)
 - [ ] Bundle ID (iOS): `com.nauticalops.app`
 - [ ] Package name (Android): `com.nauticalops.app`
 - [ ] Privacy Policy live at: https://nautical-ops.com/privacy
@@ -172,8 +174,8 @@ When prompted, select:
 
 To automate submission after build:
 
-1. **iOS**: Set `appleId` and `ascAppId` in `eas.json` submit.production.ios
-2. **Android**: Create [Google Play service account](https://developers.google.com/android-publisher/getting_started) and save key as `google-service-account.json`
+1. **iOS**: In `eas.json` submit.production.ios, replace `YOUR_APPLE_ID_EMAIL` with your Apple ID and `YOUR_APP_STORE_CONNECT_APP_ID` with the App Store Connect app ID (from App Store Connect after creating the app)
+2. **Android**: Create [Google Play service account](https://developers.google.com/android-publisher/getting_started) and save key as `google-service-account.json` in `yachy-app/` (add to `.gitignore`)
 3. Run: `eas submit --platform ios --latest` or `eas submit --platform android --latest`
 
 ---

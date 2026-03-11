@@ -17,10 +17,16 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
-import { useAuthStore, useDepartmentColorStore, getDepartmentColor as getDeptColor } from '../store';
+import {
+  useAuthStore,
+  useDepartmentColorStore,
+  getDepartmentColor as getDeptColor,
+} from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus';
 import userService from '../services/user';
 import { User, Department } from '../types';
+import { getPlanTier } from '../constants/subscriptionPlans';
 
 export const CrewManagementScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -36,11 +42,9 @@ export const CrewManagementScreen = ({ navigation }: any) => {
   useFocusEffect(
     useCallback(() => {
       if (!isHOD) {
-        Alert.alert(
-          'Access Denied',
-          'Only HODs can access crew management',
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
-        );
+        Alert.alert('Access Denied', 'Only HODs can access crew management', [
+          { text: 'OK', onPress: () => navigation.goBack() },
+        ]);
         return;
       }
 
@@ -112,9 +116,10 @@ export const CrewManagementScreen = ({ navigation }: any) => {
 
     Alert.alert(
       `${action === 'promote' ? 'Promote' : 'Demote'} ${crewMember.name}`,
-      `${action === 'promote' 
-        ? `Promote ${crewMember.name} to Head of Department (HOD)? They will have full management permissions.`
-        : `Demote ${crewMember.name} to regular crew? They will lose HOD permissions.`
+      `${
+        action === 'promote'
+          ? `Promote ${crewMember.name} to Head of Department (HOD)? They will have full management permissions.`
+          : `Demote ${crewMember.name} to regular crew? They will lose HOD permissions.`
       }`,
       [
         { text: 'Cancel', style: 'cancel' },
@@ -123,10 +128,7 @@ export const CrewManagementScreen = ({ navigation }: any) => {
           onPress: async () => {
             try {
               await userService.updateUserRole(crewMember.id, newRole);
-              Alert.alert(
-                'Success',
-                `${crewMember.name} has been ${action}d to ${newRole}`
-              );
+              Alert.alert('Success', `${crewMember.name} has been ${action}d to ${newRole}`);
               loadCrew(); // Refresh list
             } catch (error) {
               console.error('Update role error:', error);
@@ -138,13 +140,21 @@ export const CrewManagementScreen = ({ navigation }: any) => {
     );
   };
 
+  const { subscription } = useSubscriptionStatus(currentUser?.vesselId ?? null);
+  const currentPlan = subscription ? getPlanTier(subscription.planTier) : null;
+  const needsUpgrade =
+    currentPlan && crew.length >= currentPlan.maxCrew && currentPlan.maxCrew !== Infinity;
+
   const overrides = useDepartmentColorStore((s) => s.overrides);
-  const getDepartmentColor = (department: Department) =>
-    getDeptColor(department, overrides);
+  const getDepartmentColor = (department: Department) => getDeptColor(department, overrides);
 
   const formatDepartmentDisplay = (user: User) => {
-    const dept1 = user.department ? (user.department.charAt(0) + user.department.slice(1).toLowerCase()) : '';
-    const dept2 = user.department2 ? (user.department2.charAt(0) + user.department2.slice(1).toLowerCase()) : '';
+    const dept1 = user.department
+      ? user.department.charAt(0) + user.department.slice(1).toLowerCase()
+      : '';
+    const dept2 = user.department2
+      ? user.department2.charAt(0) + user.department2.slice(1).toLowerCase()
+      : '';
     return [dept1, dept2].filter(Boolean).join(', ') || '—';
   };
 
@@ -188,9 +198,7 @@ export const CrewManagementScreen = ({ navigation }: any) => {
             />
           ) : (
             <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarText}>
-                {item.name.charAt(0).toUpperCase()}
-              </Text>
+              <Text style={styles.avatarText}>{item.name.charAt(0).toUpperCase()}</Text>
             </View>
           )}
 
@@ -199,20 +207,20 @@ export const CrewManagementScreen = ({ navigation }: any) => {
               <Text style={[styles.crewName, { color: themeColors.textPrimary }]}>{item.name}</Text>
               {departmentDisplay !== '—' && (
                 <Text style={[styles.departmentLabel, { color: themeColors.textSecondary }]}>
-                  {' - '}{departmentDisplay}
+                  {' - '}
+                  {departmentDisplay}
                 </Text>
               )}
               {isCurrentUser && <Text style={styles.youBadge}>YOU</Text>}
             </View>
-            <Text style={[styles.crewPosition, { color: themeColors.textSecondary }]}>{item.position}</Text>
+            <Text style={[styles.crewPosition, { color: themeColors.textSecondary }]}>
+              {item.position}
+            </Text>
             <View style={styles.crewBadges}>
               {[item.department, item.department2].filter(Boolean).map((dept) => (
                 <View
                   key={dept}
-                  style={[
-                    styles.departmentBadge,
-                    { backgroundColor: getDepartmentColor(dept!) },
-                  ]}
+                  style={[styles.departmentBadge, { backgroundColor: getDepartmentColor(dept!) }]}
                 >
                   <Text style={styles.departmentText}>
                     {dept!.charAt(0) + dept!.slice(1).toLowerCase()}
@@ -241,22 +249,18 @@ export const CrewManagementScreen = ({ navigation }: any) => {
           <TouchableOpacity
             style={styles.optionsButton}
             onPress={() => {
-              Alert.alert(
-                'Manage ' + item.name,
-                'Choose an action',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: item.role === 'HOD' ? 'Demote to Crew' : 'Promote to HOD',
-                    onPress: () => handlePromoteToDemote(item),
-                  },
-                  {
-                    text: 'Remove from Vessel',
-                    onPress: () => handleRemoveCrew(item),
-                    style: 'destructive',
-                  },
-                ]
-              );
+              Alert.alert('Manage ' + item.name, 'Choose an action', [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: item.role === 'HOD' ? 'Demote to Crew' : 'Promote to HOD',
+                  onPress: () => handlePromoteToDemote(item),
+                },
+                {
+                  text: 'Remove from Vessel',
+                  onPress: () => handleRemoveCrew(item),
+                  style: 'destructive',
+                },
+              ]);
             }}
           >
             <Text style={[styles.optionsIcon, { color: themeColors.textSecondary }]}>⋮</Text>
@@ -268,6 +272,20 @@ export const CrewManagementScreen = ({ navigation }: any) => {
 
   const renderHeader = () => (
     <View style={styles.header}>
+      {needsUpgrade && (
+        <TouchableOpacity
+          style={[
+            styles.upgradeBanner,
+            { backgroundColor: 'rgba(245, 158, 11, 0.2)', borderColor: COLORS.warning },
+          ]}
+          onPress={() => navigation.navigate('VesselSettings')}
+        >
+          <Text style={[styles.upgradeBannerText, { color: themeColors.textPrimary }]}>
+            You have reached your crew limit ({crew.length}/{currentPlan!.maxCrew}). Upgrade your
+            plan to invite more crew members.
+          </Text>
+        </TouchableOpacity>
+      )}
       <View style={styles.statsContainer}>
         <View style={[styles.statBox, { backgroundColor: themeColors.surface }]}>
           <Text style={[styles.statNumber, { color: themeColors.textPrimary }]}>{crew.length}</Text>
@@ -315,7 +333,9 @@ export const CrewManagementScreen = ({ navigation }: any) => {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: themeColors.background }]}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={[styles.loadingText, { color: themeColors.textSecondary }]}>Loading crew...</Text>
+        <Text style={[styles.loadingText, { color: themeColors.textSecondary }]}>
+          Loading crew...
+        </Text>
       </View>
     );
   }
@@ -360,6 +380,15 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: SPACING.lg,
+  },
+  upgradeBanner: {
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    marginBottom: SPACING.md,
+  },
+  upgradeBannerText: {
+    fontSize: FONTS.sm,
   },
   statsContainer: {
     flexDirection: 'row',

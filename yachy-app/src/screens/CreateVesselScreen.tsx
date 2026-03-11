@@ -40,36 +40,16 @@ export const CreateVesselScreen = ({ navigation }: any) => {
   const setUser = useAuthStore((state) => state.setUser);
   const setDeferUserUpdate = useAuthStore((state) => state.setDeferUserUpdate);
   const [vesselName, setVesselName] = useState('');
-  // #region agent log
   useEffect(() => {
-    try {
-      fetch('http://127.0.0.1:7242/ingest/9107f27f-e433-4a01-9080-c66ba8017545',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3ce65b'},body:JSON.stringify({sessionId:'3ce65b',hypothesisId:'D',location:'CreateVesselScreen.tsx:mount',message:'CreateVesselScreen mounted',data:{},timestamp:Date.now()})}).catch(()=>{});
-    } catch (_) {}
-    return () => {
-      try {
-        fetch('http://127.0.0.1:7242/ingest/9107f27f-e433-4a01-9080-c66ba8017545',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3ce65b'},body:JSON.stringify({sessionId:'3ce65b',hypothesisId:'A,D',location:'CreateVesselScreen.tsx:unmount',message:'CreateVesselScreen unmounted',data:{},timestamp:Date.now()})}).catch(()=>{});
-      } catch (_) {}
-      setDeferUserUpdate(false);
-    };
+    return () => setDeferUserUpdate(false);
   }, []);
-  // #endregion
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [createdVessel, setCreatedVessel] = useState<any>(null);
   const [pendingUpdatedUser, setPendingUpdatedUser] = useState<any>(null);
 
   const handleCreateVessel = async () => {
-    // #region agent log
-    try {
-      fetch('http://127.0.0.1:7242/ingest/9107f27f-e433-4a01-9080-c66ba8017545',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3ce65b'},body:JSON.stringify({sessionId:'3ce65b',hypothesisId:'B,E',location:'CreateVesselScreen.tsx:handleCreateVessel:entry',message:'handleCreateVessel called',data:{vesselName,vesselNameLength:vesselName?.length,trimmed:vesselName?.trim(),trimmedLength:vesselName?.trim()?.length},timestamp:Date.now()})}).catch(()=>{});
-    } catch (_) {}
-    // #endregion
     if (!vesselName.trim()) {
-      // #region agent log
-      try {
-        fetch('http://127.0.0.1:7242/ingest/9107f27f-e433-4a01-9080-c66ba8017545',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3ce65b'},body:JSON.stringify({sessionId:'3ce65b',hypothesisId:'B',location:'CreateVesselScreen.tsx:handleCreateVessel:validationFail',message:'Validation failed - vesselName empty',data:{vesselName},timestamp:Date.now()})}).catch(()=>{});
-      } catch (_) {}
-      // #endregion
       setError('Vessel name is required');
       return;
     }
@@ -95,8 +75,10 @@ export const CreateVesselScreen = ({ navigation }: any) => {
       }
 
       // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) {
         throw new Error('No authenticated user found');
       }
@@ -107,7 +89,7 @@ export const CreateVesselScreen = ({ navigation }: any) => {
       // Update user's vessel_id and role to HOD
       const { error: updateError } = await supabase
         .from('users')
-        .update({ 
+        .update({
           vessel_id: vessel.id,
           role: 'HOD',
           updated_at: new Date().toISOString(),
@@ -122,11 +104,6 @@ export const CreateVesselScreen = ({ navigation }: any) => {
       // Store updated user but defer setUser until "Go to Home" - prevents RootNavigator remount
       // (which clears the form) when user gains vesselId. Per ADMIN rule: show success screen first.
       const updatedUser = await authService.getUserProfile(user.id);
-      // #region agent log
-      try {
-        fetch('http://127.0.0.1:7242/ingest/9107f27f-e433-4a01-9080-c66ba8017545',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3ce65b'},body:JSON.stringify({sessionId:'3ce65b',hypothesisId:'A',location:'CreateVesselScreen.tsx:handleCreateVessel:success',message:'Vessel created, about to setCreatedVessel',data:{vesselId:vessel?.id,userHasVesselId:!!updatedUser?.vesselId},timestamp:Date.now()})}).catch(()=>{});
-      } catch (_) {}
-      // #endregion
       setPendingUpdatedUser(updatedUser);
       setCreatedVessel(vessel);
     } catch (error: any) {
@@ -177,54 +154,54 @@ export const CreateVesselScreen = ({ navigation }: any) => {
               <Text style={styles.heroBadgeText}>Nautical Ops</Text>
             </View>
             <Text style={styles.successTitle}>Vessel Created!</Text>
-            <Text style={styles.successSubtitle}>
-              {createdVessel.name} is ready to go
-            </Text>
+            <Text style={styles.successSubtitle}>{createdVessel.name} is ready to go</Text>
             <View style={styles.heroAccent} />
           </View>
 
-          {/* Invite Code Card */}
+          {/* Instructions - No invite code until subscription paid */}
           <View style={[styles.card, styles.cardTransparent]}>
-            <Text style={styles.inviteCodeLabel}>Your Invite Code</Text>
-            <View style={styles.inviteCodeBox}>
-              <Text style={styles.inviteCode}>{createdVessel.inviteCode}</Text>
-            </View>
-            <Text style={[styles.inviteCodeExpiry, { color: MARITIME.textMuted }]}>
-              Valid until {new Date(createdVessel.inviteExpiry).toLocaleDateString()}
+            <Text style={[styles.successMessage, { color: MARITIME.textOnDark }]}>
+              Your vessel is ready. Go to Vessel Settings to choose a plan and get your invite code.
             </Text>
           </View>
 
-          {/* Instructions */}
-          <View style={[styles.infoBox, { backgroundColor: 'rgba(14, 165, 233, 0.1)', borderColor: 'rgba(14, 165, 233, 0.3)' }]}>
-            <Text style={[styles.instructionsTitle, { color: MARITIME.textOnDark }]}>Next Steps</Text>
-            <Text style={[styles.instructionText, { color: MARITIME.textOnDark }]}>
-              1. Share this invite code with your crew members
+          <View
+            style={[
+              styles.infoBox,
+              {
+                backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                borderColor: 'rgba(14, 165, 233, 0.3)',
+              },
+            ]}
+          >
+            <Text style={[styles.instructionsTitle, { color: MARITIME.textOnDark }]}>
+              Next Steps
             </Text>
             <Text style={[styles.instructionText, { color: MARITIME.textOnDark }]}>
-              2. Crew can use this code to register and join your vessel
+              1. Go to Vessel Settings and select a plan
             </Text>
             <Text style={[styles.instructionText, { color: MARITIME.textOnDark }]}>
-              3. Start managing your vessel operations!
+              2. Complete payment to unlock your invite code
             </Text>
             <Text style={[styles.instructionText, { color: MARITIME.textOnDark }]}>
-              4. Invite Code is accessible in the settings menu.
+              3. Share the invite code with your crew members
             </Text>
           </View>
 
           {/* Action Buttons */}
           <View style={styles.actions}>
             <Button
-              title="Share Invite Code"
-              onPress={handleShareInviteCode}
-              variant="outlineLight"
+              title="Go to Vessel Settings"
+              onPress={() => navigation.navigate('VesselSettings')}
               fullWidth
+              variant="primary"
               style={styles.actionButton}
             />
             <Button
               title="Go to Home"
               onPress={handleContinue}
               fullWidth
-              variant="primary"
+              variant="outlineLight"
               style={styles.actionButton}
             />
           </View>
@@ -271,20 +248,13 @@ export const CreateVesselScreen = ({ navigation }: any) => {
           {/* Form card – matches Login */}
           <View style={[styles.card, styles.cardTransparent]}>
             <Text style={styles.cardTitle}>Create Vessel</Text>
-            <Text style={styles.cardSubtitle}>
-              Enter your vessel name to get started
-            </Text>
+            <Text style={styles.cardSubtitle}>Enter your vessel name to get started</Text>
 
             <Input
               label="Vessel Name"
               placeholder="e.g., M/Y Excellence, S/Y Adventure"
               value={vesselName}
               onChangeText={(value) => {
-                // #region agent log
-                try {
-                  if (value?.length > 0) fetch('http://127.0.0.1:7242/ingest/9107f27f-e433-4a01-9080-c66ba8017545',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3ce65b'},body:JSON.stringify({sessionId:'3ce65b',hypothesisId:'E',location:'CreateVesselScreen.tsx:onChangeText',message:'Vessel name changed',data:{valueLength:value?.length,valuePreview:value?.slice(0,20)},timestamp:Date.now()})}).catch(()=>{});
-                } catch (_) {}
-                // #endregion
                 setVesselName(value);
                 setError('');
               }}
@@ -292,9 +262,21 @@ export const CreateVesselScreen = ({ navigation }: any) => {
               autoFocus
             />
 
-            <View style={[styles.infoBox, { backgroundColor: 'rgba(14, 165, 233, 0.1)', borderColor: 'rgba(14, 165, 233, 0.3)' }]}>
-              <Text style={[styles.infoText, { color: MARITIME.textMuted }]}>✓ Unique 8-character invite code</Text>
-              <Text style={[styles.infoText, { color: MARITIME.textMuted }]}>✓ Share with unlimited crew</Text>
+            <View
+              style={[
+                styles.infoBox,
+                {
+                  backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                  borderColor: 'rgba(14, 165, 233, 0.3)',
+                },
+              ]}
+            >
+              <Text style={[styles.infoText, { color: MARITIME.textMuted }]}>
+                ✓ Unique 8-character invite code
+              </Text>
+              <Text style={[styles.infoText, { color: MARITIME.textMuted }]}>
+                ✓ Share with unlimited crew
+              </Text>
             </View>
 
             <Button
@@ -469,6 +451,11 @@ const styles = StyleSheet.create({
     color: MARITIME.textMuted,
     textAlign: 'center',
     marginBottom: SPACING.lg,
+  },
+  successMessage: {
+    fontSize: FONTS.lg,
+    textAlign: 'center',
+    lineHeight: 26,
   },
   inviteCodeLabel: {
     fontSize: FONTS.sm,

@@ -17,6 +17,7 @@ export { JoinVesselScreen } from './JoinVesselScreen';
 export { SettingsScreen } from './SettingsScreen';
 export { ProfileScreen } from './ProfileScreen';
 export { VesselSettingsScreen } from './VesselSettingsScreen';
+export { VesselPlansScreen } from './VesselPlansScreen';
 export { CrewManagementScreen } from './CrewManagementScreen';
 export { UpcomingTripsScreen } from './UpcomingTripsScreen';
 export { GuestTripsScreen } from './GuestTripsScreen';

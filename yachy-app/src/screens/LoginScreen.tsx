@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button, Input } from '../components';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import authService from '../services/auth';
+import { getVesselSubscription } from '../services/subscription';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 
@@ -75,7 +76,22 @@ export const LoginScreen = ({ navigation }: any) => {
       const { user } = await authService.signIn({ email, password });
 
       if (user) {
-        setUser(user);
+        const isCaptain = user.role === 'HOD' || user.position?.toLowerCase().includes('captain');
+        if (isCaptain) {
+          setUser(user);
+        } else if (user.vesselId) {
+          const subscription = await getVesselSubscription(user.vesselId);
+          if (subscription?.status === 'active') {
+            setUser(user);
+          } else {
+            const msg =
+              'Ensure subscription has been paid by the MOV. Once paid, access will be granted again.';
+            setLoginError(msg);
+            if (Platform.OS !== 'web') Alert.alert('Access Restricted', msg);
+          }
+        } else {
+          setUser(user);
+        }
       } else {
         const msg = 'Email Address or Password is Incorrect, Try Again.';
         setLoginError(msg);
@@ -119,9 +135,7 @@ export const LoginScreen = ({ navigation }: any) => {
           {/* Sign-in card */}
           <View style={[styles.card, styles.cardTransparent]}>
             <Text style={styles.cardTitle}>Sign in</Text>
-            <Text style={styles.cardSubtitle}>
-              Enter your credentials to get started
-            </Text>
+            <Text style={styles.cardSubtitle}>Enter your credentials to get started</Text>
 
             <Input
               label="Email"
@@ -163,9 +177,7 @@ export const LoginScreen = ({ navigation }: any) => {
                 disabled
               />
             )}
-            {loginError ? (
-              <Text style={styles.loginError}>{loginError}</Text>
-            ) : null}
+            {loginError ? <Text style={styles.loginError}>{loginError}</Text> : null}
           </View>
 
           {/* Create account */}

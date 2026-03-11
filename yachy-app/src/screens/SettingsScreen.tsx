@@ -28,7 +28,8 @@ export const SettingsScreen = ({ navigation }: any) => {
   const themeColors = BACKGROUND_THEMES[backgroundTheme];
   const isHOD = user?.role === 'HOD';
   const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
-  const profilePhotoUrl = user?.profilePhoto || (user?.id ? userService.getProfilePhotoUrl(user.id) : null);
+  const profilePhotoUrl =
+    user?.profilePhoto || (user?.id ? userService.getProfilePhotoUrl(user.id) : null);
 
   useEffect(() => {
     if (user?.profilePhoto) setPhotoLoadFailed(false);
@@ -63,6 +64,13 @@ export const SettingsScreen = ({ navigation }: any) => {
           {
             title: 'Vessel Management',
             items: [
+              {
+                icon: '📋',
+                label: 'Vessel Plans',
+                description: 'Subscription plans and payment options',
+                onPress: () => navigation.navigate('VesselPlans'),
+                disabled: false,
+              },
               {
                 icon: '⚓',
                 label: 'Vessel Settings',
@@ -180,9 +188,7 @@ export const SettingsScreen = ({ navigation }: any) => {
               />
             ) : (
               <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarText}>
-                  {user?.name?.charAt(0).toUpperCase()}
-                </Text>
+                <Text style={styles.avatarText}>{user?.name?.charAt(0).toUpperCase()}</Text>
               </View>
             )}
           </View>
@@ -206,7 +212,9 @@ export const SettingsScreen = ({ navigation }: any) => {
         {/* Settings Sections */}
         {settingsSections.map((section, sectionIndex) => (
           <View key={sectionIndex} style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>{section.title}</Text>
+            <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
+              {section.title}
+            </Text>
             <View style={[styles.sectionContent, { backgroundColor: themeColors.surface }]}>
               {section.items.map((item, itemIndex) => (
                 <TouchableOpacity
@@ -224,8 +232,12 @@ export const SettingsScreen = ({ navigation }: any) => {
                   <View style={styles.settingsItemLeft}>
                     <Text style={styles.settingsIcon}>{item.icon}</Text>
                     <View style={styles.settingsTextContainer}>
-                      <Text style={[styles.settingsLabel, { color: themeColors.textPrimary }]}>{item.label}</Text>
-                      <Text style={[styles.settingsDescription, { color: themeColors.textSecondary }]}>
+                      <Text style={[styles.settingsLabel, { color: themeColors.textPrimary }]}>
+                        {item.label}
+                      </Text>
+                      <Text
+                        style={[styles.settingsDescription, { color: themeColors.textSecondary }]}
+                      >
                         {item.description}
                       </Text>
                     </View>
@@ -239,7 +251,9 @@ export const SettingsScreen = ({ navigation }: any) => {
 
         {/* Version Info */}
         <View style={styles.versionInfo}>
-          <Text style={[styles.versionText, { color: themeColors.textSecondary }]}>Nautical Ops v1.0.0</Text>
+          <Text style={[styles.versionText, { color: themeColors.textSecondary }]}>
+            Nautical Ops v1.0.0
+          </Text>
           <Text style={[styles.versionSubtext, { color: themeColors.textSecondary }]}>
             Professional yacht operations management
           </Text>

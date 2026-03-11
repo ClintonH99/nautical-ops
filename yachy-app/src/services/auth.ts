@@ -45,12 +45,15 @@ class AuthService {
         }
         throw error;
       }
-      
+
       if (data.user) {
         const PROFILE_TIMEOUT_MS = 15000;
         const userDataPromise = this.getUserProfile(data.user.id);
         const timeoutPromise = new Promise<null>((_, reject) =>
-          setTimeout(() => reject(new Error('Profile load timed out. Please try again.')), PROFILE_TIMEOUT_MS)
+          setTimeout(
+            () => reject(new Error('Profile load timed out. Please try again.')),
+            PROFILE_TIMEOUT_MS
+          )
         );
         let userData = await Promise.race([userDataPromise, timeoutPromise]);
         // If auth succeeded but no profile exists (edge case), create one
@@ -74,15 +77,6 @@ class AuthService {
     try {
       WebBrowser.maybeCompleteAuthSession();
       const redirectTo = makeRedirectUri({ preferLocalhost: false });
-      // #region agent log
-      try {
-        const hasSpace = redirectTo.includes(' ');
-        const firstChar = redirectTo.length ? redirectTo.charCodeAt(0) : -1;
-        const lastChar = redirectTo.length ? redirectTo.charCodeAt(redirectTo.length - 1) : -1;
-        if (__DEV__) console.log('[DEBUG H1,H5] redirectTo:', JSON.stringify(redirectTo), 'len:', redirectTo.length, 'hasSpace:', hasSpace);
-        fetch('http://127.0.0.1:7242/ingest/4078e384-3658-4a9c-ad3e-69711ac24e59',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c8c7a1'},body:JSON.stringify({sessionId:'c8c7a1',hypothesisId:'H1,H5',location:'auth.ts:79',message:'redirectTo value',data:{redirectTo,length:redirectTo.length,hasSpace,firstChar,lastChar,includesNauticalOps:redirectTo.includes('nautical-ops')},timestamp:Date.now()})}).catch(()=>{});
-      } catch (_) {}
-      // #endregion
       const isLocalhost = redirectTo.includes('localhost') || redirectTo.includes('127.0.0.1');
       if (Platform.OS !== 'web' && Device.isDevice && isLocalhost) {
         throw new Error(
@@ -100,25 +94,11 @@ class AuthService {
       });
       if (error) throw error;
       if (!data?.url) throw new Error('No OAuth URL returned');
-      // #region agent log
-      try {
-        let redirectParam = '';
-        try {
-          const u = new URL(data.url);
-          redirectParam = u.searchParams.get('redirect_uri') ?? u.searchParams.get('redirect_to') ?? u.searchParams.get('redirectTo') ?? '';
-        } catch (_) {}
-        fetch('http://127.0.0.1:7242/ingest/4078e384-3658-4a9c-ad3e-69711ac24e59',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c8c7a1'},body:JSON.stringify({sessionId:'c8c7a1',hypothesisId:'H3',location:'auth.ts:97',message:'OAuth URL redirect param',data:{redirectParam,hasSpace:redirectParam.includes(' '),includesNauticalOps:redirectParam.includes('nautical-ops')},timestamp:Date.now()})}).catch(()=>{});
-      } catch (_) {}
-      // #endregion
 
-      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo) as { type: string; url?: string };
-      // #region agent log
-      try {
-        const resUrl = result?.url ?? '';
-        const has500 = resUrl.includes('500') || resUrl.includes('unexpected_failure');
-        fetch('http://127.0.0.1:7242/ingest/4078e384-3658-4a9c-ad3e-69711ac24e59',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c8c7a1'},body:JSON.stringify({sessionId:'c8c7a1',hypothesisId:'H2,H3',location:'auth.ts:openAuthResult',message:'WebBrowser result',data:{type:result?.type,urlLength:resUrl.length,has500,urlHost:resUrl?.split('/')[2]},timestamp:Date.now()})}).catch(()=>{});
-      } catch (_) {}
-      // #endregion
+      const result = (await WebBrowser.openAuthSessionAsync(data.url, redirectTo)) as {
+        type: string;
+        url?: string;
+      };
       if (result.type !== 'success' || !result.url) {
         return { user: null, session: null };
       }
@@ -145,11 +125,6 @@ class AuthService {
       const userData = await this.ensureOAuthUserProfile(sessionData.user);
       return { user: userData, session: sessionData.session };
     } catch (error: any) {
-      // #region agent log
-      try {
-        fetch('http://127.0.0.1:7242/ingest/4078e384-3658-4a9c-ad3e-69711ac24e59',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c8c7a1'},body:JSON.stringify({sessionId:'c8c7a1',hypothesisId:'H1,H2,H3,H4,H5',location:'auth.ts:catch',message:'Google sign in error',data:{message:error?.message,code:error?.code,name:error?.name},timestamp:Date.now()})}).catch(()=>{});
-      } catch (_) {}
-      // #endregion
       if (__DEV__) console.error('Google sign in error:', error);
       throw error;
     }
@@ -217,20 +192,23 @@ class AuthService {
    */
   private async ensureOAuthUserProfile(
     authUser: { id: string; email?: string | null; user_metadata?: Record<string, any> },
-    appleFullName?: { givenName?: string | null; middleName?: string | null; familyName?: string | null } | null
+    appleFullName?: {
+      givenName?: string | null;
+      middleName?: string | null;
+      familyName?: string | null;
+    } | null
   ): Promise<User | null> {
     let profile = await this.getUserProfile(authUser.id);
     if (profile) return profile;
 
-    const name =
-      appleFullName
-        ? [appleFullName.givenName, appleFullName.middleName, appleFullName.familyName]
-            .filter((s): s is string => s != null && s !== '')
-            .join(' ')
-        : authUser.user_metadata?.full_name ??
-          authUser.user_metadata?.name ??
-          authUser.email?.split('@')[0] ??
-          'Crew Member';
+    const name = appleFullName
+      ? [appleFullName.givenName, appleFullName.middleName, appleFullName.familyName]
+          .filter((s): s is string => s != null && s !== '')
+          .join(' ')
+      : (authUser.user_metadata?.full_name ??
+        authUser.user_metadata?.name ??
+        authUser.email?.split('@')[0] ??
+        'Crew Member');
     const email = authUser.email ?? authUser.user_metadata?.email ?? '';
 
     const userProfile = {
@@ -266,7 +244,16 @@ class AuthService {
   /**
    * Sign up with email and password
    */
-  async signUp({ email, password, name, position, department, department2, inviteCode, vesselId }: RegisterData) {
+  async signUp({
+    email,
+    password,
+    name,
+    position,
+    department,
+    department2,
+    inviteCode,
+    vesselId,
+  }: RegisterData) {
     try {
       if (__DEV__) {
         console.log('🚀 Starting signup process...');
@@ -293,7 +280,10 @@ class AuthService {
 
       if (authError) {
         if (__DEV__) console.error('❌ Auth signup error:', authError.message);
-        if (authError.message.includes('already registered') || authError.message.includes('User already registered')) {
+        if (
+          authError.message.includes('already registered') ||
+          authError.message.includes('User already registered')
+        ) {
           throw new Error('Email address already in use');
         }
         throw authError;
@@ -323,17 +313,20 @@ class AuthService {
           joinedViaInviteCode = true;
         }
 
-        if (__DEV__) console.log('💾 Creating user profile with vessel_id:', userProfile.vessel_id || 'null');
+        if (__DEV__)
+          console.log('💾 Creating user profile with vessel_id:', userProfile.vessel_id || 'null');
 
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert([userProfile]);
+        const { error: profileError } = await supabase.from('users').insert([userProfile]);
 
         if (profileError) {
           if (__DEV__) console.error('❌ Profile creation error:', profileError);
           const code = (profileError as any)?.code;
           const msg = (profileError as any)?.message?.toLowerCase() || '';
-          if (code === '23505' || msg.includes('users_email_key') || msg.includes('duplicate key')) {
+          if (
+            code === '23505' ||
+            msg.includes('users_email_key') ||
+            msg.includes('duplicate key')
+          ) {
             throw new Error('Email address already in use');
           }
           throw profileError;
@@ -347,7 +340,8 @@ class AuthService {
             const newCode = await vesselService.regenerateInviteCode(userProfile.vessel_id);
             if (__DEV__) console.log('🔄 Invite code regenerated for next crew member:', newCode);
           } catch (regenError) {
-            if (__DEV__) console.error('⚠️ Failed to regenerate invite code (non-fatal):', regenError);
+            if (__DEV__)
+              console.error('⚠️ Failed to regenerate invite code (non-fatal):', regenError);
           }
         }
 
@@ -366,7 +360,13 @@ class AuthService {
           updatedAt: userProfile.updated_at,
         };
 
-        if (__DEV__) console.log('🎉 Signup complete! User:', mappedUser.name, 'Vessel ID:', mappedUser.vesselId);
+        if (__DEV__)
+          console.log(
+            '🎉 Signup complete! User:',
+            mappedUser.name,
+            'Vessel ID:',
+            mappedUser.vesselId
+          );
 
         return { user: mappedUser, session: authData.session };
       }
@@ -374,7 +374,11 @@ class AuthService {
       return { user: null, session: null };
     } catch (error: any) {
       const msg = error?.message?.toLowerCase() || '';
-      const isInviteCodeError = msg.includes('invite code') || msg.includes('vessel not found') || msg.includes('cannot coerce') || msg.includes('expired');
+      const isInviteCodeError =
+        msg.includes('invite code') ||
+        msg.includes('vessel not found') ||
+        msg.includes('cannot coerce') ||
+        msg.includes('expired');
       if (!isInviteCodeError && __DEV__) console.error('❌ Sign up error:', error.message || error);
       throw error;
     }
@@ -419,13 +423,13 @@ class AuthService {
         .maybeSingle();
 
       if (error) throw error;
-      
+
       // If no user found, return null (user doesn't have a profile yet)
       if (!data) {
         if (__DEV__) console.log('No user profile found for:', userId);
         return null;
       }
-      
+
       // Map snake_case database columns to camelCase User type
       return {
         id: data.id,
@@ -452,7 +456,7 @@ class AuthService {
   async validateInviteCode(inviteCode: string) {
     try {
       if (__DEV__) console.log('🔍 Validating invite code in database:', inviteCode);
-      
+
       const { data, error } = await supabase
         .from('vessels')
         .select('*')
@@ -476,7 +480,7 @@ class AuthService {
         console.log('📅 Expiry date:', expiryDate.toISOString());
         console.log('📅 Current date:', now.toISOString());
       }
-      
+
       if (expiryDate < now) {
         throw new Error('Invite code has expired');
       }
@@ -495,7 +499,7 @@ class AuthService {
     try {
       // Validate invite code and get vessel
       const vessel = await this.validateInviteCode(inviteCode);
-      
+
       if (!vessel) {
         throw new Error('Invalid invite code');
       }
@@ -503,7 +507,7 @@ class AuthService {
       // Update user's vessel_id
       const { error } = await supabase
         .from('users')
-        .update({ 
+        .update({
           vessel_id: vessel.id,
           updated_at: new Date().toISOString(),
         })
@@ -523,7 +527,11 @@ class AuthService {
       return await this.getUserProfile(userId);
     } catch (error: any) {
       const msg = error?.message?.toLowerCase() || '';
-      const isInviteCodeError = msg.includes('invite code') || msg.includes('vessel not found') || msg.includes('cannot coerce') || msg.includes('expired');
+      const isInviteCodeError =
+        msg.includes('invite code') ||
+        msg.includes('vessel not found') ||
+        msg.includes('cannot coerce') ||
+        msg.includes('expired');
       if (!isInviteCodeError && __DEV__) console.error('Join vessel error:', error);
       throw error;
     }
