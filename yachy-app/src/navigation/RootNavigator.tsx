@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, getStateFromPath } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View, StyleSheet, Platform } from 'react-native';
 import {
@@ -85,88 +85,128 @@ import { COLORS } from '../constants/theme';
 
 const Stack = createNativeStackNavigator();
 
-/** Web URL paths: sync browser URL with current screen for shareable links and back/forward */
-const LINKING_CONFIG = {
-  prefixes: ['https://www.nautical-ops.com', 'https://nautical-ops.vercel.app', 'nauticalops://'],
-  config: {
+/** Web URL paths: split by auth state so parsed URLs always target mounted screens */
+const WEB_PREFIXES = [
+  'https://www.nautical-ops.com',
+  'https://nautical-ops.com',
+  'https://nautical-ops.vercel.app',
+  'nauticalops://',
+];
+
+const AUTH_SCREEN_PATHS = {
+  Welcome: 'welcome',
+  Login: 'login',
+  CreateAccountChoice: 'create-account',
+  Register: 'register',
+  RegisterCaptain: 'register-captain',
+  RegisterCrew: 'register-crew',
+  CreateVessel: 'create-vessel',
+  TermsConditions: 'terms',
+  PrivacyPolicy: 'privacy',
+  RefundPolicy: 'refund-policy',
+};
+
+const APP_SCREEN_PATHS = {
+  CaptainWelcome: 'captain-welcome',
+  MainTabs: {
+    path: '',
     screens: {
-      Welcome: '',
-      Login: 'login',
-      CreateAccountChoice: 'create-account',
-      Register: 'register',
-      RegisterCaptain: 'register-captain',
-      RegisterCrew: 'register-crew',
-      CreateVessel: 'create-vessel',
-      TermsConditions: 'terms',
-      PrivacyPolicy: 'privacy',
-      RefundPolicy: 'refund-policy',
-      CaptainWelcome: 'captain-welcome',
-      MainTabs: {
-        path: '',
-        screens: {
-          Home: '',
-          Categories: 'categories',
-          Profile: 'profile',
-        },
-      },
-      JoinVessel: 'join-vessel',
-      Settings: 'settings',
-      VesselPlans: 'vessel-plans',
-      VesselSettings: 'vessel-settings',
-      CrewManagement: 'crew',
-      RotationalGroups: 'rotational-groups',
-      UpcomingTrips: 'trips/upcoming',
-      GuestTrips: 'trips/guest',
-      BossTrips: 'trips/boss',
-      AddEditTrip: 'trips/edit',
-      DeliveryTrips: 'trips/delivery',
-      YardPeriodTrips: 'trips/yard-period',
-      TripColorSettings: 'trip-colors',
-      VesselCrewSafety: 'safety',
-      MusterStation: 'safety/muster',
-      CreateMusterStation: 'safety/muster/create',
-      SafetyEquipment: 'safety/equipment',
-      CreateSafetyEquipment: 'safety/equipment/create',
-      Rules: 'rules',
-      CreateRules: 'rules/create',
-      PreDepartureChecklist: 'pre-departure',
-      AddEditPreDepartureChecklist: 'pre-departure/edit',
-      ViewPreDepartureChecklist: 'pre-departure/view',
-      Tasks: 'tasks',
-      TasksList: 'tasks/list',
-      AddEditTask: 'tasks/edit',
-      OverdueTasks: 'tasks/overdue',
-      UpcomingTasks: 'tasks/upcoming',
-      CompletedTasks: 'tasks/completed',
-      TasksCalendar: 'tasks/calendar',
-      YardPeriodJobs: 'yard-period',
-      AddEditYardJob: 'yard-period/edit',
-      MaintenanceHome: 'maintenance',
-      MaintenanceLog: 'maintenance/log',
-      AddEditMaintenanceLog: 'maintenance/edit',
-      ImportExport: 'import-export',
-      WatchKeeping: 'watch-keeping',
-      WatchSchedule: 'watch-schedule',
-      CreateWatchTimetable: 'watch-schedule/create',
-      ShoppingListCategory: 'shopping',
-      ShoppingList: 'shopping/list',
-      AddEditShoppingList: 'shopping/edit',
-      Inventory: 'inventory',
-      AddEditInventoryItem: 'inventory/edit',
-      DepartmentColorSettings: 'department-colors',
-      ThemeSettings: 'theme',
-      NotificationSettings: 'notifications',
-      VesselLogs: 'logs',
-      GeneralWasteLog: 'logs/general-waste',
-      AddEditGeneralWasteLog: 'logs/general-waste/edit',
-      FuelLog: 'logs/fuel',
-      AddEditFuelLog: 'logs/fuel/edit',
-      PumpOutLog: 'logs/pump-out',
-      AddEditPumpOutLog: 'logs/pump-out/edit',
-      ContractorDatabase: 'contractors',
-      AddEditContractor: 'contractors/edit',
+      Home: '',
+      Categories: 'categories',
+      Profile: 'profile',
     },
   },
+  JoinVessel: 'join-vessel',
+  Settings: 'settings',
+  VesselPlans: 'vessel-plans',
+  TermsConditions: 'terms',
+  PrivacyPolicy: 'privacy',
+  RefundPolicy: 'refund-policy',
+  VesselSettings: 'vessel-settings',
+  CrewManagement: 'crew',
+  RotationalGroups: 'rotational-groups',
+  UpcomingTrips: 'trips/upcoming',
+  GuestTrips: 'trips/guest',
+  BossTrips: 'trips/boss',
+  AddEditTrip: 'trips/edit',
+  DeliveryTrips: 'trips/delivery',
+  YardPeriodTrips: 'trips/yard-period',
+  TripColorSettings: 'trip-colors',
+  VesselCrewSafety: 'safety',
+  MusterStation: 'safety/muster',
+  CreateMusterStation: 'safety/muster/create',
+  SafetyEquipment: 'safety/equipment',
+  CreateSafetyEquipment: 'safety/equipment/create',
+  Rules: 'rules',
+  CreateRules: 'rules/create',
+  PreDepartureChecklist: 'pre-departure',
+  AddEditPreDepartureChecklist: 'pre-departure/edit',
+  ViewPreDepartureChecklist: 'pre-departure/view',
+  Tasks: 'tasks',
+  TasksList: 'tasks/list',
+  AddEditTask: 'tasks/edit',
+  OverdueTasks: 'tasks/overdue',
+  UpcomingTasks: 'tasks/upcoming',
+  CompletedTasks: 'tasks/completed',
+  TasksCalendar: 'tasks/calendar',
+  YardPeriodJobs: 'yard-period',
+  AddEditYardJob: 'yard-period/edit',
+  MaintenanceHome: 'maintenance',
+  MaintenanceLog: 'maintenance/log',
+  AddEditMaintenanceLog: 'maintenance/edit',
+  ImportExport: 'import-export',
+  WatchKeeping: 'watch-keeping',
+  WatchSchedule: 'watch-schedule',
+  CreateWatchTimetable: 'watch-schedule/create',
+  ShoppingListCategory: 'shopping',
+  ShoppingList: 'shopping/list',
+  AddEditShoppingList: 'shopping/edit',
+  Inventory: 'inventory',
+  AddEditInventoryItem: 'inventory/edit',
+  DepartmentColorSettings: 'department-colors',
+  ThemeSettings: 'theme',
+  NotificationSettings: 'notifications',
+  VesselLogs: 'logs',
+  GeneralWasteLog: 'logs/general-waste',
+  AddEditGeneralWasteLog: 'logs/general-waste/edit',
+  FuelLog: 'logs/fuel',
+  AddEditFuelLog: 'logs/fuel/edit',
+  PumpOutLog: 'logs/pump-out',
+  AddEditPumpOutLog: 'logs/pump-out/edit',
+  ContractorDatabase: 'contractors',
+  AddEditContractor: 'contractors/edit',
+};
+
+const createWebLinkingConfig = (isAuthenticated: boolean) => {
+  const screens = isAuthenticated ? APP_SCREEN_PATHS : AUTH_SCREEN_PATHS;
+
+  return {
+    prefixes: WEB_PREFIXES,
+    config: { screens },
+    getStateFromPath: (path: string, options: any) => {
+      const cleanedPath = String(path || '')
+        .split('?')[0]
+        .replace(/^\/+|\/+$/g, '');
+
+      // Logged out: root should always resolve to /login
+      if (!isAuthenticated && (cleanedPath === '' || cleanedPath === 'welcome')) {
+        return getStateFromPath('login', options);
+      }
+
+      // Logged in: /login should resolve to home
+      if (isAuthenticated && cleanedPath === 'login') {
+        return getStateFromPath('', options);
+      }
+
+      const resolved = getStateFromPath(path, options);
+      if (resolved) return resolved;
+
+      // Invalid/protected URL behavior:
+      // - logged out -> /login
+      // - logged in -> /
+      return getStateFromPath(isAuthenticated ? '' : 'login', options);
+    },
+  };
 };
 
 // ROUTING RULE: Users with an account AND assigned to a vessel always go to Home (MainTabs).
@@ -326,8 +366,18 @@ export const RootNavigator = () => {
     },
   };
 
+  const webLinking = Platform.OS === 'web' ? createWebLinkingConfig(isAuthenticated) : undefined;
+
   return (
-    <NavigationContainer theme={navTheme} linking={undefined}>
+    <NavigationContainer
+      theme={navTheme}
+      linking={webLinking}
+      fallback={
+        <View style={[styles.loadingContainer, { backgroundColor: themeColors.background }]}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      }
+    >
       <Stack.Navigator
         key={isAuthenticated ? `main-${initialRoute}` : 'auth'}
         initialRouteName={initialRoute}
