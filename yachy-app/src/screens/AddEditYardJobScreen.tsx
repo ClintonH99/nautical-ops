@@ -11,16 +11,17 @@ import {
   ScrollView,
   Alert,
   TouchableOpacity,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import yardJobsService from '../services/yardJobs';
-import { Input, Button } from '../components';
+import { Input, Button, LoadingSpinner } from '../components';
 import { Department, YardJobPriority } from '../types';
 
 export const AddEditYardJobScreen = ({ navigation, route }: any) => {
@@ -31,6 +32,7 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
   const [jobTitle, setJobTitle] = useState('');
   const [jobDescription, setJobDescription] = useState('');
   const [department, setDepartment] = useState<Department>(user?.department ?? 'INTERIOR');
+  const [departmentDropdownOpen, setDepartmentDropdownOpen] = useState(false);
   const [priority, setPriority] = useState<YardJobPriority>('GREEN');
   const [yardLocation, setYardLocation] = useState('');
   const [contractorCompanyName, setContractorCompanyName] = useState('');
@@ -73,17 +75,19 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
     })();
   }, [jobId]);
 
-  const markedDates: Record<string, { selected?: boolean; selectedColor?: string; selectedTextColor?: string; marked?: boolean }> =
-    doneByDate
-      ? {
-          [doneByDate]: {
-            selected: true,
-            selectedColor: COLORS.primary,
-            selectedTextColor: '#FFFFFF',
-            marked: true,
-          },
-        }
-      : {};
+  const markedDates: Record<
+    string,
+    { selected?: boolean; selectedColor?: string; selectedTextColor?: string; marked?: boolean }
+  > = doneByDate
+    ? {
+        [doneByDate]: {
+          selected: true,
+          selectedColor: COLORS.primary,
+          selectedTextColor: '#FFFFFF',
+          marked: true,
+        },
+      }
+    : {};
 
   const calendarTextColor = themeColors.isDark ? COLORS.white : COLORS.black;
   const calendarTheme = {
@@ -142,9 +146,7 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
           contactDetails: contactDetails.trim() || undefined,
           doneByDate: doneByDate || null,
         });
-        Alert.alert('Created', 'Job added.', [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
+        Alert.alert('Created', 'Job added.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
       }
     } catch (e) {
       console.error('Save job error:', e);
@@ -157,7 +159,9 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
   if (!isHOD) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Only HODs can add or edit jobs.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Only HODs can add or edit jobs.
+        </Text>
       </View>
     );
   }
@@ -165,7 +169,9 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to add jobs.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to add jobs.
+        </Text>
       </View>
     );
   }
@@ -173,7 +179,7 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <LoadingSpinner />
       </View>
     );
   }
@@ -205,60 +211,108 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
           numberOfLines={3}
         />
         <Text style={[styles.label, { color: themeColors.textPrimary }]}>Department</Text>
-        <Text style={[styles.hint, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Which department is this job for?</Text>
-        <View style={styles.chipRow}>
-          {(['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'] as Department[]).map((dept) => (
-            <TouchableOpacity
-              key={dept}
-              style={[
-                styles.chip,
-                { backgroundColor: themeColors.surface, borderColor: COLORS.border },
-                department === dept && styles.chipSelected,
-              ]}
-              onPress={() => setDepartment(dept)}
+        <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
+          Which department is this job for?
+        </Text>
+        <TouchableOpacity
+          style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
+          onPress={() => setDepartmentDropdownOpen(true)}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
+            {department.charAt(0) + department.slice(1).toLowerCase()}
+          </Text>
+          <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>▼</Text>
+        </TouchableOpacity>
+        {departmentDropdownOpen && (
+          <Modal visible transparent animationType="fade">
+            <Pressable
+              style={styles.modalBackdrop}
+              onPress={() => setDepartmentDropdownOpen(false)}
             >
-              <Text
-                style={[
-                  styles.chipText,
-                  { color: themeColors.textPrimary },
-                  department === dept && styles.chipTextSelected,
-                ]}
-                numberOfLines={1}
+              <View
+                style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+                onStartShouldSetResponder={() => true}
               >
-                {dept.charAt(0) + dept.slice(1).toLowerCase()}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+                {(['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'] as Department[]).map(
+                  (dept) => (
+                    <TouchableOpacity
+                      key={dept}
+                      style={[styles.modalItem, department === dept && styles.modalItemSelected]}
+                      onPress={() => {
+                        setDepartment(dept);
+                        setDepartmentDropdownOpen(false);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.modalItemText,
+                          { color: themeColors.textPrimary },
+                          department === dept && styles.modalItemTextSelected,
+                        ]}
+                      >
+                        {dept.charAt(0) + dept.slice(1).toLowerCase()}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                )}
+              </View>
+            </Pressable>
+          </Modal>
+        )}
         <Text style={[styles.label, { color: themeColors.textPrimary }]}>Urgency / Priority</Text>
-        <Text style={[styles.hint, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>How urgent is this job?</Text>
+        <Text
+          style={[
+            styles.hint,
+            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+          ]}
+        >
+          How urgent is this job?
+        </Text>
         <View style={styles.priorityRow}>
           {(['GREEN', 'YELLOW', 'RED'] as YardJobPriority[]).map((p) => {
             const isSelected = priority === p;
-            const chipColor = p === 'GREEN' ? COLORS.success : p === 'YELLOW' ? COLORS.warning : COLORS.danger;
+            const chipColor =
+              p === 'GREEN' ? COLORS.success : p === 'YELLOW' ? COLORS.warning : COLORS.danger;
             return (
-            <TouchableOpacity
-              key={p}
-              style={[
-                styles.priorityChip,
-                { borderColor: chipColor, borderWidth: isSelected ? 3 : 2, backgroundColor: isSelected ? chipColor : themeColors.surface },
-              ]}
-              onPress={() => setPriority(p)}
-              activeOpacity={0.7}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <View style={[styles.priorityDot, { backgroundColor: p === 'GREEN' ? COLORS.success : p === 'YELLOW' ? COLORS.warning : COLORS.danger }]} />
-              <Text
+              <TouchableOpacity
+                key={p}
                 style={[
-                  styles.priorityChipText,
-                  { color: isSelected ? COLORS.white : themeColors.textPrimary },
-                  isSelected && { fontWeight: '700' },
+                  styles.priorityChip,
+                  {
+                    borderColor: chipColor,
+                    borderWidth: isSelected ? 3 : 2,
+                    backgroundColor: isSelected ? chipColor : themeColors.surface,
+                  },
                 ]}
+                onPress={() => setPriority(p)}
+                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                {p === 'GREEN' ? 'Low' : p === 'YELLOW' ? 'Medium' : 'High'}
-              </Text>
-            </TouchableOpacity>
-          );
+                <View
+                  style={[
+                    styles.priorityDot,
+                    {
+                      backgroundColor:
+                        p === 'GREEN'
+                          ? COLORS.success
+                          : p === 'YELLOW'
+                            ? COLORS.warning
+                            : COLORS.danger,
+                    },
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.priorityChipText,
+                    { color: isSelected ? COLORS.white : themeColors.textPrimary },
+                    isSelected && { fontWeight: '700' },
+                  ]}
+                >
+                  {p === 'GREEN' ? 'Low' : p === 'YELLOW' ? 'Medium' : 'High'}
+                </Text>
+              </TouchableOpacity>
+            );
           })}
         </View>
         <Input
@@ -279,8 +333,15 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
           onChangeText={setContactDetails}
           placeholder="Phone, email, or other contact info"
         />
-        <Text style={[styles.label, { color: themeColors.textPrimary }]}>Done by date (optional)</Text>
-        <Text style={[styles.hint, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>
+        <Text style={[styles.label, { color: themeColors.textPrimary }]}>
+          Done by date (optional)
+        </Text>
+        <Text
+          style={[
+            styles.hint,
+            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+          ]}
+        >
           Jobs with a deadline change color as time passes (green → yellow → red).
         </Text>
         <View style={[styles.calendarWrap, { backgroundColor: themeColors.surface }]}>
@@ -297,11 +358,15 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
           />
         </View>
         {doneByDate && (
-          <TouchableOpacity
-            style={styles.clearDate}
-            onPress={() => setDoneByDate(null)}
-          >
-            <Text style={[styles.clearDateText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Clear deadline</Text>
+          <TouchableOpacity style={styles.clearDate} onPress={() => setDoneByDate(null)}>
+            <Text
+              style={[
+                styles.clearDateText,
+                { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+              ]}
+            >
+              Clear deadline
+            </Text>
           </TouchableOpacity>
         )}
         <View style={styles.actions}>
@@ -318,7 +383,14 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
             onPress={() => navigation.goBack()}
             disabled={saving}
           >
-            <Text style={[styles.cancelText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Cancel</Text>
+            <Text
+              style={[
+                styles.cancelText,
+                { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+              ]}
+            >
+              Cancel
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -383,27 +455,51 @@ const styles = StyleSheet.create({
   cancelText: {
     fontSize: FONTS.base,
   },
-  chipRow: {
+  dropdown: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     marginBottom: SPACING.lg,
   },
-  chip: {
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 2,
+  dropdownText: {
+    fontSize: FONTS.base,
+    fontWeight: '500',
   },
-  chipSelected: {
-    borderColor: COLORS.primary,
-    borderWidth: 2,
+  dropdownChevron: {
+    fontSize: 10,
   },
-  chipText: {
-    fontSize: FONTS.sm,
-    fontWeight: '600',
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.xl,
   },
-  chipTextSelected: {
+  modalBox: {
+    borderRadius: BORDER_RADIUS.lg,
+    overflow: 'hidden',
+    width: '100%',
+    maxWidth: 320,
+  },
+  modalItem: {
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  modalItemSelected: {
+    backgroundColor: COLORS.primaryLight + '22',
+  },
+  modalItemText: {
+    fontSize: FONTS.base,
+    fontWeight: '500',
+  },
+  modalItemTextSelected: {
     color: COLORS.primary,
     fontWeight: '700',
   },

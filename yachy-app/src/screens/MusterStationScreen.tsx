@@ -20,11 +20,17 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import musterStationsService from '../services/musterStations';
-import { Button } from '../components';
+import { Button, LoadingSpinner } from '../components';
 import { generateMusterStationPdf } from '../utils/musterStationPdf';
 import type { MusterStation, MusterStationData } from '../services/musterStations';
 
-function MusterStationPreview({ data, themeColors }: { data: MusterStationData; themeColors: { textPrimary: string; textSecondary: string } }) {
+function MusterStationPreview({
+  data,
+  themeColors,
+}: {
+  data: MusterStationData;
+  themeColors: { textPrimary: string; textSecondary: string };
+}) {
   const d = data || {};
   const musterLoc = d.musterStation?.trim() || '-';
   const medical = (d.medicalChest || []).filter(Boolean);
@@ -35,22 +41,33 @@ function MusterStationPreview({ data, themeColors }: { data: MusterStationData; 
 
   return (
     <View style={styles.preview}>
-      <Text style={[styles.previewLabel, { color: themeColors.textSecondary }]}>Muster Station</Text>
+      <Text style={[styles.previewLabel, { color: themeColors.textSecondary }]}>
+        Muster Station
+      </Text>
       <Text style={[styles.previewValue, { color: themeColors.textPrimary }]}>{musterLoc}</Text>
       {(medical.length > 0 || grabBag.length > 0 || lifeRings.length > 0) && (
         <View style={styles.previewMetaWrap}>
           {medical.length > 0 && (
-            <Text style={[styles.previewMeta, { color: themeColors.textSecondary }]} numberOfLines={1}>
+            <Text
+              style={[styles.previewMeta, { color: themeColors.textSecondary }]}
+              numberOfLines={1}
+            >
               Medical bags: {medical.join(', ')}
             </Text>
           )}
           {grabBag.length > 0 && (
-            <Text style={[styles.previewMeta, { color: themeColors.textSecondary }]} numberOfLines={1}>
+            <Text
+              style={[styles.previewMeta, { color: themeColors.textSecondary }]}
+              numberOfLines={1}
+            >
               Grab bag: {grabBag.join(', ')}
             </Text>
           )}
           {lifeRings.length > 0 && (
-            <Text style={[styles.previewMeta, { color: themeColors.textSecondary }]} numberOfLines={1}>
+            <Text
+              style={[styles.previewMeta, { color: themeColors.textSecondary }]}
+              numberOfLines={1}
+            >
               Life rings: {lifeRings.join(', ')}
             </Text>
           )}
@@ -87,7 +104,11 @@ export const MusterStationScreen = ({ navigation }: any) => {
     }
   }, [vesselId]);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -97,7 +118,9 @@ export const MusterStationScreen = ({ navigation }: any) => {
   const onDownloadPdf = async (item: MusterStation) => {
     setExportingId(item.id);
     try {
-      const fn = (item.title || 'Muster Station').replace(/[^a-z0-9]/gi, '_') + '_Muster_Station_and_Duties.pdf';
+      const fn =
+        (item.title || 'Muster Station').replace(/[^a-z0-9]/gi, '_') +
+        '_Muster_Station_and_Duties.pdf';
       await generateMusterStationPdf(item.data, fn);
     } catch (e) {
       console.error('Export PDF error:', e);
@@ -114,31 +137,29 @@ export const MusterStationScreen = ({ navigation }: any) => {
 
   const onDelete = (item: MusterStation) => {
     if (!isHOD) return;
-    Alert.alert(
-      'Delete muster station',
-      `Delete "${item.title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await musterStationsService.delete(item.id);
-              load();
-            } catch (e) {
-              Alert.alert('Error', 'Could not delete muster station');
-            }
-          },
+    Alert.alert('Delete muster station', `Delete "${item.title}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await musterStationsService.delete(item.id);
+            load();
+          } catch (e) {
+            Alert.alert('Error', 'Could not delete muster station');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to use Muster Station & Duties.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to use Muster Station & Duties.
+        </Text>
       </View>
     );
   }
@@ -146,7 +167,7 @@ export const MusterStationScreen = ({ navigation }: any) => {
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <LoadingSpinner />
       </View>
     );
   }
@@ -167,9 +188,14 @@ export const MusterStationScreen = ({ navigation }: any) => {
           disabled={!isHOD}
         >
           <View style={styles.cardHeader}>
-            <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>{item.title}</Text>
+            <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
+              {item.title}
+            </Text>
             {isHOD && (
-              <TouchableOpacity onPress={() => onDelete(item)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <TouchableOpacity
+                onPress={() => onDelete(item)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
                 <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
               </TouchableOpacity>
             )}
@@ -183,7 +209,14 @@ export const MusterStationScreen = ({ navigation }: any) => {
             {exportingId === item.id ? (
               <ActivityIndicator size="small" color={COLORS.primary} />
             ) : (
-              <Text style={[styles.downloadBtnText, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Export to PDF</Text>
+              <Text
+                style={[
+                  styles.downloadBtnText,
+                  { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                ]}
+              >
+                Export to PDF
+              </Text>
             )}
           </TouchableOpacity>
         </TouchableOpacity>
@@ -194,7 +227,12 @@ export const MusterStationScreen = ({ navigation }: any) => {
         </Text>
       )}
       <View style={styles.createSection}>
-        <Button title="Create" onPress={() => navigation.navigate('CreateMusterStation')} variant="primary" fullWidth />
+        <Button
+          title="Create"
+          onPress={() => navigation.navigate('CreateMusterStation')}
+          variant="primary"
+          fullWidth
+        />
       </View>
     </ScrollView>
   );
@@ -217,7 +255,12 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.sm },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.sm,
+  },
   cardTitle: { fontSize: FONTS.lg, fontWeight: '600', flex: 1 },
   preview: {
     marginTop: SPACING.sm,
@@ -226,7 +269,12 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
   },
-  previewLabel: { fontSize: FONTS.xs, fontWeight: '600', marginBottom: 2, textTransform: 'uppercase' },
+  previewLabel: {
+    fontSize: FONTS.xs,
+    fontWeight: '600',
+    marginBottom: 2,
+    textTransform: 'uppercase',
+  },
   previewValue: { fontSize: FONTS.sm, marginBottom: SPACING.sm },
   previewMetaWrap: { marginBottom: SPACING.sm },
   previewMeta: { fontSize: FONTS.xs },

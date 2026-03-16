@@ -6,6 +6,15 @@
 
 export type UserRole = 'HOD' | 'CREW' | 'MANAGEMENT';
 
+export type ContractType = 'permanent' | 'temporary' | 'rotational';
+
+export interface RotationGroup {
+  id: string;
+  vesselId: string;
+  name: string;
+  createdAt: string;
+}
+
 export type Department = 'BRIDGE' | 'ENGINEERING' | 'EXTERIOR' | 'INTERIOR' | 'GALLEY';
 
 export type NotificationPreferenceKey =
@@ -42,6 +51,8 @@ export interface User {
   department: Department;
   department2?: Department | null; // Optional second department for dual-role crew (e.g. deck/stew)
   role: UserRole;
+  contractType?: ContractType;
+  rotationGroupId?: string | null;
   vesselId?: string; // Optional - user can join vessel later
   profilePhoto?: string;
   createdAt: string;
@@ -308,7 +319,13 @@ export interface Attachment {
 
 // ===== CALENDAR TYPES =====
 
-export type CalendarFilterType = 'ALL' | 'BOSS_TRIPS' | 'GUEST_TRIPS' | 'CONTRACTORS' | 'JOBS' | 'DUTIES';
+export type CalendarFilterType =
+  | 'ALL'
+  | 'BOSS_TRIPS'
+  | 'GUEST_TRIPS'
+  | 'CONTRACTORS'
+  | 'JOBS'
+  | 'DUTIES';
 
 export interface CalendarEvent {
   id: string;

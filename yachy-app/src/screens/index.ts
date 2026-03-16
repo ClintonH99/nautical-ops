@@ -19,6 +19,7 @@ export { ProfileScreen } from './ProfileScreen';
 export { VesselSettingsScreen } from './VesselSettingsScreen';
 export { VesselPlansScreen } from './VesselPlansScreen';
 export { CrewManagementScreen } from './CrewManagementScreen';
+export { RotationalGroupsScreen } from './RotationalGroupsScreen';
 export { UpcomingTripsScreen } from './UpcomingTripsScreen';
 export { GuestTripsScreen } from './GuestTripsScreen';
 export { BossTripsScreen } from './BossTripsScreen';

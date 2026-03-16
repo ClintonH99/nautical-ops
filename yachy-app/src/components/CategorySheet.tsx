@@ -24,7 +24,7 @@ const PILL_BG = '#2C2C2E';
 const SHEET_MARGIN_H = 20;
 
 export const CATEGORIES = [
-  { key: 'maintenance', label: 'Maintenance', icon: '🔧', nav: 'MaintenanceHome' },
+  { key: 'maintenance', label: 'Maintenance', icon: '🔧', nav: 'MaintenanceLog' },
   { key: 'watch', label: 'Watch Keeping', icon: '⏱️', nav: 'WatchKeeping' },
   { key: 'logs', label: 'Vessel Logs', icon: '🗒️', nav: 'VesselLogs' },
   { key: 'contractors', label: 'Contractor Database', icon: '👷', nav: 'ContractorDatabase' },
@@ -87,10 +87,7 @@ export const CategorySheet = ({ visible, onClose, onSelectCategory }: CategorySh
       onRequestClose={onClose}
     >
       <View style={styles.container} pointerEvents={visible ? 'auto' : 'none'}>
-        <Animated.View
-          style={[styles.overlay, { opacity: overlayOpacity }]}
-          pointerEvents="auto"
-        >
+        <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]} pointerEvents="auto">
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         </Animated.View>
 

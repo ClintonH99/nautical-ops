@@ -10,7 +10,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   Alert,
 } from 'react-native';
@@ -21,7 +20,7 @@ import { useAuthStore } from '../store';
 import pumpOutLogsService from '../services/pumpOutLogs';
 import vesselService from '../services/vessel';
 import { PumpOutLog, DischargeType } from '../types';
-import { Button, Input, ButtonTagCard, ButtonTagRow } from '../components';
+import { Button, Input, ButtonTagCard, ButtonTagRow, LoadingSpinner } from '../components';
 import { exportPumpOutLogPdf } from '../utils/vesselLogsPdf';
 
 const DISCHARGE_LABELS: Record<DischargeType, string> = {
@@ -52,11 +51,11 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
     ? logs.filter((log) => {
         const q = searchQuery.toLowerCase().trim();
         return (
-          (log.logDate?.toLowerCase().includes(q)) ||
-          (log.logTime?.toLowerCase().includes(q)) ||
-          (log.location?.toLowerCase().includes(q)) ||
-          (log.pumpoutServiceName?.toLowerCase().includes(q)) ||
-          (log.description?.toLowerCase().includes(q)) ||
+          log.logDate?.toLowerCase().includes(q) ||
+          log.logTime?.toLowerCase().includes(q) ||
+          log.location?.toLowerCase().includes(q) ||
+          log.pumpoutServiceName?.toLowerCase().includes(q) ||
+          log.description?.toLowerCase().includes(q) ||
           DISCHARGE_LABELS[log.dischargeType].toLowerCase().includes(q)
         );
       })
@@ -76,7 +75,11 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
     }
   }, [vesselId]);
 
-  useFocusEffect(useCallback(() => { loadLogs(); }, [loadLogs]));
+  useFocusEffect(
+    useCallback(() => {
+      loadLogs();
+    }, [loadLogs])
+  );
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -91,7 +94,10 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
     setSelectedIds(allSelected ? new Set() : new Set(filteredLogs.map((l) => l.id)));
   };
 
-  const onRefresh = () => { setRefreshing(true); loadLogs(); };
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadLogs();
+  };
   const onAdd = () => navigation.navigate('AddEditPumpOutLog', {});
   const onEdit = (log: PumpOutLog) => navigation.navigate('AddEditPumpOutLog', { logId: log.id });
 
@@ -99,10 +105,15 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
     Alert.alert('Delete entry', 'Delete this pump out log entry?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Delete', style: 'destructive',
+        text: 'Delete',
+        style: 'destructive',
         onPress: async () => {
-          try { await pumpOutLogsService.delete(log.id); loadLogs(); }
-          catch { Alert.alert('Error', 'Could not delete entry.'); }
+          try {
+            await pumpOutLogsService.delete(log.id);
+            loadLogs();
+          } catch {
+            Alert.alert('Error', 'Could not delete entry.');
+          }
         },
       },
     ]);
@@ -133,7 +144,9 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to view pump out logs.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to view pump out logs.
+        </Text>
       </View>
     );
   }
@@ -143,7 +156,13 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
       <View style={styles.actionBar}>
         <Button title="Add Log" onPress={onAdd} variant="primary" style={styles.actionBtn} />
         <Button
-          title={exportingPdf ? 'Exporting…' : selectedIds.size > 0 ? `Export to PDF (${selectedIds.size})` : 'Export to PDF'}
+          title={
+            exportingPdf
+              ? 'Exporting…'
+              : selectedIds.size > 0
+                ? `Export to PDF (${selectedIds.size})`
+                : 'Export to PDF'
+          }
           onPress={onExportPdf}
           variant={themeColors.isDark ? 'outlineLight' : 'outline'}
           style={styles.actionBtn}
@@ -170,11 +189,20 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
       )}
 
       {loading ? (
-        <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
+        <LoadingSpinner />
       ) : (
         <ScrollView
-          contentContainerStyle={[styles.listContent, filteredLogs.length === 0 && styles.emptyContent]}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
+          contentContainerStyle={[
+            styles.listContent,
+            filteredLogs.length === 0 && styles.emptyContent,
+          ]}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[COLORS.primary]}
+            />
+          }
         >
           {filteredLogs.length === 0 ? (
             <View style={[styles.emptyState, { backgroundColor: themeColors.surface }]}>
@@ -205,15 +233,25 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
                 >
                   <ButtonTagRow label="Date" value={log.logDate ?? ''} />
                   <ButtonTagRow label="Time" value={log.logTime ?? ''} />
-                  <View style={[styles.badge, { backgroundColor: DISCHARGE_COLORS[log.dischargeType] + '20' }]}>
-                    <Text style={[styles.badgeText, { color: DISCHARGE_COLORS[log.dischargeType] }]}>
+                  <View
+                    style={[
+                      styles.badge,
+                      { backgroundColor: DISCHARGE_COLORS[log.dischargeType] + '20' },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.badgeText, { color: DISCHARGE_COLORS[log.dischargeType] }]}
+                    >
                       {DISCHARGE_LABELS[log.dischargeType]}
                     </Text>
                   </View>
                   {log.dischargeType === 'PUMPOUT_SERVICE' && (
                     <ButtonTagRow label="Service" value={log.pumpoutServiceName ?? ''} />
                   )}
-                  <ButtonTagRow label="Amount" value={log.amountInGallons ? `${log.amountInGallons} gallons` : ''} />
+                  <ButtonTagRow
+                    label="Amount"
+                    value={log.amountInGallons ? `${log.amountInGallons} gallons` : ''}
+                  />
                   <ButtonTagRow label="Description" value={log.description ?? ''} />
                 </ButtonTagCard>
               );
@@ -230,8 +268,11 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
   actionBar: {
-    flexDirection: 'row', gap: SPACING.sm,
-    paddingHorizontal: SPACING.lg, paddingTop: SPACING.lg, paddingBottom: SPACING.sm,
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.sm,
   },
   actionBtn: { flex: 1 },
   searchRow: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.sm },
@@ -242,12 +283,24 @@ const styles = StyleSheet.create({
   listContent: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   emptyContent: { flexGrow: 1, justifyContent: 'center' },
   emptyState: {
-    borderRadius: 12, padding: SPACING.xl, alignItems: 'center',
-    shadowColor: COLORS.black, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3,
+    borderRadius: 12,
+    padding: SPACING.xl,
+    alignItems: 'center',
+    shadowColor: COLORS.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   emptyIcon: { fontSize: 48, marginBottom: SPACING.md },
   emptyTitle: { fontSize: FONTS.xl, fontWeight: '700', marginBottom: SPACING.sm },
   emptyText: { fontSize: FONTS.base, textAlign: 'center', lineHeight: 22 },
-  badge: { alignSelf: 'flex-start', paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: BORDER_RADIUS.sm, marginBottom: SPACING.sm },
+  badge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.sm,
+    marginBottom: SPACING.sm,
+  },
   badgeText: { fontSize: FONTS.sm, fontWeight: '700' },
 });

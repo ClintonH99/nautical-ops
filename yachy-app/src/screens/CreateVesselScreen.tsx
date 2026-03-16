@@ -260,6 +260,7 @@ export const CreateVesselScreen = ({ navigation }: any) => {
               }}
               error={error}
               autoFocus
+              forceLight
             />
 
             <View

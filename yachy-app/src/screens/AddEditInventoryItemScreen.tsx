@@ -14,7 +14,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   Modal,
   Pressable,
 } from 'react-native';
@@ -24,7 +23,7 @@ import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import inventoryService, { InventoryItemRow } from '../services/inventory';
 import { Department } from '../types';
-import { Input, Button } from '../components';
+import { Input, Button, LoadingSpinner } from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -73,7 +72,11 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
     }
   }, [itemId, navigation]);
 
-  useFocusEffect(useCallback(() => { loadItem(); }, [loadItem]));
+  useFocusEffect(
+    useCallback(() => {
+      loadItem();
+    }, [loadItem])
+  );
 
   const addRow = () => setRows((prev) => [...prev, { ...defaultRow }]);
   const removeRow = (index: number) => {
@@ -138,7 +141,9 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to create inventory items.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to create inventory items.
+        </Text>
       </View>
     );
   }
@@ -146,7 +151,7 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <LoadingSpinner />
       </View>
     );
   }
@@ -164,7 +169,14 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
         showsVerticalScrollIndicator={false}
       >
         <Text style={[styles.label, { color: themeColors.textPrimary }]}>Department</Text>
-        <Text style={[styles.hint, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Which department is this for?</Text>
+        <Text
+          style={[
+            styles.hint,
+            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+          ]}
+        >
+          Which department is this for?
+        </Text>
         <TouchableOpacity
           style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
           onPress={() => setDepartmentDropdownOpen(!departmentDropdownOpen)}
@@ -173,16 +185,28 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
           <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
             {department.charAt(0) + department.slice(1).toLowerCase()}
           </Text>
-          <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>{departmentDropdownOpen ? '▲' : '▼'}</Text>
+          <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>
+            {departmentDropdownOpen ? '▲' : '▼'}
+          </Text>
         </TouchableOpacity>
         {departmentDropdownOpen && (
           <Modal visible transparent animationType="fade">
-            <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentDropdownOpen(false)}>
-              <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
+            <Pressable
+              style={styles.modalBackdrop}
+              onPress={() => setDepartmentDropdownOpen(false)}
+            >
+              <View
+                style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+                onStartShouldSetResponder={() => true}
+              >
                 {DEPARTMENTS.map((dept) => (
                   <TouchableOpacity
                     key={dept}
-                    style={[styles.modalItem, { backgroundColor: themeColors.surface }, department === dept && styles.modalItemSelected]}
+                    style={[
+                      styles.modalItem,
+                      { backgroundColor: themeColors.surface },
+                      department === dept && styles.modalItemSelected,
+                    ]}
                     onPress={() => {
                       setDepartment(dept);
                       setDepartmentDropdownOpen(false);
@@ -228,24 +252,47 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
           style={styles.descriptionInput}
         />
 
-        <Text style={[styles.tableLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Amount & Item</Text>
+        <Text
+          style={[
+            styles.tableLabel,
+            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+          ]}
+        >
+          Amount & Item
+        </Text>
         <View style={[styles.table, { backgroundColor: themeColors.surface }]}>
           <View style={[styles.tableHeader, { backgroundColor: themeColors.surfaceAlt }]}>
-            <Text style={[styles.tableHeaderCell, styles.amountCol, { color: themeColors.textPrimary }]}>Amount</Text>
-            <Text style={[styles.tableHeaderCell, styles.itemCol, { color: themeColors.textPrimary }]}>Item</Text>
+            <Text
+              style={[styles.tableHeaderCell, styles.amountCol, { color: themeColors.textPrimary }]}
+            >
+              Amount
+            </Text>
+            <Text
+              style={[styles.tableHeaderCell, styles.itemCol, { color: themeColors.textPrimary }]}
+            >
+              Item
+            </Text>
             <View style={styles.actionsCol} />
           </View>
           {rows.map((row, index) => (
             <View key={index} style={styles.tableRow}>
               <TextInput
-                style={[styles.tableInput, styles.amountCol, { color: themeColors.textPrimary, backgroundColor: themeColors.surface }]}
+                style={[
+                  styles.tableInput,
+                  styles.amountCol,
+                  { color: themeColors.textPrimary, backgroundColor: themeColors.surface },
+                ]}
                 value={row.amount}
                 onChangeText={(v) => setRowAt(index, 'amount', v)}
                 placeholder="Amount"
                 placeholderTextColor={COLORS.gray400}
               />
               <TextInput
-                style={[styles.tableInput, styles.itemCol, { color: themeColors.textPrimary, backgroundColor: themeColors.surface }]}
+                style={[
+                  styles.tableInput,
+                  styles.itemCol,
+                  { color: themeColors.textPrimary, backgroundColor: themeColors.surface },
+                ]}
                 value={row.item}
                 onChangeText={(v) => setRowAt(index, 'item', v)}
                 placeholder="Item"
@@ -256,12 +303,7 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
                 style={styles.removeBtn}
                 disabled={rows.length <= 1}
               >
-                <Text
-                  style={[
-                    styles.removeBtnText,
-                    rows.length <= 1 && styles.removeBtnDisabled,
-                  ]}
-                >
+                <Text style={[styles.removeBtnText, rows.length <= 1 && styles.removeBtnDisabled]}>
                   Remove
                 </Text>
               </TouchableOpacity>
@@ -285,31 +327,27 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
             <Button
               title="Remove item"
               onPress={() => {
-                Alert.alert(
-                  'Remove item',
-                  'Remove this inventory item?',
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    {
-                      text: 'Remove',
-                      style: 'destructive',
-                      onPress: async () => {
-                        if (!itemId) return;
-                        setSaving(true);
-                        try {
-                          await inventoryService.delete(itemId);
-                          Alert.alert('Removed', 'Item has been removed.');
-                          navigation.goBack();
-                        } catch (e) {
-                          console.error('Delete inventory item error:', e);
-                          Alert.alert('Error', 'Could not remove item.');
-                        } finally {
-                          setSaving(false);
-                        }
-                      },
+                Alert.alert('Remove item', 'Remove this inventory item?', [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Remove',
+                    style: 'destructive',
+                    onPress: async () => {
+                      if (!itemId) return;
+                      setSaving(true);
+                      try {
+                        await inventoryService.delete(itemId);
+                        Alert.alert('Removed', 'Item has been removed.');
+                        navigation.goBack();
+                      } catch (e) {
+                        console.error('Delete inventory item error:', e);
+                        Alert.alert('Error', 'Could not remove item.');
+                      } finally {
+                        setSaving(false);
+                      }
                     },
-                  ]
-                );
+                  },
+                ]);
               }}
               variant="danger"
               fullWidth
@@ -349,7 +387,13 @@ const styles = StyleSheet.create({
   },
   dropdownText: { fontSize: FONTS.base, fontWeight: '500' },
   dropdownChevron: { fontSize: 10 },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
+  },
   modalBox: { borderRadius: BORDER_RADIUS.lg, paddingVertical: SPACING.sm, minWidth: 200 },
   modalItem: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg },
   modalItemSelected: {},

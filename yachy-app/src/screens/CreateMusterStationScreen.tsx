@@ -14,14 +14,13 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
 } from 'react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import musterStationsService from '../services/musterStations';
 import vesselService from '../services/vessel';
-import { Button } from '../components';
+import { Button, LoadingSpinner } from '../components';
 import { generateMusterStationPdf } from '../utils/musterStationPdf';
 import type { MusterStationData } from '../services/musterStations';
 
@@ -128,18 +127,27 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
   const [grabBagContents, setGrabBagContents] = useState('');
   const [lifeRings, setLifeRings] = useState<string[]>(['']);
   const [emergencySignals, setEmergencySignals] = useState(DEFAULT_SIGNALS);
-  const [crewMembers, setCrewMembers] = useState<typeof EMPTY_CREW[]>([
+  const [crewMembers, setCrewMembers] = useState<(typeof EMPTY_CREW)[]>([
     { ...EMPTY_CREW, roleName: 'Captain' },
   ]);
 
   const addLocation = (setter: React.Dispatch<React.SetStateAction<string[]>>, arr: string[]) => {
     setter([...arr, '']);
   };
-  const removeLocation = (setter: React.Dispatch<React.SetStateAction<string[]>>, arr: string[], i: number) => {
+  const removeLocation = (
+    setter: React.Dispatch<React.SetStateAction<string[]>>,
+    arr: string[],
+    i: number
+  ) => {
     if (arr.length <= 1) return;
     setter(arr.filter((_, idx) => idx !== i));
   };
-  const setLoc = (setter: React.Dispatch<React.SetStateAction<string[]>>, arr: string[], i: number, v: string) => {
+  const setLoc = (
+    setter: React.Dispatch<React.SetStateAction<string[]>>,
+    arr: string[],
+    i: number,
+    v: string
+  ) => {
     const next = [...arr];
     next[i] = v;
     setter(next);
@@ -169,7 +177,8 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
 
   const onExport = async () => {
     const data = buildData();
-    const fn = (vesselName || 'Muster').replace(/[^a-z0-9]/gi, '_') + '_Muster_Station_and_Duties.pdf';
+    const fn =
+      (vesselName || 'Muster').replace(/[^a-z0-9]/gi, '_') + '_Muster_Station_and_Duties.pdf';
     await generateMusterStationPdf(data, fn);
   };
 
@@ -193,7 +202,14 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Join a vessel to create a muster station.</Text>
+        <Text
+          style={[
+            styles.message,
+            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+          ]}
+        >
+          Join a vessel to create a muster station.
+        </Text>
       </View>
     );
   }
@@ -201,7 +217,14 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
   if (!isHOD) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Only HODs can create or edit muster stations.</Text>
+        <Text
+          style={[
+            styles.message,
+            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+          ]}
+        >
+          Only HODs can create or edit muster stations.
+        </Text>
       </View>
     );
   }
@@ -209,32 +232,56 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <LoadingSpinner />
       </View>
     );
   }
 
   return (
-    <KeyboardAvoidingView style={[styles.container, { backgroundColor: themeColors.background }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: themeColors.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator
       >
-        <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Muster station location</Text>
+        <Text
+          style={[
+            styles.label,
+            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+          ]}
+        >
+          Muster station location
+        </Text>
         <TextInput
-          style={[styles.input, { backgroundColor: themeColors.surface, color: themeColors.textPrimary }]}
+          style={[
+            styles.input,
+            { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+          ]}
           value={musterStation}
           onChangeText={setMusterStation}
           placeholder="e.g. Sundeck"
           placeholderTextColor={COLORS.textTertiary}
         />
-        <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Medical Bags Locations</Text>
+        <Text
+          style={[
+            styles.label,
+            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+          ]}
+        >
+          Medical Bags Locations
+        </Text>
         {medicalChest.map((loc, i) => (
           <View key={i} style={styles.row}>
             <TextInput
-              style={[styles.input, styles.flex, { backgroundColor: themeColors.surface, color: themeColors.textPrimary }]}
+              style={[
+                styles.input,
+                styles.flex,
+                { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+              ]}
               value={loc}
               onChangeText={(v) => setLoc(setMedicalChest, medicalChest, i, v)}
               placeholder="Location"
@@ -249,11 +296,22 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
           <Text style={styles.add}>+ Add location</Text>
         </TouchableOpacity>
 
-        <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Grab bag locations</Text>
+        <Text
+          style={[
+            styles.label,
+            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+          ]}
+        >
+          Grab bag locations
+        </Text>
         {grabBag.map((loc, i) => (
           <View key={i} style={styles.row}>
             <TextInput
-              style={[styles.input, styles.flex, { backgroundColor: themeColors.surface, color: themeColors.textPrimary }]}
+              style={[
+                styles.input,
+                styles.flex,
+                { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+              ]}
               value={loc}
               onChangeText={(v) => setLoc(setGrabBag, grabBag, i, v)}
               placeholder="Location"
@@ -268,9 +326,20 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
           <Text style={styles.add}>+ Add location</Text>
         </TouchableOpacity>
 
-        <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Grab bag contents</Text>
+        <Text
+          style={[
+            styles.label,
+            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+          ]}
+        >
+          Grab bag contents
+        </Text>
         <TextInput
-          style={[styles.input, styles.textArea, { backgroundColor: themeColors.surface, color: themeColors.textPrimary }]}
+          style={[
+            styles.input,
+            styles.textArea,
+            { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+          ]}
           value={grabBagContents}
           onChangeText={setGrabBagContents}
           placeholder="e.g. Flares, EPIRB, SART, VHF batteries, medical kit, water"
@@ -278,11 +347,22 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
           multiline
         />
 
-        <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Life rings</Text>
+        <Text
+          style={[
+            styles.label,
+            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+          ]}
+        >
+          Life rings
+        </Text>
         {lifeRings.map((loc, i) => (
           <View key={i} style={styles.row}>
             <TextInput
-              style={[styles.input, styles.flex, { backgroundColor: themeColors.surface, color: themeColors.textPrimary }]}
+              style={[
+                styles.input,
+                styles.flex,
+                { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+              ]}
               value={loc}
               onChangeText={(v) => setLoc(setLifeRings, lifeRings, i, v)}
               placeholder="Location"
@@ -300,9 +380,19 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
         <Text style={[styles.section, { color: themeColors.textPrimary }]}>Emergency signals</Text>
         {(Object.keys(emergencySignals) as (keyof typeof DEFAULT_SIGNALS)[]).map((k) => (
           <View key={k}>
-            <Text style={[styles.smlabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>{EMERGENCY_SIGNAL_LABELS[k]}</Text>
+            <Text
+              style={[
+                styles.smlabel,
+                { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+              ]}
+            >
+              {EMERGENCY_SIGNAL_LABELS[k]}
+            </Text>
             <TextInput
-              style={[styles.input, { backgroundColor: themeColors.surface, color: themeColors.textPrimary }]}
+              style={[
+                styles.input,
+                { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+              ]}
               value={emergencySignals[k]}
               onChangeText={(v) => setEmergencySignals({ ...emergencySignals, [k]: v })}
               placeholderTextColor={COLORS.textTertiary}
@@ -315,7 +405,11 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
           <View key={i} style={[styles.crewCard, { backgroundColor: themeColors.surface }]}>
             <View style={styles.row}>
               <TextInput
-                style={[styles.input, styles.flex, { backgroundColor: themeColors.surface, color: themeColors.textPrimary }]}
+                style={[
+                  styles.input,
+                  styles.flex,
+                  { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+                ]}
                 value={c.roleName}
                 onChangeText={(v) => setCrew(i, 'roleName', v)}
                 placeholder="Role name"
@@ -328,7 +422,11 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
             {(['fire', 'manOverboard', 'grounding', 'abandonShip', 'medical'] as const).map((f) => (
               <TextInput
                 key={f}
-                style={[styles.input, styles.sm, { backgroundColor: themeColors.surface, color: themeColors.textPrimary }]}
+                style={[
+                  styles.input,
+                  styles.sm,
+                  { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+                ]}
                 value={c[f]}
                 onChangeText={(v) => setCrew(i, f, v)}
                 placeholder={CREW_DUTY_LABELS[f]}
@@ -342,8 +440,20 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
         </TouchableOpacity>
 
         <View style={styles.actions}>
-          <Button title="Export to PDF" onPress={onExport} variant="outline" fullWidth style={styles.btn} />
-          <Button title={isEdit ? 'Save' : 'Publish'} onPress={onPublish} variant="primary" fullWidth style={styles.btn} />
+          <Button
+            title="Export to PDF"
+            onPress={onExport}
+            variant="outline"
+            fullWidth
+            style={styles.btn}
+          />
+          <Button
+            title={isEdit ? 'Save' : 'Publish'}
+            onPress={onPublish}
+            variant="primary"
+            fullWidth
+            style={styles.btn}
+          />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -358,7 +468,12 @@ const styles = StyleSheet.create({
   message: { fontSize: FONTS.base, textAlign: 'center' },
   label: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: 4, marginTop: SPACING.md },
   smlabel: { fontSize: FONTS.xs, marginBottom: 2 },
-  section: { fontSize: FONTS.lg, fontWeight: '700', marginTop: SPACING.xl, marginBottom: SPACING.sm },
+  section: {
+    fontSize: FONTS.lg,
+    fontWeight: '700',
+    marginTop: SPACING.xl,
+    marginBottom: SPACING.sm,
+  },
   input: {
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
@@ -372,7 +487,13 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   remove: { fontSize: FONTS.sm, color: COLORS.primary },
   add: { fontSize: FONTS.base, color: COLORS.primary, fontWeight: '600', marginBottom: SPACING.sm },
-  crewCard: { padding: SPACING.md, borderRadius: BORDER_RADIUS.md, marginBottom: SPACING.md, borderWidth: 1, borderColor: COLORS.border },
+  crewCard: {
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
   actions: { marginTop: SPACING.xl, gap: SPACING.md },
   btn: { marginBottom: SPACING.sm },
 });

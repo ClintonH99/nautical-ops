@@ -3,30 +3,56 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+  Alert,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import rulesService from '../services/rules';
-import { Button } from '../components';
+import { Button, LoadingSpinner } from '../components';
 import { generateRulesPdf } from '../utils/rulesPdf';
 import type { Rule } from '../services/rules';
 
-function RulesPreview({ rules, themeColors }: { rules: string[]; themeColors: { textPrimary: string; textSecondary: string } }) {
+function RulesPreview({
+  rules,
+  themeColors,
+}: {
+  rules: string[];
+  themeColors: { textPrimary: string; textSecondary: string };
+}) {
   const items = (rules || []).filter(Boolean);
-  if (items.length === 0) return <Text style={[styles.previewEmpty, { color: themeColors.textSecondary }]}>No rules added</Text>;
+  if (items.length === 0)
+    return (
+      <Text style={[styles.previewEmpty, { color: themeColors.textSecondary }]}>
+        No rules added
+      </Text>
+    );
 
   return (
     <View style={styles.preview}>
       {items.slice(0, 4).map((r, i) => (
-        <Text key={i} style={[styles.previewRow, { color: themeColors.textPrimary }]} numberOfLines={1}>
+        <Text
+          key={i}
+          style={[styles.previewRow, { color: themeColors.textPrimary }]}
+          numberOfLines={1}
+        >
           {i + 1}. {r}
         </Text>
       ))}
       {items.length > 4 && (
-        <Text style={[styles.previewMore, { color: themeColors.textSecondary }]}>+{items.length - 4} more rules</Text>
+        <Text style={[styles.previewMore, { color: themeColors.textSecondary }]}>
+          +{items.length - 4} more rules
+        </Text>
       )}
     </View>
   );
@@ -54,7 +80,11 @@ export const RulesScreen = ({ navigation }: any) => {
     }
   }, [vesselId]);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
   const onDownloadPdf = async (item: Rule) => {
     setExportingId(item.id);
@@ -76,32 +106,52 @@ export const RulesScreen = ({ navigation }: any) => {
   const onDelete = (item: Rule) => {
     if (!isHOD) return;
     const displayTitle = item.data?.title || item.title;
-    Alert.alert(
-      'Delete rules',
-      `Delete "${displayTitle}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await rulesService.delete(item.id);
-              load();
-            } catch (e) {
-              Alert.alert('Error', 'Could not delete');
-            }
-          },
+    Alert.alert('Delete rules', `Delete "${displayTitle}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await rulesService.delete(item.id);
+            load();
+          } catch (e) {
+            Alert.alert('Error', 'Could not delete');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
-  if (!vesselId) return <View style={[styles.center, { backgroundColor: themeColors.background }]}><Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to use Rules On-Board.</Text></View>;
-  if (loading) return <View style={[styles.center, { backgroundColor: themeColors.background }]}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
+  if (!vesselId)
+    return (
+      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to use Rules On-Board.
+        </Text>
+      </View>
+    );
+  if (loading)
+    return (
+      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
+        <LoadingSpinner />
+      </View>
+    );
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: themeColors.background }]}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => {
+            setRefreshing(true);
+            load();
+          }}
+        />
+      }
+    >
       <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>Published</Text>
       {items.map((item) => (
         <TouchableOpacity
@@ -112,23 +162,52 @@ export const RulesScreen = ({ navigation }: any) => {
           disabled={!isHOD}
         >
           <View style={styles.cardHeader}>
-            <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>{item.data?.title || item.title}</Text>
+            <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
+              {item.data?.title || item.title}
+            </Text>
             {isHOD && (
-              <TouchableOpacity onPress={() => onDelete(item)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <TouchableOpacity
+                onPress={() => onDelete(item)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
                 <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
               </TouchableOpacity>
             )}
           </View>
           <RulesPreview rules={item.data?.rules ?? []} themeColors={themeColors} />
-          <TouchableOpacity style={styles.downloadBtn} onPress={() => onDownloadPdf(item)} disabled={!!exportingId}>
-            {exportingId === item.id ? <ActivityIndicator size="small" color={COLORS.primary} /> : <Text style={[styles.downloadBtnText, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Export to PDF</Text>}
+          <TouchableOpacity
+            style={styles.downloadBtn}
+            onPress={() => onDownloadPdf(item)}
+            disabled={!!exportingId}
+          >
+            {exportingId === item.id ? (
+              <ActivityIndicator size="small" color={COLORS.primary} />
+            ) : (
+              <Text
+                style={[
+                  styles.downloadBtnText,
+                  { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                ]}
+              >
+                Export to PDF
+              </Text>
+            )}
           </TouchableOpacity>
         </TouchableOpacity>
       ))}
-      {items.length === 0 && <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>No published rules yet.{isHOD ? ' Create one below.' : ''}</Text>}
+      {items.length === 0 && (
+        <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
+          No published rules yet.{isHOD ? ' Create one below.' : ''}
+        </Text>
+      )}
       {isHOD && (
         <View style={styles.createSection}>
-          <Button title="Create" onPress={() => navigation.navigate('CreateRules')} variant="primary" fullWidth />
+          <Button
+            title="Create"
+            onPress={() => navigation.navigate('CreateRules')}
+            variant="primary"
+            fullWidth
+          />
         </View>
       )}
     </ScrollView>
@@ -141,8 +220,22 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
   sectionTitle: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.md },
-  card: { borderRadius: BORDER_RADIUS.lg, padding: SPACING.lg, marginBottom: SPACING.md, shadowColor: COLORS.black, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 3 },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.sm },
+  card: {
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.lg,
+    marginBottom: SPACING.md,
+    shadowColor: COLORS.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.sm,
+  },
   cardTitle: { fontSize: FONTS.lg, fontWeight: '600', flex: 1 },
   preview: {
     marginTop: SPACING.sm,

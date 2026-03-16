@@ -11,7 +11,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   Alert,
   Modal,
@@ -29,7 +28,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import maintenanceLogsService from '../services/maintenanceLogs';
 import vesselService from '../services/vessel';
 import { MaintenanceLog } from '../types';
-import { Button } from '../components';
+import { Button, LoadingSpinner } from '../components';
 
 const COLUMN_WIDTH = 110;
 const DATE_WIDTH = 88;
@@ -49,7 +48,11 @@ const FILTER_KEYS = [
 
 type FilterKey = (typeof FILTER_KEYS)[number]['key'];
 
-function getLogFilterValue(log: MaintenanceLog, filterKey: FilterKey, formatDateFn: (d: string) => string): string {
+function getLogFilterValue(
+  log: MaintenanceLog,
+  filterKey: FilterKey,
+  formatDateFn: (d: string) => string
+): string {
   switch (filterKey) {
     case 'equipment':
       return log.equipment?.trim() || '—';
@@ -177,7 +180,8 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
 
   const toggleSelectAll = () => {
     const visibleIds = filteredLogs.map((l) => l.id);
-    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
+    const allVisibleSelected =
+      visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
     if (allVisibleSelected) {
       setSelectedIds(new Set());
     } else {
@@ -218,40 +222,33 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
   };
 
   const onDelete = (log: MaintenanceLog) => {
-    Alert.alert(
-      'Delete log',
-      `Delete maintenance log for "${log.equipment}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await maintenanceLogsService.delete(log.id);
-              loadLogs();
-            } catch (e) {
-              Alert.alert('Error', 'Could not delete log');
-            }
-          },
+    Alert.alert('Delete log', `Delete maintenance log for "${log.equipment}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await maintenanceLogsService.delete(log.id);
+            loadLogs();
+          } catch (e) {
+            Alert.alert('Error', 'Could not delete log');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const exportPdf = async () => {
     const logsToExport = logs.filter((l) => selectedIds.has(l.id));
     if (logsToExport.length === 0) {
-      Alert.alert(
-        'No logs selected',
-        'Please select at least one log to include in the PDF.'
-      );
+      Alert.alert('No logs selected', 'Please select at least one log to include in the PDF.');
       return;
     }
 
     try {
       setExportingPdf(true);
-      
+
       // Get vessel name for filename
       let vesselName = 'Vessel';
       if (vesselId) {
@@ -259,21 +256,26 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
           const vessel = await vesselService.getVessel(vesselId);
           if (vessel?.name) {
             // Sanitize vessel name for filename (remove invalid chars)
-            vesselName = vessel.name.replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '') || 'Vessel';
+            vesselName =
+              vessel.name
+                .replace(/[^a-z0-9]/gi, '_')
+                .replace(/_+/g, '_')
+                .replace(/^_|_$/g, '') || 'Vessel';
           }
         } catch (e) {
           console.error('Error fetching vessel name:', e);
         }
       }
-      
+
       // Format date for filename (YYYY-MM-DD)
       const today = new Date();
       const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       const filename = `${vesselName}_${dateStr}_MaintenanceLog.pdf`;
-      
-      const rows = logsToExport.map(
-        (l) =>
-          `<tr>
+
+      const rows = logsToExport
+        .map(
+          (l) =>
+            `<tr>
             <td>${escapeHtml(l.equipment)}</td>
             <td>${escapeHtml(l.portStarboardNa)}</td>
             <td>${escapeHtml(l.serialNumber)}</td>
@@ -284,7 +286,8 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
             <td>${escapeHtml(l.serviceDoneBy)}</td>
             <td>${formatDate(l.createdAt)}</td>
           </tr>`
-      ).join('');
+        )
+        .join('');
 
       const html = `<!DOCTYPE html>
         <html>
@@ -329,14 +332,14 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
         </html>`;
 
       const { uri } = await Print.printToFileAsync({ html });
-      
+
       // Rename file with vessel name, date, and "Maintenance Log"
       const newUri = `${FileSystem.cacheDirectory}${filename}`;
       await FileSystem.moveAsync({
         from: uri,
         to: newUri,
       });
-      
+
       await Sharing.shareAsync(newUri, {
         mimeType: 'application/pdf',
         dialogTitle: 'Save Maintenance Log PDF',
@@ -355,7 +358,9 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to see maintenance logs.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to see maintenance logs.
+        </Text>
       </View>
     );
   }
@@ -364,16 +369,17 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <View style={styles.actionsRow}>
         <View style={styles.leftActions}>
-          <Button
-            title="Add Log"
-            onPress={onAdd}
-            variant="primary"
-            style={styles.addButton}
-          />
+          <Button title="Add Log" onPress={onAdd} variant="primary" style={styles.addButton} />
           {logs.length > 0 && (
-            <TouchableOpacity onPress={toggleSelectAll} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={styles.selectAllWrap}>
+            <TouchableOpacity
+              onPress={toggleSelectAll}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.selectAllWrap}
+            >
               <Text style={styles.selectAllLink}>
-                {filteredLogs.length > 0 && filteredLogs.every((l) => selectedIds.has(l.id)) ? 'Deselect All' : 'Select All'}
+                {filteredLogs.length > 0 && filteredLogs.every((l) => selectedIds.has(l.id))
+                  ? 'Deselect All'
+                  : 'Select All'}
               </Text>
             </TouchableOpacity>
           )}
@@ -395,19 +401,39 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
 
       {logs.length > 0 && !loading && (
         <View style={styles.filterBarWrap}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterBarContent}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterBarContent}
+          >
             {FILTER_KEYS.map(({ key, label }) => {
               const value = filters[key];
               const display = value || 'All';
               return (
                 <TouchableOpacity
                   key={key}
-                  style={[styles.filterChip, { backgroundColor: themeColors.surface }, value ? styles.filterChipActive : null]}
+                  style={[
+                    styles.filterChip,
+                    { backgroundColor: themeColors.surface },
+                    value ? styles.filterChipActive : null,
+                  ]}
                   onPress={() => setFilterDropdownKey(key)}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.filterChipLabel, { color: themeColors.textSecondary }]} numberOfLines={1}>{label}</Text>
-                  <Text style={[styles.filterChipValue, { color: themeColors.textPrimary }, value ? styles.filterChipValueActive : null]} numberOfLines={1}>
+                  <Text
+                    style={[styles.filterChipLabel, { color: themeColors.textSecondary }]}
+                    numberOfLines={1}
+                  >
+                    {label}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.filterChipValue,
+                      { color: themeColors.textPrimary },
+                      value ? styles.filterChipValueActive : null,
+                    ]}
+                    numberOfLines={1}
+                  >
                     {display}
                   </Text>
                 </TouchableOpacity>
@@ -415,7 +441,21 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
             })}
           </ScrollView>
           {(FILTER_KEYS as readonly { key: FilterKey }[]).some(({ key }) => filters[key]) && (
-            <TouchableOpacity onPress={() => setFilters({ equipment: '', location: '', serialNumber: '', hoursOfService: '', hoursAtNextService: '', whatServiceDone: '', serviceDoneBy: '', date: '' })} style={styles.clearFiltersWrap}>
+            <TouchableOpacity
+              onPress={() =>
+                setFilters({
+                  equipment: '',
+                  location: '',
+                  serialNumber: '',
+                  hoursOfService: '',
+                  hoursAtNextService: '',
+                  whatServiceDone: '',
+                  serviceDoneBy: '',
+                  date: '',
+                })
+              }
+              style={styles.clearFiltersWrap}
+            >
               <Text style={styles.clearFiltersLink}>Clear filters</Text>
             </TouchableOpacity>
           )}
@@ -425,20 +465,30 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
       {filterDropdownKey && (
         <Modal visible transparent animationType="fade">
           <Pressable style={styles.filterModalBackdrop} onPress={() => setFilterDropdownKey(null)}>
-            <View style={[styles.filterModalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
-              <Text style={[styles.filterModalTitle, { color: themeColors.textPrimary }]}>{FILTER_KEYS.find((f) => f.key === filterDropdownKey)?.label ?? filterDropdownKey}</Text>
+            <View
+              style={[styles.filterModalBox, { backgroundColor: themeColors.surface }]}
+              onStartShouldSetResponder={() => true}
+            >
+              <Text style={[styles.filterModalTitle, { color: themeColors.textPrimary }]}>
+                {FILTER_KEYS.find((f) => f.key === filterDropdownKey)?.label ?? filterDropdownKey}
+              </Text>
               <FlatList
                 data={['', ...uniqueValuesByKey[filterDropdownKey]]}
                 keyExtractor={(item, i) => (item || 'all') + i}
                 renderItem={({ item }) => (
                   <TouchableOpacity
-                    style={[styles.filterModalItem, filters[filterDropdownKey] === item && styles.filterModalItemSelected]}
+                    style={[
+                      styles.filterModalItem,
+                      filters[filterDropdownKey] === item && styles.filterModalItemSelected,
+                    ]}
                     onPress={() => {
                       setFilters((prev) => ({ ...prev, [filterDropdownKey]: item }));
                       setFilterDropdownKey(null);
                     }}
                   >
-                    <Text style={[styles.filterModalItemText, { color: themeColors.textPrimary }]}>{item || 'All'}</Text>
+                    <Text style={[styles.filterModalItemText, { color: themeColors.textPrimary }]}>
+                      {item || 'All'}
+                    </Text>
                   </TouchableOpacity>
                 )}
               />
@@ -448,7 +498,7 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
       )}
 
       {loading ? (
-        <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
+        <LoadingSpinner />
       ) : logs.length === 0 ? (
         <ScrollView
           contentContainerStyle={styles.emptyScroll}
@@ -462,14 +512,24 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
         >
           <View style={styles.empty}>
             <Text style={styles.emptyEmoji}>📋</Text>
-            <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>No maintenance logs yet</Text>
-            <Button title="Add first log" onPress={onAdd} variant="primary" style={styles.emptyBtn} />
+            <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
+              No maintenance logs yet
+            </Text>
+            <Button
+              title="Add first log"
+              onPress={onAdd}
+              variant="primary"
+              style={styles.emptyBtn}
+            />
           </View>
         </ScrollView>
       ) : (
         <ScrollView
           style={styles.verticalScroll}
-          contentContainerStyle={[styles.verticalScrollContent, { paddingBottom: SIZES.bottomScrollPadding }]}
+          contentContainerStyle={[
+            styles.verticalScrollContent,
+            { paddingBottom: SIZES.bottomScrollPadding },
+          ]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -487,28 +547,47 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
           >
             <View style={styles.table}>
               <View style={[styles.row, styles.headerRow]}>
-                <View style={[styles.cellView, styles.headerCellView, styles.checkboxHeaderCell, { width: CHECKBOX_WIDTH }]}>
+                <View
+                  style={[
+                    styles.cellView,
+                    styles.headerCellView,
+                    styles.checkboxHeaderCell,
+                    { width: CHECKBOX_WIDTH },
+                  ]}
+                >
                   <Checkbox
-                    checked={filteredLogs.length > 0 && filteredLogs.every((l) => selectedIds.has(l.id))}
+                    checked={
+                      filteredLogs.length > 0 && filteredLogs.every((l) => selectedIds.has(l.id))
+                    }
                     onPress={toggleSelectAll}
                     disabled={filteredLogs.length === 0}
                     themeColors={themeColors}
                   />
                 </View>
-                <Text style={[styles.cell, styles.headerCell, { width: COLUMN_WIDTH }]}>Equipment</Text>
+                <Text style={[styles.cell, styles.headerCell, { width: COLUMN_WIDTH }]}>
+                  Equipment
+                </Text>
                 <Text style={[styles.cell, styles.headerCell, { width: 72 }]}>Location</Text>
-                <Text style={[styles.cell, styles.headerCell, { width: COLUMN_WIDTH }]}>Serial #</Text>
+                <Text style={[styles.cell, styles.headerCell, { width: COLUMN_WIDTH }]}>
+                  Serial #
+                </Text>
                 <Text style={[styles.cell, styles.headerCell, { width: 70 }]}>Hrs</Text>
                 <Text style={[styles.cell, styles.headerCell, { width: 70 }]}>Hrs next</Text>
-                <Text style={[styles.cell, styles.headerCell, { width: COLUMN_WIDTH }]}>Service done</Text>
+                <Text style={[styles.cell, styles.headerCell, { width: COLUMN_WIDTH }]}>
+                  Service done
+                </Text>
                 <Text style={[styles.cell, styles.headerCell, { width: COLUMN_WIDTH }]}>Notes</Text>
-                <Text style={[styles.cell, styles.headerCell, { width: COLUMN_WIDTH }]}>Done by</Text>
+                <Text style={[styles.cell, styles.headerCell, { width: COLUMN_WIDTH }]}>
+                  Done by
+                </Text>
                 <Text style={[styles.cell, styles.headerCell, { width: DATE_WIDTH }]}>Date</Text>
                 <View style={[styles.cellView, styles.headerCellView, { width: ACTIONS_WIDTH }]} />
               </View>
               {filteredLogs.length === 0 ? (
                 <View style={styles.filterEmptyRow}>
-                  <Text style={[styles.filterEmptyText, { color: themeColors.textSecondary }]}>No logs match the current filters</Text>
+                  <Text style={[styles.filterEmptyText, { color: themeColors.textSecondary }]}>
+                    No logs match the current filters
+                  </Text>
                 </View>
               ) : (
                 filteredLogs.map((log) => (
@@ -520,21 +599,83 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
                         themeColors={themeColors}
                       />
                     </View>
-                    <Text style={[styles.cell, { width: COLUMN_WIDTH, color: themeColors.textPrimary }]} numberOfLines={2}>{log.equipment}</Text>
-                    <Text style={[styles.cell, { width: 72, color: themeColors.textPrimary }]} numberOfLines={1}>{log.portStarboardNa || '—'}</Text>
-                    <Text style={[styles.cell, { width: COLUMN_WIDTH, color: themeColors.textPrimary }]} numberOfLines={1}>{log.serialNumber || '—'}</Text>
-                    <Text style={[styles.cell, { width: 70, color: themeColors.textPrimary }]} numberOfLines={1}>{log.hoursOfService || '—'}</Text>
-                    <Text style={[styles.cell, { width: 70, color: themeColors.textPrimary }]} numberOfLines={1}>{log.hoursAtNextService || '—'}</Text>
-                    <Text style={[styles.cell, { width: COLUMN_WIDTH, color: themeColors.textPrimary }]} numberOfLines={2}>{log.whatServiceDone || '—'}</Text>
-                    <Text style={[styles.cell, { width: COLUMN_WIDTH, color: themeColors.textPrimary }]} numberOfLines={2}>{log.notes || '—'}</Text>
-                    <Text style={[styles.cell, { width: COLUMN_WIDTH, color: themeColors.textPrimary }]} numberOfLines={1}>{log.serviceDoneBy || '—'}</Text>
-                    <Text style={[styles.cell, { width: DATE_WIDTH }, styles.dateCell, { color: themeColors.textSecondary }]}>{formatDate(log.createdAt)}</Text>
+                    <Text
+                      style={[styles.cell, { width: COLUMN_WIDTH, color: themeColors.textPrimary }]}
+                      numberOfLines={2}
+                    >
+                      {log.equipment}
+                    </Text>
+                    <Text
+                      style={[styles.cell, { width: 72, color: themeColors.textPrimary }]}
+                      numberOfLines={1}
+                    >
+                      {log.portStarboardNa || '—'}
+                    </Text>
+                    <Text
+                      style={[styles.cell, { width: COLUMN_WIDTH, color: themeColors.textPrimary }]}
+                      numberOfLines={1}
+                    >
+                      {log.serialNumber || '—'}
+                    </Text>
+                    <Text
+                      style={[styles.cell, { width: 70, color: themeColors.textPrimary }]}
+                      numberOfLines={1}
+                    >
+                      {log.hoursOfService || '—'}
+                    </Text>
+                    <Text
+                      style={[styles.cell, { width: 70, color: themeColors.textPrimary }]}
+                      numberOfLines={1}
+                    >
+                      {log.hoursAtNextService || '—'}
+                    </Text>
+                    <Text
+                      style={[styles.cell, { width: COLUMN_WIDTH, color: themeColors.textPrimary }]}
+                      numberOfLines={2}
+                    >
+                      {log.whatServiceDone || '—'}
+                    </Text>
+                    <Text
+                      style={[styles.cell, { width: COLUMN_WIDTH, color: themeColors.textPrimary }]}
+                      numberOfLines={2}
+                    >
+                      {log.notes || '—'}
+                    </Text>
+                    <Text
+                      style={[styles.cell, { width: COLUMN_WIDTH, color: themeColors.textPrimary }]}
+                      numberOfLines={1}
+                    >
+                      {log.serviceDoneBy || '—'}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.cell,
+                        { width: DATE_WIDTH },
+                        styles.dateCell,
+                        { color: themeColors.textSecondary },
+                      ]}
+                    >
+                      {formatDate(log.createdAt)}
+                    </Text>
                     <View style={[styles.cell, styles.actionsCell, { width: ACTIONS_WIDTH }]}>
-                      <TouchableOpacity onPress={() => onDelete(log)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <TouchableOpacity
+                        onPress={() => onDelete(log)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
                         <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
                       </TouchableOpacity>
-                      <TouchableOpacity onPress={() => onEdit(log)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                        <Text style={[styles.editBtn, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Edit</Text>
+                      <TouchableOpacity
+                        onPress={() => onEdit(log)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Text
+                          style={[
+                            styles.editBtn,
+                            { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                          ]}
+                        >
+                          Edit
+                        </Text>
                       </TouchableOpacity>
                     </View>
                   </View>

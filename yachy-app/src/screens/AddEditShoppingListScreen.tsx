@@ -11,7 +11,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -23,9 +22,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
-import shoppingListsService, { ShoppingList, ShoppingListItem, ShoppingListType } from '../services/shoppingLists';
+import shoppingListsService, {
+  ShoppingList,
+  ShoppingListItem,
+  ShoppingListType,
+} from '../services/shoppingLists';
 import { Department } from '../types';
-import { Input, Button } from '../components';
+import { Input, Button, LoadingSpinner } from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -73,9 +76,11 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
     }
   }, [listId, vesselId, navigation]);
 
-  useFocusEffect(useCallback(() => {
-    loadList();
-  }, [loadList]));
+  useFocusEffect(
+    useCallback(() => {
+      loadList();
+    }, [loadList])
+  );
 
   useEffect(() => {
     if (!isEdit && presetTitle) {
@@ -160,7 +165,9 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to create shopping lists.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to create shopping lists.
+        </Text>
       </View>
     );
   }
@@ -168,7 +175,7 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <LoadingSpinner />
       </View>
     );
   }
@@ -202,16 +209,28 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
               <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
                 {department.charAt(0) + department.slice(1).toLowerCase()}
               </Text>
-              <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>{departmentDropdownOpen ? '▲' : '▼'}</Text>
+              <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>
+                {departmentDropdownOpen ? '▲' : '▼'}
+              </Text>
             </TouchableOpacity>
             {departmentDropdownOpen && (
               <Modal visible transparent animationType="fade">
-                <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentDropdownOpen(false)}>
-                  <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
+                <Pressable
+                  style={styles.modalBackdrop}
+                  onPress={() => setDepartmentDropdownOpen(false)}
+                >
+                  <View
+                    style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+                    onStartShouldSetResponder={() => true}
+                  >
                     {DEPARTMENTS.map((dept) => (
                       <TouchableOpacity
                         key={dept}
-                        style={[styles.modalItem, { backgroundColor: themeColors.surface }, department === dept && styles.modalItemSelected]}
+                        style={[
+                          styles.modalItem,
+                          { backgroundColor: themeColors.surface },
+                          department === dept && styles.modalItemSelected,
+                        ]}
                         onPress={() => {
                           setDepartment(dept);
                           setDepartmentDropdownOpen(false);
@@ -243,12 +262,14 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
               style={[styles.checkbox, item.checked && styles.checkboxChecked]}
               activeOpacity={0.7}
             >
-              {item.checked ? (
-                <Text style={styles.checkboxTick}>✓</Text>
-              ) : null}
+              {item.checked ? <Text style={styles.checkboxTick}>✓</Text> : null}
             </TouchableOpacity>
             <TextInput
-              style={[styles.itemInput, { backgroundColor: themeColors.surface, color: themeColors.textPrimary }, item.checked && styles.itemInputChecked]}
+              style={[
+                styles.itemInput,
+                { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+                item.checked && styles.itemInputChecked,
+              ]}
               value={item.text}
               onChangeText={(v) => setItemAt(index, v)}
               placeholder="Item"
@@ -309,7 +330,13 @@ const styles = StyleSheet.create({
   },
   dropdownText: { fontSize: FONTS.base, fontWeight: '500' },
   dropdownChevron: { fontSize: 10 },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
+  },
   modalBox: { borderRadius: BORDER_RADIUS.lg, paddingVertical: SPACING.sm, minWidth: 200 },
   modalItem: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg },
   modalItemSelected: {},

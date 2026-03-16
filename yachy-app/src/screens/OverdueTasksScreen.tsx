@@ -10,7 +10,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   Alert,
   Modal,
@@ -23,6 +22,7 @@ import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../st
 import { useThemeColors } from '../hooks/useThemeColors';
 import vesselTasksService from '../services/vesselTasks';
 import { VesselTask, TaskCategory, Department } from '../types';
+import { LoadingSpinner } from '../components';
 
 const CATEGORY_LABELS: Record<TaskCategory, string> = {
   DAILY: 'Daily',
@@ -88,25 +88,21 @@ export const OverdueTasksScreen = ({ navigation }: any) => {
   };
 
   const onDelete = (task: VesselTask) => {
-    Alert.alert(
-      'Delete task',
-      `Delete "${task.title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await vesselTasksService.delete(task.id);
-              loadTasks();
-            } catch (e) {
-              Alert.alert('Error', 'Could not delete task');
-            }
-          },
+    Alert.alert('Delete task', `Delete "${task.title}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await vesselTasksService.delete(task.id);
+            loadTasks();
+          } catch (e) {
+            Alert.alert('Error', 'Could not delete task');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const onMarkComplete = (task: VesselTask) => {
@@ -123,7 +119,10 @@ export const OverdueTasksScreen = ({ navigation }: any) => {
 
   const renderItem = ({ item }: { item: VesselTask }) => (
     <TouchableOpacity
-      style={[styles.card, { backgroundColor: themeColors.surface, borderLeftColor: COLORS.danger }]}
+      style={[
+        styles.card,
+        { backgroundColor: themeColors.surface, borderLeftColor: COLORS.danger },
+      ]}
       onPress={() => onEdit(item)}
       activeOpacity={0.8}
     >
@@ -139,10 +138,19 @@ export const OverdueTasksScreen = ({ navigation }: any) => {
         </TouchableOpacity>
       </View>
       <View style={styles.cardMeta}>
-        <View style={[styles.deptBadge, { backgroundColor: getDepartmentColor(item.department, overrides) }]}>
-          <Text style={styles.deptBadgeText}>{item.department.charAt(0) + item.department.slice(1).toLowerCase()}</Text>
+        <View
+          style={[
+            styles.deptBadge,
+            { backgroundColor: getDepartmentColor(item.department, overrides) },
+          ]}
+        >
+          <Text style={styles.deptBadgeText}>
+            {item.department.charAt(0) + item.department.slice(1).toLowerCase()}
+          </Text>
         </View>
-        <Text style={styles.cardDate}>Was due: {item.doneByDate ? formatDate(item.doneByDate) : ''}</Text>
+        <Text style={styles.cardDate}>
+          Was due: {item.doneByDate ? formatDate(item.doneByDate) : ''}
+        </Text>
         <Text style={styles.categoryBadge}>{CATEGORY_LABELS[item.category]}</Text>
       </View>
       {item.notes ? (
@@ -150,10 +158,7 @@ export const OverdueTasksScreen = ({ navigation }: any) => {
           {item.notes}
         </Text>
       ) : null}
-      <TouchableOpacity
-        style={styles.completeBtn}
-        onPress={() => onMarkComplete(item)}
-      >
+      <TouchableOpacity style={styles.completeBtn} onPress={() => onMarkComplete(item)}>
         <Text style={styles.completeBtnText}>Mark complete</Text>
       </TouchableOpacity>
     </TouchableOpacity>
@@ -162,7 +167,9 @@ export const OverdueTasksScreen = ({ navigation }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to see tasks.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to see tasks.
+        </Text>
       </View>
     );
   }
@@ -170,24 +177,31 @@ export const OverdueTasksScreen = ({ navigation }: any) => {
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       {loading ? (
-        <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
+        <LoadingSpinner />
       ) : tasks.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyEmoji}>✓</Text>
-          <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>No overdue tasks</Text>
+          <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
+            No overdue tasks
+          </Text>
         </View>
       ) : (
         <>
           <View style={styles.filterBar}>
             <View style={styles.filterBarContent}>
-              <Text style={[styles.filterLabel, { color: themeColors.textPrimary }]}>Department</Text>
+              <Text style={[styles.filterLabel, { color: themeColors.textPrimary }]}>
+                Department
+              </Text>
               <TouchableOpacity
                 style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
                 onPress={() => setDepartmentModalVisible(true)}
                 activeOpacity={0.7}
               >
                 <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
-                  {departmentFilter ? DEPARTMENT_OPTIONS.find((o) => o.value === departmentFilter)?.label ?? departmentFilter : 'All departments'}
+                  {departmentFilter
+                    ? (DEPARTMENT_OPTIONS.find((o) => o.value === departmentFilter)?.label ??
+                      departmentFilter)
+                    : 'All departments'}
                 </Text>
                 <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>
                   {departmentModalVisible ? '▲' : '▼'}
@@ -196,54 +210,71 @@ export const OverdueTasksScreen = ({ navigation }: any) => {
             </View>
             {departmentFilter ? (
               <TouchableOpacity onPress={() => setDepartmentFilter('')} style={styles.clearFilters}>
-                <Text style={[styles.clearFiltersText, { color: themeColors.textPrimary }]}>Clear filter</Text>
+                <Text style={[styles.clearFiltersText, { color: themeColors.textPrimary }]}>
+                  Clear filter
+                </Text>
               </TouchableOpacity>
             ) : null}
           </View>
           {departmentModalVisible && (
             <Modal visible transparent animationType="fade">
-              <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentModalVisible(false)}>
-                <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
-                  <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Filter by department</Text>
+              <Pressable
+                style={styles.modalBackdrop}
+                onPress={() => setDepartmentModalVisible(false)}
+              >
+                <View
+                  style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+                  onStartShouldSetResponder={() => true}
+                >
+                  <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+                    Filter by department
+                  </Text>
                   {DEPARTMENT_OPTIONS.map((opt) => (
                     <TouchableOpacity
                       key={opt.value || 'all'}
-                      style={[styles.modalItem, departmentFilter === opt.value && styles.modalItemSelected]}
+                      style={[
+                        styles.modalItem,
+                        departmentFilter === opt.value && styles.modalItemSelected,
+                      ]}
                       onPress={() => {
                         setDepartmentFilter(opt.value);
                         setDepartmentModalVisible(false);
                       }}
                     >
-                      <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>{opt.label}</Text>
+                      <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
+                        {opt.label}
+                      </Text>
                     </TouchableOpacity>
                   ))}
                 </View>
               </Pressable>
             </Modal>
           )}
-        <FlatList
-          data={filteredTasks}
-          keyExtractor={(t) => t.id}
-          renderItem={renderItem}
-          contentContainerStyle={[
-            styles.list,
-            filteredTasks.length === 0 && tasks.length > 0 && styles.listEmpty,
-          ]}
-          ListEmptyComponent={
-            filteredTasks.length === 0 && tasks.length > 0 ? (
-              <View style={styles.emptyFilter}>
-                <Text style={[styles.emptyFilterText, { color: themeColors.textSecondary }]}>No tasks match the current filter</Text>
-              </View>
-            ) : null
-          }
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={[COLORS.primary]}
-            />
-          }
-        />
+          <FlatList
+            data={filteredTasks}
+            keyExtractor={(t) => t.id}
+            renderItem={renderItem}
+            contentContainerStyle={[
+              styles.list,
+              filteredTasks.length === 0 && tasks.length > 0 && styles.listEmpty,
+            ]}
+            ListEmptyComponent={
+              filteredTasks.length === 0 && tasks.length > 0 ? (
+                <View style={styles.emptyFilter}>
+                  <Text style={[styles.emptyFilterText, { color: themeColors.textSecondary }]}>
+                    No tasks match the current filter
+                  </Text>
+                </View>
+              ) : null
+            }
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[COLORS.primary]}
+              />
+            }
+          />
         </>
       )}
     </View>

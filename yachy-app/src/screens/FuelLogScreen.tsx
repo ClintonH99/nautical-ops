@@ -10,7 +10,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   Alert,
 } from 'react-native';
@@ -21,7 +20,7 @@ import { useAuthStore } from '../store';
 import fuelLogsService from '../services/fuelLogs';
 import vesselService from '../services/vessel';
 import { FuelLog } from '../types';
-import { Button, Input, ButtonTagCard, ButtonTagRow } from '../components';
+import { Button, Input, ButtonTagCard, ButtonTagRow, LoadingSpinner } from '../components';
 import { exportFuelLogPdf } from '../utils/vesselLogsPdf';
 
 function formatCurrency(value: number): string {
@@ -44,9 +43,9 @@ export const FuelLogScreen = ({ navigation }: any) => {
     ? logs.filter((log) => {
         const q = searchQuery.toLowerCase().trim();
         return (
-          (log.logDate?.toLowerCase().includes(q)) ||
-          (log.logTime?.toLowerCase().includes(q)) ||
-          (log.locationOfRefueling?.toLowerCase().includes(q))
+          log.logDate?.toLowerCase().includes(q) ||
+          log.logTime?.toLowerCase().includes(q) ||
+          log.locationOfRefueling?.toLowerCase().includes(q)
         );
       })
     : logs;
@@ -65,7 +64,11 @@ export const FuelLogScreen = ({ navigation }: any) => {
     }
   }, [vesselId]);
 
-  useFocusEffect(useCallback(() => { loadLogs(); }, [loadLogs]));
+  useFocusEffect(
+    useCallback(() => {
+      loadLogs();
+    }, [loadLogs])
+  );
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -80,21 +83,33 @@ export const FuelLogScreen = ({ navigation }: any) => {
     setSelectedIds(allSelected ? new Set() : new Set(filteredLogs.map((l) => l.id)));
   };
 
-  const onRefresh = () => { setRefreshing(true); loadLogs(); };
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadLogs();
+  };
   const onAdd = () => navigation.navigate('AddEditFuelLog', {});
   const onEdit = (log: FuelLog) => navigation.navigate('AddEditFuelLog', { logId: log.id });
 
   const onDelete = (log: FuelLog) => {
-    Alert.alert('Delete entry', `Delete fuel log entry for ${log.locationOfRefueling || log.logDate}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive',
-        onPress: async () => {
-          try { await fuelLogsService.delete(log.id); loadLogs(); }
-          catch { Alert.alert('Error', 'Could not delete entry.'); }
+    Alert.alert(
+      'Delete entry',
+      `Delete fuel log entry for ${log.locationOfRefueling || log.logDate}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await fuelLogsService.delete(log.id);
+              loadLogs();
+            } catch {
+              Alert.alert('Error', 'Could not delete entry.');
+            }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   const onExportPdf = async () => {
@@ -122,7 +137,9 @@ export const FuelLogScreen = ({ navigation }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to view fuel logs.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to view fuel logs.
+        </Text>
       </View>
     );
   }
@@ -132,7 +149,13 @@ export const FuelLogScreen = ({ navigation }: any) => {
       <View style={styles.actionBar}>
         <Button title="Add Log" onPress={onAdd} variant="primary" style={styles.actionBtn} />
         <Button
-          title={exportingPdf ? 'Exporting…' : selectedIds.size > 0 ? `Export to PDF (${selectedIds.size})` : 'Export to PDF'}
+          title={
+            exportingPdf
+              ? 'Exporting…'
+              : selectedIds.size > 0
+                ? `Export to PDF (${selectedIds.size})`
+                : 'Export to PDF'
+          }
           onPress={onExportPdf}
           variant={themeColors.isDark ? 'outlineLight' : 'outline'}
           style={styles.actionBtn}
@@ -159,11 +182,20 @@ export const FuelLogScreen = ({ navigation }: any) => {
       )}
 
       {loading ? (
-        <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
+        <LoadingSpinner />
       ) : (
         <ScrollView
-          contentContainerStyle={[styles.listContent, filteredLogs.length === 0 && styles.emptyContent]}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
+          contentContainerStyle={[
+            styles.listContent,
+            filteredLogs.length === 0 && styles.emptyContent,
+          ]}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[COLORS.primary]}
+            />
+          }
         >
           {filteredLogs.length === 0 ? (
             <View style={[styles.emptyState, { backgroundColor: themeColors.surface }]}>
@@ -196,18 +228,51 @@ export const FuelLogScreen = ({ navigation }: any) => {
                   <ButtonTagRow label="Time" value={log.logTime ?? ''} />
                   <View style={[styles.statsRow, { backgroundColor: themeColors.background }]}>
                     <View style={styles.statBox}>
-                      <Text style={[styles.statLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Amount</Text>
-                      <Text style={[styles.statValue, { color: themeColors.textPrimary }]}>{log.amountOfFuel} gal</Text>
+                      <Text
+                        style={[
+                          styles.statLabel,
+                          { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                        ]}
+                      >
+                        Amount
+                      </Text>
+                      <Text style={[styles.statValue, { color: themeColors.textPrimary }]}>
+                        {log.amountOfFuel} gal
+                      </Text>
                     </View>
                     <View style={styles.statDivider} />
                     <View style={styles.statBox}>
-                      <Text style={[styles.statLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Per Gallon</Text>
-                      <Text style={[styles.statValue, { color: themeColors.textPrimary }]}>{formatCurrency(log.pricePerGallon)}</Text>
+                      <Text
+                        style={[
+                          styles.statLabel,
+                          { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                        ]}
+                      >
+                        Per Gallon
+                      </Text>
+                      <Text style={[styles.statValue, { color: themeColors.textPrimary }]}>
+                        {formatCurrency(log.pricePerGallon)}
+                      </Text>
                     </View>
                     <View style={styles.statDivider} />
                     <View style={styles.statBox}>
-                      <Text style={[styles.statLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Total</Text>
-                      <Text style={[styles.statValue, styles.totalValue, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>{formatCurrency(log.totalPrice)}</Text>
+                      <Text
+                        style={[
+                          styles.statLabel,
+                          { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                        ]}
+                      >
+                        Total
+                      </Text>
+                      <Text
+                        style={[
+                          styles.statValue,
+                          styles.totalValue,
+                          { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                        ]}
+                      >
+                        {formatCurrency(log.totalPrice)}
+                      </Text>
                     </View>
                   </View>
                 </ButtonTagCard>
@@ -225,8 +290,11 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
   actionBar: {
-    flexDirection: 'row', gap: SPACING.sm,
-    paddingHorizontal: SPACING.lg, paddingTop: SPACING.lg, paddingBottom: SPACING.sm,
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.sm,
   },
   actionBtn: { flex: 1 },
   searchRow: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.sm },
@@ -237,16 +305,34 @@ const styles = StyleSheet.create({
   listContent: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   emptyContent: { flexGrow: 1, justifyContent: 'center' },
   emptyState: {
-    borderRadius: 12, padding: SPACING.xl, alignItems: 'center',
-    shadowColor: COLORS.black, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3,
+    borderRadius: 12,
+    padding: SPACING.xl,
+    alignItems: 'center',
+    shadowColor: COLORS.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   emptyIcon: { fontSize: 48, marginBottom: SPACING.md },
   emptyTitle: { fontSize: FONTS.xl, fontWeight: '700', marginBottom: SPACING.sm },
   emptyText: { fontSize: FONTS.base, textAlign: 'center', lineHeight: 22 },
-  statsRow: { flexDirection: 'row', borderRadius: BORDER_RADIUS.md, padding: SPACING.md, marginTop: SPACING.xs, marginBottom: SPACING.sm },
+  statsRow: {
+    flexDirection: 'row',
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.sm,
+  },
   statBox: { flex: 1, alignItems: 'center' },
   statDivider: { width: 1, backgroundColor: COLORS.gray200, marginVertical: 2 },
-  statLabel: { fontSize: FONTS.xs, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 2 },
+  statLabel: {
+    fontSize: FONTS.xs,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 2,
+  },
   statValue: { fontSize: FONTS.base, fontWeight: '600' },
   totalValue: { fontWeight: '700' },
 });

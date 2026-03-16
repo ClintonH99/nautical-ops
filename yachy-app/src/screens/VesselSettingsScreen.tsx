@@ -12,7 +12,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  ActivityIndicator,
   TextInput,
   Share,
 } from 'react-native';
@@ -22,7 +21,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus';
-import { Button } from '../components';
+import { Button, LoadingSpinner } from '../components';
 import vesselService from '../services/vessel';
 import userService from '../services/user';
 import { Vessel } from '../types';
@@ -41,10 +40,13 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
   const [crewCount, setCrewCount] = useState(0);
 
   const {
-    hasActiveSubscription,
+    hasActiveSubscription: _hasActiveSubscription,
     subscription,
     refetch: refetchSubscription,
   } = useSubscriptionStatus(user?.vesselId ?? null);
+  // TODO: Re-enable subscription gate once payment flow is set up
+  const bypassSubscriptionCheck = true;
+  const hasActiveSubscription = bypassSubscriptionCheck || _hasActiveSubscription;
 
   // Check if user is HOD
   const isHOD = user?.role === 'HOD';
@@ -244,7 +246,7 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
   if (isLoading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: themeColors.background }]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <LoadingSpinner />
         <Text
           style={[
             styles.loadingText,

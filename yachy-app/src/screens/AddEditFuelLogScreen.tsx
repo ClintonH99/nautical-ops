@@ -10,7 +10,6 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
@@ -20,7 +19,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import fuelLogsService from '../services/fuelLogs';
-import { Input, Button } from '../components';
+import { Input, Button, LoadingSpinner } from '../components';
 
 function formatDate(d: Date): string {
   const yyyy = d.getFullYear();
@@ -54,7 +53,6 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
   const [saving, setSaving] = useState(false);
 
   const vesselId = user?.vesselId ?? null;
-
 
   useEffect(() => {
     navigation.setOptions({ title: isEdit ? 'Edit Fuel Entry' : 'New Fuel Log Entry' });
@@ -133,9 +131,7 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
           totalPrice: parsedTotal,
           createdByName: user?.name ?? '',
         });
-        Alert.alert('Saved', 'Entry added.', [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
+        Alert.alert('Saved', 'Entry added.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
       }
     } catch {
       Alert.alert('Error', 'Could not save entry.');
@@ -147,7 +143,9 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to add fuel log entries.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to add fuel log entries.
+        </Text>
       </View>
     );
   }
@@ -155,7 +153,7 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <LoadingSpinner />
       </View>
     );
   }
@@ -184,7 +182,9 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
           <Text style={[styles.label, { color: themeColors.textPrimary }]}>Date</Text>
           {Platform.OS === 'ios' ? (
             <View style={[styles.pickerTrigger, { backgroundColor: themeColors.surface }]}>
-              <Text style={[styles.pickerValue, { color: themeColors.textPrimary }]}>{formatDate(date)}</Text>
+              <Text style={[styles.pickerValue, { color: themeColors.textPrimary }]}>
+                {formatDate(date)}
+              </Text>
               <DateTimePicker
                 value={date}
                 mode="date"
@@ -196,8 +196,14 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
             </View>
           ) : (
             <>
-              <TouchableOpacity style={[styles.pickerTrigger, { backgroundColor: themeColors.surface }]} onPress={() => setShowDatePicker(true)} activeOpacity={0.7}>
-                <Text style={[styles.pickerValue, { color: themeColors.textPrimary }]}>{formatDate(date)}</Text>
+              <TouchableOpacity
+                style={[styles.pickerTrigger, { backgroundColor: themeColors.surface }]}
+                onPress={() => setShowDatePicker(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.pickerValue, { color: themeColors.textPrimary }]}>
+                  {formatDate(date)}
+                </Text>
                 <Text style={styles.pickerIcon}>📅</Text>
               </TouchableOpacity>
               {showDatePicker && (
@@ -220,7 +226,9 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
           <Text style={[styles.label, { color: themeColors.textPrimary }]}>Time</Text>
           {Platform.OS === 'ios' ? (
             <View style={[styles.pickerTrigger, { backgroundColor: themeColors.surface }]}>
-              <Text style={[styles.pickerValue, { color: themeColors.textPrimary }]}>{formatTime(time)}</Text>
+              <Text style={[styles.pickerValue, { color: themeColors.textPrimary }]}>
+                {formatTime(time)}
+              </Text>
               <DateTimePicker
                 value={time}
                 mode="time"
@@ -232,8 +240,14 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
             </View>
           ) : (
             <>
-              <TouchableOpacity style={[styles.pickerTrigger, { backgroundColor: themeColors.surface }]} onPress={() => setShowTimePicker(true)} activeOpacity={0.7}>
-                <Text style={[styles.pickerValue, { color: themeColors.textPrimary }]}>{formatTime(time)}</Text>
+              <TouchableOpacity
+                style={[styles.pickerTrigger, { backgroundColor: themeColors.surface }]}
+                onPress={() => setShowTimePicker(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.pickerValue, { color: themeColors.textPrimary }]}>
+                  {formatTime(time)}
+                </Text>
                 <Text style={styles.pickerIcon}>🕐</Text>
               </TouchableOpacity>
               {showTimePicker && (
@@ -307,7 +321,14 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
             onPress={() => navigation.goBack()}
             disabled={saving}
           >
-            <Text style={[styles.cancelText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Cancel</Text>
+            <Text
+              style={[
+                styles.cancelText,
+                { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+              ]}
+            >
+              Cancel
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

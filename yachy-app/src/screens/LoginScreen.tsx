@@ -20,7 +20,6 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import authService from '../services/auth';
 import { getVesselSubscription } from '../services/subscription';
 import { useAuthStore } from '../store';
-import { useThemeColors } from '../hooks/useThemeColors';
 
 const MARITIME = {
   bgDark: '#0f172a',
@@ -33,7 +32,6 @@ const MARITIME = {
 };
 
 export const LoginScreen = ({ navigation }: any) => {
-  const themeColors = useThemeColors();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -146,6 +144,7 @@ export const LoginScreen = ({ navigation }: any) => {
               autoCapitalize="none"
               autoCorrect={false}
               error={errors.email}
+              forceLight
             />
 
             <Input
@@ -157,6 +156,7 @@ export const LoginScreen = ({ navigation }: any) => {
               showPasswordToggle
               autoCapitalize="none"
               error={errors.password}
+              forceLight
             />
 
             <Button
@@ -177,6 +177,7 @@ export const LoginScreen = ({ navigation }: any) => {
                 disabled
               />
             )}
+
             {loginError ? <Text style={styles.loginError}>{loginError}</Text> : null}
           </View>
 

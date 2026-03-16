@@ -11,7 +11,6 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
@@ -23,7 +22,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import maintenanceLogsService from '../services/maintenanceLogs';
-import { Input, Button } from '../components';
+import { Input, Button, LoadingSpinner } from '../components';
 
 const DEFAULT_EQUIPMENT_OPTIONS = [
   'Mains',
@@ -100,7 +99,9 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
   const [serialNumbersByKey, setSerialNumbersByKey] = useState<Record<string, string[]>>({});
   const [serialNumberDropdownVisible, setSerialNumberDropdownVisible] = useState(false);
 
-  const previousSerialNumbers = (serialNumbersByKey[getSerialNumberKey(equipment, location)] || []).slice(0, MAX_STORED_SERIAL_NUMBERS);
+  const previousSerialNumbers = (
+    serialNumbersByKey[getSerialNumberKey(equipment, location)] || []
+  ).slice(0, MAX_STORED_SERIAL_NUMBERS);
   const [hoursOfService, setHoursOfService] = useState('');
   const [hoursAtNextService, setHoursAtNextService] = useState('');
   const [whatServiceDone, setWhatServiceDone] = useState('');
@@ -214,53 +215,45 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
   }, [logId]);
 
   const removeEquipment = (opt: string) => {
-    Alert.alert(
-      'Remove from list',
-      `Remove "${opt}" from your equipment list?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            const nextHidden = [...hiddenEquipment, opt];
-            setHiddenEquipment(nextHidden);
-            setEquipmentOptions((prev) => prev.filter((x) => x !== opt));
-            if (equipment === opt) setEquipment('');
-            try {
-              await AsyncStorage.setItem(HIDDEN_EQUIPMENT_STORAGE_KEY, JSON.stringify(nextHidden));
-            } catch (e) {
-              console.error('Save hidden equipment error:', e);
-            }
-          },
+    Alert.alert('Remove from list', `Remove "${opt}" from your equipment list?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          const nextHidden = [...hiddenEquipment, opt];
+          setHiddenEquipment(nextHidden);
+          setEquipmentOptions((prev) => prev.filter((x) => x !== opt));
+          if (equipment === opt) setEquipment('');
+          try {
+            await AsyncStorage.setItem(HIDDEN_EQUIPMENT_STORAGE_KEY, JSON.stringify(nextHidden));
+          } catch (e) {
+            console.error('Save hidden equipment error:', e);
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const removeLocation = (opt: string) => {
-    Alert.alert(
-      'Remove from list',
-      `Remove "${opt}" from your location list?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            const nextHidden = [...hiddenLocations, opt];
-            setHiddenLocations(nextHidden);
-            setLocationOptions((prev) => prev.filter((x) => x !== opt));
-            if (location === opt) setLocation('');
-            try {
-              await AsyncStorage.setItem(HIDDEN_LOCATION_STORAGE_KEY, JSON.stringify(nextHidden));
-            } catch (e) {
-              console.error('Save hidden location error:', e);
-            }
-          },
+    Alert.alert('Remove from list', `Remove "${opt}" from your location list?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          const nextHidden = [...hiddenLocations, opt];
+          setHiddenLocations(nextHidden);
+          setLocationOptions((prev) => prev.filter((x) => x !== opt));
+          if (location === opt) setLocation('');
+          try {
+            await AsyncStorage.setItem(HIDDEN_LOCATION_STORAGE_KEY, JSON.stringify(nextHidden));
+          } catch (e) {
+            console.error('Save hidden location error:', e);
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleSaveNewLocation = async () => {
@@ -269,7 +262,9 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
       Alert.alert('Required', 'Please enter location name.');
       return;
     }
-    const nextOptions = locationOptions.includes(name) ? locationOptions : [...locationOptions, name];
+    const nextOptions = locationOptions.includes(name)
+      ? locationOptions
+      : [...locationOptions, name];
     setLocationOptions(nextOptions);
     setLocation(name);
     setNewLocationName('');
@@ -289,7 +284,9 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
       Alert.alert('Required', 'Please enter equipment name.');
       return;
     }
-    const nextOptions = equipmentOptions.includes(name) ? equipmentOptions : [...equipmentOptions, name];
+    const nextOptions = equipmentOptions.includes(name)
+      ? equipmentOptions
+      : [...equipmentOptions, name];
     setEquipmentOptions(nextOptions);
     setEquipment(name);
     setNewEquipmentName('');
@@ -337,7 +334,10 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
           const key = getSerialNumberKey(equipment, location);
           setSerialNumbersByKey((prev) => {
             const list = prev[key] || [];
-            const nextList = [sn, ...list.filter((p) => p !== sn)].slice(0, MAX_STORED_SERIAL_NUMBERS);
+            const nextList = [sn, ...list.filter((p) => p !== sn)].slice(
+              0,
+              MAX_STORED_SERIAL_NUMBERS
+            );
             const next = { ...prev, [key]: nextList };
             AsyncStorage.setItem(SERIAL_NUMBERS_STORAGE_KEY, JSON.stringify(next)).catch((e) =>
               console.error('Save serial numbers error:', e)
@@ -365,7 +365,10 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
           const key = getSerialNumberKey(equipment, location);
           setSerialNumbersByKey((prev) => {
             const list = prev[key] || [];
-            const nextList = [sn, ...list.filter((p) => p !== sn)].slice(0, MAX_STORED_SERIAL_NUMBERS);
+            const nextList = [sn, ...list.filter((p) => p !== sn)].slice(
+              0,
+              MAX_STORED_SERIAL_NUMBERS
+            );
             const next = { ...prev, [key]: nextList };
             AsyncStorage.setItem(SERIAL_NUMBERS_STORAGE_KEY, JSON.stringify(next)).catch((e) =>
               console.error('Save serial numbers error:', e)
@@ -373,9 +376,7 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
             return next;
           });
         }
-        Alert.alert('Saved', 'Log added.', [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
+        Alert.alert('Saved', 'Log added.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
       }
     } catch (e) {
       console.error('Save log error:', e);
@@ -388,7 +389,9 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to add maintenance logs.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to add maintenance logs.
+        </Text>
       </View>
     );
   }
@@ -396,7 +399,7 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <LoadingSpinner />
       </View>
     );
   }
@@ -436,10 +439,19 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
             activeOpacity={1}
             onPress={() => setEquipmentDropdownVisible(false)}
           >
-            <View style={[styles.modalContent, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
+            <View
+              style={[styles.modalContent, { backgroundColor: themeColors.surface }]}
+              onStartShouldSetResponder={() => true}
+            >
               <ScrollView style={styles.dropdownList} keyboardShouldPersistTaps="handled">
                 {equipmentOptions.map((opt) => (
-                  <View key={opt} style={[styles.dropdownOptionRow, equipment === opt && styles.dropdownOptionSelected]}>
+                  <View
+                    key={opt}
+                    style={[
+                      styles.dropdownOptionRow,
+                      equipment === opt && styles.dropdownOptionSelected,
+                    ]}
+                  >
                     <TouchableOpacity
                       style={styles.dropdownOptionTouch}
                       onPress={() => {
@@ -447,7 +459,13 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
                         setEquipmentDropdownVisible(false);
                       }}
                     >
-                      <Text style={[styles.dropdownOptionText, { color: equipment === opt ? undefined : themeColors.textPrimary }, equipment === opt && styles.dropdownOptionTextSelected]}>
+                      <Text
+                        style={[
+                          styles.dropdownOptionText,
+                          { color: equipment === opt ? undefined : themeColors.textPrimary },
+                          equipment === opt && styles.dropdownOptionTextSelected,
+                        ]}
+                      >
                         {opt}
                       </Text>
                     </TouchableOpacity>
@@ -456,7 +474,14 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
                       onPress={() => removeEquipment(opt)}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
-                      <Text style={[styles.deleteOptionText, equipment === opt && styles.deleteOptionTextSelected]}>×</Text>
+                      <Text
+                        style={[
+                          styles.deleteOptionText,
+                          equipment === opt && styles.deleteOptionTextSelected,
+                        ]}
+                      >
+                        ×
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -485,10 +510,18 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
             activeOpacity={1}
             onPress={() => setCreateNewVisible(false)}
           >
-            <View style={[styles.createNewModal, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
-              <Text style={[styles.createNewTitle, { color: themeColors.textPrimary }]}>New Equipment</Text>
+            <View
+              style={[styles.createNewModal, { backgroundColor: themeColors.surface }]}
+              onStartShouldSetResponder={() => true}
+            >
+              <Text style={[styles.createNewTitle, { color: themeColors.textPrimary }]}>
+                New Equipment
+              </Text>
               <TextInput
-                style={[styles.createNewInput, { backgroundColor: themeColors.background, color: themeColors.textPrimary }]}
+                style={[
+                  styles.createNewInput,
+                  { backgroundColor: themeColors.background, color: themeColors.textPrimary },
+                ]}
                 value={newEquipmentName}
                 onChangeText={setNewEquipmentName}
                 placeholder="Enter equipment name"
@@ -497,9 +530,26 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
                 autoFocus
               />
               <View style={styles.createNewActions}>
-                <Button title="Add" onPress={handleSaveNewEquipment} variant="primary" style={styles.createNewAddBtn} />
-                <TouchableOpacity onPress={() => { setCreateNewVisible(false); setNewEquipmentName(''); }}>
-                  <Text style={[styles.cancelText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Cancel</Text>
+                <Button
+                  title="Add"
+                  onPress={handleSaveNewEquipment}
+                  variant="primary"
+                  style={styles.createNewAddBtn}
+                />
+                <TouchableOpacity
+                  onPress={() => {
+                    setCreateNewVisible(false);
+                    setNewEquipmentName('');
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.cancelText,
+                      { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                    ]}
+                  >
+                    Cancel
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -529,10 +579,19 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
             activeOpacity={1}
             onPress={() => setLocationDropdownVisible(false)}
           >
-            <View style={[styles.modalContent, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
+            <View
+              style={[styles.modalContent, { backgroundColor: themeColors.surface }]}
+              onStartShouldSetResponder={() => true}
+            >
               <ScrollView style={styles.dropdownList} keyboardShouldPersistTaps="handled">
                 {locationOptions.map((opt) => (
-                  <View key={opt} style={[styles.dropdownOptionRow, location === opt && styles.dropdownOptionSelected]}>
+                  <View
+                    key={opt}
+                    style={[
+                      styles.dropdownOptionRow,
+                      location === opt && styles.dropdownOptionSelected,
+                    ]}
+                  >
                     <TouchableOpacity
                       style={styles.dropdownOptionTouch}
                       onPress={() => {
@@ -540,7 +599,13 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
                         setLocationDropdownVisible(false);
                       }}
                     >
-                      <Text style={[styles.dropdownOptionText, { color: location === opt ? undefined : themeColors.textPrimary }, location === opt && styles.dropdownOptionTextSelected]}>
+                      <Text
+                        style={[
+                          styles.dropdownOptionText,
+                          { color: location === opt ? undefined : themeColors.textPrimary },
+                          location === opt && styles.dropdownOptionTextSelected,
+                        ]}
+                      >
                         {opt}
                       </Text>
                     </TouchableOpacity>
@@ -549,7 +614,14 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
                       onPress={() => removeLocation(opt)}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
-                      <Text style={[styles.deleteOptionText, location === opt && styles.deleteOptionTextSelected]}>×</Text>
+                      <Text
+                        style={[
+                          styles.deleteOptionText,
+                          location === opt && styles.deleteOptionTextSelected,
+                        ]}
+                      >
+                        ×
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -578,10 +650,18 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
             activeOpacity={1}
             onPress={() => setAddNewLocationVisible(false)}
           >
-            <View style={[styles.createNewModal, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
-              <Text style={[styles.createNewTitle, { color: themeColors.textPrimary }]}>New Location</Text>
+            <View
+              style={[styles.createNewModal, { backgroundColor: themeColors.surface }]}
+              onStartShouldSetResponder={() => true}
+            >
+              <Text style={[styles.createNewTitle, { color: themeColors.textPrimary }]}>
+                New Location
+              </Text>
               <TextInput
-                style={[styles.createNewInput, { backgroundColor: themeColors.background, color: themeColors.textPrimary }]}
+                style={[
+                  styles.createNewInput,
+                  { backgroundColor: themeColors.background, color: themeColors.textPrimary },
+                ]}
                 value={newLocationName}
                 onChangeText={setNewLocationName}
                 placeholder="Enter location name"
@@ -590,9 +670,26 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
                 autoFocus
               />
               <View style={styles.createNewActions}>
-                <Button title="Add" onPress={handleSaveNewLocation} variant="primary" style={styles.createNewAddBtn} />
-                <TouchableOpacity onPress={() => { setAddNewLocationVisible(false); setNewLocationName(''); }}>
-                  <Text style={[styles.cancelText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Cancel</Text>
+                <Button
+                  title="Add"
+                  onPress={handleSaveNewLocation}
+                  variant="primary"
+                  style={styles.createNewAddBtn}
+                />
+                <TouchableOpacity
+                  onPress={() => {
+                    setAddNewLocationVisible(false);
+                    setNewLocationName('');
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.cancelText,
+                      { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                    ]}
+                  >
+                    Cancel
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -602,7 +699,10 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
           <Text style={[styles.label, { color: themeColors.textPrimary }]}>Serial number</Text>
           <View style={styles.serialNumberRow}>
             <TextInput
-              style={[styles.serialNumberInput, { backgroundColor: themeColors.surface, color: themeColors.textPrimary }]}
+              style={[
+                styles.serialNumberInput,
+                { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+              ]}
               value={serialNumber}
               onChangeText={setSerialNumber}
               placeholder="Optional - tap Recent for this equipment + location"
@@ -628,29 +728,53 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
             activeOpacity={1}
             onPress={() => setSerialNumberDropdownVisible(false)}
           >
-            <View style={[styles.modalContent, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
+            <View
+              style={[styles.modalContent, { backgroundColor: themeColors.surface }]}
+              onStartShouldSetResponder={() => true}
+            >
               <Text style={[styles.previousTitle, { color: themeColors.textPrimary }]}>
                 {equipment || location
                   ? `Previous serial numbers${equipment && location ? ` for ${equipment} / ${location}` : ''}`
                   : 'Select equipment and location first'}
               </Text>
               {!equipment && !location ? (
-                <Text style={[styles.previousEmpty, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Choose equipment and location to see serial numbers for that combination.</Text>
+                <Text
+                  style={[
+                    styles.previousEmpty,
+                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                  ]}
+                >
+                  Choose equipment and location to see serial numbers for that combination.
+                </Text>
               ) : previousSerialNumbers.length === 0 ? (
-                <Text style={[styles.previousEmpty, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>No previous entries for this combination yet. Save a log to add one.</Text>
+                <Text
+                  style={[
+                    styles.previousEmpty,
+                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                  ]}
+                >
+                  No previous entries for this combination yet. Save a log to add one.
+                </Text>
               ) : (
                 <ScrollView style={styles.dropdownList} keyboardShouldPersistTaps="handled">
                   {previousSerialNumbers.map((sn) => (
                     <TouchableOpacity
                       key={sn}
-                      style={[styles.dropdownOption, serialNumber === sn && styles.dropdownOptionSelected]}
+                      style={[
+                        styles.dropdownOption,
+                        serialNumber === sn && styles.dropdownOptionSelected,
+                      ]}
                       onPress={() => {
                         setSerialNumber(sn);
                         setSerialNumberDropdownVisible(false);
                       }}
                     >
                       <Text
-                        style={[styles.dropdownOptionText, { color: serialNumber === sn ? undefined : themeColors.textPrimary }, serialNumber === sn && styles.dropdownOptionTextSelected]}
+                        style={[
+                          styles.dropdownOptionText,
+                          { color: serialNumber === sn ? undefined : themeColors.textPrimary },
+                          serialNumber === sn && styles.dropdownOptionTextSelected,
+                        ]}
                         numberOfLines={2}
                       >
                         {sn}
@@ -712,7 +836,14 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
             onPress={() => navigation.goBack()}
             disabled={saving}
           >
-            <Text style={[styles.cancelText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Cancel</Text>
+            <Text
+              style={[
+                styles.cancelText,
+                { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+              ]}
+            >
+              Cancel
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

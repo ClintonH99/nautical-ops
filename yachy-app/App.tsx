@@ -14,7 +14,10 @@ import { isSupabaseConfigured } from './src/services/supabase';
 function AppContent() {
   useEffect(() => {
     if (Platform.OS !== 'web') {
-      const apiKey = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY;
+      const apiKey =
+        Platform.OS === 'ios'
+          ? process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY
+          : process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY;
       if (apiKey) {
         try {
           require('react-native-purchases').default.configure({ apiKey });

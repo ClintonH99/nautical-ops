@@ -10,7 +10,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   Alert,
 } from 'react-native';
@@ -20,7 +19,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import tripsService from '../services/trips';
 import { Trip, Department } from '../types';
-import { Button, ButtonTagCard, ButtonTagRow } from '../components';
+import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner } from '../components';
 import { useVesselTripColors } from '../hooks/useVesselTripColors';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { DEFAULT_COLORS } from '../services/tripColors';
@@ -28,7 +27,9 @@ import { parseLocalDate, toYYYYMMDD, formatLocalDateString } from '../utils';
 
 const TRIP_TYPE = 'YARD_PERIOD' as const;
 
-type MarkedDates = { [date: string]: { startingDay?: boolean; endingDay?: boolean; color: string; textColor?: string } };
+type MarkedDates = {
+  [date: string]: { startingDay?: boolean; endingDay?: boolean; color: string; textColor?: string };
+};
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -134,25 +135,21 @@ export const YardPeriodTripsScreen = ({ navigation }: any) => {
 
   const onDelete = (trip: Trip) => {
     if (!isHOD) return;
-    Alert.alert(
-      'Delete trip',
-      `Delete "${trip.title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await tripsService.deleteTrip(trip.id);
-              loadTrips();
-            } catch (e) {
-              Alert.alert('Error', 'Could not delete trip');
-            }
-          },
+    Alert.alert('Delete trip', `Delete "${trip.title}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await tripsService.deleteTrip(trip.id);
+            loadTrips();
+          } catch (e) {
+            Alert.alert('Error', 'Could not delete trip');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const renderItem = ({ item }: { item: Trip }) => {
@@ -167,8 +164,15 @@ export const YardPeriodTripsScreen = ({ navigation }: any) => {
         onDelete={isHOD ? () => onDelete(item) : undefined}
         onPress={isHOD ? () => onEdit(item) : undefined}
       >
-        <ButtonTagRow label="Date" value={`${formatDate(item.startDate)} – ${formatDate(item.endDate)}`} />
-        <ButtonTagRow label="Department" value={deptLabel} badgeColor={item.department ? getDepartmentColor(item.department, overrides) : undefined} />
+        <ButtonTagRow
+          label="Date"
+          value={`${formatDate(item.startDate)} – ${formatDate(item.endDate)}`}
+        />
+        <ButtonTagRow
+          label="Department"
+          value={deptLabel}
+          badgeColor={item.department ? getDepartmentColor(item.department, overrides) : undefined}
+        />
         <ButtonTagRow label="Notes" value={item.notes ?? ''} />
       </ButtonTagCard>
     );
@@ -177,7 +181,9 @@ export const YardPeriodTripsScreen = ({ navigation }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to see yard period trips.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to see yard period trips.
+        </Text>
       </View>
     );
   }
@@ -186,7 +192,7 @@ export const YardPeriodTripsScreen = ({ navigation }: any) => {
     <>
       <View style={[styles.calendarWrap, { backgroundColor: themeColors.surface }]}>
         {loading ? (
-          <ActivityIndicator size="large" color={COLORS.primary} style={styles.calendarLoader} />
+          <LoadingSpinner />
         ) : (
           <Calendar
             current={new Date().toISOString().slice(0, 10)}
@@ -228,7 +234,7 @@ export const YardPeriodTripsScreen = ({ navigation }: any) => {
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       {loading && trips.length === 0 ? (
         <View style={styles.empty}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <LoadingSpinner />
         </View>
       ) : trips.length === 0 ? (
         <FlatList
@@ -238,12 +244,18 @@ export const YardPeriodTripsScreen = ({ navigation }: any) => {
           renderItem={() => null}
           contentContainerStyle={styles.listEmpty}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[COLORS.primary]}
+            />
           }
           ListEmptyComponent={
             <View style={styles.empty}>
               <Text style={styles.emptyEmoji}>🔧</Text>
-              <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>No yard periods yet</Text>
+              <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
+                No yard periods yet
+              </Text>
             </View>
           }
         />
@@ -255,7 +267,11 @@ export const YardPeriodTripsScreen = ({ navigation }: any) => {
           ListHeaderComponent={<ListHeader />}
           contentContainerStyle={styles.list}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[COLORS.primary]}
+            />
           }
         />
       )}

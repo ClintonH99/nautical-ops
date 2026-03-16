@@ -10,7 +10,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   Alert,
 } from 'react-native';
@@ -21,7 +20,7 @@ import { useAuthStore } from '../store';
 import generalWasteLogsService from '../services/generalWasteLogs';
 import vesselService from '../services/vessel';
 import { GeneralWasteLog } from '../types';
-import { Button, Input, ButtonTagCard, ButtonTagRow } from '../components';
+import { Button, Input, ButtonTagCard, ButtonTagRow, LoadingSpinner } from '../components';
 import { exportGeneralWasteLogPdf } from '../utils/vesselLogsPdf';
 
 export const GeneralWasteLogScreen = ({ navigation }: any) => {
@@ -42,12 +41,12 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
         const weightStr = log.weight != null ? String(log.weight) : '';
         const unitStr = log.weightUnit ?? '';
         return (
-          (log.logDate?.toLowerCase().includes(q)) ||
-          (log.logTime?.toLowerCase().includes(q)) ||
-          (log.positionLocation?.toLowerCase().includes(q)) ||
-          (log.descriptionOfGarbage?.toLowerCase().includes(q)) ||
-          (weightStr?.toLowerCase().includes(q)) ||
-          (unitStr?.toLowerCase().includes(q))
+          log.logDate?.toLowerCase().includes(q) ||
+          log.logTime?.toLowerCase().includes(q) ||
+          log.positionLocation?.toLowerCase().includes(q) ||
+          log.descriptionOfGarbage?.toLowerCase().includes(q) ||
+          weightStr?.toLowerCase().includes(q) ||
+          unitStr?.toLowerCase().includes(q)
         );
       })
     : logs;
@@ -66,7 +65,11 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
     }
   }, [vesselId]);
 
-  useFocusEffect(useCallback(() => { loadLogs(); }, [loadLogs]));
+  useFocusEffect(
+    useCallback(() => {
+      loadLogs();
+    }, [loadLogs])
+  );
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -81,18 +84,27 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
     setSelectedIds(allSelected ? new Set() : new Set(filteredLogs.map((l) => l.id)));
   };
 
-  const onRefresh = () => { setRefreshing(true); loadLogs(); };
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadLogs();
+  };
   const onAdd = () => navigation.navigate('AddEditGeneralWasteLog', {});
-  const onEdit = (log: GeneralWasteLog) => navigation.navigate('AddEditGeneralWasteLog', { logId: log.id });
+  const onEdit = (log: GeneralWasteLog) =>
+    navigation.navigate('AddEditGeneralWasteLog', { logId: log.id });
 
   const onDelete = (log: GeneralWasteLog) => {
     Alert.alert('Delete entry', 'Delete this waste log entry?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Delete', style: 'destructive',
+        text: 'Delete',
+        style: 'destructive',
         onPress: async () => {
-          try { await generalWasteLogsService.delete(log.id); loadLogs(); }
-          catch { Alert.alert('Error', 'Could not delete entry.'); }
+          try {
+            await generalWasteLogsService.delete(log.id);
+            loadLogs();
+          } catch {
+            Alert.alert('Error', 'Could not delete entry.');
+          }
         },
       },
     ]);
@@ -123,7 +135,9 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to view waste logs.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to view waste logs.
+        </Text>
       </View>
     );
   }
@@ -133,7 +147,13 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
       <View style={styles.actionBar}>
         <Button title="Add Log" onPress={onAdd} variant="primary" style={styles.actionBtn} />
         <Button
-          title={exportingPdf ? 'Exporting…' : selectedIds.size > 0 ? `Export to PDF (${selectedIds.size})` : 'Export to PDF'}
+          title={
+            exportingPdf
+              ? 'Exporting…'
+              : selectedIds.size > 0
+                ? `Export to PDF (${selectedIds.size})`
+                : 'Export to PDF'
+          }
           onPress={onExportPdf}
           variant={themeColors.isDark ? 'outlineLight' : 'outline'}
           style={styles.actionBtn}
@@ -160,11 +180,20 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
       )}
 
       {loading ? (
-        <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
+        <LoadingSpinner />
       ) : (
         <ScrollView
-          contentContainerStyle={[styles.listContent, filteredLogs.length === 0 && styles.emptyContent]}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
+          contentContainerStyle={[
+            styles.listContent,
+            filteredLogs.length === 0 && styles.emptyContent,
+          ]}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[COLORS.primary]}
+            />
+          }
         >
           {filteredLogs.length === 0 ? (
             <View style={[styles.emptyState, { backgroundColor: themeColors.surface }]}>
@@ -181,7 +210,8 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
           ) : (
             filteredLogs.map((log) => {
               const selected = selectedIds.has(log.id);
-              const weightStr = log.weight != null ? `${log.weight} ${log.weightUnit ?? 'kgs'}` : '';
+              const weightStr =
+                log.weight != null ? `${log.weight} ${log.weightUnit ?? 'kgs'}` : '';
               return (
                 <ButtonTagCard
                   key={log.id}
@@ -196,7 +226,10 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
                 >
                   <ButtonTagRow label="Date" value={log.logDate ?? ''} />
                   <ButtonTagRow label="Time" value={log.logTime ?? ''} />
-                  <ButtonTagRow label="Description of Garbage" value={log.descriptionOfGarbage ?? ''} />
+                  <ButtonTagRow
+                    label="Description of Garbage"
+                    value={log.descriptionOfGarbage ?? ''}
+                  />
                   <ButtonTagRow label="Weight" value={weightStr} />
                 </ButtonTagCard>
               );
@@ -213,8 +246,11 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
   actionBar: {
-    flexDirection: 'row', gap: SPACING.sm,
-    paddingHorizontal: SPACING.lg, paddingTop: SPACING.lg, paddingBottom: SPACING.sm,
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.sm,
   },
   actionBtn: { flex: 1 },
   searchRow: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.sm },
@@ -225,8 +261,14 @@ const styles = StyleSheet.create({
   listContent: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   emptyContent: { flexGrow: 1, justifyContent: 'center' },
   emptyState: {
-    borderRadius: 12, padding: SPACING.xl, alignItems: 'center',
-    shadowColor: COLORS.black, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3,
+    borderRadius: 12,
+    padding: SPACING.xl,
+    alignItems: 'center',
+    shadowColor: COLORS.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   emptyIcon: { fontSize: 48, marginBottom: SPACING.md },
   emptyTitle: { fontSize: FONTS.xl, fontWeight: '700', marginBottom: SPACING.sm },

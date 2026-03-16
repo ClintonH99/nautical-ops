@@ -11,7 +11,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   Modal,
   Pressable,
@@ -27,6 +26,7 @@ import yardJobsService from '../services/yardJobs';
 import { PieDayComponent } from '../components/PieDayComponent';
 import { VesselTask, YardPeriodJob, Department } from '../types';
 import { getTaskUrgencyColor, getUrgencyLevel, UrgencyLevel } from '../utils/taskUrgency';
+import { LoadingSpinner } from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -73,9 +73,7 @@ function getMarkedDatesFromTasksAndJobs(
   yardJobs.forEach((job) => {
     if (!job.doneByDate) return;
     if (!visibleDepartments[job.department ?? 'INTERIOR']) return;
-    const color = job.department
-      ? getDeptColor(job.department)
-      : YARD_JOB_COLOR;
+    const color = job.department ? getDeptColor(job.department) : YARD_JOB_COLOR;
     addColor(job.doneByDate, color);
   });
 
@@ -95,7 +93,10 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const overrides = useDepartmentColorStore((s) => s.overrides);
-  const getDeptColor = useCallback((dept: string) => getDepartmentColor(dept, overrides), [overrides]);
+  const getDeptColor = useCallback(
+    (dept: string) => getDepartmentColor(dept, overrides),
+    [overrides]
+  );
   const [tasks, setTasks] = useState<VesselTask[]>([]);
   const [yardJobs, setYardJobs] = useState<YardPeriodJob[]>([]);
   const [loading, setLoading] = useState(true);
@@ -132,7 +133,9 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
         yardJobsService.getByVessel(vesselId),
       ]);
       setTasks(taskData);
-      setYardJobs(jobData.filter((j) => j.doneByDate && j.doneByDate >= startStr && j.doneByDate <= endStr));
+      setYardJobs(
+        jobData.filter((j) => j.doneByDate && j.doneByDate >= startStr && j.doneByDate <= endStr)
+      );
     } catch (e) {
       console.error('Load tasks calendar error:', e);
     } finally {
@@ -156,11 +159,7 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
     let result = tasks.filter((t) => visibleDepartments[t.department]);
     if (urgencyFilter !== 'ALL') {
       result = result.filter((task) => {
-        const level = getUrgencyLevel(
-          task.doneByDate,
-          task.createdAt,
-          task.status
-        );
+        const level = getUrgencyLevel(task.doneByDate, task.createdAt, task.status);
         return level === urgencyFilter;
       });
     }
@@ -173,7 +172,13 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
   );
 
   const markedDates = useMemo(
-    () => getMarkedDatesFromTasksAndJobs(filteredTasks, filteredYardJobs, visibleDepartments, getDeptColor),
+    () =>
+      getMarkedDatesFromTasksAndJobs(
+        filteredTasks,
+        filteredYardJobs,
+        visibleDepartments,
+        getDeptColor
+      ),
     [filteredTasks, filteredYardJobs, visibleDepartments, getDeptColor]
   );
 
@@ -238,7 +243,9 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to see the tasks calendar.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to see the tasks calendar.
+        </Text>
       </View>
     );
   }
@@ -251,7 +258,9 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
       }
     >
-      <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Urgency / Priority</Text>
+      <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+        Urgency / Priority
+      </Text>
       <TouchableOpacity
         style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
         onPress={() => setUrgencyDropdownOpen(!urgencyDropdownOpen)}
@@ -260,22 +269,32 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
         <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
           {URGENCY_OPTIONS.find((o) => o.value === urgencyFilter)?.label ?? 'All priorities'}
         </Text>
-        <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>{urgencyDropdownOpen ? '▲' : '▼'}</Text>
+        <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>
+          {urgencyDropdownOpen ? '▲' : '▼'}
+        </Text>
       </TouchableOpacity>
       {urgencyDropdownOpen && (
         <Modal visible transparent animationType="fade">
           <Pressable style={styles.modalBackdrop} onPress={() => setUrgencyDropdownOpen(false)}>
-            <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
+            <View
+              style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+              onStartShouldSetResponder={() => true}
+            >
               {URGENCY_OPTIONS.map((opt) => (
                 <TouchableOpacity
                   key={opt.value}
-                  style={[styles.modalItem, urgencyFilter === opt.value && styles.modalItemSelected]}
+                  style={[
+                    styles.modalItem,
+                    urgencyFilter === opt.value && styles.modalItemSelected,
+                  ]}
                   onPress={() => {
                     setUrgencyFilter(opt.value);
                     setUrgencyDropdownOpen(false);
                   }}
                 >
-                  <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>{opt.label}</Text>
+                  <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
+                    {opt.label}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -283,8 +302,12 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
         </Modal>
       )}
 
-      <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Department filters</Text>
-      <Text style={[styles.filterHint, { color: themeColors.textSecondary }]}>Tap to show/hide on calendar</Text>
+      <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+        Department filters
+      </Text>
+      <Text style={[styles.filterHint, { color: themeColors.textSecondary }]}>
+        Tap to show/hide on calendar
+      </Text>
       <View style={styles.deptChips}>
         {DEPARTMENTS.map((dept) => (
           <TouchableOpacity
@@ -296,18 +319,32 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
             ]}
             onPress={() => toggleDepartment(dept)}
           >
-            <View style={[styles.deptDot, { backgroundColor: getDeptColor(dept) ?? COLORS.primary }]} />
-            <Text style={[styles.deptChipText, { color: visibleDepartments[dept] ? themeColors.textPrimary : themeColors.textSecondary }, !visibleDepartments[dept] && styles.deptChipTextDim]}>
+            <View
+              style={[styles.deptDot, { backgroundColor: getDeptColor(dept) ?? COLORS.primary }]}
+            />
+            <Text
+              style={[
+                styles.deptChipText,
+                {
+                  color: visibleDepartments[dept]
+                    ? themeColors.textPrimary
+                    : themeColors.textSecondary,
+                },
+                !visibleDepartments[dept] && styles.deptChipTextDim,
+              ]}
+            >
               {dept.charAt(0) + dept.slice(1).toLowerCase()}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Yard Period Calendar</Text>
+      <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+        Yard Period Calendar
+      </Text>
       <View style={[styles.calendarCard, { backgroundColor: themeColors.surface }]}>
         {loading ? (
-          <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
+          <LoadingSpinner />
         ) : (
           <>
             <Calendar
@@ -337,7 +374,9 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
               {DEPARTMENTS.filter((d) => visibleDepartments[d]).map((dept) => (
                 <View key={dept} style={styles.legendRow}>
                   <View style={[styles.legendDot, { backgroundColor: getDeptColor(dept) }]} />
-                  <Text style={[styles.legendText, { color: themeColors.textPrimary }]}>{dept.charAt(0) + dept.slice(1).toLowerCase()}</Text>
+                  <Text style={[styles.legendText, { color: themeColors.textPrimary }]}>
+                    {dept.charAt(0) + dept.slice(1).toLowerCase()}
+                  </Text>
                 </View>
               ))}
             </View>
@@ -347,9 +386,13 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
 
       {selectedDate && (
         <>
-          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Tasks & Jobs for {formatDate(selectedDate)}</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+            Tasks & Jobs for {formatDate(selectedDate)}
+          </Text>
           {tasksForSelectedDate.tasks.length === 0 && tasksForSelectedDate.yardJobs.length === 0 ? (
-            <Text style={[styles.emptyDate, { color: themeColors.textSecondary }]}>No tasks or yard jobs due on this date</Text>
+            <Text style={[styles.emptyDate, { color: themeColors.textSecondary }]}>
+              No tasks or yard jobs due on this date
+            </Text>
           ) : (
             <View style={styles.taskList}>
               {tasksForSelectedDate.tasks.map((task) => {
@@ -362,25 +405,42 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
                 return (
                   <TouchableOpacity
                     key={`task-${task.id}`}
-                    style={[styles.taskCard, { backgroundColor: themeColors.surface, borderLeftColor: urgencyColor }]}
+                    style={[
+                      styles.taskCard,
+                      { backgroundColor: themeColors.surface, borderLeftColor: urgencyColor },
+                    ]}
                     onPress={() => onEdit(task)}
                     activeOpacity={0.8}
                   >
                     <View style={styles.taskHeader}>
                       <Text
-                        style={[styles.taskTitle, { color: themeColors.textPrimary }, isComplete && styles.taskTitleComplete]}
+                        style={[
+                          styles.taskTitle,
+                          {
+                            color: isComplete ? themeColors.textSecondary : themeColors.textPrimary,
+                          },
+                          isComplete && styles.taskTitleComplete,
+                        ]}
                         numberOfLines={1}
                       >
                         {task.title}
                       </Text>
-                      <View style={[styles.deptBadge, { backgroundColor: getDeptColor(task.department) ?? COLORS.gray300 }]}>
+                      <View
+                        style={[
+                          styles.deptBadge,
+                          { backgroundColor: getDeptColor(task.department) ?? COLORS.gray300 },
+                        ]}
+                      >
                         <Text style={styles.deptBadgeText}>
                           {task.department.charAt(0) + task.department.slice(1).toLowerCase()}
                         </Text>
                       </View>
                     </View>
                     {task.notes ? (
-                      <Text style={[styles.taskNotes, { color: themeColors.textSecondary }]} numberOfLines={2}>
+                      <Text
+                        style={[styles.taskNotes, { color: themeColors.textSecondary }]}
+                        numberOfLines={2}
+                      >
                         {task.notes}
                       </Text>
                     ) : null}
@@ -402,26 +462,43 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
                 return (
                   <TouchableOpacity
                     key={`job-${job.id}`}
-                    style={[styles.taskCard, { backgroundColor: themeColors.surface, borderLeftColor: priorityColor }]}
+                    style={[
+                      styles.taskCard,
+                      { backgroundColor: themeColors.surface, borderLeftColor: priorityColor },
+                    ]}
                     onPress={() => onEditYardJob(job)}
                     activeOpacity={0.8}
                     disabled={!isHOD}
                   >
                     <View style={styles.taskHeader}>
                       <Text
-                        style={[styles.taskTitle, { color: themeColors.textPrimary }, isComplete && styles.taskTitleComplete]}
+                        style={[
+                          styles.taskTitle,
+                          {
+                            color: isComplete ? themeColors.textSecondary : themeColors.textPrimary,
+                          },
+                          isComplete && styles.taskTitleComplete,
+                        ]}
                         numberOfLines={1}
                       >
                         {job.jobTitle} {isComplete ? '✓' : ''}
                       </Text>
-                      <View style={[styles.deptBadge, { backgroundColor: getDeptColor(dept) ?? COLORS.gray300 }]}>
+                      <View
+                        style={[
+                          styles.deptBadge,
+                          { backgroundColor: getDeptColor(dept) ?? COLORS.gray300 },
+                        ]}
+                      >
                         <Text style={styles.deptBadgeText}>
                           {dept.charAt(0) + dept.slice(1).toLowerCase()} · Yard
                         </Text>
                       </View>
                     </View>
                     {job.jobDescription ? (
-                      <Text style={[styles.taskNotes, { color: themeColors.textSecondary }]} numberOfLines={2}>
+                      <Text
+                        style={[styles.taskNotes, { color: themeColors.textSecondary }]}
+                        numberOfLines={2}
+                      >
                         {job.jobDescription}
                       </Text>
                     ) : null}
@@ -608,7 +685,6 @@ const styles = StyleSheet.create({
   },
   taskTitleComplete: {
     textDecorationLine: 'line-through',
-    color: COLORS.textSecondary,
   },
   deptBadge: {
     paddingHorizontal: SPACING.sm,

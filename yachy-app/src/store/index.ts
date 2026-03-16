@@ -127,8 +127,8 @@ export const BACKGROUND_THEMES: Record<BackgroundThemeId, BackgroundThemeColors>
     background: '#0F172A',
     surface: '#1E293B',
     surfaceAlt: '#334155',
-    textPrimary: '#F8FAFC',
-    textSecondary: '#94A3B8',
+    textPrimary: '#FFFFFF',
+    textSecondary: 'rgba(255,255,255,0.75)',
     isDark: true,
   },
 };

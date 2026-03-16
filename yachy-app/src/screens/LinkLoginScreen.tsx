@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { createAuthCode, getAuthLink } from '../services/authLinkService';
+import { LoadingSpinner } from '../components';
 
 const MARITIME = {
   bgDark: '#0f172a',
@@ -23,7 +24,8 @@ const MARITIME = {
   gold: '#c9a227',
 };
 
-const WEB_ORIGIN = typeof window !== 'undefined' ? window.location.origin : 'https://www.nautical-ops.com';
+const WEB_ORIGIN =
+  typeof window !== 'undefined' ? window.location.origin : 'https://www.nautical-ops.com';
 
 export const LinkLoginScreen = ({ navigation }: any) => {
   const [code, setCode] = useState<string | null>(null);
@@ -87,7 +89,8 @@ export const LinkLoginScreen = ({ navigation }: any) => {
       <View style={styles.card}>
         <Text style={styles.title}>Sign in with your phone</Text>
         <Text style={styles.subtitle}>
-          Use your phone app—no credentials on this device. Open Nautical Ops on your phone, go to Settings → Link website, and scan this code.
+          Use your phone app—no credentials on this device. Open Nautical Ops on your phone, go to
+          Settings → Link website, and scan this code.
         </Text>
 
         {error && (
@@ -108,7 +111,7 @@ export const LinkLoginScreen = ({ navigation }: any) => {
           </View>
         ) : !error ? (
           <View style={styles.loadingBox}>
-            <ActivityIndicator size="large" color={MARITIME.accent} />
+            <LoadingSpinner />
             <Text style={styles.loadingText}>Generating QR code…</Text>
           </View>
         ) : null}
@@ -117,10 +120,7 @@ export const LinkLoginScreen = ({ navigation }: any) => {
           <Text style={styles.refreshText}>Generate new code</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() => navigation.navigate('Login')}
-          style={styles.backButton}
-        >
+        <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.backButton}>
           <Text style={styles.backText}>← Back to sign in with email</Text>
         </TouchableOpacity>
         <TouchableOpacity

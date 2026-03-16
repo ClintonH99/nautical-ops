@@ -50,9 +50,11 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
     }
   }, [vesselId]);
 
-  useFocusEffect(useCallback(() => {
-    if (vesselId) loadRules();
-  }, [vesselId, loadRules]));
+  useFocusEffect(
+    useCallback(() => {
+      if (vesselId) loadRules();
+    }, [vesselId, loadRules])
+  );
 
   const handleSaveRules = async () => {
     if (!vesselId) return;
@@ -77,37 +79,57 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
 
   if (!vesselId) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.message}>Join a vessel to use Watch Keeping.</Text>
+      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to use Watch Keeping.
+        </Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>
-      {/* Watch Keeping Rules - same style as Coming Soon on Home */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Watch Keeping Rules</Text>
-          {isHOD && (
-            <TouchableOpacity onPress={openEditModal} style={styles.editRulesBtn}>
-              <Text style={[styles.editRulesBtnText, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Edit</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-        {loadingRules ? (
-          <ActivityIndicator size="small" color={COLORS.primary} style={styles.rulesLoader} />
-        ) : (
-          <View style={styles.featureList}>
-            {rules?.content ? (
-              <Text style={styles.rulesBody}>{rules.content}</Text>
-            ) : (
-              <Text style={styles.rulesPlaceholder}>
-                {isHOD ? 'No rules set. Tap Edit to add Watch Keeping rules.' : 'No rules set for this vessel.'}
-              </Text>
+    <ScrollView
+      style={[styles.container, { backgroundColor: themeColors.background }]}
+      contentContainerStyle={styles.content}
+    >
+      {/* Watch Keeping Rules board — matches Muster Station design */}
+      <View style={[styles.rulesBoard, { backgroundColor: themeColors.surface }]}>
+        <View style={styles.rulesBoardInner}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+              Watch Keeping Rules
+            </Text>
+            {isHOD && (
+              <TouchableOpacity onPress={openEditModal} style={styles.editRulesBtn}>
+                <Text
+                  style={[
+                    styles.editRulesBtnText,
+                    { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                  ]}
+                >
+                  Edit
+                </Text>
+              </TouchableOpacity>
             )}
           </View>
-        )}
+          {loadingRules ? (
+            <ActivityIndicator size="small" color={COLORS.primary} style={styles.rulesLoader} />
+          ) : (
+            <View style={styles.featureList}>
+              {rules?.content ? (
+                <Text style={[styles.rulesBody, { color: themeColors.textPrimary }]}>
+                  {rules.content}
+                </Text>
+              ) : (
+                <Text style={[styles.rulesPlaceholder, { color: themeColors.textSecondary }]}>
+                  {isHOD
+                    ? 'No rules set. Tap Edit to add Watch Keeping rules.'
+                    : 'No rules set for this vessel.'}
+                </Text>
+              )}
+            </View>
+          )}
+        </View>
       </View>
 
       <TouchableOpacity
@@ -118,7 +140,9 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
         <Text style={styles.cardIcon}>📋</Text>
         <View style={styles.cardLabelWrap}>
           <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>Watch Schedule</Text>
-          <Text style={[styles.cardHint, { color: themeColors.textSecondary }]}>View published watch timetables</Text>
+          <Text style={[styles.cardHint, { color: themeColors.textSecondary }]}>
+            View published watch timetables
+          </Text>
         </View>
       </TouchableOpacity>
 
@@ -130,7 +154,9 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
         <Text style={styles.cardIcon}>➕</Text>
         <View style={styles.cardLabelWrap}>
           <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>Create</Text>
-          <Text style={[styles.cardHint, { color: themeColors.textSecondary }]}>Create and publish a new watch timetable</Text>
+          <Text style={[styles.cardHint, { color: themeColors.textSecondary }]}>
+            Create and publish a new watch timetable
+          </Text>
         </View>
       </TouchableOpacity>
 
@@ -143,21 +169,38 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
             keyboardVerticalOffset={60}
           >
             <Pressable style={StyleSheet.absoluteFill} onPress={() => setEditModalOpen(false)} />
-            <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
-              <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Edit Watch Keeping Rules</Text>
+            <View
+              style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+              onStartShouldSetResponder={() => true}
+            >
+              <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+                Edit Watch Keeping Rules
+              </Text>
               <TextInput
-                style={styles.rulesInput}
+                style={[
+                  styles.rulesInput,
+                  {
+                    backgroundColor: themeColors.surfaceAlt,
+                    color: themeColors.textPrimary,
+                    borderColor: themeColors.isDark ? themeColors.surfaceAlt : COLORS.border,
+                  },
+                ]}
                 value={editContent}
                 onChangeText={setEditContent}
                 placeholder="Enter rules and guidelines for watch keeping..."
-                placeholderTextColor={COLORS.textTertiary}
+                placeholderTextColor={themeColors.textSecondary}
                 multiline
                 numberOfLines={8}
                 textAlignVertical="top"
               />
               <View style={styles.modalActions}>
-                <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setEditModalOpen(false)}>
-                  <Text style={styles.modalCancelText}>Cancel</Text>
+                <TouchableOpacity
+                  style={styles.modalCancelBtn}
+                  onPress={() => setEditModalOpen(false)}
+                >
+                  <Text style={[styles.modalCancelText, { color: themeColors.textSecondary }]}>
+                    Cancel
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.modalSaveBtn}
@@ -191,19 +234,19 @@ const styles = StyleSheet.create({
   },
   message: {
     fontSize: FONTS.base,
-    color: COLORS.textSecondary,
     textAlign: 'center',
   },
-  section: {
-    backgroundColor: COLORS.white,
-    padding: SPACING.lg,
-    borderRadius: 12,
+  rulesBoard: {
+    borderRadius: BORDER_RADIUS.lg,
     marginBottom: SPACING.lg,
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  rulesBoardInner: {
+    padding: SPACING.lg,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -214,7 +257,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: FONTS.xl,
     fontWeight: 'bold',
-    color: COLORS.primary,
   },
   editRulesBtn: {
     paddingHorizontal: SPACING.md,
@@ -229,12 +271,10 @@ const styles = StyleSheet.create({
   },
   rulesBody: {
     fontSize: FONTS.base,
-    color: COLORS.textPrimary,
     lineHeight: 24,
   },
   rulesPlaceholder: {
     fontSize: FONTS.base,
-    color: COLORS.textSecondary,
     fontStyle: 'italic',
     lineHeight: 24,
   },

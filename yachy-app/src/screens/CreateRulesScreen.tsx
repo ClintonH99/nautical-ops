@@ -14,13 +14,12 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
 } from 'react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import rulesService from '../services/rules';
-import { Button } from '../components';
+import { Button, LoadingSpinner } from '../components';
 import { generateRulesPdf } from '../utils/rulesPdf';
 
 export const CreateRulesScreen = ({ navigation, route }: any) => {
@@ -97,46 +96,75 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to create rules.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to create rules.
+        </Text>
       </View>
     );
   }
   if (!isHOD) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Only HODs can create or edit rules.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Only HODs can create or edit rules.
+        </Text>
       </View>
     );
   }
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <LoadingSpinner />
       </View>
     );
   }
 
   return (
-    <KeyboardAvoidingView style={[styles.container, { backgroundColor: themeColors.background }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: themeColors.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator
       >
-        <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Rule Title</Text>
+        <Text
+          style={[
+            styles.label,
+            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+          ]}
+        >
+          Rule Title
+        </Text>
         <TextInput
-          style={[styles.input, { backgroundColor: themeColors.surface, color: themeColors.textPrimary }]}
+          style={[
+            styles.input,
+            { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+          ]}
           value={title}
           onChangeText={setTitle}
           placeholder="eg. Deck/Interior Team or Miami to Nassau"
           placeholderTextColor={COLORS.textTertiary}
         />
-        <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Rules</Text>
+        <Text
+          style={[
+            styles.label,
+            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+          ]}
+        >
+          Rules
+        </Text>
         {rules.map((r, i) => (
           <View key={i} style={styles.ruleRow}>
             <TextInput
-              style={[styles.input, styles.textArea, styles.flex, { backgroundColor: themeColors.surface, color: themeColors.textPrimary }]}
+              style={[
+                styles.input,
+                styles.textArea,
+                styles.flex,
+                { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+              ]}
               value={r}
               onChangeText={(v) => setRule(i, v)}
               placeholder="Enter rule"
@@ -155,8 +183,20 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
         </TouchableOpacity>
 
         <View style={styles.actions}>
-          <Button title="Export to PDF" onPress={onExport} variant="outline" fullWidth style={styles.btn} />
-          <Button title={isEdit ? 'Save' : 'Publish'} onPress={onPublish} variant="primary" fullWidth style={styles.btn} />
+          <Button
+            title="Export to PDF"
+            onPress={onExport}
+            variant="outline"
+            fullWidth
+            style={styles.btn}
+          />
+          <Button
+            title={isEdit ? 'Save' : 'Publish'}
+            onPress={onPublish}
+            variant="primary"
+            fullWidth
+            style={styles.btn}
+          />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -178,7 +218,12 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   textArea: { minHeight: 60, textAlignVertical: 'top' },
-  ruleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm, marginBottom: SPACING.sm },
+  ruleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
   flex: { flex: 1 },
   remove: { fontSize: FONTS.sm, color: COLORS.primary, paddingTop: SPACING.md },
   add: { fontSize: FONTS.base, color: COLORS.primary, fontWeight: '600', marginBottom: SPACING.sm },

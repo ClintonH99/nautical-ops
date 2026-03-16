@@ -140,77 +140,87 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
 
           <View style={styles.infoBanner}>
             <Text style={styles.infoBannerText}>
-              As Captain (Master of Vessel), you'll create your vessel and receive an invite code to share with your crew.
+              As Captain (Master of Vessel), you'll create your vessel and receive an invite code to
+              share with your crew.
             </Text>
           </View>
 
           <>
-          <View style={[styles.formCard, { backgroundColor: MARITIME.formCardBg, borderColor: MARITIME.formCardBorder }]}>
-            <Input
-              label="Full Name"
-              placeholder="John Doe"
-              value={formData.name}
-              onChangeText={(value) => updateField('name', value)}
-              error={errors.name}
-            />
+            <View
+              style={[
+                styles.formCard,
+                { backgroundColor: MARITIME.formCardBg, borderColor: MARITIME.formCardBorder },
+              ]}
+            >
+              <Input
+                label="Full Name"
+                placeholder="John Doe"
+                value={formData.name}
+                onChangeText={(value) => updateField('name', value)}
+                error={errors.name}
+                forceLight
+              />
 
-            <Input
-              label="Email"
-              placeholder="your@email.com"
-              value={formData.email}
-              onChangeText={(value) => updateField('email', value)}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              error={errors.email}
-            />
+              <Input
+                label="Email"
+                placeholder="your@email.com"
+                value={formData.email}
+                onChangeText={(value) => updateField('email', value)}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                error={errors.email}
+                forceLight
+              />
 
-            <Input
-              label="Password"
-              placeholder="Minimum 6 characters"
-              value={formData.password}
-              onChangeText={(value) => updateField('password', value)}
-              secureTextEntry
-              showPasswordToggle
-              autoCapitalize="none"
-              error={errors.password}
-            />
+              <Input
+                label="Password"
+                placeholder="Minimum 6 characters"
+                value={formData.password}
+                onChangeText={(value) => updateField('password', value)}
+                secureTextEntry
+                showPasswordToggle
+                autoCapitalize="none"
+                error={errors.password}
+                forceLight
+              />
 
-            <Input
-              label="Confirm Password"
-              placeholder="Re-enter password"
-              value={formData.confirmPassword}
-              onChangeText={(value) => updateField('confirmPassword', value)}
-              secureTextEntry
-              showPasswordToggle
-              autoCapitalize="none"
-              error={errors.confirmPassword}
-            />
+              <Input
+                label="Confirm Password"
+                placeholder="Re-enter password"
+                value={formData.confirmPassword}
+                onChangeText={(value) => updateField('confirmPassword', value)}
+                secureTextEntry
+                showPasswordToggle
+                autoCapitalize="none"
+                error={errors.confirmPassword}
+                forceLight
+              />
 
-            <ConsentCheckbox
-              checked={acceptedTerms}
-              onToggle={() => setAcceptedTerms((v) => !v)}
-              onPressTerms={() => navigation.navigate('TermsConditions')}
-              onPressPrivacy={() => navigation.navigate('PrivacyPolicy')}
-              textColor={COLORS.textPrimary}
-              error={errors.terms}
-            />
+              <ConsentCheckbox
+                checked={acceptedTerms}
+                onToggle={() => setAcceptedTerms((v) => !v)}
+                onPressTerms={() => navigation.navigate('TermsConditions')}
+                onPressPrivacy={() => navigation.navigate('PrivacyPolicy')}
+                textColor={COLORS.textPrimary}
+                error={errors.terms}
+              />
 
-            <Button
-              title="Create Captain Account"
-              onPress={handleRegister}
-              loading={loading}
-              fullWidth
-              style={styles.registerButton}
-            />
-          </View>
+              <Button
+                title="Create Captain Account"
+                onPress={handleRegister}
+                loading={loading}
+                fullWidth
+                style={styles.registerButton}
+              />
+            </View>
 
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.footerLink}>Sign In</Text>
-            </TouchableOpacity>
-          </View>
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Already have an account? </Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                <Text style={styles.footerLink}>Sign In</Text>
+              </TouchableOpacity>
+            </View>
           </>
         </ScrollView>
       </KeyboardAvoidingView>

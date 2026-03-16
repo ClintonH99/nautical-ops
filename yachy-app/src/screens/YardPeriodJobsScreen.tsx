@@ -11,7 +11,6 @@ import {
   FlatList,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   Alert,
   Modal,
@@ -25,7 +24,7 @@ import yardJobsService from '../services/yardJobs';
 import { YardPeriodJob, Department } from '../types';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
-import { Button, ButtonTagCard, ButtonTagRow } from '../components';
+import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner } from '../components';
 import { getTaskUrgencyColor } from '../utils/taskUrgency';
 
 export const YardPeriodJobsScreen = ({ navigation }: any) => {
@@ -107,25 +106,21 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
 
   const onDelete = (job: YardPeriodJob) => {
     if (!isHOD) return;
-    Alert.alert(
-      'Delete job',
-      `Delete "${job.jobTitle}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await yardJobsService.delete(job.id);
-              loadJobs();
-            } catch (e) {
-              Alert.alert('Error', 'Could not delete job');
-            }
-          },
+    Alert.alert('Delete job', `Delete "${job.jobTitle}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await yardJobsService.delete(job.id);
+            loadJobs();
+          } catch (e) {
+            Alert.alert('Error', 'Could not delete job');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const onMarkComplete = (job: YardPeriodJob) => {
@@ -167,17 +162,26 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
         onEdit={isHOD ? () => onEdit(item) : undefined}
         onDelete={isHOD ? () => onDelete(item) : undefined}
         onPress={isHOD ? () => onEdit(item) : undefined}
-        footer={isComplete && item.completedByName ? `Completed by ${item.completedByName}` : undefined}
+        footer={
+          isComplete && item.completedByName ? `Completed by ${item.completedByName}` : undefined
+        }
       >
         {dateVal ? <ButtonTagRow label="Date" value={dateVal} /> : null}
-        <ButtonTagRow label="Department" value={deptLabel} badgeColor={getDepartmentColor(item.department ?? 'INTERIOR', overrides)} />
+        <ButtonTagRow
+          label="Department"
+          value={deptLabel}
+          badgeColor={getDepartmentColor(item.department ?? 'INTERIOR', overrides)}
+        />
         <ButtonTagRow label="Yard Location" value={item.yardLocation ?? ''} />
         <ButtonTagRow label="Contractor" value={item.contractorCompanyName ?? ''} />
         <ButtonTagRow label="Description" value={item.jobDescription ?? ''} />
         {!isComplete && (
           <TouchableOpacity
             style={styles.completeBtn}
-            onPress={(e) => { e?.stopPropagation?.(); onMarkComplete(item); }}
+            onPress={(e) => {
+              e?.stopPropagation?.();
+              onMarkComplete(item);
+            }}
           >
             <Text style={styles.completeBtnText}>Mark complete</Text>
           </TouchableOpacity>
@@ -189,7 +193,9 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to see yard period jobs.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to see yard period jobs.
+        </Text>
       </View>
     );
   }
@@ -209,8 +215,17 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
       >
         <Text style={styles.calendarCardIcon}>📅</Text>
         <View style={styles.calendarCardContent}>
-        <Text style={[styles.calendarCardTitle, { color: themeColors.textPrimary }]}>Yard Period Calendar</Text>
-        <Text style={[styles.calendarCardHint, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Calendar view with department & urgency filters</Text>
+          <Text style={[styles.calendarCardTitle, { color: themeColors.textPrimary }]}>
+            Yard Period Calendar
+          </Text>
+          <Text
+            style={[
+              styles.calendarCardHint,
+              { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+            ]}
+          >
+            Calendar view with department & urgency filters
+          </Text>
         </View>
       </TouchableOpacity>
       <View style={styles.filterBar}>
@@ -221,15 +236,22 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
             onPress={() => setDepartmentDropdownOpen(!departmentDropdownOpen)}
             activeOpacity={0.7}
           >
-            <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>{departmentDisplayText}</Text>
-            <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>{departmentDropdownOpen ? '▲' : '▼'}</Text>
+            <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
+              {departmentDisplayText}
+            </Text>
+            <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>
+              {departmentDropdownOpen ? '▲' : '▼'}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
       {departmentDropdownOpen && (
         <Modal visible transparent animationType="fade">
           <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentDropdownOpen(false)}>
-            <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
+            <View
+              style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+              onStartShouldSetResponder={() => true}
+            >
               <TouchableOpacity
                 style={[
                   styles.modalItem,
@@ -253,22 +275,19 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
               {DEPARTMENTS.map((dept) => (
                 <TouchableOpacity
                   key={dept}
-                  style={[
-                    styles.modalItem,
-                    visibleDepartments[dept] && styles.modalItemSelected,
-                  ]}
+                  style={[styles.modalItem, visibleDepartments[dept] && styles.modalItemSelected]}
                   onPress={() => {
                     selectDepartment(dept);
                     setDepartmentDropdownOpen(false);
                   }}
                 >
-                <Text
-                  style={[
-                    styles.modalItemText,
-                    { color: themeColors.textPrimary },
-                    visibleDepartments[dept] && styles.modalItemTextAll,
-                  ]}
-                >
+                  <Text
+                    style={[
+                      styles.modalItemText,
+                      { color: themeColors.textPrimary },
+                      visibleDepartments[dept] && styles.modalItemTextAll,
+                    ]}
+                  >
                     {dept.charAt(0) + dept.slice(1).toLowerCase()}
                   </Text>
                 </TouchableOpacity>
@@ -293,19 +312,25 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       {loading ? (
-        <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
+        <LoadingSpinner />
       ) : jobs.length === 0 ? (
         <ScrollView
           style={[styles.container, { backgroundColor: themeColors.background }]}
           contentContainerStyle={styles.emptyWrapper}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[COLORS.primary]}
+            />
           }
         >
           <CalendarHeader />
           <View style={styles.empty}>
             <Text style={styles.emptyEmoji}>🔧</Text>
-            <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>No yard period jobs yet</Text>
+            <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
+              No yard period jobs yet
+            </Text>
             {isHOD && (
               <Button
                 title="Create first job"
@@ -325,12 +350,29 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
           ListEmptyComponent={
             jobs.length > 0 ? (
               <View style={styles.emptyFilter}>
-                <Text style={[styles.emptyFilterText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>No jobs in selected departments</Text>
-                <Text style={[styles.emptyFilterHint, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Tap the Department dropdown to choose</Text>
+                <Text
+                  style={[
+                    styles.emptyFilterText,
+                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                  ]}
+                >
+                  No jobs in selected departments
+                </Text>
+                <Text
+                  style={[
+                    styles.emptyFilterHint,
+                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                  ]}
+                >
+                  Tap the Department dropdown to choose
+                </Text>
               </View>
             ) : null
           }
-          contentContainerStyle={[styles.list, filteredJobs.length === 0 && jobs.length > 0 && styles.listFlex]}
+          contentContainerStyle={[
+            styles.list,
+            filteredJobs.length === 0 && jobs.length > 0 && styles.listFlex,
+          ]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

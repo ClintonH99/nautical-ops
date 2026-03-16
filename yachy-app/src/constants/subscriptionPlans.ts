@@ -19,7 +19,6 @@ export const BILLING_PERIODS = [
   { id: '3_months', label: '3 Months', months: 3, discountPercent: 5, isRecurring: true },
   { id: '6_months', label: '6 Months', months: 6, discountPercent: 8, isRecurring: true },
   { id: '12_months', label: 'Yearly', months: 12, discountPercent: 10, isRecurring: true },
-  { id: 'once_off', label: 'Once-off', months: 12, discountPercent: 10, isRecurring: false },
 ] as const;
 
 export const PLAN_BOARD_SMALL_MEDIUM: PlanTierId[] = ['1_5', '6_10', '11_15'];

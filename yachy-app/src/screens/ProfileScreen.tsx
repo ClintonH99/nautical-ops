@@ -12,13 +12,14 @@ import {
   TouchableOpacity,
   Image,
   Alert,
-  ActivityIndicator,
   TextInput,
+  Modal,
+  Pressable,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES, SHADOWS } from '../constants/theme';
 import { useAuthStore, useThemeStore, BACKGROUND_THEMES } from '../store';
-import { Button } from '../components';
+import { Button, LoadingSpinner } from '../components';
 import userService from '../services/user';
 import { Department } from '../types';
 
@@ -34,6 +35,7 @@ export const ProfileScreen = ({ navigation }: any) => {
   const [name, setName] = useState(user?.name || '');
   const [position, setPosition] = useState(user?.position || '');
   const [department, setDepartment] = useState<Department>(user?.department || 'BRIDGE');
+  const [departmentDropdownOpen, setDepartmentDropdownOpen] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState(user?.profilePhoto);
   const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
   const [localPreviewUri, setLocalPreviewUri] = useState<string | null>(null);
@@ -48,7 +50,8 @@ export const ProfileScreen = ({ navigation }: any) => {
     setLocalPreviewUri(null);
   }, [user?.profilePhoto, user?.id]);
 
-  const displayPhotoUri = localPreviewUri || profilePhoto || (user?.id ? userService.getProfilePhotoUrl(user.id) : null);
+  const displayPhotoUri =
+    localPreviewUri || profilePhoto || (user?.id ? userService.getProfilePhotoUrl(user.id) : null);
 
   const departments: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -57,10 +60,7 @@ export const ProfileScreen = ({ navigation }: any) => {
       // Request permission
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Please grant permission to access your photos'
-        );
+        Alert.alert('Permission Required', 'Please grant permission to access your photos');
         return;
       }
 
@@ -77,10 +77,7 @@ export const ProfileScreen = ({ navigation }: any) => {
         setIsUploadingPhoto(true);
         try {
           // Upload photo (replaces previous; each upload is separate)
-          const photoUrl = await userService.uploadProfilePhoto(
-            user!.id,
-            result.assets[0].uri
-          );
+          const photoUrl = await userService.uploadProfilePhoto(user!.id, result.assets[0].uri);
           setLocalPreviewUri(null);
           setProfilePhoto(photoUrl);
           setPhotoLoadFailed(false);
@@ -110,40 +107,36 @@ export const ProfileScreen = ({ navigation }: any) => {
   };
 
   const handleRemovePhoto = async () => {
-    Alert.alert(
-      'Remove Photo',
-      'Are you sure you want to remove your profile photo?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            setIsUploadingPhoto(true);
-            try {
-              await userService.deleteProfilePhoto(user!.id);
-              setProfilePhoto(undefined);
-              setPhotoLoadFailed(true);
+    Alert.alert('Remove Photo', 'Are you sure you want to remove your profile photo?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          setIsUploadingPhoto(true);
+          try {
+            await userService.deleteProfilePhoto(user!.id);
+            setProfilePhoto(undefined);
+            setPhotoLoadFailed(true);
 
-              const updatedUser = await userService.updateProfile(user!.id, {
-                profilePhoto: '',
-              });
+            const updatedUser = await userService.updateProfile(user!.id, {
+              profilePhoto: '',
+            });
 
-              if (updatedUser) {
-                setUser(updatedUser);
-              }
-
-              Alert.alert('Success', 'Profile photo removed!');
-            } catch (error) {
-              console.error('Remove photo error:', error);
-              Alert.alert('Error', 'Failed to remove photo. Please try again.');
-            } finally {
-              setIsUploadingPhoto(false);
+            if (updatedUser) {
+              setUser(updatedUser);
             }
-          },
+
+            Alert.alert('Success', 'Profile photo removed!');
+          } catch (error) {
+            console.error('Remove photo error:', error);
+            Alert.alert('Error', 'Failed to remove photo. Please try again.');
+          } finally {
+            setIsUploadingPhoto(false);
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleSave = async () => {
@@ -186,7 +179,16 @@ export const ProfileScreen = ({ navigation }: any) => {
     setIsEditing(false);
   };
 
-  const settingsSections: Array<{ title: string; items: Array<{ icon: string; label: string; description: string; onPress: () => void; disabled: boolean }> }> = [];
+  const settingsSections: Array<{
+    title: string;
+    items: Array<{
+      icon: string;
+      label: string;
+      description: string;
+      onPress: () => void;
+      disabled: boolean;
+    }>;
+  }> = [];
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]}>
@@ -196,7 +198,7 @@ export const ProfileScreen = ({ navigation }: any) => {
           <View style={styles.photoContainer}>
             {isUploadingPhoto ? (
               <View style={styles.photoLoading}>
-                <ActivityIndicator size="large" color={COLORS.primary} />
+                <LoadingSpinner />
               </View>
             ) : displayPhotoUri && !photoLoadFailed ? (
               <Image
@@ -239,10 +241,19 @@ export const ProfileScreen = ({ navigation }: any) => {
         {/* Profile Information */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>Profile Information</Text>
+            <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
+              Profile Information
+            </Text>
             {!isEditing && (
               <TouchableOpacity onPress={() => setIsEditing(true)}>
-                <Text style={[styles.editButton, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Edit</Text>
+                <Text
+                  style={[
+                    styles.editButton,
+                    { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                  ]}
+                >
+                  Edit
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -250,10 +261,20 @@ export const ProfileScreen = ({ navigation }: any) => {
           <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
             {/* Name */}
             <View style={styles.field}>
-              <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Name</Text>
+              <Text
+                style={[
+                  styles.label,
+                  { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                ]}
+              >
+                Name
+              </Text>
               {isEditing ? (
                 <TextInput
-                  style={[styles.input, { backgroundColor: themeColors.background, color: themeColors.textPrimary }]}
+                  style={[
+                    styles.input,
+                    { backgroundColor: themeColors.background, color: themeColors.textPrimary },
+                  ]}
                   value={name}
                   onChangeText={setName}
                   placeholder="Enter your name"
@@ -266,76 +287,180 @@ export const ProfileScreen = ({ navigation }: any) => {
 
             {/* Position */}
             <View style={styles.field}>
-              <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Position</Text>
+              <Text
+                style={[
+                  styles.label,
+                  { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                ]}
+              >
+                Position
+              </Text>
               {isEditing ? (
                 <TextInput
-                  style={[styles.input, { backgroundColor: themeColors.background, color: themeColors.textPrimary }]}
+                  style={[
+                    styles.input,
+                    { backgroundColor: themeColors.background, color: themeColors.textPrimary },
+                  ]}
                   value={position}
                   onChangeText={setPosition}
                   placeholder="Enter your position"
                   placeholderTextColor={themeColors.textSecondary}
                 />
               ) : (
-                <Text style={[styles.value, { color: themeColors.textPrimary }]}>{user?.position}</Text>
+                <Text style={[styles.value, { color: themeColors.textPrimary }]}>
+                  {user?.position}
+                </Text>
               )}
             </View>
 
             {/* Department */}
             <View style={styles.field}>
-              <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Department</Text>
+              <Text
+                style={[
+                  styles.label,
+                  { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                ]}
+              >
+                Department
+              </Text>
               {isEditing ? (
-                <View style={styles.departmentSelector}>
-                  {departments.map((dept) => (
-                    <TouchableOpacity
-                      key={dept}
-                      style={[
-                        styles.departmentChip,
-                        department === dept && styles.departmentChipActive,
-                      ]}
-                      onPress={() => setDepartment(dept)}
+                <>
+                  <TouchableOpacity
+                    style={[styles.departmentDropdown, { backgroundColor: themeColors.background }]}
+                    onPress={() => setDepartmentDropdownOpen(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[styles.departmentDropdownText, { color: themeColors.textPrimary }]}
                     >
-                      <Text
-                        style={[
-                          styles.departmentChipText,
-                          department === dept && styles.departmentChipTextActive,
-                        ]}
+                      {department.charAt(0) + department.slice(1).toLowerCase()}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.departmentDropdownChevron,
+                        { color: themeColors.textSecondary },
+                      ]}
+                    >
+                      ▼
+                    </Text>
+                  </TouchableOpacity>
+                  {departmentDropdownOpen && (
+                    <Modal visible transparent animationType="fade">
+                      <Pressable
+                        style={styles.modalBackdrop}
+                        onPress={() => setDepartmentDropdownOpen(false)}
                       >
-                        {dept}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                        <View
+                          style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+                          onStartShouldSetResponder={() => true}
+                        >
+                          {departments.map((dept) => (
+                            <TouchableOpacity
+                              key={dept}
+                              style={[
+                                styles.modalItem,
+                                department === dept && styles.modalItemSelected,
+                              ]}
+                              onPress={() => {
+                                setDepartment(dept);
+                                setDepartmentDropdownOpen(false);
+                              }}
+                            >
+                              <Text
+                                style={[
+                                  styles.modalItemText,
+                                  { color: themeColors.textPrimary },
+                                  department === dept && styles.modalItemTextSelected,
+                                ]}
+                              >
+                                {dept.charAt(0) + dept.slice(1).toLowerCase()}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </Pressable>
+                    </Modal>
+                  )}
+                </>
               ) : (
-                <Text style={[styles.value, { color: themeColors.textPrimary }]}>{user?.department}</Text>
+                <Text style={[styles.value, { color: themeColors.textPrimary }]}>
+                  {user?.department}
+                </Text>
               )}
             </View>
 
             {/* Email (read-only) */}
             <View style={[styles.field, styles.fieldLast]}>
-              <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Email</Text>
-              <Text style={[styles.value, styles.valueDisabled, { color: themeColors.textSecondary }]}>{user?.email}</Text>
+              <Text
+                style={[
+                  styles.label,
+                  { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                ]}
+              >
+                Email
+              </Text>
+              <Text
+                style={[styles.value, styles.valueDisabled, { color: themeColors.textSecondary }]}
+              >
+                {user?.email}
+              </Text>
             </View>
           </View>
         </View>
 
         {/* Account Information (read-only) */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>Account Information</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
+            Account Information
+          </Text>
           <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
             <View style={styles.field}>
-              <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Role</Text>
-              <View style={styles.roleBadge}>
-                <Text style={[styles.roleText, { textTransform: 'none' }]}>
-                  {user?.position?.toLowerCase().includes('captain')
-                    ? 'MOV (Master of Vessel)'
-                    : user?.role === 'HOD'
-                      ? 'HOD (Head of Department)'
-                      : 'Crew'}
-                </Text>
+              <Text
+                style={[
+                  styles.label,
+                  { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                ]}
+              >
+                Role
+              </Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: SPACING.sm,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <View style={styles.roleBadge}>
+                  <Text style={[styles.roleText, { textTransform: 'none' }]}>
+                    {user?.position?.toLowerCase().includes('captain')
+                      ? 'MOV (Master of Vessel)'
+                      : user?.role === 'HOD'
+                        ? 'HOD (Head of Department)'
+                        : 'Crew'}
+                  </Text>
+                </View>
+                {user?.contractType === 'temporary' && (
+                  <View style={styles.contractBadgeTemp}>
+                    <Text style={styles.contractBadgeText}>TEMP</Text>
+                  </View>
+                )}
+                {user?.contractType === 'rotational' && (
+                  <View style={styles.contractBadgeRotation}>
+                    <Text style={styles.contractBadgeText}>Rotation</Text>
+                  </View>
+                )}
               </View>
             </View>
             <View style={[styles.field, styles.fieldLast]}>
-              <Text style={[styles.label, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Member Since</Text>
+              <Text
+                style={[
+                  styles.label,
+                  { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                ]}
+              >
+                Member Since
+              </Text>
               <Text style={[styles.value, { color: themeColors.textPrimary }]}>
                 {user?.createdAt
                   ? new Date(user.createdAt).toLocaleDateString('en-US', {
@@ -352,7 +477,9 @@ export const ProfileScreen = ({ navigation }: any) => {
         {/* Settings Sections */}
         {settingsSections.map((section, sectionIndex) => (
           <View key={sectionIndex} style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>{section.title}</Text>
+            <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
+              {section.title}
+            </Text>
             <View style={[styles.settingsCard, { backgroundColor: themeColors.surface }]}>
               {section.items.map((item, itemIndex) => (
                 <TouchableOpacity
@@ -369,8 +496,12 @@ export const ProfileScreen = ({ navigation }: any) => {
                   <View style={styles.settingsItemLeft}>
                     <Text style={styles.settingsIcon}>{item.icon}</Text>
                     <View style={styles.settingsTextContainer}>
-                      <Text style={[styles.settingsLabel, { color: themeColors.textPrimary }]}>{item.label}</Text>
-                      <Text style={[styles.settingsDescription, { color: themeColors.textSecondary }]}>
+                      <Text style={[styles.settingsLabel, { color: themeColors.textPrimary }]}>
+                        {item.label}
+                      </Text>
+                      <Text
+                        style={[styles.settingsDescription, { color: themeColors.textSecondary }]}
+                      >
                         {item.description}
                       </Text>
                     </View>
@@ -384,7 +515,9 @@ export const ProfileScreen = ({ navigation }: any) => {
 
         {/* Version Info */}
         <View style={styles.versionInfo}>
-          <Text style={[styles.versionText, { color: themeColors.textSecondary }]}>Nautical Ops v1.0.0</Text>
+          <Text style={[styles.versionText, { color: themeColors.textSecondary }]}>
+            Nautical Ops v1.0.0
+          </Text>
           <Text style={[styles.versionSubtext, { color: themeColors.textSecondary }]}>
             Professional yacht operations management
           </Text>
@@ -564,29 +697,50 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
   },
-  departmentSelector: {
+  departmentDropdown: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
-  },
-  departmentChip: {
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
     borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.border,
-    backgroundColor: COLORS.white,
   },
-  departmentChipActive: {
-    borderColor: COLORS.primary,
-    borderWidth: 2,
+  departmentDropdownText: {
+    fontSize: FONTS.base,
+    fontWeight: '500',
   },
-  departmentChipText: {
-    fontSize: FONTS.sm,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
+  departmentDropdownChevron: {
+    fontSize: 10,
   },
-  departmentChipTextActive: {
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.xl,
+  },
+  modalBox: {
+    borderRadius: BORDER_RADIUS.lg,
+    overflow: 'hidden',
+    width: '100%',
+    maxWidth: 320,
+  },
+  modalItem: {
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  modalItemSelected: {
+    backgroundColor: COLORS.primaryLight + '22',
+  },
+  modalItemText: {
+    fontSize: FONTS.base,
+    fontWeight: '500',
+  },
+  modalItemTextSelected: {
     color: COLORS.primary,
     fontWeight: '700',
   },
@@ -602,6 +756,25 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.white,
     textTransform: 'uppercase',
+  },
+  contractBadgeTemp: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: '#ea580c',
+  },
+  contractBadgeRotation: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: '#0d9488',
+  },
+  contractBadgeText: {
+    fontSize: FONTS.sm,
+    fontWeight: 'bold',
+    color: COLORS.white,
   },
   actions: {
     flexDirection: 'row',

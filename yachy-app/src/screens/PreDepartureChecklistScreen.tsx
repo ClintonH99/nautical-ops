@@ -10,7 +10,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   Alert,
   Modal,
@@ -23,7 +22,7 @@ import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../st
 import preDepartureChecklistsService from '../services/preDepartureChecklists';
 import vesselService from '../services/vessel';
 import { PreDepartureChecklist, Department } from '../types';
-import { Button, ButtonTagCard, ButtonTagRow } from '../components';
+import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner } from '../components';
 import { generatePreDepartureChecklistPdf } from '../utils/preDepartureChecklistPdf';
 
 const CAPTAIN_CHECKLIST_MAX_ITEMS = 15;
@@ -58,9 +57,7 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
 
   const filteredChecklists = useMemo(() => {
     if (!departmentFilter) return checklists;
-    return checklists.filter(
-      (c) => c.department === departmentFilter || c.department === null
-    );
+    return checklists.filter((c) => c.department === departmentFilter || c.department === null);
   }, [checklists, departmentFilter]);
 
   const captainBoard = useMemo(() => {
@@ -94,7 +91,8 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
     });
   }, []);
 
-  const allSelected = filteredChecklists.length > 0 && selectedIds.size === filteredChecklists.length;
+  const allSelected =
+    filteredChecklists.length > 0 && selectedIds.size === filteredChecklists.length;
 
   const toggleSelectAll = useCallback(() => {
     if (allSelected) {
@@ -142,25 +140,21 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
 
   const onDelete = (checklist: PreDepartureChecklist) => {
     if (!canEditChecklist(checklist)) return;
-    Alert.alert(
-      'Delete checklist',
-      `Delete "${checklist.title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await preDepartureChecklistsService.delete(checklist.id);
-              loadChecklists();
-            } catch (e) {
-              Alert.alert('Error', 'Could not delete checklist');
-            }
-          },
+    Alert.alert('Delete checklist', `Delete "${checklist.title}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await preDepartureChecklistsService.delete(checklist.id);
+            loadChecklists();
+          } catch (e) {
+            Alert.alert('Error', 'Could not delete checklist');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const onView = (checklist: PreDepartureChecklist) => {
@@ -176,7 +170,11 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
     try {
       const vessel = await vesselService.getVessel(vesselId);
       const vesselName = vessel?.name || 'Vessel';
-      const safeName = vesselName.replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '') || 'Vessel';
+      const safeName =
+        vesselName
+          .replace(/[^a-z0-9]/gi, '_')
+          .replace(/_+/g, '_')
+          .replace(/^_|_$/g, '') || 'Vessel';
       const filename = `${safeName}_Pre_Departure_Checklist.pdf`;
       await generatePreDepartureChecklistPdf(selectedChecklists, vesselName, filename);
     } catch (e) {
@@ -194,7 +192,7 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
   const renderItem = ({ item }: { item: PreDepartureChecklist }) => {
     const count = itemCount(item);
     const deptLabel = item.department
-      ? DEPARTMENT_OPTIONS.find((o) => o.value === item.department)?.label ?? item.department
+      ? (DEPARTMENT_OPTIONS.find((o) => o.value === item.department)?.label ?? item.department)
       : 'All';
     const isSelected = selectedIds.has(item.id);
     return (
@@ -208,7 +206,11 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
         onDelete={canEditChecklist(item) ? () => onDelete(item) : undefined}
       >
         <ButtonTagRow label="Date" value={formatDate(item.createdAt)} />
-        <ButtonTagRow label="Department" value={deptLabel} badgeColor={item.department ? getDepartmentColor(item.department, overrides) : undefined} />
+        <ButtonTagRow
+          label="Department"
+          value={deptLabel}
+          badgeColor={item.department ? getDepartmentColor(item.department, overrides) : undefined}
+        />
         <ButtonTagRow label="Items" value={`${count} items`} />
       </ButtonTagCard>
     );
@@ -217,7 +219,9 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to manage pre-departure checklists.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to manage pre-departure checklists.
+        </Text>
       </View>
     );
   }
@@ -225,7 +229,7 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <LoadingSpinner />
       </View>
     );
   }
@@ -233,8 +237,17 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
   const ListHeader = (
     <>
       <View style={styles.boardHeader}>
-        <Text style={[styles.boardTitle, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Pre-Departure Checklist</Text>
-        <Text style={[styles.boardHint, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>
+        <Text
+          style={[styles.boardTitle, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}
+        >
+          Pre-Departure Checklist
+        </Text>
+        <Text
+          style={[
+            styles.boardHint,
+            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+          ]}
+        >
           {isHOD
             ? 'Add tasks for crew to complete before each departure. Read and do.'
             : 'Tasks to complete before departure. Read and do.'}
@@ -262,8 +275,14 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
       {filteredChecklists.length > 0 && (
         <View style={[styles.selectionBar, { backgroundColor: themeColors.surface }]}>
           <View style={styles.selectionBarActions}>
-            <TouchableOpacity onPress={toggleSelectAll} style={styles.selectionBarBtn} activeOpacity={0.7}>
-              <Text style={styles.selectionBarBtnText}>{allSelected ? 'Deselect All' : 'Select All'}</Text>
+            <TouchableOpacity
+              onPress={toggleSelectAll}
+              style={styles.selectionBarBtn}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.selectionBarBtnText}>
+                {allSelected ? 'Deselect All' : 'Select All'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -282,19 +301,17 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
             onPress={() => onEdit(captainBoard)}
             activeOpacity={0.9}
           >
-          <Text style={styles.captainBoardBadge}>Captain's Checklist</Text>
+            <Text style={styles.captainBoardBadge}>Captain's Checklist</Text>
             <Text style={styles.captainBoardTitle} numberOfLines={1}>
               {captainBoard.title}
             </Text>
             <View style={styles.captainBoardItems}>
-              {captainBoard.items
-                .slice(0, CAPTAIN_CHECKLIST_MAX_ITEMS)
-                .map((item, idx) => (
-                  <View key={item.id} style={styles.captainBoardItemRow}>
-                    <Text style={styles.captainBoardItemNum}>{idx + 1}.</Text>
-                    <Text style={styles.captainBoardItemLabel}>{item.label}</Text>
-                  </View>
-                ))}
+              {captainBoard.items.slice(0, CAPTAIN_CHECKLIST_MAX_ITEMS).map((item, idx) => (
+                <View key={item.id} style={styles.captainBoardItemRow}>
+                  <Text style={styles.captainBoardItemNum}>{idx + 1}.</Text>
+                  <Text style={styles.captainBoardItemLabel}>{item.label}</Text>
+                </View>
+              ))}
               {captainBoard.items.length === 0 && (
                 <Text style={styles.captainBoardEmpty}>No items yet</Text>
               )}
@@ -314,7 +331,10 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
             activeOpacity={0.7}
           >
             <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
-              {departmentFilter ? DEPARTMENT_OPTIONS.find((o) => o.value === departmentFilter)?.label ?? departmentFilter : 'All departments'}
+              {departmentFilter
+                ? (DEPARTMENT_OPTIONS.find((o) => o.value === departmentFilter)?.label ??
+                  departmentFilter)
+                : 'All departments'}
             </Text>
             <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>
               {departmentModalVisible ? '▲' : '▼'}
@@ -323,7 +343,9 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
         </View>
         {departmentFilter ? (
           <TouchableOpacity onPress={() => setDepartmentFilter('')} style={styles.clearFilters}>
-            <Text style={[styles.clearFiltersText, { color: themeColors.textPrimary }]}>Clear filter</Text>
+            <Text style={[styles.clearFiltersText, { color: themeColors.textPrimary }]}>
+              Clear filter
+            </Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -335,18 +357,28 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
       {departmentModalVisible && (
         <Modal visible transparent animationType="fade">
           <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentModalVisible(false)}>
-            <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
-              <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Filter by department</Text>
+            <View
+              style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+              onStartShouldSetResponder={() => true}
+            >
+              <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+                Filter by department
+              </Text>
               {DEPARTMENT_OPTIONS.map((opt) => (
                 <TouchableOpacity
                   key={opt.value || 'all'}
-                  style={[styles.modalItem, departmentFilter === opt.value && styles.modalItemSelected]}
+                  style={[
+                    styles.modalItem,
+                    departmentFilter === opt.value && styles.modalItemSelected,
+                  ]}
                   onPress={() => {
                     setDepartmentFilter(opt.value);
                     setDepartmentModalVisible(false);
                   }}
                 >
-                  <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>{opt.label}</Text>
+                  <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
+                    {opt.label}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -368,12 +400,19 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
             <View style={styles.empty}>
               <Text style={styles.emptyEmoji}>📋</Text>
               <Text style={[styles.emptyTitle, { color: themeColors.textPrimary }]}>
-                {filteredChecklists.length === 0 && checklists.length > 0 ? 'No matching checklists' : 'No checklists yet'}
+                {filteredChecklists.length === 0 && checklists.length > 0
+                  ? 'No matching checklists'
+                  : 'No checklists yet'}
               </Text>
-              <Text style={[styles.emptyText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.emptyText,
+                  { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                ]}
+              >
                 {filteredChecklists.length === 0 && checklists.length > 0
                   ? 'Try a different department filter.'
-                  : (isHOD || isCaptain)
+                  : isHOD || isCaptain
                     ? 'Tap "Create" to add a checklist. Use "All Departments" for the Captain\'s board.'
                     : 'No pre-departure tasks have been added yet.'}
               </Text>
@@ -593,6 +632,11 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
   },
   emptyEmoji: { fontSize: 48, marginBottom: SPACING.md },
-  emptyTitle: { fontSize: FONTS.xl, fontWeight: '600', marginBottom: SPACING.sm, textAlign: 'center' },
+  emptyTitle: {
+    fontSize: FONTS.xl,
+    fontWeight: '600',
+    marginBottom: SPACING.sm,
+    textAlign: 'center',
+  },
   emptyText: { fontSize: FONTS.base, textAlign: 'center', lineHeight: 22 },
 });

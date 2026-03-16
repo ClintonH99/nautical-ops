@@ -4,15 +4,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  RefreshControl,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
@@ -23,14 +15,14 @@ import { Trip, TripType } from '../types';
 import { useVesselTripColors, getTripTypeColorMap } from '../hooks/useVesselTripColors';
 import { DEFAULT_COLORS } from '../services/tripColors';
 import { parseLocalDate, toYYYYMMDD } from '../utils';
+import { LoadingSpinner } from '../components';
 
 // Full-day colored cells: period marking with same start/end = whole day in that color
-type MarkedDates = { [date: string]: { startingDay?: boolean; endingDay?: boolean; color: string; textColor?: string } };
+type MarkedDates = {
+  [date: string]: { startingDay?: boolean; endingDay?: boolean; color: string; textColor?: string };
+};
 
-function getMarkedDatesFromTrips(
-  trips: Trip[],
-  typeColorMap: Record<string, string>
-): MarkedDates {
+function getMarkedDatesFromTrips(trips: Trip[], typeColorMap: Record<string, string>): MarkedDates {
   const byDate: Record<string, Set<TripType>> = {};
 
   trips.forEach((trip) => {
@@ -68,7 +60,9 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
   const isHOD = user?.role === 'HOD';
   const { colors: tripColors, load: loadColors } = useVesselTripColors(vesselId);
 
-  const typeColorMap = tripColors ? getTripTypeColorMap(tripColors) : getTripTypeColorMap(DEFAULT_COLORS);
+  const typeColorMap = tripColors
+    ? getTripTypeColorMap(tripColors)
+    : getTripTypeColorMap(DEFAULT_COLORS);
   const c = tripColors ?? DEFAULT_COLORS;
 
   const [visibleTypes, setVisibleTypes] = useState<Record<TripType, boolean>>({
@@ -85,10 +79,7 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
   const loadTrips = useCallback(async () => {
     if (!vesselId) return;
     try {
-      const [data] = await Promise.all([
-        tripsService.getTripsByVessel(vesselId),
-        loadColors(),
-      ]);
+      const [data] = await Promise.all([tripsService.getTripsByVessel(vesselId), loadColors()]);
       setTrips(data);
     } catch (e) {
       console.error('Load trips error:', e);
@@ -118,7 +109,14 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
             alignItems: 'center',
           }}
         >
-          <Text style={[styles.headerButtonText, { color: themeColors.isDark ? COLORS.white : themeColors.textPrimary }]}>Edit colors</Text>
+          <Text
+            style={[
+              styles.headerButtonText,
+              { color: themeColors.isDark ? COLORS.white : themeColors.textPrimary },
+            ]}
+          >
+            Edit colors
+          </Text>
         </TouchableOpacity>
       ),
     });
@@ -157,7 +155,9 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to see upcoming trips.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to see upcoming trips.
+        </Text>
       </View>
     );
   }
@@ -170,10 +170,14 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
       }
     >
-      <Text style={[styles.sectionTitle, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Calendar</Text>
+      <Text
+        style={[styles.sectionTitle, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}
+      >
+        Calendar
+      </Text>
       <View style={[styles.calendarCard, { backgroundColor: themeColors.surface }]}>
         {loading ? (
-          <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
+          <LoadingSpinner />
         ) : (
           <Calendar
             current={new Date().toISOString().slice(0, 10)}
@@ -201,7 +205,9 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
           {visibleTypes.DELIVERY && (
             <View style={styles.legendRow}>
               <View style={[styles.legendDot, { backgroundColor: c.delivery }]} />
-              <Text style={[styles.legendText, { color: themeColors.textSecondary }]}>Delivery</Text>
+              <Text style={[styles.legendText, { color: themeColors.textSecondary }]}>
+                Delivery
+              </Text>
             </View>
           )}
           {visibleTypes.YARD_PERIOD && (
@@ -216,7 +222,8 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
       {tripsStartingTomorrow.length > 0 && (
         <View style={styles.tripTomorrowBanner}>
           <Text style={styles.tripTomorrowBannerText}>
-            Trip{tripsStartingTomorrow.length > 1 ? 's' : ''} starting tomorrow – review your pre-departure checklist
+            Trip{tripsStartingTomorrow.length > 1 ? 's' : ''} starting tomorrow – review your
+            pre-departure checklist
           </Text>
         </View>
       )}
@@ -228,7 +235,9 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
         >
           <Text style={styles.preDepartureEmoji}>📋</Text>
           <View style={styles.preDepartureTextWrap}>
-            <Text style={[styles.preDepartureLabel, { color: themeColors.textPrimary }]}>Pre-Departure Checklist</Text>
+            <Text style={[styles.preDepartureLabel, { color: themeColors.textPrimary }]}>
+              Pre-Departure Checklist
+            </Text>
             <Text style={[styles.preDepartureHint, { color: themeColors.textSecondary }]}>
               {tripsStartingTomorrow.length > 0
                 ? `Trip${tripsStartingTomorrow.length > 1 ? 's' : ''} tomorrow: ${tripsStartingTomorrow.map((t) => t.title).join(', ')}`
@@ -238,55 +247,126 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
         </TouchableOpacity>
       </View>
 
-      <Text style={[styles.sectionTitle, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Trip types</Text>
-      <Text style={[styles.filterHint, { color: COLORS.textTertiary }]}>Tap card to open • Tap Show/Hide to filter calendar</Text>
+      <Text
+        style={[styles.sectionTitle, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}
+      >
+        Trip types
+      </Text>
+      <Text style={[styles.filterHint, { color: COLORS.textTertiary }]}>
+        Tap card to open • Tap Show/Hide to filter calendar
+      </Text>
       <View style={styles.optionsRow}>
-        <View style={[styles.optionCard, { backgroundColor: themeColors.surface, borderLeftColor: c.guest }]}>
-          <TouchableOpacity style={styles.optionCardMain} onPress={() => navigation.navigate('GuestTrips')} activeOpacity={0.8}>
+        <View
+          style={[
+            styles.optionCard,
+            { backgroundColor: themeColors.surface, borderLeftColor: c.guest },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.optionCardMain}
+            onPress={() => navigation.navigate('GuestTrips')}
+            activeOpacity={0.8}
+          >
             <Text style={styles.optionEmoji}>👥</Text>
-            <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>Guest Trips</Text>
-            <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>Charter guests</Text>
+            <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>
+              Guest Trips
+            </Text>
+            <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>
+              Charter guests
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.visibilityBtn} onPress={() => toggleVisible('GUEST')}>
-            <Text style={[styles.visibilityBtnText, !visibleTypes.GUEST && styles.visibilityBtnTextDim]}>
+            <Text
+              style={[styles.visibilityBtnText, !visibleTypes.GUEST && styles.visibilityBtnTextDim]}
+            >
               {visibleTypes.GUEST ? 'Hide' : 'Show'}
             </Text>
           </TouchableOpacity>
         </View>
-        <View style={[styles.optionCard, { backgroundColor: themeColors.surface, borderLeftColor: c.boss }]}>
-          <TouchableOpacity style={styles.optionCardMain} onPress={() => navigation.navigate('BossTrips')} activeOpacity={0.8}>
+        <View
+          style={[
+            styles.optionCard,
+            { backgroundColor: themeColors.surface, borderLeftColor: c.boss },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.optionCardMain}
+            onPress={() => navigation.navigate('BossTrips')}
+            activeOpacity={0.8}
+          >
             <Text style={styles.optionEmoji}>⚓</Text>
             <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>Boss Trips</Text>
-            <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>Owner / family</Text>
+            <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>
+              Owner / family
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.visibilityBtn} onPress={() => toggleVisible('BOSS')}>
-            <Text style={[styles.visibilityBtnText, !visibleTypes.BOSS && styles.visibilityBtnTextDim]}>
+            <Text
+              style={[styles.visibilityBtnText, !visibleTypes.BOSS && styles.visibilityBtnTextDim]}
+            >
               {visibleTypes.BOSS ? 'Hide' : 'Show'}
             </Text>
           </TouchableOpacity>
         </View>
       </View>
       <View style={[styles.optionsRow, styles.optionsRowSecond]}>
-        <View style={[styles.optionCard, { backgroundColor: themeColors.surface, borderLeftColor: c.delivery }]}>
-          <TouchableOpacity style={styles.optionCardMain} onPress={() => navigation.navigate('DeliveryTrips')} activeOpacity={0.8}>
+        <View
+          style={[
+            styles.optionCard,
+            { backgroundColor: themeColors.surface, borderLeftColor: c.delivery },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.optionCardMain}
+            onPress={() => navigation.navigate('DeliveryTrips')}
+            activeOpacity={0.8}
+          >
             <Text style={styles.optionEmoji}>🚢</Text>
             <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>Delivery</Text>
-            <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>Delivery periods</Text>
+            <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>
+              Delivery periods
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.visibilityBtn} onPress={() => toggleVisible('DELIVERY')}>
-            <Text style={[styles.visibilityBtnText, !visibleTypes.DELIVERY && styles.visibilityBtnTextDim]}>
+            <Text
+              style={[
+                styles.visibilityBtnText,
+                !visibleTypes.DELIVERY && styles.visibilityBtnTextDim,
+              ]}
+            >
               {visibleTypes.DELIVERY ? 'Hide' : 'Show'}
             </Text>
           </TouchableOpacity>
         </View>
-        <View style={[styles.optionCard, { backgroundColor: themeColors.surface, borderLeftColor: c.yardPeriod }]}>
-          <TouchableOpacity style={styles.optionCardMain} onPress={() => navigation.navigate('YardPeriodTrips')} activeOpacity={0.8}>
+        <View
+          style={[
+            styles.optionCard,
+            { backgroundColor: themeColors.surface, borderLeftColor: c.yardPeriod },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.optionCardMain}
+            onPress={() => navigation.navigate('YardPeriodTrips')}
+            activeOpacity={0.8}
+          >
             <Text style={styles.optionEmoji}>🔧</Text>
-            <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>Yard Period</Text>
-            <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>Yard / maintenance</Text>
+            <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>
+              Yard Period
+            </Text>
+            <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>
+              Yard / maintenance
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.visibilityBtn} onPress={() => toggleVisible('YARD_PERIOD')}>
-            <Text style={[styles.visibilityBtnText, !visibleTypes.YARD_PERIOD && styles.visibilityBtnTextDim]}>
+          <TouchableOpacity
+            style={styles.visibilityBtn}
+            onPress={() => toggleVisible('YARD_PERIOD')}
+          >
+            <Text
+              style={[
+                styles.visibilityBtnText,
+                !visibleTypes.YARD_PERIOD && styles.visibilityBtnTextDim,
+              ]}
+            >
               {visibleTypes.YARD_PERIOD ? 'Hide' : 'Show'}
             </Text>
           </TouchableOpacity>

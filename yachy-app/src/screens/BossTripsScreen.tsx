@@ -10,7 +10,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   Alert,
 } from 'react-native';
@@ -19,7 +18,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import tripsService from '../services/trips';
 import { Trip } from '../types';
-import { Button, ButtonTagCard, ButtonTagRow } from '../components';
+import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner } from '../components';
 import { formatLocalDateString } from '../utils';
 import { useVesselTripColors } from '../hooks/useVesselTripColors';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -75,7 +74,14 @@ export const BossTripsScreen = ({ navigation }: any) => {
             alignItems: 'center',
           }}
         >
-          <Text style={[styles.headerButtonText, { color: themeColors.isDark ? COLORS.white : themeColors.textPrimary }]}>Edit colors</Text>
+          <Text
+            style={[
+              styles.headerButtonText,
+              { color: themeColors.isDark ? COLORS.white : themeColors.textPrimary },
+            ]}
+          >
+            Edit colors
+          </Text>
         </TouchableOpacity>
       ),
     });
@@ -99,25 +105,21 @@ export const BossTripsScreen = ({ navigation }: any) => {
 
   const onDelete = (trip: Trip) => {
     if (!isHOD) return;
-    Alert.alert(
-      'Delete trip',
-      `Delete "${trip.title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await tripsService.deleteTrip(trip.id);
-              loadTrips();
-            } catch (e) {
-              Alert.alert('Error', 'Could not delete trip');
-            }
-          },
+    Alert.alert('Delete trip', `Delete "${trip.title}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await tripsService.deleteTrip(trip.id);
+            loadTrips();
+          } catch (e) {
+            Alert.alert('Error', 'Could not delete trip');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const renderItem = ({ item }: { item: Trip }) => (
@@ -128,7 +130,10 @@ export const BossTripsScreen = ({ navigation }: any) => {
       onDelete={isHOD ? () => onDelete(item) : undefined}
       onPress={isHOD ? () => onEdit(item) : undefined}
     >
-      <ButtonTagRow label="Date" value={`${formatDate(item.startDate)} – ${formatDate(item.endDate)}`} />
+      <ButtonTagRow
+        label="Date"
+        value={`${formatDate(item.startDate)} – ${formatDate(item.endDate)}`}
+      />
       <ButtonTagRow label="Notes" value={item.notes ?? ''} />
     </ButtonTagCard>
   );
@@ -136,7 +141,9 @@ export const BossTripsScreen = ({ navigation }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to see boss trips.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to see boss trips.
+        </Text>
       </View>
     );
   }
@@ -154,13 +161,20 @@ export const BossTripsScreen = ({ navigation }: any) => {
         </View>
       )}
       {loading ? (
-        <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
+        <LoadingSpinner />
       ) : trips.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyEmoji}>⚓</Text>
-          <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>No boss trips yet</Text>
+          <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
+            No boss trips yet
+          </Text>
           {isHOD && (
-            <Button title="Add first trip" onPress={onAdd} variant="primary" style={styles.emptyBtn} />
+            <Button
+              title="Add first trip"
+              onPress={onAdd}
+              variant="primary"
+              style={styles.emptyBtn}
+            />
           )}
         </View>
       ) : (
@@ -170,7 +184,11 @@ export const BossTripsScreen = ({ navigation }: any) => {
           renderItem={renderItem}
           contentContainerStyle={styles.list}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[COLORS.primary]}
+            />
           }
         />
       )}

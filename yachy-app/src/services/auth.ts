@@ -23,6 +23,7 @@ export interface RegisterData extends LoginCredentials {
   position: string;
   department: string;
   department2?: string | null; // Optional second department for crew
+  contractType?: string;
   inviteCode?: string;
   vesselId?: string; // For when user creates their own vessel
 }
@@ -76,7 +77,10 @@ class AuthService {
   async signInWithGoogle(): Promise<{ user: User | null; session: any }> {
     try {
       WebBrowser.maybeCompleteAuthSession();
-      const redirectTo = makeRedirectUri({ preferLocalhost: false });
+      const redirectTo = makeRedirectUri({
+        scheme: 'nauticalops',
+        preferLocalhost: false,
+      });
       const isLocalhost = redirectTo.includes('localhost') || redirectTo.includes('127.0.0.1');
       if (Platform.OS !== 'web' && Device.isDevice && isLocalhost) {
         throw new Error(
@@ -131,12 +135,68 @@ class AuthService {
   }
 
   /**
-   * Sign in with Apple (native, iOS only)
+   * Sign in with Apple (native iOS or web OAuth)
    */
   async signInWithApple(): Promise<{ user: User | null; session: any }> {
-    if (Platform.OS !== 'ios') {
-      throw new Error('Sign in with Apple is only available on iOS');
+    if (Platform.OS === 'android') {
+      throw new Error('Sign in with Apple is not available on Android');
     }
+
+    // Web: use OAuth redirect flow (same as Google)
+    if (Platform.OS === 'web') {
+      try {
+        WebBrowser.maybeCompleteAuthSession();
+        const redirectTo = makeRedirectUri({
+          scheme: 'nauticalops',
+          preferLocalhost: false,
+        });
+
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'apple',
+          options: {
+            redirectTo,
+            skipBrowserRedirect: true,
+          },
+        });
+        if (error) throw error;
+        if (!data?.url) throw new Error('No OAuth URL returned');
+
+        const result = (await WebBrowser.openAuthSessionAsync(data.url, redirectTo)) as {
+          type: string;
+          url?: string;
+        };
+        if (result.type !== 'success' || !result.url) {
+          return { user: null, session: null };
+        }
+        const authUrl = result.url;
+        const { params, errorCode } = QueryParams.getQueryParams(authUrl);
+        if (errorCode) throw new Error(errorCode);
+        let access_token = (params as any)?.access_token;
+        let refresh_token = (params as any)?.refresh_token;
+        if (!access_token && authUrl.includes('#')) {
+          const hash = authUrl.split('#')[1];
+          const hashParams = new URLSearchParams(hash);
+          access_token = hashParams.get('access_token') ?? undefined;
+          refresh_token = hashParams.get('refresh_token') ?? undefined;
+        }
+        if (!access_token) return { user: null, session: null };
+
+        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+          access_token,
+          refresh_token: refresh_token ?? '',
+        });
+        if (sessionError) throw sessionError;
+        if (!sessionData.user) return { user: null, session: null };
+
+        const userData = await this.ensureOAuthUserProfile(sessionData.user);
+        return { user: userData, session: sessionData.session };
+      } catch (error: any) {
+        if (__DEV__) console.error('Apple sign in (web) error:', error);
+        throw error;
+      }
+    }
+
+    // iOS: native Apple authentication
     try {
       const AppleAuthentication = require('expo-apple-authentication');
       const rawNonce = Crypto.randomUUID();
@@ -251,6 +311,7 @@ class AuthService {
     position,
     department,
     department2,
+    contractType,
     inviteCode,
     vesselId,
   }: RegisterData) {
@@ -300,6 +361,7 @@ class AuthService {
           position,
           department: department as any,
           department_2: department2 || null,
+          contract_type: contractType || 'permanent',
           role: role as any,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -353,6 +415,8 @@ class AuthService {
           position: userProfile.position,
           department: userProfile.department,
           department2: userProfile.department_2 ?? null,
+          contractType: userProfile.contract_type ?? 'permanent',
+          rotationGroupId: userProfile.rotation_group_id ?? null,
           role: userProfile.role,
           vesselId: userProfile.vessel_id, // Map vessel_id to vesselId
           profilePhoto: userProfile.profile_photo,
@@ -438,6 +502,8 @@ class AuthService {
         position: data.position,
         department: data.department,
         department2: data.department_2 ?? null,
+        contractType: data.contract_type ?? 'permanent',
+        rotationGroupId: data.rotation_group_id ?? null,
         role: data.role,
         vesselId: data.vessel_id, // Map vessel_id to vesselId
         profilePhoto: data.profile_photo,

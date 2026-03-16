@@ -4,21 +4,13 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import tripColorsService, { DEFAULT_COLORS } from '../services/tripColors';
-import { Button } from '../components';
+import { Button, LoadingSpinner } from '../components';
 
 type ColorKey = 'guest' | 'boss' | 'delivery' | 'yardPeriod';
 
@@ -73,39 +65,37 @@ export const TripColorSettingsScreen = ({ navigation }: any) => {
   };
 
   const handleReset = () => {
-    Alert.alert(
-      'Reset to defaults',
-      'Use the default colors for all trip types?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset',
-          onPress: async () => {
-            if (!vesselId || !isHOD) return;
-            setSaving(true);
-            try {
-              await tripColorsService.setColors(vesselId, {
-                guest: DEFAULT_COLORS.guest,
-                boss: DEFAULT_COLORS.boss,
-                delivery: DEFAULT_COLORS.delivery,
-                yardPeriod: DEFAULT_COLORS.yardPeriod,
-              });
-              setColors(DEFAULT_COLORS);
-            } catch (e) {
-              Alert.alert('Error', 'Could not reset colors');
-            } finally {
-              setSaving(false);
-            }
-          },
+    Alert.alert('Reset to defaults', 'Use the default colors for all trip types?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Reset',
+        onPress: async () => {
+          if (!vesselId || !isHOD) return;
+          setSaving(true);
+          try {
+            await tripColorsService.setColors(vesselId, {
+              guest: DEFAULT_COLORS.guest,
+              boss: DEFAULT_COLORS.boss,
+              delivery: DEFAULT_COLORS.delivery,
+              yardPeriod: DEFAULT_COLORS.yardPeriod,
+            });
+            setColors(DEFAULT_COLORS);
+          } catch (e) {
+            Alert.alert('Error', 'Could not reset colors');
+          } finally {
+            setSaving(false);
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   if (!isHOD) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Only HODs can edit trip colors.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Only HODs can edit trip colors.
+        </Text>
       </View>
     );
   }
@@ -113,7 +103,9 @@ export const TripColorSettingsScreen = ({ navigation }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to edit trip colors.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to edit trip colors.
+        </Text>
       </View>
     );
   }
@@ -121,14 +113,22 @@ export const TripColorSettingsScreen = ({ navigation }: any) => {
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <LoadingSpinner />
       </View>
     );
   }
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>
-      <Text style={[styles.intro, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: themeColors.background }]}
+      contentContainerStyle={styles.content}
+    >
+      <Text
+        style={[
+          styles.intro,
+          { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+        ]}
+      >
         Choose a color for each trip type. These colors appear on the Upcoming Trips calendar.
       </Text>
 

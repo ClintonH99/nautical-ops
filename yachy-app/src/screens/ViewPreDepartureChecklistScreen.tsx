@@ -4,20 +4,14 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import preDepartureChecklistsService from '../services/preDepartureChecklists';
 import { PreDepartureChecklist, Department } from '../types';
+import { LoadingSpinner } from '../components';
 
 const DEPARTMENT_OPTIONS: { value: Department | null; label: string }[] = [
   { value: null, label: 'All Departments' },
@@ -55,7 +49,8 @@ export const ViewPreDepartureChecklistScreen = ({ navigation, route }: any) => {
   );
 
   const deptLabel = checklist?.department
-    ? DEPARTMENT_OPTIONS.find((o) => o.value === checklist.department)?.label ?? checklist.department
+    ? (DEPARTMENT_OPTIONS.find((o) => o.value === checklist.department)?.label ??
+      checklist.department)
     : 'All Departments';
 
   const formatDate = (d: string) =>
@@ -64,7 +59,9 @@ export const ViewPreDepartureChecklistScreen = ({ navigation, route }: any) => {
   if (!checklistId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>No checklist selected.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          No checklist selected.
+        </Text>
       </View>
     );
   }
@@ -72,7 +69,7 @@ export const ViewPreDepartureChecklistScreen = ({ navigation, route }: any) => {
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <LoadingSpinner />
       </View>
     );
   }
@@ -80,7 +77,9 @@ export const ViewPreDepartureChecklistScreen = ({ navigation, route }: any) => {
   if (!checklist) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Checklist not found.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Checklist not found.
+        </Text>
       </View>
     );
   }
@@ -96,25 +95,39 @@ export const ViewPreDepartureChecklistScreen = ({ navigation, route }: any) => {
           <View
             style={[
               styles.deptBadge,
-              { backgroundColor: checklist.department ? getDepartmentColor(checklist.department, overrides) : COLORS.gray400 },
+              {
+                backgroundColor: checklist.department
+                  ? getDepartmentColor(checklist.department, overrides)
+                  : COLORS.gray400,
+              },
             ]}
           >
             <Text style={styles.deptBadgeText}>{deptLabel}</Text>
           </View>
-          <Text style={[styles.date, { color: themeColors.textSecondary }]}>{formatDate(checklist.createdAt)}</Text>
+          <Text style={[styles.date, { color: themeColors.textSecondary }]}>
+            {formatDate(checklist.createdAt)}
+          </Text>
         </View>
 
         <View style={styles.itemsSection}>
-          <Text style={[styles.itemsLabel, { color: themeColors.textPrimary }]}>Checklist items</Text>
+          <Text style={[styles.itemsLabel, { color: themeColors.textPrimary }]}>
+            Checklist items
+          </Text>
           {checklist.items.length === 0 ? (
-            <Text style={[styles.emptyItems, { color: themeColors.textSecondary }]}>No items yet</Text>
+            <Text style={[styles.emptyItems, { color: themeColors.textSecondary }]}>
+              No items yet
+            </Text>
           ) : (
             checklist.items
               .sort((a, b) => a.sortOrder - b.sortOrder)
               .map((item, idx) => (
                 <View key={item.id} style={styles.itemRow}>
-                  <Text style={[styles.itemNum, { color: themeColors.textSecondary }]}>{idx + 1}.</Text>
-                  <Text style={[styles.itemLabel, { color: themeColors.textPrimary }]}>{item.label}</Text>
+                  <Text style={[styles.itemNum, { color: themeColors.textSecondary }]}>
+                    {idx + 1}.
+                  </Text>
+                  <Text style={[styles.itemLabel, { color: themeColors.textPrimary }]}>
+                    {item.label}
+                  </Text>
                 </View>
               ))
           )}

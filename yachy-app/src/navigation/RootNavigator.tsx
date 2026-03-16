@@ -20,6 +20,7 @@ import {
   VesselSettingsScreen,
   VesselPlansScreen,
   CrewManagementScreen,
+  RotationalGroupsScreen,
   UpcomingTripsScreen,
   GuestTripsScreen,
   BossTripsScreen,
@@ -129,13 +130,15 @@ export const RootNavigator = () => {
             if (isCaptain) {
               setUser(userData);
             } else if (userData.vesselId) {
-              const subscription = await getVesselSubscription(userData.vesselId);
-              if (mounted && subscription?.status === 'active') {
-                setUser(userData);
-              } else {
-                await supabase.auth.signOut();
-                setUser(null);
-              }
+              // TODO: Re-enable subscription check once payment flow is set up
+              // const subscription = await getVesselSubscription(userData.vesselId);
+              // if (mounted && subscription?.status === 'active') {
+              //   setUser(userData);
+              // } else {
+              //   await supabase.auth.signOut();
+              //   setUser(null);
+              // }
+              if (mounted) setUser(userData);
             } else {
               setUser(userData);
             }
@@ -175,13 +178,15 @@ export const RootNavigator = () => {
       } else if (isCaptain) {
         setUser(user);
       } else if (user.vesselId) {
-        const subscription = await getVesselSubscription(user.vesselId);
-        if (subscription?.status === 'active') {
-          setUser(user);
-        } else {
-          await supabase.auth.signOut();
-          setUser(null);
-        }
+        // TODO: Re-enable subscription check once payment flow is set up
+        // const subscription = await getVesselSubscription(user.vesselId);
+        // if (subscription?.status === 'active') {
+        //   setUser(user);
+        // } else {
+        //   await supabase.auth.signOut();
+        //   setUser(null);
+        // }
+        setUser(user);
       } else {
         setUser(user);
       }
@@ -365,6 +370,14 @@ export const RootNavigator = () => {
               component={CrewManagementScreen}
               options={{
                 title: 'Crew Management',
+                headerShown: true,
+              }}
+            />
+            <Stack.Screen
+              name="RotationalGroups"
+              component={RotationalGroupsScreen}
+              options={{
+                title: 'Rotational Groups',
                 headerShown: true,
               }}
             />

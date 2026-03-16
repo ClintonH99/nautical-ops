@@ -4,15 +4,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Switch,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Switch, ActivityIndicator, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -27,6 +19,7 @@ import {
 import { supabase } from '../services/supabase';
 import * as Device from 'expo-device';
 import type { NotificationPreferenceKey } from '../types';
+import { LoadingSpinner } from '../components';
 
 const PREFERENCE_LABELS: Record<NotificationPreferenceKey, string> = {
   tasks: 'Tasks',
@@ -80,7 +73,9 @@ export const NotificationSettingsScreen = () => {
       };
 
       check();
-      return () => { mounted = false; };
+      return () => {
+        mounted = false;
+      };
     }, [user?.id])
   );
 
@@ -148,7 +143,7 @@ export const NotificationSettingsScreen = () => {
   if (checking) {
     return (
       <View style={[styles.centered, { backgroundColor: themeColors.background }]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <LoadingSpinner />
       </View>
     );
   }
@@ -166,7 +161,9 @@ export const NotificationSettingsScreen = () => {
 
       <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
         <View style={styles.row}>
-          <Text style={[styles.rowLabel, { color: themeColors.textPrimary }]}>Push notifications</Text>
+          <Text style={[styles.rowLabel, { color: themeColors.textPrimary }]}>
+            Push notifications
+          </Text>
           {loading ? (
             <ActivityIndicator size="small" color={COLORS.primary} />
           ) : (
@@ -179,13 +176,17 @@ export const NotificationSettingsScreen = () => {
           )}
         </View>
         {enabled && (
-          <Text style={[styles.statusText, { color: themeColors.textSecondary }]}>You will receive push notifications.</Text>
+          <Text style={[styles.statusText, { color: themeColors.textSecondary }]}>
+            You will receive push notifications.
+          </Text>
         )}
       </View>
 
       {enabled && (
         <View style={styles.preferencesSection}>
-          <Text style={[styles.preferencesTitle, { color: themeColors.textPrimary }]}>What to receive</Text>
+          <Text style={[styles.preferencesTitle, { color: themeColors.textPrimary }]}>
+            What to receive
+          </Text>
           <Text style={[styles.preferencesSubtitle, { color: themeColors.textSecondary }]}>
             Choose which updates you want to be notified about.
           </Text>
@@ -198,7 +199,9 @@ export const NotificationSettingsScreen = () => {
                   index < PREFERENCE_ORDER.length - 1 && styles.preferenceRowBorder,
                 ]}
               >
-                <Text style={[styles.preferenceLabel, { color: themeColors.textPrimary }]}>{PREFERENCE_LABELS[key]}</Text>
+                <Text style={[styles.preferenceLabel, { color: themeColors.textPrimary }]}>
+                  {PREFERENCE_LABELS[key]}
+                </Text>
                 <Switch
                   value={preferences[key] ?? true}
                   onValueChange={(v) => handlePreferenceToggle(key, v)}

@@ -11,7 +11,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -25,7 +24,7 @@ import { useAuthStore } from '../store';
 import preDepartureChecklistsService from '../services/preDepartureChecklists';
 import tripsService from '../services/trips';
 import { PreDepartureChecklistItem, Department } from '../types';
-import { Input, Button } from '../components';
+import { Input, Button, LoadingSpinner } from '../components';
 import { Trip } from '../types';
 import { formatLocalDateString } from '../utils';
 
@@ -56,8 +55,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
   const isCaptain = user?.position?.toLowerCase().includes('captain');
 
   // Captain's checklist (All Departments): only captain can edit. Department checklists: only HOD.
-  const canEdit = (dept: Department | null) =>
-    dept === null ? isCaptain : isHOD;
+  const canEdit = (dept: Department | null) => (dept === null ? isCaptain : isHOD);
 
   const [title, setTitle] = useState('');
   const [tripId, setTripId] = useState<string | null>(null);
@@ -110,11 +108,15 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
 
   const isEditable = canEdit(department);
   // When creating, both HOD and Captain need to see the form to pick department. When editing, only authorized editor.
-  const showEditableFields = isEdit ? isEditable : (isHOD || isCaptain);
+  const showEditableFields = isEdit ? isEditable : isHOD || isCaptain;
 
   useEffect(() => {
     navigation.setOptions({
-      title: isEdit ? (isEditable ? 'Edit Checklist' : 'Pre-Departure Checklist') : 'Create Pre-Departure Checklist',
+      title: isEdit
+        ? isEditable
+          ? 'Edit Checklist'
+          : 'Pre-Departure Checklist'
+        : 'Create Pre-Departure Checklist',
     });
   }, [navigation, isEdit, isEditable]);
 
@@ -151,8 +153,14 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
     setSaving(true);
     try {
       if (isEdit) {
-        await preDepartureChecklistsService.update(checklistId!, { title: trimmedTitle, tripId, department });
-        Alert.alert('Saved', 'Checklist updated.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+        await preDepartureChecklistsService.update(checklistId!, {
+          title: trimmedTitle,
+          tripId,
+          department,
+        });
+        Alert.alert('Saved', 'Checklist updated.', [
+          { text: 'OK', onPress: () => navigation.goBack() },
+        ]);
       } else {
         const itemLabels = items.length > 0 ? items.map((i) => i.label) : DEFAULT_ITEMS;
         const created = await preDepartureChecklistsService.create({
@@ -163,7 +171,11 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
           items: itemLabels.map((label) => ({ label })),
         });
         Alert.alert('Created', 'Pre-departure checklist created.', [
-          { text: 'OK', onPress: () => navigation.replace('AddEditPreDepartureChecklist', { checklistId: created.id }) },
+          {
+            text: 'OK',
+            onPress: () =>
+              navigation.replace('AddEditPreDepartureChecklist', { checklistId: created.id }),
+          },
         ]);
       }
     } catch (e) {
@@ -174,12 +186,15 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
   };
 
   const selectedTrip = trips.find((t) => t.id === tripId);
-  const selectedDeptLabel = DEPARTMENT_OPTIONS.find((o) => o.value === department)?.label ?? 'All Departments';
+  const selectedDeptLabel =
+    DEPARTMENT_OPTIONS.find((o) => o.value === department)?.label ?? 'All Departments';
 
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to create checklists.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to create checklists.
+        </Text>
       </View>
     );
   }
@@ -187,7 +202,9 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
   if (!(isHOD || isCaptain) && !isEdit) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Only HODs and Captains can create pre-departure checklists.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Only HODs and Captains can create pre-departure checklists.
+        </Text>
       </View>
     );
   }
@@ -195,7 +212,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <LoadingSpinner />
       </View>
     );
   }
@@ -205,7 +222,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
         <Text style={[styles.message, { color: themeColors.textSecondary }]}>
           {department === null
-            ? 'Only the Captain can edit the Captain\'s checklist.'
+            ? "Only the Captain can edit the Captain's checklist."
             : 'Only HODs can edit department checklists.'}
         </Text>
       </View>
@@ -234,7 +251,9 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
           <>
             <View style={styles.fieldContainer}>
               <Text style={[styles.label, { color: themeColors.textPrimary }]}>Title</Text>
-              <Text style={[styles.readOnlyTitle, { color: themeColors.textPrimary }]}>{title || '—'}</Text>
+              <Text style={[styles.readOnlyTitle, { color: themeColors.textPrimary }]}>
+                {title || '—'}
+              </Text>
             </View>
             {department != null && (
               <View style={styles.fieldContainer}>
@@ -256,18 +275,28 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
                 onPress={() => setDepartmentModalVisible(true)}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.pickerValue, { color: themeColors.textPrimary }]}>{selectedDeptLabel}</Text>
+                <Text style={[styles.pickerValue, { color: themeColors.textPrimary }]}>
+                  {selectedDeptLabel}
+                </Text>
                 <Text style={[styles.pickerIcon, { color: themeColors.textSecondary }]}>▾</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: themeColors.textPrimary }]}>Linked Trip (optional)</Text>
+              <Text style={[styles.label, { color: themeColors.textPrimary }]}>
+                Linked Trip (optional)
+              </Text>
               <TouchableOpacity
                 style={[styles.pickerTrigger, { backgroundColor: themeColors.surface }]}
                 onPress={() => setTripModalVisible(true)}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.pickerValue, { color: themeColors.textPrimary }, !selectedTrip && styles.pickerPlaceholder]}>
+                <Text
+                  style={[
+                    styles.pickerValue,
+                    { color: themeColors.textPrimary },
+                    !selectedTrip && styles.pickerPlaceholder,
+                  ]}
+                >
                   {selectedTrip ? selectedTrip.title : 'No trip selected'}
                 </Text>
                 <Text style={[styles.pickerIcon, { color: themeColors.textSecondary }]}>▾</Text>
@@ -276,19 +305,32 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
 
             {departmentModalVisible && (
               <Modal visible transparent animationType="fade">
-                <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentModalVisible(false)}>
-                  <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
-                    <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Select department</Text>
+                <Pressable
+                  style={styles.modalBackdrop}
+                  onPress={() => setDepartmentModalVisible(false)}
+                >
+                  <View
+                    style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+                    onStartShouldSetResponder={() => true}
+                  >
+                    <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+                      Select department
+                    </Text>
                     {DEPARTMENT_OPTIONS.map((opt) => (
                       <TouchableOpacity
                         key={opt.value ?? 'all'}
-                        style={[styles.modalItem, department === opt.value && styles.modalItemSelected]}
+                        style={[
+                          styles.modalItem,
+                          department === opt.value && styles.modalItemSelected,
+                        ]}
                         onPress={() => {
                           setDepartment(opt.value);
                           setDepartmentModalVisible(false);
                         }}
                       >
-                        <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>{opt.label}</Text>
+                        <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
+                          {opt.label}
+                        </Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -299,8 +341,13 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
             {tripModalVisible && (
               <Modal visible transparent animationType="fade">
                 <Pressable style={styles.modalBackdrop} onPress={() => setTripModalVisible(false)}>
-                  <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
-                    <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Select trip</Text>
+                  <View
+                    style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+                    onStartShouldSetResponder={() => true}
+                  >
+                    <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+                      Select trip
+                    </Text>
                     <TouchableOpacity
                       style={styles.modalItem}
                       onPress={() => {
@@ -308,7 +355,9 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
                         setTripModalVisible(false);
                       }}
                     >
-                      <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>No trip</Text>
+                      <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
+                        No trip
+                      </Text>
                     </TouchableOpacity>
                     {trips.map((t) => (
                       <TouchableOpacity
@@ -319,8 +368,19 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
                           setTripModalVisible(false);
                         }}
                       >
-                        <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>{t.title}</Text>
-                        <Text style={[styles.modalItemSub, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>{formatLocalDateString(t.startDate)} – {formatLocalDateString(t.endDate)}</Text>
+                        <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
+                          {t.title}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.modalItemSub,
+                            {
+                              color: themeColors.isDark ? COLORS.white : themeColors.textSecondary,
+                            },
+                          ]}
+                        >
+                          {formatLocalDateString(t.startDate)} – {formatLocalDateString(t.endDate)}
+                        </Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -330,14 +390,18 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
           </>
         )}
 
-        <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>Checklist items</Text>
+        <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>
+          Checklist items
+        </Text>
 
         {isEdit ? (
           <>
             {items.map((item, idx) => (
               <View key={item.id} style={styles.itemRow}>
                 <Text style={styles.itemBullet}>{idx + 1}.</Text>
-                <Text style={[styles.itemLabel, { color: themeColors.textPrimary }]}>{item.label}</Text>
+                <Text style={[styles.itemLabel, { color: themeColors.textPrimary }]}>
+                  {item.label}
+                </Text>
                 {isEditable && (
                   <TouchableOpacity
                     onPress={() => removeItem(item)}
@@ -349,40 +413,56 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
               </View>
             ))}
             {isEditable && (
-            <View style={styles.addRow}>
-              <Input
-                value={newItemLabel}
-                onChangeText={setNewItemLabel}
-                placeholder="Add new item..."
-                containerStyle={styles.addInput}
-                onSubmitEditing={addItem}
-              />
-              <TouchableOpacity style={styles.addBtn} onPress={addItem}>
-                <Text style={styles.addBtnText}>Add</Text>
-              </TouchableOpacity>
-            </View>
+              <View style={styles.addRow}>
+                <Input
+                  value={newItemLabel}
+                  onChangeText={setNewItemLabel}
+                  placeholder="Add new item..."
+                  containerStyle={styles.addInput}
+                  onSubmitEditing={addItem}
+                />
+                <TouchableOpacity style={styles.addBtn} onPress={addItem}>
+                  <Text style={styles.addBtnText}>Add</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </>
         ) : (
-          <Text style={[styles.hint, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>
+          <Text
+            style={[
+              styles.hint,
+              { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+            ]}
+          >
             Save the checklist to add and manage items. Default items will be added on creation.
           </Text>
         )}
 
         {showEditableFields && (
-        <View style={styles.actions}>
-          <Button
-            title={isEdit ? 'Save' : 'Create Checklist'}
-            onPress={handleSave}
-            variant="primary"
-            loading={saving}
-            disabled={saving || !isEditable}
-            fullWidth
-          />
-          <TouchableOpacity style={styles.cancelBtn} onPress={() => navigation.goBack()} disabled={saving}>
-            <Text style={[styles.cancelText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
+          <View style={styles.actions}>
+            <Button
+              title={isEdit ? 'Save' : 'Create Checklist'}
+              onPress={handleSave}
+              variant="primary"
+              loading={saving}
+              disabled={saving || !isEditable}
+              fullWidth
+            />
+            <TouchableOpacity
+              style={styles.cancelBtn}
+              onPress={() => navigation.goBack()}
+              disabled={saving}
+            >
+              <Text
+                style={[
+                  styles.cancelText,
+                  { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                ]}
+              >
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
       </ScrollView>
     </KeyboardAvoidingView>

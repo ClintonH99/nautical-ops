@@ -46,6 +46,7 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
     email: '',
     password: '',
     confirmPassword: '',
+    contractType: 'permanent' as 'permanent' | 'temporary' | 'rotational',
     position: '',
     departments: [] as Department[], // Up to 2 departments for dual-role (e.g. deck/stew)
     inviteCode: '',
@@ -133,24 +134,29 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
         position: formData.position,
         department: formData.departments[0],
         department2: formData.departments[1] || null,
+        contractType: formData.contractType,
         inviteCode: formData.inviteCode,
       });
 
       if (user) {
         setUser(user);
-        Alert.alert(
-          'Success',
-          'Welcome aboard! Your crew account has been created.',
-          [{ text: 'OK' }]
-        );
+        Alert.alert('Success', 'Welcome aboard! Your crew account has been created.', [
+          { text: 'OK' },
+        ]);
       }
     } catch (error: any) {
       const msg = error?.message?.toLowerCase() || '';
-      const isInviteCodeError = msg.includes('invite code') || msg.includes('vessel not found') || msg.includes('cannot coerce') || msg.includes('expired');
+      const isInviteCodeError =
+        msg.includes('invite code') ||
+        msg.includes('vessel not found') ||
+        msg.includes('cannot coerce') ||
+        msg.includes('expired');
       if (!isInviteCodeError) console.error('Crew registration error:', error);
       Alert.alert(
         isInviteCodeError ? 'Invalid Invite Code' : 'Error',
-        isInviteCodeError ? 'Request new code from the Captain.' : (error.message || 'Failed to create account.')
+        isInviteCodeError
+          ? 'Request new code from the Captain.'
+          : error.message || 'Failed to create account.'
       );
     } finally {
       setLoading(false);
@@ -187,143 +193,191 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
           </View>
 
           <>
-          <View style={[styles.formCard, { backgroundColor: MARITIME.formCardBg, borderColor: MARITIME.formCardBorder }]}>
-            <Input
-              label="Full Name"
-              placeholder="John Doe"
-              value={formData.name}
-              onChangeText={(value) => updateField('name', value)}
-              error={errors.name}
-            />
+            <View
+              style={[
+                styles.formCard,
+                { backgroundColor: MARITIME.formCardBg, borderColor: MARITIME.formCardBorder },
+              ]}
+            >
+              <Input
+                label="Full Name"
+                placeholder="John Doe"
+                value={formData.name}
+                onChangeText={(value) => updateField('name', value)}
+                error={errors.name}
+                forceLight
+              />
 
-            <Input
-              label="Email"
-              placeholder="your@email.com"
-              value={formData.email}
-              onChangeText={(value) => updateField('email', value)}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              error={errors.email}
-            />
+              <Input
+                label="Email"
+                placeholder="your@email.com"
+                value={formData.email}
+                onChangeText={(value) => updateField('email', value)}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                error={errors.email}
+                forceLight
+              />
 
-            <Input
-              label="Password"
-              placeholder="Minimum 6 characters"
-              value={formData.password}
-              onChangeText={(value) => updateField('password', value)}
-              secureTextEntry
-              showPasswordToggle
-              autoCapitalize="none"
-              error={errors.password}
-            />
+              <Input
+                label="Password"
+                placeholder="Minimum 6 characters"
+                value={formData.password}
+                onChangeText={(value) => updateField('password', value)}
+                secureTextEntry
+                showPasswordToggle
+                autoCapitalize="none"
+                error={errors.password}
+                forceLight
+              />
 
-            <Input
-              label="Confirm Password"
-              placeholder="Re-enter password"
-              value={formData.confirmPassword}
-              onChangeText={(value) => updateField('confirmPassword', value)}
-              secureTextEntry
-              showPasswordToggle
-              autoCapitalize="none"
-              error={errors.confirmPassword}
-            />
+              <Input
+                label="Confirm Password"
+                placeholder="Re-enter password"
+                value={formData.confirmPassword}
+                onChangeText={(value) => updateField('confirmPassword', value)}
+                secureTextEntry
+                showPasswordToggle
+                autoCapitalize="none"
+                error={errors.confirmPassword}
+                forceLight
+              />
 
-            <Input
-              label="Position"
-              placeholder="e.g., Deckhand, Chief Stew, Engineer"
-              value={formData.position}
-              onChangeText={(value) => updateField('position', value)}
-              error={errors.position}
-            />
-
-            <View style={styles.departmentSection}>
-              <Text style={[styles.label, { color: COLORS.textPrimary }]}>Department</Text>
-              <Text style={[styles.departmentHint, { color: MARITIME.textMuted }]}>
-                Select the department you report to. i.e. If you're Deck/Stew, choose Exterior/Interior.
-              </Text>
-              <View style={styles.departmentButtons}>
-                {DEPARTMENTS.map((dept) => {
-                  const isSelected = formData.departments.includes(dept.value as Department);
-                  const canSelect = isSelected || formData.departments.length < 2;
-                  return (
-                    <Button
-                      key={dept.value}
-                      title={dept.label}
-                      variant="outline"
-                      size="small"
-                      style={isSelected ? { ...styles.departmentButton, ...styles.departmentButtonSelected } : styles.departmentButton}
-                      onPress={() => {
-                        if (isSelected) {
-                          setFormData({
-                            ...formData,
-                            departments: formData.departments.filter((d) => d !== dept.value),
-                          });
-                          if (errors.department) setErrors({ ...errors, department: '' });
-                        } else if (canSelect) {
-                          setFormData({
-                            ...formData,
-                            departments: [...formData.departments, dept.value as Department],
-                          });
-                          if (errors.department) setErrors({ ...errors, department: '' });
-                        }
-                      }}
-                    />
-                  );
-                })}
-              </View>
-              {formData.departments.length > 0 && (
-                <Text style={[styles.selectedDepts, { color: MARITIME.textMuted }]}>
-                  Selected: {formData.departments.map((d) => DEPARTMENTS.find((x) => x.value === d)?.label ?? d).join(', ')}
+              {/* Contract Type */}
+              <View style={styles.contractTypeSection}>
+                <Text style={[styles.label, { color: COLORS.textPrimary }]}>Contract Type</Text>
+                <View style={styles.contractTypeButtons}>
+                  {(
+                    [
+                      { label: 'Permanent', value: 'permanent' },
+                      { label: 'Rotational', value: 'rotational' },
+                      { label: 'Temporary', value: 'temporary' },
+                    ] as const
+                  ).map((ct) => {
+                    const isSelected = formData.contractType === ct.value;
+                    return (
+                      <Button
+                        key={ct.value}
+                        title={ct.label}
+                        variant={isSelected ? 'primary' : 'outline'}
+                        size="small"
+                        style={styles.contractTypeButton}
+                        onPress={() => setFormData({ ...formData, contractType: ct.value })}
+                      />
+                    );
+                  })}
+                </View>
+                <Text style={[styles.departmentHint, { color: MARITIME.textMuted }]}>
+                  Crew in a probation period should fall under Permanent.
                 </Text>
-              )}
-              {errors.department && (
-                <Text style={styles.error}>{errors.department}</Text>
-              )}
+              </View>
+
+              <View style={styles.departmentSection}>
+                <Text style={[styles.label, { color: COLORS.textPrimary }]}>Department</Text>
+                <Text style={[styles.departmentHint, { color: MARITIME.textMuted }]}>
+                  Select the department you report to. i.e. If you're Deck/Stew, choose
+                  Exterior/Interior.
+                </Text>
+                <View style={styles.departmentButtons}>
+                  {DEPARTMENTS.map((dept) => {
+                    const isSelected = formData.departments.includes(dept.value as Department);
+                    const canSelect = isSelected || formData.departments.length < 2;
+                    return (
+                      <Button
+                        key={dept.value}
+                        title={dept.label}
+                        variant={isSelected ? 'primary' : 'outline'}
+                        size="small"
+                        style={styles.departmentButton}
+                        onPress={() => {
+                          if (isSelected) {
+                            setFormData({
+                              ...formData,
+                              departments: formData.departments.filter((d) => d !== dept.value),
+                            });
+                            if (errors.department) setErrors({ ...errors, department: '' });
+                          } else if (canSelect) {
+                            setFormData({
+                              ...formData,
+                              departments: [...formData.departments, dept.value as Department],
+                            });
+                            if (errors.department) setErrors({ ...errors, department: '' });
+                          }
+                        }}
+                      />
+                    );
+                  })}
+                </View>
+                {formData.departments.length > 0 && (
+                  <Text style={[styles.selectedDepts, { color: MARITIME.textMuted }]}>
+                    Selected:{' '}
+                    {formData.departments
+                      .map((d) => DEPARTMENTS.find((x) => x.value === d)?.label ?? d)
+                      .join(', ')}
+                  </Text>
+                )}
+                {errors.department && <Text style={styles.error}>{errors.department}</Text>}
+              </View>
+
+              <Input
+                label="Position"
+                placeholder="e.g., Deckhand, Chief Stew, Engineer"
+                value={formData.position}
+                onChangeText={(value) => updateField('position', value)}
+                error={errors.position}
+                forceLight
+              />
+
+              {/* Invite Code - REQUIRED for crew */}
+              <Input
+                label="Invite Code *"
+                placeholder="e.g., ABC12345"
+                value={formData.inviteCode}
+                onChangeText={(value) => updateField('inviteCode', value.toUpperCase())}
+                autoCapitalize="characters"
+                maxLength={8}
+                error={errors.inviteCode}
+                forceLight
+              />
+
+              <ConsentCheckbox
+                checked={acceptedTerms}
+                onToggle={() => setAcceptedTerms((v) => !v)}
+                onPressTerms={() => navigation.navigate('TermsConditions')}
+                onPressPrivacy={() => navigation.navigate('PrivacyPolicy')}
+                textColor={COLORS.textPrimary}
+                error={errors.terms}
+              />
+
+              <Button
+                title="Create Crew Account"
+                onPress={handleRegister}
+                loading={loading}
+                fullWidth
+                style={styles.registerButton}
+              />
             </View>
 
-            {/* Invite Code - REQUIRED for crew */}
-            <Input
-              label="Invite Code *"
-              placeholder="e.g., ABC12345"
-              value={formData.inviteCode}
-              onChangeText={(value) => updateField('inviteCode', value.toUpperCase())}
-              autoCapitalize="characters"
-              maxLength={8}
-              error={errors.inviteCode}
-            />
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Already have an account? </Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                <Text style={styles.footerLink}>Sign In</Text>
+              </TouchableOpacity>
+            </View>
 
-            <ConsentCheckbox
-              checked={acceptedTerms}
-              onToggle={() => setAcceptedTerms((v) => !v)}
-              onPressTerms={() => navigation.navigate('TermsConditions')}
-              onPressPrivacy={() => navigation.navigate('PrivacyPolicy')}
-              textColor={COLORS.textPrimary}
-              error={errors.terms}
-            />
-
-            <Button
-              title="Create Crew Account"
-              onPress={handleRegister}
-              loading={loading}
-              fullWidth
-              style={styles.registerButton}
-            />
-          </View>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.footerLink}>Sign In</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={[styles.helpSection, { backgroundColor: MARITIME.infoBg, borderColor: MARITIME.infoBorder }]}>
-            <Text style={styles.helpText}>Don't have an invite code?</Text>
-            <Text style={styles.helpSubtext}>
-              Ask your captain for the vessel's invite code, or create a captain account if you're starting your own vessel.
-            </Text>
-          </View>
+            <View
+              style={[
+                styles.helpSection,
+                { backgroundColor: MARITIME.infoBg, borderColor: MARITIME.infoBorder },
+              ]}
+            >
+              <Text style={styles.helpText}>Don't have an invite code?</Text>
+              <Text style={styles.helpSubtext}>
+                Ask your captain for the vessel's invite code, or create a captain account if you're
+                starting your own vessel.
+              </Text>
+            </View>
           </>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -391,6 +445,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: SPACING.sm,
   },
+  contractTypeSection: {
+    marginBottom: SPACING.md,
+  },
+  contractTypeButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  contractTypeButton: {
+    flexShrink: 0,
+  },
   departmentSection: {
     marginBottom: SPACING.md,
   },
@@ -413,9 +479,6 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: '45%',
     marginBottom: SPACING.sm,
-  },
-  departmentButtonSelected: {
-    borderWidth: 2,
   },
   registerButton: {
     marginTop: SPACING.md,

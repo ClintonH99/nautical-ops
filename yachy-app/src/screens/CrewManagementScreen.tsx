@@ -11,7 +11,6 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
-  ActivityIndicator,
   Image,
   RefreshControl,
 } from 'react-native';
@@ -27,6 +26,7 @@ import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus';
 import userService from '../services/user';
 import { User, Department } from '../types';
 import { getPlanTier } from '../constants/subscriptionPlans';
+import { LoadingSpinner } from '../components';
 
 export const CrewManagementScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -35,9 +35,13 @@ export const CrewManagementScreen = ({ navigation }: any) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [photoLoadFailedIds, setPhotoLoadFailedIds] = useState<Set<string>>(new Set());
+  const [contractFilter, setContractFilter] = useState<
+    'all' | 'permanent' | 'temporary' | 'rotational'
+  >('all');
 
-  // Check if user is HOD
+  // Check if user is HOD or MOV (Captain)
   const isHOD = currentUser?.role === 'HOD';
+  const isMOV = currentUser?.position?.toLowerCase().includes('captain');
 
   useFocusEffect(
     useCallback(() => {
@@ -140,6 +144,68 @@ export const CrewManagementScreen = ({ navigation }: any) => {
     );
   };
 
+  const handleChangeContractType = (crewMember: User) => {
+    Alert.alert(`Contract Type — ${crewMember.name}`, 'Select the new contract type:', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Permanent',
+        onPress: async () => {
+          try {
+            await userService.updateContractType(crewMember.id, 'permanent');
+            loadCrew();
+          } catch {
+            Alert.alert('Error', 'Failed to update contract type');
+          }
+        },
+      },
+      {
+        text: 'Rotational',
+        onPress: async () => {
+          try {
+            await userService.updateContractType(crewMember.id, 'rotational');
+            loadCrew();
+          } catch {
+            Alert.alert('Error', 'Failed to update contract type');
+          }
+        },
+      },
+      {
+        text: 'Temporary',
+        onPress: async () => {
+          try {
+            await userService.updateContractType(crewMember.id, 'temporary');
+            loadCrew();
+          } catch {
+            Alert.alert('Error', 'Failed to update contract type');
+          }
+        },
+      },
+    ]);
+  };
+
+  const handlePromoteToCaptain = (crewMember: User) => {
+    Alert.alert(
+      `Promote ${crewMember.name} to Captain/MOV`,
+      `This will give ${crewMember.name} full Captain/MOV permissions on this vessel. Continue?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Promote to Captain',
+          onPress: async () => {
+            try {
+              await userService.updateUserRole(crewMember.id, 'HOD');
+              await userService.updatePosition(crewMember.id, 'Captain');
+              Alert.alert('Success', `${crewMember.name} is now a Captain/MOV.`);
+              loadCrew();
+            } catch {
+              Alert.alert('Error', 'Failed to promote to Captain');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const { subscription } = useSubscriptionStatus(currentUser?.vesselId ?? null);
   const currentPlan = subscription ? getPlanTier(subscription.planTier) : null;
   const needsUpgrade =
@@ -166,28 +232,33 @@ export const CrewManagementScreen = ({ navigation }: any) => {
       <TouchableOpacity
         style={[styles.crewCard, { backgroundColor: themeColors.surface }]}
         onPress={() => {
-          Alert.alert(
-            item.name,
-            `${item.position}\n${departmentDisplay}\n\nEmail: ${item.email}\nRole: ${item.role}`,
-            [
-              { text: 'Close', style: 'cancel' },
-              ...(!isCurrentUser
-                ? [
-                    {
-                      text: item.role === 'HOD' ? 'Demote' : 'Promote',
-                      onPress: () => handlePromoteToDemote(item),
-                    },
-                    {
-                      text: 'Remove',
-                      onPress: () => handleRemoveCrew(item),
-                      style: 'destructive' as const,
-                    },
-                  ]
-                : []),
-            ]
-          );
+          if (isCurrentUser) return;
+          Alert.alert('Manage ' + item.name, 'Choose an action', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: item.role === 'HOD' ? 'Demote to Crew' : 'Promote to HOD',
+              onPress: () => handlePromoteToDemote(item),
+            },
+            ...(isMOV && !item.position?.toLowerCase().includes('captain')
+              ? [
+                  {
+                    text: 'Promote to Captain/MOV',
+                    onPress: () => handlePromoteToCaptain(item),
+                  },
+                ]
+              : []),
+            {
+              text: 'Change Contract Type',
+              onPress: () => handleChangeContractType(item),
+            },
+            {
+              text: 'Remove from Vessel',
+              onPress: () => handleRemoveCrew(item),
+              style: 'destructive' as const,
+            },
+          ]);
         }}
-        activeOpacity={0.7}
+        activeOpacity={isCurrentUser ? 1 : 0.7}
       >
         <View style={styles.crewCardLeft}>
           {!photoLoadFailedIds.has(item.id) ? (
@@ -241,34 +312,29 @@ export const CrewManagementScreen = ({ navigation }: any) => {
                   {item.position?.toLowerCase().includes('captain') ? 'MOV' : item.role}
                 </Text>
               </View>
+              {item.contractType === 'temporary' && (
+                <View style={styles.contractBadgeTemp}>
+                  <Text style={styles.contractBadgeText}>TEMP</Text>
+                </View>
+              )}
+              {item.contractType === 'rotational' && (
+                <View style={styles.contractBadgeRotation}>
+                  <Text style={styles.contractBadgeText}>Rotation</Text>
+                </View>
+              )}
             </View>
           </View>
         </View>
-
-        {!isCurrentUser && (
-          <TouchableOpacity
-            style={styles.optionsButton}
-            onPress={() => {
-              Alert.alert('Manage ' + item.name, 'Choose an action', [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: item.role === 'HOD' ? 'Demote to Crew' : 'Promote to HOD',
-                  onPress: () => handlePromoteToDemote(item),
-                },
-                {
-                  text: 'Remove from Vessel',
-                  onPress: () => handleRemoveCrew(item),
-                  style: 'destructive',
-                },
-              ]);
-            }}
-          >
-            <Text style={[styles.optionsIcon, { color: themeColors.textSecondary }]}>⋮</Text>
-          </TouchableOpacity>
-        )}
       </TouchableOpacity>
     );
   };
+
+  const filterLabel =
+    contractFilter === 'all'
+      ? 'All Crew'
+      : contractFilter.charAt(0).toUpperCase() + contractFilter.slice(1);
+  const filteredCrew =
+    contractFilter === 'all' ? crew : crew.filter((c) => c.contractType === contractFilter);
 
   const renderHeader = () => (
     <View style={styles.header}>
@@ -286,6 +352,18 @@ export const CrewManagementScreen = ({ navigation }: any) => {
           </Text>
         </TouchableOpacity>
       )}
+
+      {/* Rotational Captain Info Banner */}
+      <View style={[styles.rotationalInfoBanner, { backgroundColor: themeColors.surface }]}>
+        <Text style={[styles.rotationalInfoTitle, { color: themeColors.textPrimary }]}>
+          Adding a Rotational Captain?
+        </Text>
+        <Text style={[styles.rotationalInfoText, { color: themeColors.textSecondary }]}>
+          A second captain should join via the Invite Code on the Create Crew Account page — they
+          should NOT create a new vessel. Once joined, promote them to Captain/MOV from this screen.
+        </Text>
+      </View>
+
       <View style={styles.statsContainer}>
         <View style={[styles.statBox, { backgroundColor: themeColors.surface }]}>
           <Text style={[styles.statNumber, { color: themeColors.textPrimary }]}>{crew.length}</Text>
@@ -311,7 +389,39 @@ export const CrewManagementScreen = ({ navigation }: any) => {
         </Text>
       </View>
 
-      <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Crew Members</Text>
+      {/* Filter row */}
+      <TouchableOpacity
+        style={[styles.actionRow, { backgroundColor: themeColors.surface }]}
+        onPress={() => {
+          Alert.alert('Filter Crew', 'Show crew by contract type:', [
+            { text: 'All Crew', onPress: () => setContractFilter('all') },
+            { text: 'Permanent', onPress: () => setContractFilter('permanent') },
+            { text: 'Rotational', onPress: () => setContractFilter('rotational') },
+            { text: 'Temporary', onPress: () => setContractFilter('temporary') },
+            { text: 'Cancel', style: 'cancel' },
+          ]);
+        }}
+        activeOpacity={0.7}
+      >
+        <Text style={[styles.actionRowLabel, { color: themeColors.textPrimary }]}>
+          Filter: {filterLabel}
+        </Text>
+        <Text style={[styles.actionRowChevron, { color: themeColors.textSecondary }]}>›</Text>
+      </TouchableOpacity>
+
+      {/* Rotational Groups row */}
+      <TouchableOpacity
+        style={[styles.actionRow, { backgroundColor: themeColors.surface }]}
+        onPress={() => navigation.navigate('RotationalGroups')}
+        activeOpacity={0.7}
+      >
+        <Text style={[styles.actionRowLabel, { color: COLORS.primary }]}>Rotational Groups</Text>
+        <Text style={[styles.actionRowChevron, { color: COLORS.primary }]}>›</Text>
+      </TouchableOpacity>
+
+      <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+        {filterLabel} ({filteredCrew.length})
+      </Text>
     </View>
   );
 
@@ -332,7 +442,7 @@ export const CrewManagementScreen = ({ navigation }: any) => {
   if (isLoading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: themeColors.background }]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <LoadingSpinner />
         <Text style={[styles.loadingText, { color: themeColors.textSecondary }]}>
           Loading crew...
         </Text>
@@ -343,7 +453,7 @@ export const CrewManagementScreen = ({ navigation }: any) => {
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <FlatList
-        data={crew}
+        data={filteredCrew}
         renderItem={renderCrewMember}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={renderHeader}
@@ -425,6 +535,45 @@ const styles = StyleSheet.create({
   infoText: {
     fontSize: FONTS.sm,
     lineHeight: 20,
+  },
+  rotationalInfoBanner: {
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.primaryLight,
+  },
+  rotationalInfoTitle: {
+    fontSize: FONTS.sm,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  rotationalInfoText: {
+    fontSize: FONTS.xs,
+    lineHeight: 18,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    marginBottom: SPACING.sm,
+    shadowColor: COLORS.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  actionRowLabel: {
+    fontSize: FONTS.base,
+    fontWeight: '600',
+  },
+  actionRowChevron: {
+    fontSize: 22,
+    lineHeight: 24,
+    fontWeight: '300',
   },
   sectionTitle: {
     fontSize: FONTS.lg,
@@ -533,11 +682,22 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.white,
   },
-  optionsButton: {
-    padding: SPACING.sm,
+  contractBadgeTemp: {
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: '#ea580c', // Orange
   },
-  optionsIcon: {
-    fontSize: 20,
+  contractBadgeRotation: {
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: '#0d9488', // Teal
+  },
+  contractBadgeText: {
+    fontSize: FONTS.xs,
+    fontWeight: 'bold',
+    color: COLORS.white,
   },
   emptyContainer: {
     alignItems: 'center',
