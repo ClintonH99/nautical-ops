@@ -6,7 +6,7 @@
 import React, { useEffect } from 'react';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Platform } from 'react-native';
 import {
   WelcomeScreen,
   LoginScreen,
@@ -56,6 +56,7 @@ import {
   NotificationSettingsScreen,
   TermsConditionsScreen,
   PrivacyPolicyScreen,
+  RefundPolicyScreen,
   VesselLogsScreen,
   GeneralWasteLogScreen,
   AddEditGeneralWasteLogScreen,
@@ -83,6 +84,90 @@ import { startRealtimeSync, stopRealtimeSync } from '../services/realtimeSync';
 import { COLORS } from '../constants/theme';
 
 const Stack = createNativeStackNavigator();
+
+/** Web URL paths: sync browser URL with current screen for shareable links and back/forward */
+const LINKING_CONFIG = {
+  prefixes: ['https://www.nautical-ops.com', 'https://nautical-ops.vercel.app', 'nauticalops://'],
+  config: {
+    screens: {
+      Welcome: '',
+      Login: 'login',
+      CreateAccountChoice: 'create-account',
+      Register: 'register',
+      RegisterCaptain: 'register-captain',
+      RegisterCrew: 'register-crew',
+      CreateVessel: 'create-vessel',
+      TermsConditions: 'terms',
+      PrivacyPolicy: 'privacy',
+      RefundPolicy: 'refund-policy',
+      CaptainWelcome: 'captain-welcome',
+      MainTabs: {
+        path: '',
+        screens: {
+          Home: '',
+          Categories: 'categories',
+          Profile: 'profile',
+        },
+      },
+      JoinVessel: 'join-vessel',
+      Settings: 'settings',
+      VesselPlans: 'vessel-plans',
+      VesselSettings: 'vessel-settings',
+      CrewManagement: 'crew',
+      RotationalGroups: 'rotational-groups',
+      UpcomingTrips: 'trips/upcoming',
+      GuestTrips: 'trips/guest',
+      BossTrips: 'trips/boss',
+      AddEditTrip: 'trips/edit',
+      DeliveryTrips: 'trips/delivery',
+      YardPeriodTrips: 'trips/yard-period',
+      TripColorSettings: 'trip-colors',
+      VesselCrewSafety: 'safety',
+      MusterStation: 'safety/muster',
+      CreateMusterStation: 'safety/muster/create',
+      SafetyEquipment: 'safety/equipment',
+      CreateSafetyEquipment: 'safety/equipment/create',
+      Rules: 'rules',
+      CreateRules: 'rules/create',
+      PreDepartureChecklist: 'pre-departure',
+      AddEditPreDepartureChecklist: 'pre-departure/edit',
+      ViewPreDepartureChecklist: 'pre-departure/view',
+      Tasks: 'tasks',
+      TasksList: 'tasks/list',
+      AddEditTask: 'tasks/edit',
+      OverdueTasks: 'tasks/overdue',
+      UpcomingTasks: 'tasks/upcoming',
+      CompletedTasks: 'tasks/completed',
+      TasksCalendar: 'tasks/calendar',
+      YardPeriodJobs: 'yard-period',
+      AddEditYardJob: 'yard-period/edit',
+      MaintenanceHome: 'maintenance',
+      MaintenanceLog: 'maintenance/log',
+      AddEditMaintenanceLog: 'maintenance/edit',
+      ImportExport: 'import-export',
+      WatchKeeping: 'watch-keeping',
+      WatchSchedule: 'watch-schedule',
+      CreateWatchTimetable: 'watch-schedule/create',
+      ShoppingListCategory: 'shopping',
+      ShoppingList: 'shopping/list',
+      AddEditShoppingList: 'shopping/edit',
+      Inventory: 'inventory',
+      AddEditInventoryItem: 'inventory/edit',
+      DepartmentColorSettings: 'department-colors',
+      ThemeSettings: 'theme',
+      NotificationSettings: 'notifications',
+      VesselLogs: 'logs',
+      GeneralWasteLog: 'logs/general-waste',
+      AddEditGeneralWasteLog: 'logs/general-waste/edit',
+      FuelLog: 'logs/fuel',
+      AddEditFuelLog: 'logs/fuel/edit',
+      PumpOutLog: 'logs/pump-out',
+      AddEditPumpOutLog: 'logs/pump-out/edit',
+      ContractorDatabase: 'contractors',
+      AddEditContractor: 'contractors/edit',
+    },
+  },
+};
 
 // ROUTING RULE: Users with an account AND assigned to a vessel always go to Home (MainTabs).
 // CaptainWelcome (create vessel) is ONLY for captains who have no vessel yet.
@@ -242,7 +327,10 @@ export const RootNavigator = () => {
   };
 
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer
+      theme={navTheme}
+      linking={Platform.OS === 'web' ? LINKING_CONFIG : undefined}
+    >
       <Stack.Navigator
         key={isAuthenticated ? `main-${initialRoute}` : 'auth'}
         initialRouteName={initialRoute}
@@ -301,6 +389,11 @@ export const RootNavigator = () => {
               name="PrivacyPolicy"
               component={PrivacyPolicyScreen}
               options={{ title: 'Privacy Policy', headerShown: true }}
+            />
+            <Stack.Screen
+              name="RefundPolicy"
+              component={RefundPolicyScreen}
+              options={{ title: 'Refund Policy', headerShown: true }}
             />
           </>
         ) : (
@@ -692,6 +785,14 @@ export const RootNavigator = () => {
               component={PrivacyPolicyScreen}
               options={{
                 title: 'Privacy Policy',
+                headerShown: true,
+              }}
+            />
+            <Stack.Screen
+              name="RefundPolicy"
+              component={RefundPolicyScreen}
+              options={{
+                title: 'Refund Policy',
                 headerShown: true,
               }}
             />

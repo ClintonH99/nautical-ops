@@ -54,6 +54,7 @@ export { ThemeSettingsScreen } from './ThemeSettingsScreen';
 export { NotificationSettingsScreen } from './NotificationSettingsScreen';
 export { TermsConditionsScreen } from './TermsConditionsScreen';
 export { PrivacyPolicyScreen } from './PrivacyPolicyScreen';
+export { RefundPolicyScreen } from './RefundPolicyScreen';
 export { VesselLogsScreen } from './VesselLogsScreen';
 export { GeneralWasteLogScreen } from './GeneralWasteLogScreen';
 export { AddEditGeneralWasteLogScreen } from './AddEditGeneralWasteLogScreen';

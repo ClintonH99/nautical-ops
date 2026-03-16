@@ -173,6 +173,13 @@ export const SettingsScreen = ({ navigation }: any) => {
           onPress: () => navigation.navigate('PrivacyPolicy'),
           disabled: false,
         },
+        {
+          icon: '💰',
+          label: 'Refund Policy',
+          description: 'Subscription refund terms and conditions',
+          onPress: () => navigation.navigate('RefundPolicy'),
+          disabled: false,
+        },
       ],
     },
   ];

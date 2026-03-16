@@ -164,3 +164,41 @@ export const PRIVACY_POLICY: LegalSection[] = [
       'For privacy inquiries, data requests, or questions about this Privacy Policy, please contact us at support@nautical-ops.com. We will endeavor to respond within 30 days.',
   },
 ];
+
+export const REFUND_POLICY: LegalSection[] = [
+  {
+    title: '1. Introduction',
+    content:
+      'This Refund Policy ("Policy") applies to subscription payments made for Nautical Ops vessel plans. By subscribing to a plan, you agree to this Policy. Nautical Ops is committed to fair and transparent handling of refund requests.',
+  },
+  {
+    title: '2. General Policy',
+    content:
+      'Subscription fees are generally non-refundable. Once a payment has been processed and your vessel plan has been activated, you have access to the Service for the billing period you selected. We do not provide refunds for change of mind, partial use of the Service, or cancellation mid-period.',
+  },
+  {
+    title: '3. Eligible Refunds',
+    content:
+      'Refunds are available only in the following circumstances: (a) Double charges: If you were charged twice for the same billing period (e.g., duplicate transactions), we will refund the duplicate charge upon verification. (b) Wrong plan selected: If you can provide proof that you selected the wrong plan (e.g., intended to select a different crew tier or billing period) and contact us promptly after the charge, we may, at our discretion, issue a refund or adjust your plan. Proof may include screenshots, transaction records, or other documentation that clearly demonstrates the error.',
+  },
+  {
+    title: '4. How to Request a Refund',
+    content:
+      'To request a refund, contact us at support@nautical-ops.com with your account email, vessel name, transaction date, and a clear description of the issue. For double charges, include both transaction IDs or receipts. For wrong plan selection, include the proof described in Section 3(b). We will review your request and respond within 14 business days.',
+  },
+  {
+    title: '5. Processing',
+    content:
+      'Approved refunds will be processed to the original payment method within 5–10 business days. The timing of the refund appearing in your account may vary depending on your bank or payment provider.',
+  },
+  {
+    title: '6. Changes to This Policy',
+    content:
+      'We may update this Refund Policy from time to time. Material changes will be posted within the application or communicated via email. Your continued use of paid features after changes constitutes acceptance of the updated Policy.',
+  },
+  {
+    title: '7. Contact',
+    content:
+      'For refund requests or questions about this Policy, contact us at support@nautical-ops.com.',
+  },
+];
