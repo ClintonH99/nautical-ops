@@ -4,8 +4,6 @@
 
 export { WelcomeScreen } from './WelcomeScreen';
 export { LoginScreen } from './LoginScreen';
-export { LinkLoginScreen } from './LinkLoginScreen';
-export { LinkWebsiteScanScreen } from './LinkWebsiteScanScreen';
 export { CreateAccountChoiceScreen } from './CreateAccountChoiceScreen';
 export { RegisterScreen } from './RegisterScreen';
 export { RegisterCaptainScreen } from './RegisterCaptainScreen';

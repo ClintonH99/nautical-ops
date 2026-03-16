@@ -117,10 +117,13 @@ export const SettingsScreen = ({ navigation }: any) => {
           ? [
               {
                 icon: '🔗',
-                label: 'Link website (Coming soon)',
-                description: 'Scan QR on website to sign in from your laptop',
-                onPress: () => {},
-                disabled: true,
+                label: 'Link website',
+                description: 'Open website in your browser to sign in',
+                onPress: () =>
+                  Linking.openURL('https://www.nautical-ops.com').catch(() =>
+                    Alert.alert('Error', 'Could not open website')
+                  ),
+                disabled: false,
               },
             ]
           : []),

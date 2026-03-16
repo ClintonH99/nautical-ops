@@ -68,7 +68,7 @@ export const TERMS_AND_CONDITIONS: LegalSection[] = [
   {
     title: '12. Indemnification',
     content:
-      'You agree to indemnify, defend, and hold harmless Nautical Ops and its officers, directors, employees, and agents from and against any claims, damages, losses, or expenses (including reasonable attorneys\' fees) arising out of or related to your use of the Service, your violation of these Terms, or your violation of any rights of another party.',
+      "You agree to indemnify, defend, and hold harmless Nautical Ops and its officers, directors, employees, and agents from and against any claims, damages, losses, or expenses (including reasonable attorneys' fees) arising out of or related to your use of the Service, your violation of these Terms, or your violation of any rights of another party.",
   },
   {
     title: '13. Governing Law and Disputes',
@@ -101,7 +101,7 @@ export const PRIVACY_POLICY: LegalSection[] = [
   {
     title: '3. How We Collect Data',
     content:
-      'We collect data directly from you when you register, sign in, or use the Service. We also receive information from third-party authentication providers (Google, Apple) when you choose to sign in with those services. When you use features such as QR-code sign-in from a website, we receive authentication tokens to verify your identity. Push notification tokens are collected when you enable notifications.',
+      'We collect data directly from you when you register, sign in, or use the Service. We also receive information from third-party authentication providers (Google, Apple) when you choose to sign in with those services. Push notification tokens are collected when you enable notifications.',
   },
   {
     title: '4. Purpose of Use',
