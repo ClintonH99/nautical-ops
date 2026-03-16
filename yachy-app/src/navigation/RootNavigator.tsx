@@ -327,10 +327,7 @@ export const RootNavigator = () => {
   };
 
   return (
-    <NavigationContainer
-      theme={navTheme}
-      linking={Platform.OS === 'web' ? LINKING_CONFIG : undefined}
-    >
+    <NavigationContainer theme={navTheme} linking={undefined}>
       <Stack.Navigator
         key={isAuthenticated ? `main-${initialRoute}` : 'auth'}
         initialRouteName={initialRoute}
