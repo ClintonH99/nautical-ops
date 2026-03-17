@@ -18,7 +18,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button, Input } from '../components';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import authService from '../services/auth';
-import { getVesselSubscription } from '../services/subscription';
 import { useAuthStore } from '../store';
 
 const MARITIME = {
@@ -74,22 +73,18 @@ export const LoginScreen = ({ navigation }: any) => {
       const { user } = await authService.signIn({ email, password });
 
       if (user) {
-        const isCaptain = user.role === 'HOD' || user.position?.toLowerCase().includes('captain');
-        if (isCaptain) {
-          setUser(user);
-        } else if (user.vesselId) {
-          const subscription = await getVesselSubscription(user.vesselId);
-          if (subscription?.status === 'active') {
-            setUser(user);
-          } else {
-            const msg =
-              'Ensure subscription has been paid by the MOV. Once paid, access will be granted again.';
-            setLoginError(msg);
-            if (Platform.OS !== 'web') Alert.alert('Access Restricted', msg);
-          }
-        } else {
-          setUser(user);
-        }
+        // TODO: Re-enable subscription check once payment flow is set up
+        // const isCaptain = user.role === 'HOD' || user.position?.toLowerCase().includes('captain');
+        // if (!isCaptain && user.vesselId) {
+        //   const subscription = await getVesselSubscription(user.vesselId);
+        //   if (subscription?.status !== 'active') {
+        //     const msg = 'Ensure subscription has been paid by the MOV. Once paid, access will be granted again.';
+        //     setLoginError(msg);
+        //     if (Platform.OS !== 'web') Alert.alert('Access Restricted', msg);
+        //     return;
+        //   }
+        // }
+        setUser(user);
       } else {
         const msg = 'Email Address or Password is Incorrect, Try Again.';
         setLoginError(msg);

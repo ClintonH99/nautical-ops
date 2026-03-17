@@ -198,7 +198,7 @@ const createWebLinkingConfig = (isAuthenticated: boolean) => {
         return getStateFromPath('', options);
       }
 
-      const resolved = getStateFromPath(path, options);
+      const resolved = getStateFromPath(cleanedPath, options);
       if (resolved) return resolved;
 
       // Invalid/protected URL behavior:
@@ -243,6 +243,15 @@ export const RootNavigator = () => {
         const session = await authService.getSession();
         if (mounted && session?.user) {
           let userData = await authService.getUserProfile(session.user.id);
+
+          if (mounted && !userData && Platform.OS === 'web') {
+            try {
+              await supabase.auth.signOut({ scope: 'local' });
+            } catch {
+              /* best-effort clear of stale web session */
+            }
+          }
+
           if (mounted && userData) {
             const isCaptain =
               userData.role === 'HOD' || userData.position?.toLowerCase().includes('captain');
@@ -269,6 +278,13 @@ export const RootNavigator = () => {
         }
       } catch (error) {
         if (__DEV__) console.error('Auth check error:', error);
+        if (Platform.OS === 'web') {
+          try {
+            await supabase.auth.signOut({ scope: 'local' });
+          } catch {
+            /* best-effort clear on error */
+          }
+        }
       } finally {
         if (mounted) setLoading(false);
       }
@@ -278,9 +294,13 @@ export const RootNavigator = () => {
     const timeoutPromise = new Promise<void>((resolve) => {
       setTimeout(() => resolve(), MAX_AUTH_WAIT_MS);
     });
-    Promise.race([bootstrap(), timeoutPromise]).then(() => {
-      if (mounted) setLoading(false);
-    });
+    Promise.race([bootstrap(), timeoutPromise])
+      .then(() => {
+        if (mounted) setLoading(false);
+      })
+      .catch(() => {
+        if (mounted) setLoading(false);
+      });
 
     // Fallback: ensure loading always clears
     const fallback = setTimeout(() => {
@@ -288,32 +308,36 @@ export const RootNavigator = () => {
     }, MAX_AUTH_WAIT_MS + 1000);
 
     const { data: authListener } = authService.onAuthStateChange(async (user) => {
-      if (!user) {
-        setUser(null);
+      try {
+        if (!user) {
+          setUser(null);
+          return;
+        }
+        const isCaptain = user.role === 'HOD' || user.position?.toLowerCase().includes('captain');
+        if (isCaptain && !user.vesselId) {
+          const refetch = await authService.getUserProfile(user.id);
+          if (refetch?.vesselId) setUser(refetch);
+          else setUser(user);
+        } else if (isCaptain) {
+          setUser(user);
+        } else if (user.vesselId) {
+          // TODO: Re-enable subscription check once payment flow is set up
+          // const subscription = await getVesselSubscription(user.vesselId);
+          // if (subscription?.status === 'active') {
+          //   setUser(user);
+          // } else {
+          //   await supabase.auth.signOut();
+          //   setUser(null);
+          // }
+          setUser(user);
+        } else {
+          setUser(user);
+        }
+      } catch (error) {
+        if (__DEV__) console.error('Auth listener error:', error);
+      } finally {
         setLoading(false);
-        return;
       }
-      const isCaptain = user.role === 'HOD' || user.position?.toLowerCase().includes('captain');
-      if (isCaptain && !user.vesselId) {
-        const refetch = await authService.getUserProfile(user.id);
-        if (refetch?.vesselId) setUser(refetch);
-        else setUser(user);
-      } else if (isCaptain) {
-        setUser(user);
-      } else if (user.vesselId) {
-        // TODO: Re-enable subscription check once payment flow is set up
-        // const subscription = await getVesselSubscription(user.vesselId);
-        // if (subscription?.status === 'active') {
-        //   setUser(user);
-        // } else {
-        //   await supabase.auth.signOut();
-        //   setUser(null);
-        // }
-        setUser(user);
-      } else {
-        setUser(user);
-      }
-      setLoading(false);
     });
 
     return () => {

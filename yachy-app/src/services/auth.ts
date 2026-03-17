@@ -463,14 +463,32 @@ class AuthService {
 
   /**
    * Get current session
+   * Handles invalid/expired refresh tokens by signing out and returning null
    */
   async getSession() {
     try {
       const { data, error } = await supabase.auth.getSession();
       if (error) throw error;
       return data.session;
-    } catch (error) {
-      if (__DEV__) console.error('Get session error:', error);
+    } catch (error: any) {
+      const msg = String(error?.message ?? '').toLowerCase();
+      const isInvalidRefreshToken =
+        msg.includes('invalid refresh token') ||
+        msg.includes('refresh token not found') ||
+        msg.includes('refresh token expired') ||
+        msg.includes('refresh token revoked');
+      if (isInvalidRefreshToken) {
+        try {
+          await supabase.auth.signOut({ scope: 'local' });
+        } catch {
+          /* best-effort clear */
+        }
+        if (__DEV__) {
+          console.warn('[Auth] Cleared invalid refresh token; user will need to sign in again.');
+        }
+      } else if (__DEV__) {
+        console.error('Get session error:', error);
+      }
       return null;
     }
   }
@@ -608,10 +626,24 @@ class AuthService {
    */
   onAuthStateChange(callback: (user: User | null) => void) {
     return supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        const userData = await this.getUserProfile(session.user.id);
-        callback(userData);
-      } else {
+      try {
+        if (event === 'TOKEN_REFRESHED' && !session) {
+          try {
+            await supabase.auth.signOut({ scope: 'local' });
+          } catch {
+            /* best-effort */
+          }
+          callback(null);
+          return;
+        }
+        if (session?.user) {
+          const userData = await this.getUserProfile(session.user.id);
+          callback(userData);
+        } else {
+          callback(null);
+        }
+      } catch (error) {
+        if (__DEV__) console.error('Auth state change handler error:', error);
         callback(null);
       }
     });
