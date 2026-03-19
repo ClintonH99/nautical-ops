@@ -22,7 +22,7 @@ Notifications.setNotificationHandler({
 
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
   if (!Device.isDevice) {
-    console.log('Push notifications require a physical device');
+    if (__DEV__) console.log('Push notifications require a physical device');
     return null;
   }
 
@@ -42,7 +42,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     const { status } = await Notifications.requestPermissionsAsync();
     finalStatus = status;
     if (status !== 'granted') {
-      console.log('Push permission not granted');
+      if (__DEV__) console.log('Push permission not granted');
       return null;
     }
   }
@@ -73,10 +73,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
 }
 
 export async function savePushToken(userId: string, token: string): Promise<void> {
-  const { error } = await supabase
-    .from('users')
-    .update({ push_token: token })
-    .eq('id', userId);
+  const { error } = await supabase.from('users').update({ push_token: token }).eq('id', userId);
 
   if (error) {
     console.error('Save push token error:', error);
@@ -85,10 +82,7 @@ export async function savePushToken(userId: string, token: string): Promise<void
 }
 
 export async function clearPushToken(userId: string): Promise<void> {
-  const { error } = await supabase
-    .from('users')
-    .update({ push_token: null })
-    .eq('id', userId);
+  const { error } = await supabase.from('users').update({ push_token: null }).eq('id', userId);
 
   if (error) {
     console.error('Clear push token error:', error);
@@ -96,9 +90,7 @@ export async function clearPushToken(userId: string): Promise<void> {
   }
 }
 
-export async function getNotificationPreferences(
-  userId: string
-): Promise<Record<string, boolean>> {
+export async function getNotificationPreferences(userId: string): Promise<Record<string, boolean>> {
   const { data, error } = await supabase
     .from('users')
     .select('notification_preferences')

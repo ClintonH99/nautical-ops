@@ -28,11 +28,6 @@ if (__DEV__ && isPlaceholder) {
   );
 }
 
-// Debug: verify correct Supabase project on web (remove after confirming login works)
-if (typeof window !== 'undefined') {
-  console.log('[Nautical Ops] Supabase URL:', SUPABASE_URL);
-}
-
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     ...(Platform.OS !== 'web' ? { storage: AsyncStorage } : {}),

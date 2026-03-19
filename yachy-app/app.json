@@ -36,7 +36,20 @@
       "@react-native-community/datetimepicker",
       "expo-notifications",
       "expo-web-browser",
-      "expo-apple-authentication",["expo-camera",{"cameraPermission":"Allow Nautical Ops to access your camera","barcodeScannerEnabled":true}]
+      "expo-apple-authentication",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Nautical Ops to access your camera",
+          "barcodeScannerEnabled": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Nautical Ops to access your photos for profile and vessel images."
+        }
+      ]
     ],
     "extra": {
       "eas": {
