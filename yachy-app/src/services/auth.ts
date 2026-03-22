@@ -65,8 +65,17 @@ class AuthService {
       }
 
       return { user: null, session: null };
-    } catch (error) {
+    } catch (error: any) {
       if (__DEV__) console.error('Sign in error:', error);
+      const msg = String(error?.message ?? '').toLowerCase();
+      const isNetworkError =
+        msg.includes('network request failed') ||
+        msg.includes('network error') ||
+        msg.includes('fetch failed') ||
+        msg.includes('authretryablefetcherror');
+      if (isNetworkError) {
+        throw new Error('Unable to connect. Please check your internet connection and try again.');
+      }
       throw error;
     }
   }

@@ -1,6 +1,6 @@
 /**
  * Subscription Service
- * Handles vessel subscription status and payment flows (Stripe, RevenueCat)
+ * Handles vessel subscription status and payment flows (Paddle card checkout, RevenueCat IAP)
  */
 
 import { supabase } from './supabase';
@@ -59,42 +59,78 @@ export async function getVesselSubscription(vesselId: string): Promise<VesselSub
   }
 }
 
+export interface PaddleCheckoutResult {
+  url: string | null;
+  transactionId?: string;
+  errorMessage?: string;
+}
+
 /**
- * Create Stripe Checkout session for selected plan.
- * Calls Edge Function; returns checkout URL to open in browser.
+ * Create Paddle checkout for selected crew tier + billing period.
+ * Price ID is resolved server-side.
  */
-export async function createStripeCheckout(
+export async function createPaddleCheckout(
   vesselId: string,
   planTier: PlanTierId,
-  billingPeriod: BillingPeriodId,
-  successUrl: string,
-  cancelUrl: string
-): Promise<string | null> {
+  billingPeriod: BillingPeriodId
+): Promise<PaddleCheckoutResult> {
   try {
     const {
       data: { session },
     } = await supabase.auth.getSession();
-    if (!session?.access_token) return null;
+    if (!session?.access_token) {
+      return { url: null, errorMessage: 'You must be signed in to checkout.' };
+    }
 
-    const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+    const { data, error } = await supabase.functions.invoke('create-paddle-checkout', {
       body: {
         vesselId,
         planTier,
         billingPeriod,
-        successUrl,
-        cancelUrl,
       },
     });
 
     if (error) {
-      if (__DEV__) console.warn('createStripeCheckout error:', error);
-      return null;
+      let message = error.message;
+      const ctx = (error as { context?: Response }).context;
+      if (ctx && typeof ctx.json === 'function') {
+        try {
+          const body = await ctx.json();
+          if (body && typeof body === 'object' && 'error' in body && body.error) {
+            message = String(body.error);
+          }
+        } catch {
+          /* keep error.message */
+        }
+      }
+      if (__DEV__) console.warn('createPaddleCheckout error:', error);
+      return { url: null, errorMessage: message };
     }
 
-    return data?.url ?? null;
+    const payload = data as { url?: string; transactionId?: string; error?: string } | null;
+    if (payload?.error) {
+      return { url: null, errorMessage: String(payload.error) };
+    }
+
+    const url = payload?.url;
+    if (!url || typeof url !== 'string') {
+      return {
+        url: null,
+        errorMessage:
+          'No checkout URL returned. Check Paddle default payment link and Edge Function logs.',
+      };
+    }
+
+    return {
+      url,
+      transactionId: typeof payload.transactionId === 'string' ? payload.transactionId : undefined,
+    };
   } catch (err) {
-    if (__DEV__) console.warn('createStripeCheckout:', err);
-    return null;
+    if (__DEV__) console.warn('createPaddleCheckout:', err);
+    return {
+      url: null,
+      errorMessage: err instanceof Error ? err.message : 'Failed to start checkout.',
+    };
   }
 }
 

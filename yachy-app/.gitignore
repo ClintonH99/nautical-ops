@@ -38,6 +38,9 @@ supabase/.temp/
 .env
 CREDENTIALS.md
 
+# Google Play API key (do not commit)
+google-service-account.json
+
 # typescript
 *.tsbuildinfo
 

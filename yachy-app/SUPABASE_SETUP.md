@@ -22,21 +22,30 @@ Follow these steps to set up your Supabase backend.
    - **anon/public key** (a long string starting with `eyJ...`)
 
 3. Create a `.env` file in your project root:
+
 ```bash
 cp .env.example .env
 ```
 
 4. Add your values to `.env`:
+
 ```
 EXPO_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
+
+### TestFlight & App Store builds (EAS)
+
+Local `.env` does **not** apply to **EAS Build** by default. For iOS TestFlight and production store builds, define the same two variables in the **Expo dashboard** for the **production** environment, then run a **new** `eas build`.
+
+**Step-by-step:** see **[docs/EAS_TESTFLIGHT_SUPABASE.md](./docs/EAS_TESTFLIGHT_SUPABASE.md)**.
 
 ## Step 3: Create Database Tables
 
 Go to **SQL Editor** in Supabase dashboard and run these commands:
 
 ### 1. Users Table
+
 ```sql
 CREATE TABLE users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -64,6 +73,7 @@ CREATE POLICY "Users can update own data" ON users
 ```
 
 ### 2. Vessels Table
+
 ```sql
 CREATE TABLE vessels (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -85,6 +95,7 @@ CREATE POLICY "Users can read their vessel" ON vessels
 ```
 
 ### 3. Tasks Table
+
 ```sql
 CREATE TABLE tasks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -129,6 +140,7 @@ CREATE POLICY "Users can update tasks" ON tasks
 ```
 
 ### 4. Inventory Categories Table
+
 ```sql
 CREATE TABLE inventory_categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -153,6 +165,7 @@ CREATE POLICY "Users can manage inventory categories" ON inventory_categories
 ```
 
 ### 5. Inventory Items Table
+
 ```sql
 CREATE TABLE inventory_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -261,6 +274,7 @@ The app already has `usesAppleSignIn: true` and `expo-apple-authentication` in a
 ## Step 6: Test Connection
 
 1. Restart your Expo development server:
+
 ```bash
 npm start
 ```
@@ -271,20 +285,24 @@ npm start
 ## Troubleshooting
 
 ### "Invalid API key" error
+
 - Check that your `.env` file has the correct values
 - Restart Expo server after changing `.env`
 
 ### "Failed to create user" error
+
 - Check that all tables are created
 - Check Row Level Security policies are set up
 
 ### Need help?
+
 - Supabase docs: [https://supabase.com/docs](https://supabase.com/docs)
 - Check Supabase dashboard logs for errors
 
 ## Next Steps
 
 Once Supabase is set up:
+
 1. Test registration with an invite code (you'll need to manually create a vessel first)
 2. Test login
 3. Start building the Tasks and Inventory modules!
@@ -292,6 +310,7 @@ Once Supabase is set up:
 ---
 
 **Note:** For production, you'll want to:
+
 - Set up proper database backups
 - Configure rate limiting
 - Add more sophisticated RLS policies

@@ -39,6 +39,11 @@ const CATEGORY_LABELS: Record<string, string> = {
   epirbs: 'EPIRBs',
 };
 
+function getLabel(key: string, data: SafetyEquipmentData): string {
+  if (CATEGORY_LABELS[key]) return CATEGORY_LABELS[key];
+  return data.customLabels?.[key] ?? key.replace(/^custom_/, '').replace(/_/g, ' ');
+}
+
 function SafetyEquipmentPreview({
   data,
   themeColors,
@@ -46,11 +51,11 @@ function SafetyEquipmentPreview({
   data: SafetyEquipmentData;
   themeColors: { textPrimary: string; textSecondary: string };
 }) {
-  const items: { label: string; locations: string }[] = [];
+  const items: { key: string; label: string; locations: string }[] = [];
   Object.entries(data || {}).forEach(([key, val]) => {
-    if (key === 'vesselName') return;
+    if (key === 'vesselName' || key === 'customLabels') return;
     const arr = Array.isArray(val) ? val.filter(Boolean) : [];
-    if (arr.length) items.push({ label: CATEGORY_LABELS[key] || key, locations: arr.join(', ') });
+    if (arr.length) items.push({ key, label: getLabel(key, data), locations: arr.join(', ') });
   });
 
   return (
@@ -61,9 +66,9 @@ function SafetyEquipmentPreview({
         </Text>
       ) : (
         <>
-          {items.slice(0, 5).map(({ label, locations }) => (
+          {items.slice(0, 5).map(({ key, label, locations }) => (
             <Text
-              key={label}
+              key={key}
               style={[styles.previewRow, { color: themeColors.textPrimary }]}
               numberOfLines={1}
             >

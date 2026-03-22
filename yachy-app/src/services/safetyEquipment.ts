@@ -23,7 +23,8 @@ export type SafetyEquipmentCategories = {
 
 export interface SafetyEquipmentData {
   vesselName?: string;
-  [key: string]: string[] | string | undefined;
+  customLabels?: Record<string, string>;
+  [key: string]: string[] | string | Record<string, string> | undefined;
 }
 
 export interface SafetyEquipment {
@@ -67,7 +68,12 @@ class SafetyEquipmentService {
     return this.mapRow(data);
   }
 
-  async create(vesselId: string, title: string, data: SafetyEquipmentData, createdBy?: string): Promise<SafetyEquipment> {
+  async create(
+    vesselId: string,
+    title: string,
+    data: SafetyEquipmentData,
+    createdBy?: string
+  ): Promise<SafetyEquipment> {
     const { data: row, error } = await supabase
       .from('safety_equipment')
       .insert([{ vessel_id: vesselId, title, data, created_by: createdBy || null }])
@@ -91,10 +97,7 @@ class SafetyEquipmentService {
   }
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('safety_equipment')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabase.from('safety_equipment').delete().eq('id', id);
 
     if (error) throw error;
   }

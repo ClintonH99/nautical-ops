@@ -12,7 +12,7 @@ Phase 4 of Enterprise App Launch Readiness. Follow this checklist before submitt
 - [ ] **OAuth**: Supabase Auth → URL Configuration includes production redirect URLs (e.g. `https://nautical-ops.com`, `nauticalops://`)
 - [ ] Bundle ID (iOS): `com.nauticalops.app`
 - [ ] Package name (Android): `com.nauticalops.app`
-- [ ] Privacy Policy live at: https://nautical-ops.com/privacy
+- [ ] Privacy Policy live at: https://nautical-ops.com/privacy-policy
 - [ ] Terms of Service live (ensure linked in app)
 
 ---

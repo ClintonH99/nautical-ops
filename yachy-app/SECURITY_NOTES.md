@@ -14,4 +14,5 @@ Run `npm audit` periodically. CI runs `npm audit --audit-level=critical` (fails 
 ## Supabase Configuration
 
 - Production builds fail immediately if `EXPO_PUBLIC_SUPABASE_URL` or `EXPO_PUBLIC_SUPABASE_ANON_KEY` are not set or still use placeholder values.
+- **Native (TestFlight / store):** set those variables in **Expo → Environment variables** for the build environment used by `production` in `eas.json`, then rebuild. See `docs/EAS_TESTFLIGHT_SUPABASE.md`.
 - The anon key is safe to include in client builds; RLS enforces server-side access control.

@@ -76,7 +76,7 @@ export async function savePushToken(userId: string, token: string): Promise<void
   const { error } = await supabase.from('users').update({ push_token: token }).eq('id', userId);
 
   if (error) {
-    console.error('Save push token error:', error);
+    if (__DEV__) console.error('Save push token error:', error);
     throw error;
   }
 }
@@ -85,7 +85,7 @@ export async function clearPushToken(userId: string): Promise<void> {
   const { error } = await supabase.from('users').update({ push_token: null }).eq('id', userId);
 
   if (error) {
-    console.error('Clear push token error:', error);
+    if (__DEV__) console.error('Clear push token error:', error);
     throw error;
   }
 }
@@ -130,7 +130,7 @@ export async function saveNotificationPreference(
     .eq('id', userId);
 
   if (error) {
-    console.error('Save notification preference error:', error);
+    if (__DEV__) console.error('Save notification preference error:', error);
     throw error;
   }
 }

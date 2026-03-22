@@ -42,8 +42,8 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "YOUR_APPLE_ID_EMAIL",
-        "ascAppId": "YOUR_APP_STORE_CONNECT_APP_ID"
+        "appleId": "clinton.handford@gmail.com",
+        "ascAppId": "6760950524"
       },
       "android": {
         "serviceAccountKeyPath": "./google-service-account.json"

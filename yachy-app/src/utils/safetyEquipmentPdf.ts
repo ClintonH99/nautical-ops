@@ -24,15 +24,35 @@ const LABELS: Record<string, string> = {
 };
 
 function escapeHtml(s: string): string {
-  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
-export async function generateSafetyEquipmentPdf(data: SafetyEquipmentData, title: string, filename: string): Promise<void> {
+function getLabel(key: string, data: SafetyEquipmentData): string {
+  if (LABELS[key]) return LABELS[key];
+  return data.customLabels?.[key] ?? key.replace(/^custom_/, '').replace(/_/g, ' ');
+}
+
+export async function generateSafetyEquipmentPdf(
+  data: SafetyEquipmentData,
+  title: string,
+  filename: string
+): Promise<void> {
   const rows: string[] = [];
-  for (const [key, label] of Object.entries(LABELS)) {
-    const arr = data[key];
+  const categoryKeys = Object.keys(data).filter(
+    (k) => k !== 'vesselName' && k !== 'customLabels' && Array.isArray(data[k])
+  );
+  for (const key of categoryKeys) {
+    const arr = data[key] as string[];
     if (Array.isArray(arr) && arr.length) {
-      const locs = arr.filter(Boolean).map((l) => escapeHtml(String(l))).join(', ');
+      const locs = arr
+        .filter(Boolean)
+        .map((l) => escapeHtml(String(l)))
+        .join(', ');
+      const label = getLabel(key, data);
       rows.push(`<tr><td><strong>${escapeHtml(label)}</strong></td><td>${locs}</td></tr>`);
     }
   }
@@ -69,6 +89,9 @@ export async function generateSafetyEquipmentPdf(data: SafetyEquipmentData, titl
   await FileSystem.moveAsync({ from: uri, to: newUri });
   const canShare = await Sharing.isAvailableAsync();
   if (canShare) {
-    await Sharing.shareAsync(newUri, { mimeType: 'application/pdf', dialogTitle: `Save ${filename}` });
+    await Sharing.shareAsync(newUri, {
+      mimeType: 'application/pdf',
+      dialogTitle: `Save ${filename}`,
+    });
   }
 }

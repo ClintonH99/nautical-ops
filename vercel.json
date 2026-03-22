@@ -4,6 +4,10 @@
   "outputDirectory": "yachy-app/dist",
   "framework": null,
   "rewrites": [
+    { "source": "/pricing", "destination": "/pricing.html" },
+    { "source": "/privacy-policy", "destination": "/privacy-policy.html" },
+    { "source": "/refund-policy", "destination": "/refund-policy.html" },
+    { "source": "/terms-and-conditions", "destination": "/terms-and-conditions.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

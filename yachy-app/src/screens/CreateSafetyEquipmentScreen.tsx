@@ -14,6 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
@@ -23,7 +24,7 @@ import { Button, LoadingSpinner } from '../components';
 import { generateSafetyEquipmentPdf } from '../utils/safetyEquipmentPdf';
 import type { SafetyEquipmentData } from '../services/safetyEquipment';
 
-const CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   'fireExtinguishers',
   'firstAidKits',
   'medicalBags',
@@ -55,6 +56,10 @@ const LABELS: Record<string, string> = {
   epirbs: 'EPIRBs',
 };
 
+function getLabel(key: string, customLabels: Record<string, string>): string {
+  return LABELS[key] ?? customLabels[key] ?? key;
+}
+
 export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
@@ -67,8 +72,11 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
   const [loading, setLoading] = useState(isEdit);
   const [vesselName, setVesselName] = useState('');
   const [title, setTitle] = useState('');
+  const [categoryOrder, setCategoryOrder] = useState<string[]>(() => [...DEFAULT_CATEGORIES]);
+  const [customLabels, setCustomLabels] = useState<Record<string, string>>({});
+  const [newCategoryName, setNewCategoryName] = useState('');
   const [data, setData] = useState<Record<string, string[]>>(
-    Object.fromEntries(CATEGORIES.map((c) => [c, ['']]))
+    Object.fromEntries(DEFAULT_CATEGORIES.map((c) => [c, ['']]))
   );
 
   useEffect(() => {
@@ -92,11 +100,24 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
         const item = await safetyEquipmentService.getById(equipmentId);
         if (item) {
           setTitle(item.title ?? '');
-          const next: Record<string, string[]> = {
-            ...Object.fromEntries(CATEGORIES.map((c) => [c, ['']])),
-          };
-          CATEGORIES.forEach((k) => {
-            const arr = (item.data?.[k] as string[] | undefined)?.filter(Boolean);
+          const raw = item.data || {};
+          const labels = (raw.customLabels as Record<string, string>) || {};
+          setCustomLabels(labels);
+          const allKeys = new Set(DEFAULT_CATEGORIES);
+          Object.keys(raw).forEach((k) => {
+            if (k !== 'vesselName' && k !== 'customLabels' && k.startsWith('custom_')) {
+              allKeys.add(k);
+            }
+          });
+          const order = [...DEFAULT_CATEGORIES.filter((k) => allKeys.has(k))];
+          const customKeys = Object.keys(raw).filter(
+            (k) => k.startsWith('custom_') && !DEFAULT_CATEGORIES.includes(k)
+          );
+          order.push(...customKeys);
+          setCategoryOrder(order.length ? order : [...DEFAULT_CATEGORIES]);
+          const next: Record<string, string[]> = {};
+          order.forEach((k) => {
+            const arr = (raw[k] as string[] | undefined)?.filter(Boolean);
             next[k] = arr?.length ? arr : [''];
           });
           setData(next);
@@ -120,9 +141,55 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
     setData({ ...data, [key]: arr.length ? arr : [''] });
   };
 
+  const addEquipmentType = () => {
+    const name = newCategoryName.trim();
+    if (!name) return;
+    const existingLabels = Object.values(LABELS).filter(Boolean);
+    const existingCustom = Object.values(customLabels);
+    const allLabels = [...existingLabels, ...existingCustom];
+    if (allLabels.some((l) => l.toLowerCase() === name.toLowerCase())) {
+      Alert.alert('Duplicate', 'This equipment type already exists.');
+      return;
+    }
+    const key = `custom_${Date.now()}`;
+    setCustomLabels({ ...customLabels, [key]: name });
+    setCategoryOrder([...categoryOrder, key]);
+    setData({ ...data, [key]: [''] });
+    setNewCategoryName('');
+  };
+
+  const removeCategory = (key: string) => {
+    const label = getLabel(key, customLabels);
+    Alert.alert('Remove category', `Remove "${label}"? Locations will be lost.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: () => {
+          const nextOrder = categoryOrder.filter((k) => k !== key);
+          if (nextOrder.length === 0) {
+            setCategoryOrder([...DEFAULT_CATEGORIES]);
+            setData(Object.fromEntries(DEFAULT_CATEGORIES.map((c) => [c, ['']])));
+          } else {
+            setCategoryOrder(nextOrder);
+            const { [key]: _, ...rest } = data;
+            setData(rest);
+          }
+          if (key.startsWith('custom_')) {
+            const { [key]: __, ...rest } = customLabels;
+            setCustomLabels(rest);
+          }
+        },
+      },
+    ]);
+  };
+
   const build = (): SafetyEquipmentData => {
     const out: SafetyEquipmentData = { vesselName };
-    CATEGORIES.forEach((k) => {
+    if (Object.keys(customLabels).length) {
+      out.customLabels = customLabels;
+    }
+    categoryOrder.forEach((k) => {
       const arr = (data[k] || []).filter(Boolean);
       if (arr.length) (out as any)[k] = arr;
     });
@@ -202,9 +269,49 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
           placeholder="Safety Equipment Locations"
           placeholderTextColor={COLORS.textTertiary}
         />
-        {CATEGORIES.map((key) => (
+        <View style={[styles.addSection, { borderColor: themeColors.surfaceAlt }]}>
+          <Text
+            style={[
+              styles.addSectionLabel,
+              { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+            ]}
+          >
+            Add equipment type
+          </Text>
+          <View style={styles.addSectionRow}>
+            <TextInput
+              style={[
+                styles.input,
+                styles.flex,
+                { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+              ]}
+              value={newCategoryName}
+              onChangeText={setNewCategoryName}
+              placeholder="e.g. Safety harnesses"
+              placeholderTextColor={COLORS.textTertiary}
+              onSubmitEditing={addEquipmentType}
+            />
+            <Button
+              title="Add"
+              onPress={addEquipmentType}
+              variant="outline"
+              style={styles.addBtn}
+            />
+          </View>
+        </View>
+        {categoryOrder.map((key) => (
           <View key={key} style={styles.cat}>
-            <Text style={[styles.catLabel, { color: themeColors.textPrimary }]}>{LABELS[key]}</Text>
+            <View style={styles.catHeader}>
+              <Text style={[styles.catLabel, { color: themeColors.textPrimary }]}>
+                {getLabel(key, customLabels)}
+              </Text>
+              <TouchableOpacity
+                onPress={() => removeCategory(key)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
+              </TouchableOpacity>
+            </View>
             {(data[key] || ['']).map((loc, i) => (
               <View key={i} style={styles.row}>
                 <TextInput
@@ -256,8 +363,24 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base },
   label: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: 4, marginTop: SPACING.md },
+  addSection: {
+    marginTop: SPACING.xl,
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  addSectionLabel: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.sm },
+  addSectionRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  addBtn: { minWidth: 70 },
   cat: { marginTop: SPACING.lg },
-  catLabel: { fontSize: FONTS.base, fontWeight: '600', marginBottom: SPACING.sm },
+  catHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.sm,
+  },
+  catLabel: { fontSize: FONTS.base, fontWeight: '600', flex: 1 },
   input: {
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,

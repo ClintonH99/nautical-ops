@@ -14,6 +14,7 @@ import {
   Linking,
   Platform,
 } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
@@ -21,7 +22,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus';
 import { Button } from '../components';
-import { createStripeCheckout, purchaseWithRevenueCat } from '../services/subscription';
+import { createPaddleCheckout, purchaseWithRevenueCat } from '../services/subscription';
 import {
   PLAN_TIERS,
   BILLING_PERIODS,
@@ -57,23 +58,39 @@ export const VesselPlansScreen = ({ navigation }: any) => {
     if (!user?.vesselId) return;
     setIsProcessing(true);
     try {
-      const url = await createStripeCheckout(
+      const { url, errorMessage } = await createPaddleCheckout(
         user.vesselId,
         selectedPlanTier,
-        selectedBillingPeriod,
-        'nauticalops://subscription-success',
-        'nauticalops://subscription-cancel'
+        selectedBillingPeriod
       );
-      if (url) {
-        await Linking.openURL(url);
-      } else {
+      if (!url) {
         Alert.alert(
-          'Payment Unavailable',
-          'Card checkout is not yet configured. Please contact support.'
+          'Checkout unavailable',
+          errorMessage ?? 'Could not start card checkout. Please try again or contact support.'
         );
+        return;
       }
+
+      if (Platform.OS === 'web') {
+        const opened =
+          typeof window !== 'undefined' && window.open(url, '_blank', 'noopener,noreferrer');
+        if (!opened) {
+          Alert.alert(
+            'Popup blocked',
+            'Allow popups for this site to open checkout, or open the payment page in a new tab.'
+          );
+          return;
+        }
+      } else {
+        await WebBrowser.openBrowserAsync(url, {
+          enableBarCollapsing: true,
+          presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+        });
+      }
+
+      await refetchSubscription();
     } catch {
-      Alert.alert('Error', 'Failed to start checkout. Please try again.');
+      Alert.alert('Error', 'Failed to open checkout. Please try again.');
     } finally {
       setIsProcessing(false);
     }

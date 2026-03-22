@@ -11,23 +11,32 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0d1b2a"
     },
     "ios": {
       "bundleIdentifier": "com.nauticalops.app",
       "supportsTablet": true,
       "usesAppleSignIn": true,
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.nauticalops.app",
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0d1b2a"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -55,8 +64,14 @@
       "eas": {
         "projectId": "eb067a9d-d949-45a2-b3a1-15867c609436"
       },
-      "privacyUrl": "https://nautical-ops.com/privacy"
+      "privacyUrl": "https://nautical-ops.com/privacy-policy"
     },
-    "owner": "clintonh99"
+    "owner": "clintonh99",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/eb067a9d-d949-45a2-b3a1-15867c609436"
+    }
   }
 }

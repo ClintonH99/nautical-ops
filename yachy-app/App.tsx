@@ -42,13 +42,14 @@ function AppContent() {
   }, []);
 
   if (!isSupabaseConfigured()) {
+    const configHint =
+      Platform.OS === 'web'
+        ? 'Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to your .env (local) or your web host’s environment (e.g. Vercel), then rebuild.'
+        : 'This build was made without Supabase env vars. In expo.dev → your project → Environment variables, add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY for the production environment, then run a new EAS iOS/Android build and install it from TestFlight or the store. See docs/EAS_TESTFLIGHT_SUPABASE.md in the repo.';
     return (
       <View style={styles.configError}>
         <Text style={styles.configTitle}>Configuration Required</Text>
-        <Text style={styles.configText}>
-          Supabase is not configured. Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY
-          to your .env file (local) or Vercel Environment Variables (production), then restart.
-        </Text>
+        <Text style={styles.configText}>{configHint}</Text>
         <StatusBar style="light" />
       </View>
     );

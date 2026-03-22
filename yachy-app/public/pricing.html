@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Pricing — Nautical Ops</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root { --navy: #0d1b2a; --navy-light: #112236; --gold: #C8961A; --gold-light: #D4A017; --white: #ffffff; --text: #e8edf2; --muted: #8a9bb0; --border: rgba(200,150,26,0.2); }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--navy); color: var(--text); font-family: 'DM Sans', sans-serif; font-weight: 300; line-height: 1.8; min-height: 100vh; }
+  header { border-bottom: 1px solid var(--border); padding: 24px 40px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; background: rgba(13,27,42,0.95); backdrop-filter: blur(10px); z-index: 100; }
+  .logo-text { font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 18px; color: var(--white); }
+  .logo-icon { width: 36px; height: 36px; }
+  .nav-links { margin-left: auto; display: flex; gap: 28px; list-style: none; }
+  .nav-links a { color: var(--muted); text-decoration: none; font-size: 14px; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--gold); }
+  .hero { padding: 80px 40px 48px; max-width: 960px; margin: 0 auto; text-align: center; }
+  .hero-label { font-size: 11px; letter-spacing: 0.2em; color: var(--gold); text-transform: uppercase; margin-bottom: 16px; }
+  .hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(36px, 5vw, 56px); font-weight: 400; color: var(--white); margin-bottom: 16px; }
+  .hero p { color: var(--muted); font-size: 17px; max-width: 500px; margin: 0 auto; }
+  .divider { width: 60px; height: 1px; background: var(--gold); margin: 32px auto; opacity: 0.6; }
+  .policy-banner { max-width: 960px; margin: 0 auto 48px; padding: 0 40px; }
+  .policy-inner { background: rgba(200,150,26,0.08); border: 1px solid var(--gold); border-radius: 10px; padding: 16px 24px; display: flex; gap: 12px; align-items: flex-start; }
+  .policy-icon { color: var(--gold); font-size: 16px; margin-top: 2px; flex-shrink: 0; }
+  .policy-inner p { font-size: 14px; color: var(--text); }
+  .policy-inner strong { color: var(--gold); font-weight: 500; }
+  .billing-section { max-width: 960px; margin: 0 auto 56px; padding: 0 40px; }
+  .section-label { font-size: 11px; letter-spacing: 0.2em; color: var(--gold); text-transform: uppercase; margin-bottom: 20px; }
+  .billing-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .billing-card { background: var(--navy-light); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; cursor: pointer; transition: all 0.2s; position: relative; display: flex; align-items: center; justify-content: space-between; }
+  .billing-card:hover { border-color: var(--gold); }
+  .billing-card.active { border-color: var(--gold); background: rgba(200,150,26,0.08); }
+  .billing-name { font-size: 15px; color: var(--white); font-weight: 400; }
+  .billing-badge { background: var(--gold); color: var(--navy); font-size: 10px; font-weight: 500; padding: 3px 8px; border-radius: 20px; letter-spacing: 0.05em; }
+  .plans-section { max-width: 960px; margin: 0 auto; padding: 0 40px 100px; }
+  .plans-category { margin-bottom: 48px; }
+  .category-header { margin-bottom: 20px; }
+  .category-title { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 400; color: var(--white); margin-bottom: 4px; }
+  .category-sub { font-size: 13px; color: var(--muted); }
+  .plans-grid { display: grid; gap: 10px; }
+  .plan-card { background: var(--navy-light); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; transition: border-color 0.2s; }
+  .plan-card:hover { border-color: var(--gold); }
+  .plan-crew { font-size: 11px; letter-spacing: 0.12em; color: var(--gold); text-transform: uppercase; margin-bottom: 4px; }
+  .plan-price { font-family: 'Playfair Display', serif; font-size: 28px; color: var(--white); }
+  .plan-price span { font-size: 14px; color: var(--muted); font-family: 'DM Sans', sans-serif; }
+  .plan-arrow { color: var(--gold); font-size: 18px; opacity: 0.6; }
+  .cta-section { max-width: 960px; margin: 0 auto; padding: 0 40px 48px; }
+  .cta-btn { display: block; width: 100%; background: var(--gold); color: var(--navy); text-align: center; padding: 18px; border-radius: 10px; font-size: 16px; font-weight: 500; text-decoration: none; letter-spacing: 0.02em; transition: opacity 0.2s; margin-bottom: 12px; }
+  .cta-btn:hover { opacity: 0.9; }
+  .cta-btn-outline { display: block; width: 100%; background: transparent; color: var(--gold); text-align: center; padding: 18px; border-radius: 10px; font-size: 16px; font-weight: 400; text-decoration: none; border: 1px solid var(--gold); transition: background 0.2s; }
+  .cta-btn-outline:hover { background: rgba(200,150,26,0.08); }
+  .cancel-note { text-align: center; font-size: 13px; color: var(--muted); margin-top: 16px; padding: 14px 20px; background: var(--navy-light); border-radius: 8px; border: 1px solid var(--border); }
+  .features { max-width: 960px; margin: 0 auto 80px; padding: 0 40px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .feature { padding: 24px; background: var(--navy-light); border: 1px solid var(--border); border-radius: 10px; }
+  .feature-icon { color: var(--gold); font-size: 20px; margin-bottom: 12px; }
+  .feature h3 { font-size: 15px; color: var(--white); font-weight: 500; margin-bottom: 6px; }
+  .feature p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+  footer { border-top: 1px solid var(--border); padding: 40px; text-align: center; }
+  footer p { color: var(--muted); font-size: 13px; }
+  footer a { color: var(--gold); text-decoration: none; }
+  @media (max-width: 700px) {
+    header { padding: 16px 20px; }
+    .hero { padding: 48px 20px 32px; }
+    .billing-section, .plans-section, .cta-section, .policy-banner { padding: 0 20px; }
+    .billing-grid { grid-template-columns: 1fr 1fr; }
+    .features { grid-template-columns: 1fr; padding: 0 20px; }
+    .nav-links { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <svg class="logo-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M6 26 Q6 30 18 31 Q30 30 30 26 L28 18 L8 18 Z" fill="none" stroke="#C8961A" stroke-width="1.8" stroke-linejoin="round"/>
+    <rect x="11" y="12" width="14" height="7" rx="1.5" fill="none" stroke="#C8961A" stroke-width="1.8"/>
+    <line x1="18" y1="5" x2="18" y2="12" stroke="#C8961A" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="18" cy="4" r="1.8" fill="#C8961A"/>
+    <path d="M4 32 Q8 29 12 32 Q16 35 20 32 Q24 29 28 32 Q31 29 33 32" fill="none" stroke="#C8961A" stroke-width="1.4" stroke-linecap="round"/>
+  </svg>
+  <span class="logo-text">Nautical Ops</span>
+  <ul class="nav-links">
+    <li><a href="/pricing">Pricing</a></li>
+    <li><a href="/privacy-policy">Privacy</a></li>
+    <li><a href="/refund-policy">Refunds</a></li>
+    <li><a href="/terms-and-conditions">Terms</a></li>
+  </ul>
+</header>
+
+<div class="hero">
+  <p class="hero-label">Vessel Plans</p>
+  <h1>Simple, transparent pricing</h1>
+  <p class="hero p">Select a billing period and crew tier that fits your vessel.</p>
+  <div class="divider"></div>
+</div>
+
+<div class="policy-banner">
+  <div class="policy-inner">
+    <span class="policy-icon">⚠</span>
+    <p><strong>Payment Policy:</strong> If payment is not made by the due date, access for all crew members will be restricted until payment is completed. Access resumes immediately once payment is made.</p>
+  </div>
+</div>
+
+<div class="billing-section">
+  <p class="section-label">Billing Period</p>
+  <div class="billing-grid">
+    <div class="billing-card active">
+      <span class="billing-name">Monthly</span>
+    </div>
+    <div class="billing-card">
+      <span class="billing-name">3 Months</span>
+      <span class="billing-badge">5% OFF</span>
+    </div>
+    <div class="billing-card">
+      <span class="billing-name">6 Months</span>
+      <span class="billing-badge">8% OFF</span>
+    </div>
+    <div class="billing-card">
+      <span class="billing-name">Yearly</span>
+      <span class="billing-badge">10% OFF</span>
+    </div>
+  </div>
+</div>
+
+<div class="plans-section">
+
+  <div class="plans-category">
+    <div class="category-header">
+      <h2 class="category-title">Small to Medium Vessels</h2>
+      <p class="category-sub">All plans include full access to Nautical Ops. Select the tier that fits your crew size.</p>
+    </div>
+    <div class="plans-grid">
+      <div class="plan-card">
+        <div>
+          <p class="plan-crew">1–5 Crew Members</p>
+          <p class="plan-price">$79.99 <span>/mo</span></p>
+        </div>
+        <span class="plan-arrow">→</span>
+      </div>
+      <div class="plan-card">
+        <div>
+          <p class="plan-crew">6–10 Crew Members</p>
+          <p class="plan-price">$89.99 <span>/mo</span></p>
+        </div>
+        <span class="plan-arrow">→</span>
+      </div>
+      <div class="plan-card">
+        <div>
+          <p class="plan-crew">11–15 Crew Members</p>
+          <p class="plan-price">$119.99 <span>/mo</span></p>
+        </div>
+        <span class="plan-arrow">→</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="plans-category">
+    <div class="category-header">
+      <h2 class="category-title">Medium to Large Vessels</h2>
+      <p class="category-sub">All plans include full access to Nautical Ops. Select the tier that fits your crew size.</p>
+    </div>
+    <div class="plans-grid">
+      <div class="plan-card">
+        <div>
+          <p class="plan-crew">16–25 Crew Members</p>
+          <p class="plan-price">$149.99 <span>/mo</span></p>
+        </div>
+        <span class="plan-arrow">→</span>
+      </div>
+      <div class="plan-card">
+        <div>
+          <p class="plan-crew">26–40 Crew Members</p>
+          <p class="plan-price">$199.99 <span>/mo</span></p>
+        </div>
+        <span class="plan-arrow">→</span>
+      </div>
+      <div class="plan-card">
+        <div>
+          <p class="plan-crew">40+ Crew Members</p>
+          <p class="plan-price">$249.99 <span>/mo</span></p>
+        </div>
+        <span class="plan-arrow">→</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="cta-section">
+  <a href="https://nautical-ops.vercel.app" class="cta-btn">Pay with Card</a>
+  <a href="https://nautical-ops.vercel.app" class="cta-btn-outline">Subscribe via App Store</a>
+  <p class="cancel-note">Subscriptions can be cancelled at any time. Access to the app will be restricted upon cancellation.</p>
+</div>
+
+<div class="features">
+  <div class="feature">
+    <div class="feature-icon">⚓</div>
+    <h3>Full vessel management</h3>
+    <p>Trips, tasks, checklists, maintenance logs, safety equipment and more — all in one place.</p>
+  </div>
+  <div class="feature">
+    <div class="feature-icon">👥</div>
+    <h3>Crew collaboration</h3>
+    <p>Invite crew via a unique code. Each member gets their own role, department, and access level.</p>
+  </div>
+  <div class="feature">
+    <div class="feature-icon">📄</div>
+    <h3>PDF exports</h3>
+    <p>Export checklists, logs, and reports as PDFs directly from the app for compliance and records.</p>
+  </div>
+</div>
+
+<footer>
+  <p>© 2025 Nautical Ops. All rights reserved. &nbsp;|&nbsp; <a href="/terms-and-conditions">Terms</a> &nbsp;|&nbsp; <a href="/privacy-policy">Privacy Policy</a> &nbsp;|&nbsp; <a href="/refund-policy">Refund Policy</a></p>
+</footer>
+
+</body>
+</html>

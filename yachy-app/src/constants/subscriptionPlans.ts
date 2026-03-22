@@ -26,6 +26,57 @@ export const PLAN_BOARD_MEDIUM_LARGE: PlanTierId[] = ['16_25', '26_40', '40_plus
 
 export type BillingPeriodId = (typeof BILLING_PERIODS)[number]['id'];
 
+/**
+ * Paddle Billing price IDs (sandbox or live catalog).
+ * Map: plan tier x billing period -> pri_*
+ */
+export const PADDLE_PRICE_IDS: Record<PlanTierId, Record<BillingPeriodId, string>> = {
+  '1_5': {
+    monthly: 'pri_01kmbephg7qqmbqvjck7zymssh',
+    '3_months': 'pri_01kmbf0w42q58zngqdcccge9th',
+    '6_months': 'pri_01kmbf1wrbe30gmhgb9g2pyg16',
+    '12_months': 'pri_01kmbf5fq7jd2p0cx8j0xhakay',
+  },
+  '6_10': {
+    monthly: 'pri_01kmber39aaqmmz1m6qbzq7yss',
+    '3_months': 'pri_01kmbf9ej19e1f7h506ts5d73p',
+    '6_months': 'pri_01kmbfabqx4q0654x9kwdh1pr9',
+    '12_months': 'pri_01kmbfb5egpnskb5ecjv6xh77z',
+  },
+  '11_15': {
+    monthly: 'pri_01kmbes0mbznxs11we7n8b9e5j',
+    '3_months': 'pri_01kmbfcgm1y8kz52f18281ffrz',
+    '6_months': 'pri_01kmbfdeyvk39w808zdv757rbx',
+    '12_months': 'pri_01kmbfe65782vt1tdfgmhrpeww',
+  },
+  '16_25': {
+    monthly: 'pri_01kmbet1wkq596zqe2y0cn8d20',
+    '3_months': 'pri_01kmbff8h99yc7n0pk5che3bva',
+    '6_months': 'pri_01kmbfg15wmgfsktswqhnkgw15',
+    '12_months': 'pri_01kmbfgx5grpk10pt0awwjajhp',
+  },
+  '26_40': {
+    monthly: 'pri_01kmbetrmtjw5jfefraw26yjee',
+    '3_months': 'pri_01kmbfj17safnjk15v03anpqce',
+    '6_months': 'pri_01kmbfk0f8smv3p048y5b7sm9f',
+    '12_months': 'pri_01kmbfm2e3y1f27zn2e2c9c9xq',
+  },
+  '40_plus': {
+    monthly: 'pri_01kmbevmd6a5hzdsf6pqmmx8rp',
+    '3_months': 'pri_01kmbfn7etz89caxm9cj94tbmq',
+    '6_months': 'pri_01kmbfp7sxramn43pg6cdzmsvq',
+    '12_months': 'pri_01kmbfq0k4eg5fgensecty5d45',
+  },
+};
+
+export function getPaddlePriceId(planTierId: PlanTierId, billingPeriodId: BillingPeriodId): string {
+  const id = PADDLE_PRICE_IDS[planTierId]?.[billingPeriodId];
+  if (!id) {
+    throw new Error(`No Paddle price for tier ${planTierId} period ${billingPeriodId}`);
+  }
+  return id;
+}
+
 export interface PriceResult {
   monthlyPrice: number;
   discountedMonthly: number;

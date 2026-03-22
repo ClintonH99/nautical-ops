@@ -17,7 +17,9 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "build:ios": "eas build --platform ios --profile production",
-    "build:android": "eas build --platform android --profile production"
+    "build:android": "eas build --platform android --profile production",
+    "eas:login": "eas login",
+    "eas:submit:ios": "eas submit --platform ios --profile production --latest"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",
@@ -49,6 +51,7 @@
     "expo-print": "~15.0.8",
     "expo-sharing": "~14.0.8",
     "expo-status-bar": "~3.0.9",
+    "expo-updates": "~29.0.16",
     "expo-web-browser": "~15.0.10",
     "lottie-react-native": "^7.3.6",
     "react": "19.1.0",
@@ -83,6 +86,7 @@
     "@types/react": "~19.1.0",
     "@typescript-eslint/eslint-plugin": "^8.56.1",
     "@typescript-eslint/parser": "^8.56.1",
+    "eas-cli": "^16.28.0",
     "eslint": "^9.39.3",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",
