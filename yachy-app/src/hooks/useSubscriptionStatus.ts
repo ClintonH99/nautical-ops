@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { getVesselSubscription, checkRevenueCatEntitlement } from '../services/subscription';
+import { getVesselSubscription } from '../services/subscription';
 import type { VesselSubscription } from '../services/subscription';
 
 export interface UseSubscriptionStatusResult {
@@ -16,28 +16,21 @@ export interface UseSubscriptionStatusResult {
 
 export function useSubscriptionStatus(vesselId: string | null): UseSubscriptionStatusResult {
   const [subscription, setSubscription] = useState<VesselSubscription | null>(null);
-  const [revenueCatActive, setRevenueCatActive] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetch = useCallback(async () => {
     if (!vesselId) {
       setSubscription(null);
-      setRevenueCatActive(false);
       setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
     try {
-      const [sub, rcActive] = await Promise.all([
-        getVesselSubscription(vesselId),
-        checkRevenueCatEntitlement(),
-      ]);
+      const sub = await getVesselSubscription(vesselId);
       setSubscription(sub);
-      setRevenueCatActive(rcActive);
     } catch {
       setSubscription(null);
-      setRevenueCatActive(false);
     } finally {
       setIsLoading(false);
     }
@@ -47,7 +40,7 @@ export function useSubscriptionStatus(vesselId: string | null): UseSubscriptionS
     fetch();
   }, [fetch]);
 
-  const hasActiveSubscription = !!(subscription || revenueCatActive);
+  const hasActiveSubscription = !!subscription;
 
   return {
     hasActiveSubscription,

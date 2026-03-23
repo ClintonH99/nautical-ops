@@ -4,17 +4,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  Linking,
-  Platform,
-} from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
@@ -22,7 +12,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus';
 import { Button } from '../components';
-import { createPaddleCheckout, purchaseWithRevenueCat } from '../services/subscription';
+import { openWebPricingWithMagicLink } from '../services/authLinkFlow';
 import {
   PLAN_TIERS,
   BILLING_PERIODS,
@@ -54,65 +44,18 @@ export const VesselPlansScreen = ({ navigation }: any) => {
     }, [refetchSubscription])
   );
 
-  const handlePayWithCard = async () => {
-    if (!user?.vesselId) return;
+  const handleActivateVesselPlan = async () => {
     setIsProcessing(true);
     try {
-      const { url, errorMessage } = await createPaddleCheckout(
-        user.vesselId,
-        selectedPlanTier,
-        selectedBillingPeriod
-      );
-      if (!url) {
-        Alert.alert(
-          'Checkout unavailable',
-          errorMessage ?? 'Could not start card checkout. Please try again or contact support.'
-        );
+      const result = await openWebPricingWithMagicLink();
+      if ('errorMessage' in result) {
+        Alert.alert('Unable to open pricing', result.errorMessage);
         return;
       }
-
-      if (Platform.OS === 'web') {
-        const opened =
-          typeof window !== 'undefined' && window.open(url, '_blank', 'noopener,noreferrer');
-        if (!opened) {
-          Alert.alert(
-            'Popup blocked',
-            'Allow popups for this site to open checkout, or open the payment page in a new tab.'
-          );
-          return;
-        }
-      } else {
-        await WebBrowser.openBrowserAsync(url, {
-          enableBarCollapsing: true,
-          presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
-        });
-      }
-
+      await Linking.openURL(result.actionLink);
       await refetchSubscription();
     } catch {
-      Alert.alert('Error', 'Failed to open checkout. Please try again.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleSubscribeInApp = async () => {
-    if (Platform.OS === 'web') {
-      Alert.alert(
-        'Not Available',
-        'In-app purchases are not available on web. Use Pay with Card instead.'
-      );
-      return;
-    }
-    setIsProcessing(true);
-    try {
-      const success = await purchaseWithRevenueCat(selectedPlanTier, selectedBillingPeriod);
-      if (success) {
-        await refetchSubscription();
-        Alert.alert('Subscribed!', 'Your subscription is now active.');
-      }
-    } catch {
-      Alert.alert('Purchase Failed', 'Could not complete the purchase. Please try again.');
+      Alert.alert('Error', 'Failed to open pricing. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -276,7 +219,7 @@ export const VesselPlansScreen = ({ navigation }: any) => {
                     getBillingPeriod(subscription.billingPeriod)?.label ??
                     subscription.billingPeriod
                   }`
-                : 'Active (via App Store)'}
+                : 'Active'}
             </Text>
             {subscription && (
               <Text style={[styles.renewalText, { color: themeColors.textSecondary }]}>
@@ -334,24 +277,20 @@ export const VesselPlansScreen = ({ navigation }: any) => {
             {renderBoard('Small to Medium Vessels', PLAN_BOARD_SMALL_MEDIUM)}
             {renderBoard('Medium to Large Vessels', PLAN_BOARD_MEDIUM_LARGE)}
 
-            {/* ── Action buttons ── */}
+            {/* ── Activate plan (web pricing + magic link) ── */}
             <View style={styles.actions}>
               <Button
-                title={isProcessing ? 'Opening...' : 'Pay with Card'}
-                onPress={handlePayWithCard}
+                title="Activate Vessel Plan"
+                onPress={handleActivateVesselPlan}
                 variant="primary"
                 fullWidth
                 style={styles.actionButton}
                 disabled={isProcessing}
+                loading={isProcessing}
               />
-              <Button
-                title={isProcessing ? 'Processing...' : 'Subscribe via App Store'}
-                onPress={handleSubscribeInApp}
-                variant="outline"
-                fullWidth
-                style={styles.actionButton}
-                disabled={isProcessing}
-              />
+              <Text style={[styles.activateHint, { color: themeColors.textSecondary }]}>
+                Complete setup to invite crew and unlock all features.
+              </Text>
             </View>
 
             {/* ── Cancellation note ── */}
@@ -558,6 +497,13 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     marginBottom: SPACING.sm,
+  },
+  activateHint: {
+    fontSize: FONTS.sm,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginTop: SPACING.xs,
+    opacity: 0.85,
   },
 
   // Cancellation note

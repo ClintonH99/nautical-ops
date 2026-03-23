@@ -20,6 +20,8 @@
   .hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(36px, 5vw, 56px); font-weight: 400; color: var(--white); margin-bottom: 16px; }
   .hero p { color: var(--muted); font-size: 17px; max-width: 500px; margin: 0 auto; }
   .divider { width: 60px; height: 1px; background: var(--gold); margin: 32px auto; opacity: 0.6; }
+  .auth-hint { font-size: 13px; color: var(--muted); margin-top: 12px; }
+  .config-warning { max-width: 640px; margin: 16px auto 0; padding: 12px 16px; background: rgba(200,150,26,0.12); border: 1px solid var(--gold); border-radius: 8px; color: var(--text); font-size: 13px; text-align: center; }
   .policy-banner { max-width: 960px; margin: 0 auto 48px; padding: 0 40px; }
   .policy-inner { background: rgba(200,150,26,0.08); border: 1px solid var(--gold); border-radius: 10px; padding: 16px 24px; display: flex; gap: 12px; align-items: flex-start; }
   .policy-icon { color: var(--gold); font-size: 16px; margin-top: 2px; flex-shrink: 0; }
@@ -39,17 +41,20 @@
   .category-title { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 400; color: var(--white); margin-bottom: 4px; }
   .category-sub { font-size: 13px; color: var(--muted); }
   .plans-grid { display: grid; gap: 10px; }
-  .plan-card { background: var(--navy-light); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; transition: border-color 0.2s; }
+  .plan-card { background: var(--navy-light); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; transition: border-color 0.2s; }
   .plan-card:hover { border-color: var(--gold); }
+  .plan-card-row { display: flex; align-items: center; justify-content: space-between; }
   .plan-crew { font-size: 11px; letter-spacing: 0.12em; color: var(--gold); text-transform: uppercase; margin-bottom: 4px; }
   .plan-price { font-family: 'Playfair Display', serif; font-size: 28px; color: var(--white); }
   .plan-price span { font-size: 14px; color: var(--muted); font-family: 'DM Sans', sans-serif; }
+  .plan-total { font-size: 12px; color: var(--muted); margin-top: 4px; }
   .plan-arrow { color: var(--gold); font-size: 18px; opacity: 0.6; }
+  .subscribe-btn { width: 100%; background: var(--gold); color: var(--navy); border: none; padding: 12px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; letter-spacing: 0.02em; transition: opacity 0.2s; }
+  .subscribe-btn:hover { opacity: 0.92; }
+  .subscribe-btn:disabled { opacity: 0.45; cursor: not-allowed; }
   .cta-section { max-width: 960px; margin: 0 auto; padding: 0 40px 48px; }
-  .cta-btn { display: block; width: 100%; background: var(--gold); color: var(--navy); text-align: center; padding: 18px; border-radius: 10px; font-size: 16px; font-weight: 500; text-decoration: none; letter-spacing: 0.02em; transition: opacity 0.2s; margin-bottom: 12px; }
-  .cta-btn:hover { opacity: 0.9; }
-  .cta-btn-outline { display: block; width: 100%; background: transparent; color: var(--gold); text-align: center; padding: 18px; border-radius: 10px; font-size: 16px; font-weight: 400; text-decoration: none; border: 1px solid var(--gold); transition: background 0.2s; }
-  .cta-btn-outline:hover { background: rgba(200,150,26,0.08); }
+  .success-banner { text-align: center; padding: 24px 28px; background: rgba(200,150,26,0.12); border: 1px solid var(--gold); border-radius: 10px; margin-bottom: 20px; }
+  .success-banner p { font-size: 16px; color: var(--white); font-weight: 500; line-height: 1.5; }
   .cancel-note { text-align: center; font-size: 13px; color: var(--muted); margin-top: 16px; padding: 14px 20px; background: var(--navy-light); border-radius: 8px; border: 1px solid var(--border); }
   .features { max-width: 960px; margin: 0 auto 80px; padding: 0 40px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
   .feature { padding: 24px; background: var(--navy-light); border: 1px solid var(--border); border-radius: 10px; }
@@ -68,6 +73,8 @@
     .nav-links { display: none; }
   }
 </style>
+<script src="/pricing-config.js"></script>
+<script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
 </head>
 <body>
 
@@ -93,6 +100,8 @@
   <h1>Simple, transparent pricing</h1>
   <p class="hero p">Select a billing period and crew tier that fits your vessel.</p>
   <div class="divider"></div>
+  <p id="auth-status" class="auth-hint" aria-live="polite"></p>
+  <p id="config-warning" class="config-warning" hidden></p>
 </div>
 
 <div class="policy-banner">
@@ -104,19 +113,19 @@
 
 <div class="billing-section">
   <p class="section-label">Billing Period</p>
-  <div class="billing-grid">
-    <div class="billing-card active">
+  <div class="billing-grid" id="billing-grid">
+    <div class="billing-card active" data-period="monthly" role="button" tabindex="0">
       <span class="billing-name">Monthly</span>
     </div>
-    <div class="billing-card">
+    <div class="billing-card" data-period="3_months" role="button" tabindex="0">
       <span class="billing-name">3 Months</span>
       <span class="billing-badge">5% OFF</span>
     </div>
-    <div class="billing-card">
+    <div class="billing-card" data-period="6_months" role="button" tabindex="0">
       <span class="billing-name">6 Months</span>
       <span class="billing-badge">8% OFF</span>
     </div>
-    <div class="billing-card">
+    <div class="billing-card" data-period="12_months" role="button" tabindex="0">
       <span class="billing-name">Yearly</span>
       <span class="billing-badge">10% OFF</span>
     </div>
@@ -131,26 +140,38 @@
       <p class="category-sub">All plans include full access to Nautical Ops. Select the tier that fits your crew size.</p>
     </div>
     <div class="plans-grid">
-      <div class="plan-card">
-        <div>
-          <p class="plan-crew">1–5 Crew Members</p>
-          <p class="plan-price">$79.99 <span>/mo</span></p>
+      <div class="plan-card" data-tier="1_5">
+        <div class="plan-card-row">
+          <div>
+            <p class="plan-crew">1–5 Crew Members</p>
+            <p class="plan-price" data-price-display>$79.99 <span>/mo</span></p>
+            <p class="plan-total" data-total-row style="display:none;"></p>
+          </div>
+          <span class="plan-arrow">→</span>
         </div>
-        <span class="plan-arrow">→</span>
+        <button type="button" class="subscribe-btn" data-subscribe>Subscribe Now</button>
       </div>
-      <div class="plan-card">
-        <div>
-          <p class="plan-crew">6–10 Crew Members</p>
-          <p class="plan-price">$89.99 <span>/mo</span></p>
+      <div class="plan-card" data-tier="6_10">
+        <div class="plan-card-row">
+          <div>
+            <p class="plan-crew">6–10 Crew Members</p>
+            <p class="plan-price" data-price-display>$89.99 <span>/mo</span></p>
+            <p class="plan-total" data-total-row style="display:none;"></p>
+          </div>
+          <span class="plan-arrow">→</span>
         </div>
-        <span class="plan-arrow">→</span>
+        <button type="button" class="subscribe-btn" data-subscribe>Subscribe Now</button>
       </div>
-      <div class="plan-card">
-        <div>
-          <p class="plan-crew">11–15 Crew Members</p>
-          <p class="plan-price">$119.99 <span>/mo</span></p>
+      <div class="plan-card" data-tier="11_15">
+        <div class="plan-card-row">
+          <div>
+            <p class="plan-crew">11–15 Crew Members</p>
+            <p class="plan-price" data-price-display>$119.99 <span>/mo</span></p>
+            <p class="plan-total" data-total-row style="display:none;"></p>
+          </div>
+          <span class="plan-arrow">→</span>
         </div>
-        <span class="plan-arrow">→</span>
+        <button type="button" class="subscribe-btn" data-subscribe>Subscribe Now</button>
       </div>
     </div>
   </div>
@@ -161,26 +182,38 @@
       <p class="category-sub">All plans include full access to Nautical Ops. Select the tier that fits your crew size.</p>
     </div>
     <div class="plans-grid">
-      <div class="plan-card">
-        <div>
-          <p class="plan-crew">16–25 Crew Members</p>
-          <p class="plan-price">$149.99 <span>/mo</span></p>
+      <div class="plan-card" data-tier="16_25">
+        <div class="plan-card-row">
+          <div>
+            <p class="plan-crew">16–25 Crew Members</p>
+            <p class="plan-price" data-price-display>$149.99 <span>/mo</span></p>
+            <p class="plan-total" data-total-row style="display:none;"></p>
+          </div>
+          <span class="plan-arrow">→</span>
         </div>
-        <span class="plan-arrow">→</span>
+        <button type="button" class="subscribe-btn" data-subscribe>Subscribe Now</button>
       </div>
-      <div class="plan-card">
-        <div>
-          <p class="plan-crew">26–40 Crew Members</p>
-          <p class="plan-price">$199.99 <span>/mo</span></p>
+      <div class="plan-card" data-tier="26_40">
+        <div class="plan-card-row">
+          <div>
+            <p class="plan-crew">26–40 Crew Members</p>
+            <p class="plan-price" data-price-display>$199.99 <span>/mo</span></p>
+            <p class="plan-total" data-total-row style="display:none;"></p>
+          </div>
+          <span class="plan-arrow">→</span>
         </div>
-        <span class="plan-arrow">→</span>
+        <button type="button" class="subscribe-btn" data-subscribe>Subscribe Now</button>
       </div>
-      <div class="plan-card">
-        <div>
-          <p class="plan-crew">40+ Crew Members</p>
-          <p class="plan-price">$249.99 <span>/mo</span></p>
+      <div class="plan-card" data-tier="40_plus">
+        <div class="plan-card-row">
+          <div>
+            <p class="plan-crew">40+ Crew Members</p>
+            <p class="plan-price" data-price-display>$249.99 <span>/mo</span></p>
+            <p class="plan-total" data-total-row style="display:none;"></p>
+          </div>
+          <span class="plan-arrow">→</span>
         </div>
-        <span class="plan-arrow">→</span>
+        <button type="button" class="subscribe-btn" data-subscribe>Subscribe Now</button>
       </div>
     </div>
   </div>
@@ -188,8 +221,9 @@
 </div>
 
 <div class="cta-section">
-  <a href="https://nautical-ops.vercel.app" class="cta-btn">Pay with Card</a>
-  <a href="https://nautical-ops.vercel.app" class="cta-btn-outline">Subscribe via App Store</a>
+  <div id="checkout-success" class="success-banner" hidden>
+    <p>You're all set! Open the Nautical Ops app to start inviting your crew.</p>
+  </div>
   <p class="cancel-note">Subscriptions can be cancelled at any time. Access to the app will be restricted upon cancellation.</p>
 </div>
 
@@ -214,6 +248,284 @@
 <footer>
   <p>© 2025 Nautical Ops. All rights reserved. &nbsp;|&nbsp; <a href="/terms-and-conditions">Terms</a> &nbsp;|&nbsp; <a href="/privacy-policy">Privacy Policy</a> &nbsp;|&nbsp; <a href="/refund-policy">Refund Policy</a></p>
 </footer>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
+
+const PADDLE_PRICE_IDS = {
+  '1_5': { monthly: 'pri_01kmbephg7qqmbqvjck7zymssh', '3_months': 'pri_01kmbf0w42q58zngqdcccge9th', '6_months': 'pri_01kmbf1wrbe30gmhgb9g2pyg16', '12_months': 'pri_01kmbf5fq7jd2p0cx8j0xhakay' },
+  '6_10': { monthly: 'pri_01kmber39aaqmmz1m6qbzq7yss', '3_months': 'pri_01kmbf9ej19e1f7h506ts5d73p', '6_months': 'pri_01kmbfabqx4q0654x9kwdh1pr9', '12_months': 'pri_01kmbfb5egpnskb5ecjv6xh77z' },
+  '11_15': { monthly: 'pri_01kmbes0mbznxs11we7n8b9e5j', '3_months': 'pri_01kmbfcgm1y8kz52f18281ffrz', '6_months': 'pri_01kmbfdeyvk39w808zdv757rbx', '12_months': 'pri_01kmbfe65782vt1tdfgmhrpeww' },
+  '16_25': { monthly: 'pri_01kmbet1wkq596zqe2y0cn8d20', '3_months': 'pri_01kmbff8h99yc7n0pk5che3bva', '6_months': 'pri_01kmbfg15wmgfsktswqhnkgw15', '12_months': 'pri_01kmbfgx5grpk10pt0awwjajhp' },
+  '26_40': { monthly: 'pri_01kmbetrmtjw5jfefraw26yjee', '3_months': 'pri_01kmbfj17safnjk15v03anpqce', '6_months': 'pri_01kmbfk0f8smv3p048y5b7sm9f', '12_months': 'pri_01kmbfm2e3y1f27zn2e2c9c9xq' },
+  '40_plus': { monthly: 'pri_01kmbevmd6a5hzdsf6pqmmx8rp', '3_months': 'pri_01kmbfn7etz89caxm9cj94tbmq', '6_months': 'pri_01kmbfp7sxramn43pg6cdzmsvq', '12_months': 'pri_01kmbfq0k4eg5fgensecty5d45' },
+};
+
+const PLAN_MONTHLY = { '1_5': 79.99, '6_10': 89.99, '11_15': 119.99, '16_25': 149.99, '26_40': 199.99, '40_plus': 249.99 };
+const PERIODS = {
+  monthly: { months: 1, discountPercent: 0 },
+  '3_months': { months: 3, discountPercent: 5 },
+  '6_months': { months: 6, discountPercent: 8 },
+  '12_months': { months: 12, discountPercent: 10 },
+};
+
+function formatMoney(n) {
+  return `$${n.toFixed(2)}`;
+}
+
+function priceForTierPeriod(tierId, periodId) {
+  const monthly = PLAN_MONTHLY[tierId];
+  const p = PERIODS[periodId];
+  if (monthly == null || !p) return { displayMonthly: formatMoney(0) + ' /mo', totalLine: null };
+  const mult = 1 - p.discountPercent / 100;
+  const discountedMonthly = monthly * mult;
+  const total = discountedMonthly * p.months;
+  const displayMonthly = `${formatMoney(discountedMonthly)} <span>/mo</span>`;
+  const totalLine = p.discountPercent > 0 ? `${formatMoney(total)} total` : null;
+  return { displayMonthly, totalLine };
+}
+
+function getCfg() {
+  return window.NAUTICAL_PRICING_CONFIG || {};
+}
+
+const cfg = getCfg();
+const authStatusEl = document.getElementById('auth-status');
+const configWarnEl = document.getElementById('config-warning');
+const successEl = document.getElementById('checkout-success');
+
+if (!cfg.supabaseUrl || !cfg.supabaseAnonKey) {
+  configWarnEl.hidden = false;
+  configWarnEl.textContent =
+    'Subscription checkout is not configured on this deploy. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in Vercel, then redeploy.';
+}
+
+let supabase = null;
+if (cfg.supabaseUrl && cfg.supabaseAnonKey) {
+  supabase = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {
+    auth: {
+      flowType: 'pkce',
+      detectSessionInUrl: true,
+      persistSession: true,
+      storage: window.localStorage,
+      autoRefreshToken: true,
+    },
+  });
+}
+
+function stripAuthFromUrl() {
+  try {
+    const u = new URL(window.location.href);
+    ['code', 'token', 'token_hash', 'type', 'error', 'error_description'].forEach((k) =>
+      u.searchParams.delete(k)
+    );
+    const clean = u.pathname + (u.search || '');
+    window.history.replaceState({}, document.title, clean);
+  } catch (e) {
+    console.warn('stripAuthFromUrl', e);
+  }
+}
+
+async function completeAuthFromUrl() {
+  if (!supabase) return;
+
+  const url = new URL(window.location.href);
+  const params = url.searchParams;
+  const code = params.get('code');
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+    if (!error) {
+      stripAuthFromUrl();
+      return;
+    }
+    console.warn('exchangeCodeForSession', error);
+  }
+
+  const hash = window.location.hash.replace(/^#/, '');
+  if (hash) {
+    const hp = new URLSearchParams(hash);
+    const access_token = hp.get('access_token');
+    const refresh_token = hp.get('refresh_token');
+    if (access_token && refresh_token) {
+      const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+      if (!error) {
+        stripAuthFromUrl();
+        return;
+      }
+      console.warn('setSession from hash', error);
+    }
+  }
+
+  const token = params.get('token') || params.get('token_hash');
+  const typeRaw = params.get('type') || 'magiclink';
+  if (token) {
+    const type = typeRaw === 'signup' ? 'signup' : 'magiclink';
+    const { error } = await supabase.auth.verifyOtp({ token_hash: token, type });
+    if (!error) {
+      stripAuthFromUrl();
+      return;
+    }
+    const email = params.get('email');
+    if (email) {
+      const { error: err2 } = await supabase.auth.verifyOtp({ email, token, type });
+      if (!err2) {
+        stripAuthFromUrl();
+        return;
+      }
+      console.warn('verifyOtp', error, err2);
+    } else {
+      console.warn('verifyOtp', error);
+    }
+  }
+}
+
+let currentPeriod = 'monthly';
+let vesselIdCache = '';
+let sessionRef = null;
+let paddleReady = false;
+
+function updateAuthUi(session) {
+  sessionRef = session;
+  if (!authStatusEl) return;
+  if (session?.user?.email) {
+    authStatusEl.textContent = 'Signed in as ' + session.user.email;
+  } else {
+    authStatusEl.textContent = 'Open this page from the Nautical Ops app (Activate Vessel Plan) to sign in, then choose a plan.';
+  }
+}
+
+async function refreshVesselId(userId) {
+  vesselIdCache = '';
+  if (!supabase || !userId) return;
+  try {
+    const { data, error } = await supabase.from('users').select('vessel_id').eq('id', userId).maybeSingle();
+    if (!error && data?.vessel_id) vesselIdCache = String(data.vessel_id);
+  } catch (e) {
+    console.warn('vessel_id fetch', e);
+  }
+}
+
+function applyPeriodToCards() {
+  document.querySelectorAll('.plan-card').forEach((card) => {
+    const tier = card.getAttribute('data-tier');
+    const priceEl = card.querySelector('[data-price-display]');
+    const totalEl = card.querySelector('[data-total-row]');
+    if (!tier || !priceEl) return;
+    const { displayMonthly, totalLine } = priceForTierPeriod(tier, currentPeriod);
+    priceEl.innerHTML = displayMonthly;
+    if (totalLine && totalEl) {
+      totalEl.textContent = totalLine;
+      totalEl.style.display = totalLine ? 'block' : 'none';
+    }
+  });
+}
+
+function initBillingSelector() {
+  const grid = document.getElementById('billing-grid');
+  if (!grid) return;
+  grid.querySelectorAll('.billing-card').forEach((card) => {
+    const select = () => {
+      currentPeriod = card.getAttribute('data-period') || 'monthly';
+      grid.querySelectorAll('.billing-card').forEach((c) => c.classList.toggle('active', c === card));
+      applyPeriodToCards();
+    };
+    card.addEventListener('click', select);
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        select();
+      }
+    });
+  });
+}
+
+function showSuccess() {
+  successEl.hidden = false;
+  successEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function initPaddle() {
+  const token = cfg.paddleClientToken;
+  if (!token || typeof window.Paddle === 'undefined') {
+    console.warn('Paddle.js not initialized: missing token or Paddle global');
+    return;
+  }
+  window.Paddle.Environment.set('sandbox');
+  window.Paddle.Initialize({
+    token,
+    eventCallback: function (event) {
+      if (event && event.name === 'checkout.completed') {
+        showSuccess();
+      }
+    },
+  });
+  paddleReady = true;
+}
+
+function openCheckout(tierId) {
+  if (!sessionRef?.user?.email) {
+    alert('Please sign in first. Use Activate Vessel Plan in the Nautical Ops app to open this page with your account.');
+    return;
+  }
+  if (!paddleReady || !cfg.paddleClientToken) {
+    alert('Checkout is not configured. Add EXPO_PUBLIC_PADDLE_CLIENT_TOKEN (Paddle client-side token) in Vercel and redeploy.');
+    return;
+  }
+  const priceId = PADDLE_PRICE_IDS[tierId]?.[currentPeriod];
+  if (!priceId) {
+    alert('No price is configured for this selection.');
+    return;
+  }
+  window.Paddle.Checkout.open({
+    settings: {
+      displayMode: 'overlay',
+      variant: 'one-page',
+      theme: 'dark',
+    },
+    items: [{ priceId, quantity: 1 }],
+    customer: { email: sessionRef.user.email },
+    customData: {
+      vessel_id: vesselIdCache || '',
+      user_id: sessionRef.user.id,
+      plan_tier: tierId,
+      billing_period: currentPeriod,
+    },
+  });
+}
+
+function initSubscribeButtons() {
+  document.querySelectorAll('.subscribe-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const card = btn.closest('.plan-card');
+      const tier = card?.getAttribute('data-tier');
+      if (tier) openCheckout(tier);
+    });
+  });
+}
+
+async function main() {
+  initBillingSelector();
+  applyPeriodToCards();
+  initSubscribeButtons();
+  initPaddle();
+
+  if (supabase) {
+    await completeAuthFromUrl();
+    const { data: { session } } = await supabase.auth.getSession();
+    updateAuthUi(session);
+    if (session?.user?.id) await refreshVesselId(session.user.id);
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      updateAuthUi(session);
+      if (session?.user?.id) refreshVesselId(session.user.id);
+    });
+  } else {
+    updateAuthUi(null);
+  }
+}
+
+main().catch(console.error);
+</script>
 
 </body>
 </html>

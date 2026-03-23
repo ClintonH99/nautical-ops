@@ -1,8 +1,9 @@
 {
-  "buildCommand": "npx expo export --platform web",
+  "buildCommand": "node scripts/inject-pricing-config.mjs && npx expo export --platform web",
   "outputDirectory": "dist",
   "framework": null,
   "rewrites": [
+    { "source": "/pricing", "destination": "/pricing.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

@@ -26,11 +26,11 @@
 5. **Upgrade warning:** When crew count reaches the plan's max (e.g. 5 crew on 1-5 plan), show a warning to upgrade. Display in Vessel Settings (Vessel Plans) and Crew Management.
 
 6. **Payment options:**
-   - **Pay with Card (Paddle Billing):** Hosted checkout in the system browser; return URLs per Paddle / app scheme configuration.
-   - **Subscribe in App (RevenueCat):** Native IAP via App Store / Play Store.
+   - **Activate Vessel Plan (mobile):** Captain taps **Activate Vessel Plan** on **Settings → Vessel Plans**. The app opens the system browser with a magic link so the user is signed in on **nautical-ops.com/pricing** to select tier, billing period, and pay (Paddle on the web).
+   - **Web:** Checkout and account management on nautical-ops.com.
 
 7. **Create Vessel flow:** After vessel creation, do NOT show invite code. Direct Captain to Vessel Settings to choose a plan and pay. Primary CTA: "Go to Vessel Settings."
 
 ## Scope
 
-Applies to: VesselSettingsScreen, CreateVesselScreen, CrewManagementScreen, subscription service, Paddle/RevenueCat integrations.
+Applies to: VesselSettingsScreen, CreateVesselScreen, CrewManagementScreen, subscription service, Paddle (web) and auth-link Edge functions for app → web handoff.

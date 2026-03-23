@@ -13,7 +13,9 @@ import {
   TouchableOpacity,
   ImageBackground,
   Dimensions,
+  Modal,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Calendar } from 'react-native-calendars';
 import { useFocusEffect } from '@react-navigation/native';
 import { Button } from '../components';
@@ -40,7 +42,9 @@ const CATEGORY_IMAGES: Record<string, string> = {
   maintenance: 'https://images.unsplash.com/photo-1564415315949-7a0c4c73aade?w=400',
 };
 
-type MarkedDates = { [date: string]: { startingDay?: boolean; endingDay?: boolean; color: string; textColor?: string } };
+type MarkedDates = {
+  [date: string]: { startingDay?: boolean; endingDay?: boolean; color: string; textColor?: string };
+};
 
 function getMarkedDatesFromTrips(trips: Trip[], typeColorMap: Record<string, string>): MarkedDates {
   const byDate: Record<string, Set<TripType>> = {};
@@ -102,6 +106,8 @@ const HOME_CATEGORIES = [
 /** Trips calendar accent – ocean teal */
 const CALENDAR_ACCENT = '#0d9488';
 
+const WELCOME_POPUP_STORAGE_KEY = 'has_seen_welcome_popup';
+
 const TRIP_TYPE_LABELS: Record<string, string> = {
   GUEST: 'Guest',
   BOSS: 'Boss',
@@ -119,18 +125,26 @@ export const HomeScreen = ({ navigation }: any) => {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [tripsLoading, setTripsLoading] = useState(true);
   const [calendarMode, setCalendarMode] = useState<'trips' | 'yardPeriod'>('trips');
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   const vesselId = user?.vesselId ?? null;
   const hasVessel = !!vesselId;
   const isCaptain = user?.role === 'HOD';
+  const isCaptainLike = isCaptain || (user?.position?.toLowerCase().includes('captain') ?? false);
   const { colors: tripColors, load: loadColors } = useVesselTripColors(vesselId);
   const overrides = useDepartmentColorStore((s) => s.overrides);
-  const typeColorMap = tripColors ? getTripTypeColorMap(tripColors) : getTripTypeColorMap(DEFAULT_COLORS);
+  const typeColorMap = tripColors
+    ? getTripTypeColorMap(tripColors)
+    : getTripTypeColorMap(DEFAULT_COLORS);
   const yardPeriodColor = tripColors?.yardPeriod ?? DEFAULT_COLORS.yardPeriod;
   const getDeptColor = (dept: string) => getDepartmentColor(dept, overrides);
 
   const markedDatesTrips = getMarkedDatesFromTrips(trips, typeColorMap);
-  const markedDatesYardPeriod = getMarkedDatesFromYardPeriodTrips(trips, yardPeriodColor, getDeptColor);
+  const markedDatesYardPeriod = getMarkedDatesFromYardPeriodTrips(
+    trips,
+    yardPeriodColor,
+    getDeptColor
+  );
   const markedDates = calendarMode === 'trips' ? markedDatesTrips : markedDatesYardPeriod;
 
   const loadTrips = useCallback(async () => {
@@ -145,7 +159,11 @@ export const HomeScreen = ({ navigation }: any) => {
     }
   }, [vesselId, loadColors]);
 
-  useFocusEffect(useCallback(() => { if (hasVessel) loadTrips(); }, [hasVessel, loadTrips]));
+  useFocusEffect(
+    useCallback(() => {
+      if (hasVessel) loadTrips();
+    }, [hasVessel, loadTrips])
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -153,6 +171,35 @@ export const HomeScreen = ({ navigation }: any) => {
       setBannerCacheBust(Date.now());
     }, [user?.vesselId])
   );
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        if (!hasVessel || !isCaptainLike) return;
+        try {
+          const seen = await AsyncStorage.getItem(WELCOME_POPUP_STORAGE_KEY);
+          if (!cancelled && seen !== 'true') {
+            setShowWelcomeModal(true);
+          }
+        } catch {
+          /* ignore */
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [hasVessel, isCaptainLike])
+  );
+
+  const dismissWelcomeModal = useCallback(async () => {
+    try {
+      await AsyncStorage.setItem(WELCOME_POPUP_STORAGE_KEY, 'true');
+    } catch {
+      /* still close */
+    }
+    setShowWelcomeModal(false);
+  }, []);
 
   useEffect(() => {
     const fetchVessel = async () => {
@@ -172,185 +219,303 @@ export const HomeScreen = ({ navigation }: any) => {
     fetchVessel();
   }, [user?.vesselId]);
 
-  const bannerImageUrl = vesselId ? vesselService.getBannerPublicUrl(vesselId, bannerCacheBust ?? undefined) : null;
+  const bannerImageUrl = vesselId
+    ? vesselService.getBannerPublicUrl(vesselId, bannerCacheBust ?? undefined)
+    : null;
 
   return (
     <>
-    <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} showsVerticalScrollIndicator={false}>
-      <View style={styles.content}>
-        {/* Vessel banner */}
-        {hasVessel && (
-          <View style={styles.bannerWrap}>
-            <ImageBackground
-              source={!bannerLoadFailed && bannerImageUrl ? { uri: bannerImageUrl } : DEFAULT_BANNER_IMAGE}
-              style={styles.bannerImage}
-              imageStyle={styles.bannerImageStyle}
-              onError={() => {
-                if (bannerImageUrl) setBannerLoadFailed(true);
-              }}
-            >
-              <View style={styles.bannerOverlay} />
-              {vesselName && (
-                <Text style={styles.bannerVesselName} numberOfLines={1}>
-                  {vesselName}
-                </Text>
-              )}
-            </ImageBackground>
-          </View>
-        )}
-
-        {!hasVessel && (
-          <View style={[styles.noVesselCard, { backgroundColor: themeColors.surface }]}>
-            <Text style={styles.noVesselIcon}>⚓</Text>
-            <Text style={[styles.noVesselTitle, { color: themeColors.textPrimary }]}>You're not part of a vessel yet</Text>
-            <Text style={[styles.noVesselText, { color: themeColors.textSecondary }]}>
-              Join with an invite code to get started.
+      <Modal
+        visible={showWelcomeModal}
+        transparent
+        animationType="fade"
+        onRequestClose={dismissWelcomeModal}
+      >
+        <View style={styles.welcomeModalBackdrop}>
+          <View style={[styles.welcomeModalCard, { backgroundColor: themeColors.surface }]}>
+            <Text style={[styles.welcomeModalTitle, { color: themeColors.textPrimary }]}>
+              Welcome to Nautical Ops!
             </Text>
-            <Button
-              title="Join Vessel"
-              onPress={() => navigation.navigate('JoinVessel')}
-              variant="primary"
-              shape="pill"
-              fullWidth
-            />
+            <Text style={[styles.welcomeModalMessage, { color: themeColors.textSecondary }]}>
+              {
+                "To invite crew members you'll need to activate your vessel plan first. Go to Settings → Vessel Plans and tap 'Activate Vessel Plan' to get started. Once active you can invite crew using your vessel's unique invite code."
+              }
+            </Text>
+            <Button title="Got it!" onPress={dismissWelcomeModal} variant="primary" fullWidth />
           </View>
-        )}
+        </View>
+      </Modal>
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.content}>
+          {/* Vessel banner */}
+          {hasVessel && (
+            <View style={styles.bannerWrap}>
+              <ImageBackground
+                source={
+                  !bannerLoadFailed && bannerImageUrl
+                    ? { uri: bannerImageUrl }
+                    : DEFAULT_BANNER_IMAGE
+                }
+                style={styles.bannerImage}
+                imageStyle={styles.bannerImageStyle}
+                onError={() => {
+                  if (bannerImageUrl) setBannerLoadFailed(true);
+                }}
+              >
+                <View style={styles.bannerOverlay} />
+                {vesselName && (
+                  <Text style={styles.bannerVesselName} numberOfLines={1}>
+                    {vesselName}
+                  </Text>
+                )}
+              </ImageBackground>
+            </View>
+          )}
 
-        {hasVessel && (
-          <>
-            <View style={[styles.tripsCalendarCard, { backgroundColor: themeColors.surface, borderColor: themeColors.surfaceAlt }]}>
-              <View style={styles.tripsCalendarHeader}>
-                <View style={styles.calendarModeRow}>
-                  <TouchableOpacity
-                    style={[
-                      styles.calendarModeBtn,
-                      {
-                        backgroundColor: calendarMode === 'trips' ? themeColors.surfaceAlt : 'transparent',
-                        borderColor: calendarMode === 'trips' ? CALENDAR_ACCENT : themeColors.surfaceAlt,
-                      },
-                    ]}
-                    onPress={() => setCalendarMode('trips')}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.calendarModeBtnText, { color: calendarMode === 'trips' ? themeColors.textPrimary : themeColors.textSecondary }]}>
-                      Trips
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.calendarModeBtn,
-                      {
-                        backgroundColor: calendarMode === 'yardPeriod' ? themeColors.surfaceAlt : 'transparent',
-                        borderColor: calendarMode === 'yardPeriod' ? CALENDAR_ACCENT : themeColors.surfaceAlt,
-                      },
-                    ]}
-                    onPress={() => setCalendarMode('yardPeriod')}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.calendarModeBtnText, { color: calendarMode === 'yardPeriod' ? themeColors.textPrimary : themeColors.textSecondary }]}>
-                      Yard Period
+          {!hasVessel && (
+            <View style={[styles.noVesselCard, { backgroundColor: themeColors.surface }]}>
+              <Text style={styles.noVesselIcon}>⚓</Text>
+              <Text style={[styles.noVesselTitle, { color: themeColors.textPrimary }]}>
+                You're not part of a vessel yet
+              </Text>
+              <Text style={[styles.noVesselText, { color: themeColors.textSecondary }]}>
+                Join with an invite code to get started.
+              </Text>
+              <Button
+                title="Join Vessel"
+                onPress={() => navigation.navigate('JoinVessel')}
+                variant="primary"
+                shape="pill"
+                fullWidth
+              />
+            </View>
+          )}
+
+          {hasVessel && (
+            <>
+              <View
+                style={[
+                  styles.tripsCalendarCard,
+                  { backgroundColor: themeColors.surface, borderColor: themeColors.surfaceAlt },
+                ]}
+              >
+                <View style={styles.tripsCalendarHeader}>
+                  <View style={styles.calendarModeRow}>
+                    <TouchableOpacity
+                      style={[
+                        styles.calendarModeBtn,
+                        {
+                          backgroundColor:
+                            calendarMode === 'trips' ? themeColors.surfaceAlt : 'transparent',
+                          borderColor:
+                            calendarMode === 'trips' ? CALENDAR_ACCENT : themeColors.surfaceAlt,
+                        },
+                      ]}
+                      onPress={() => setCalendarMode('trips')}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.calendarModeBtnText,
+                          {
+                            color:
+                              calendarMode === 'trips'
+                                ? themeColors.textPrimary
+                                : themeColors.textSecondary,
+                          },
+                        ]}
+                      >
+                        Trips
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.calendarModeBtn,
+                        {
+                          backgroundColor:
+                            calendarMode === 'yardPeriod' ? themeColors.surfaceAlt : 'transparent',
+                          borderColor:
+                            calendarMode === 'yardPeriod'
+                              ? CALENDAR_ACCENT
+                              : themeColors.surfaceAlt,
+                        },
+                      ]}
+                      onPress={() => setCalendarMode('yardPeriod')}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.calendarModeBtnText,
+                          {
+                            color:
+                              calendarMode === 'yardPeriod'
+                                ? themeColors.textPrimary
+                                : themeColors.textSecondary,
+                          },
+                        ]}
+                      >
+                        Yard Period
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <View
+                    style={[styles.tripsCalendarAccent, { backgroundColor: CALENDAR_ACCENT }]}
+                  />
+                </View>
+                <View style={styles.tripsCalendarBody}>
+                  {tripsLoading ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={CALENDAR_ACCENT}
+                      style={styles.tripsLoader}
+                    />
+                  ) : (
+                    <Calendar
+                      key={themeColors.isDark ? 'dark' : 'light'}
+                      current={new Date().toISOString().slice(0, 10)}
+                      markedDates={markedDates}
+                      markingType="period"
+                      theme={{
+                        backgroundColor: 'transparent',
+                        calendarBackground: 'transparent',
+                        textSectionTitleColor: themeColors.isDark ? COLORS.white : COLORS.black,
+                        selectedDayBackgroundColor: CALENDAR_ACCENT,
+                        selectedDayTextColor: COLORS.white,
+                        todayTextColor: themeColors.isDark ? COLORS.white : COLORS.black,
+                        dayTextColor: themeColors.isDark ? COLORS.white : COLORS.black,
+                        textDisabledColor: themeColors.isDark ? COLORS.white : COLORS.black,
+                        arrowColor: themeColors.isDark ? COLORS.white : COLORS.black,
+                        monthTextColor: themeColors.isDark ? COLORS.white : COLORS.black,
+                        textDayHeaderFontSize: 11,
+                        textMonthFontSize: 16,
+                        textDayFontSize: 14,
+                      }}
+                      hideExtraDays
+                      hideArrows={false}
+                      style={styles.tripsCalendarInner}
+                    />
+                  )}
+                </View>
+                <View style={[styles.tripsLegend, { borderTopColor: themeColors.surfaceAlt }]}>
+                  {calendarMode === 'trips'
+                    ? (Object.entries(TRIP_TYPE_LABELS) as [string, string][]).map(
+                        ([type, label]) => (
+                          <View key={type} style={styles.tripsLegendItem}>
+                            <View
+                              style={[
+                                styles.tripsLegendDot,
+                                { backgroundColor: typeColorMap[type] ?? COLORS.primary },
+                              ]}
+                            />
+                            <Text
+                              style={[
+                                styles.tripsLegendLabel,
+                                { color: themeColors.textSecondary },
+                              ]}
+                            >
+                              {label}
+                            </Text>
+                          </View>
+                        )
+                      )
+                    : DEPARTMENTS.map((dept) => (
+                        <View key={dept} style={styles.tripsLegendItem}>
+                          <View
+                            style={[
+                              styles.tripsLegendDot,
+                              { backgroundColor: getDepartmentColor(dept, overrides) },
+                            ]}
+                          />
+                          <Text
+                            style={[styles.tripsLegendLabel, { color: themeColors.textSecondary }]}
+                          >
+                            {dept.charAt(0) + dept.slice(1).toLowerCase()}
+                          </Text>
+                        </View>
+                      ))}
+                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.seeTripsButton,
+                    {
+                      backgroundColor: themeColors.surfaceAlt,
+                      borderTopColor: themeColors.surfaceAlt,
+                    },
+                  ]}
+                  onPress={() =>
+                    navigation.navigate(
+                      calendarMode === 'trips' ? 'UpcomingTrips' : 'YardPeriodTrips'
+                    )
+                  }
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.seeTripsButtonText, { color: CALENDAR_ACCENT }]}>
+                    {calendarMode === 'trips' ? 'See trips' : 'See yard periods'}
+                  </Text>
+                  <Text style={[styles.seeTripsArrow, { color: CALENDAR_ACCENT }]}>›</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
+                    Quick Access
+                  </Text>
+                  <TouchableOpacity onPress={() => navigation.navigate('Categories')}>
+                    <Text style={[styles.seeAll, { color: themeColors.textSecondary }]}>
+                      See all
                     </Text>
                   </TouchableOpacity>
                 </View>
-                <View style={[styles.tripsCalendarAccent, { backgroundColor: CALENDAR_ACCENT }]} />
-              </View>
-              <View style={styles.tripsCalendarBody}>
-                {tripsLoading ? (
-                  <ActivityIndicator size="small" color={CALENDAR_ACCENT} style={styles.tripsLoader} />
-                ) : (
-                  <Calendar
-                    key={themeColors.isDark ? 'dark' : 'light'}
-                    current={new Date().toISOString().slice(0, 10)}
-                    markedDates={markedDates}
-                    markingType="period"
-                    theme={{
-                      backgroundColor: 'transparent',
-                      calendarBackground: 'transparent',
-                      textSectionTitleColor: themeColors.isDark ? COLORS.white : COLORS.black,
-                      selectedDayBackgroundColor: CALENDAR_ACCENT,
-                      selectedDayTextColor: COLORS.white,
-                      todayTextColor: themeColors.isDark ? COLORS.white : COLORS.black,
-                      dayTextColor: themeColors.isDark ? COLORS.white : COLORS.black,
-                      textDisabledColor: themeColors.isDark ? COLORS.white : COLORS.black,
-                      arrowColor: themeColors.isDark ? COLORS.white : COLORS.black,
-                      monthTextColor: themeColors.isDark ? COLORS.white : COLORS.black,
-                      textDayHeaderFontSize: 11,
-                      textMonthFontSize: 16,
-                      textDayFontSize: 14,
-                    }}
-                    hideExtraDays
-                    hideArrows={false}
-                    style={styles.tripsCalendarInner}
-                  />
-                )}
-              </View>
-              <View style={[styles.tripsLegend, { borderTopColor: themeColors.surfaceAlt }]}>
-                {calendarMode === 'trips' ? (
-                  (Object.entries(TRIP_TYPE_LABELS) as [string, string][]).map(([type, label]) => (
-                    <View key={type} style={styles.tripsLegendItem}>
-                      <View style={[styles.tripsLegendDot, { backgroundColor: typeColorMap[type] ?? COLORS.primary }]} />
-                      <Text style={[styles.tripsLegendLabel, { color: themeColors.textSecondary }]}>{label}</Text>
-                    </View>
-                  ))
-                ) : (
-                  DEPARTMENTS.map((dept) => (
-                    <View key={dept} style={styles.tripsLegendItem}>
-                      <View style={[styles.tripsLegendDot, { backgroundColor: getDepartmentColor(dept, overrides) }]} />
-                      <Text style={[styles.tripsLegendLabel, { color: themeColors.textSecondary }]}>
-                        {dept.charAt(0) + dept.slice(1).toLowerCase()}
+                <View style={styles.quickAccessStack}>
+                  {HOME_CATEGORIES.map((cat) => (
+                    <TouchableOpacity
+                      key={cat.key}
+                      style={[styles.quickAccessCard, { backgroundColor: themeColors.surface }]}
+                      onPress={() => navigation.navigate(cat.nav)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.quickAccessCardIcon}>{cat.icon}</Text>
+                      <Text
+                        style={[styles.quickAccessCardLabel, { color: themeColors.textPrimary }]}
+                        numberOfLines={1}
+                      >
+                        {cat.label}
                       </Text>
-                    </View>
-                  ))
-                )}
-              </View>
-              <TouchableOpacity
-                style={[styles.seeTripsButton, { backgroundColor: themeColors.surfaceAlt, borderTopColor: themeColors.surfaceAlt }]}
-                onPress={() => navigation.navigate(calendarMode === 'trips' ? 'UpcomingTrips' : 'YardPeriodTrips')}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.seeTripsButtonText, { color: CALENDAR_ACCENT }]}>
-                  {calendarMode === 'trips' ? 'See trips' : 'See yard periods'}
-                </Text>
-                <Text style={[styles.seeTripsArrow, { color: CALENDAR_ACCENT }]}>›</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>Quick Access</Text>
-                <TouchableOpacity onPress={() => navigation.navigate('Categories')}>
-                  <Text style={[styles.seeAll, { color: themeColors.textSecondary }]}>See all</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.quickAccessStack}>
-                {HOME_CATEGORIES.map((cat) => (
+                      <Text
+                        style={[
+                          styles.quickAccessCardChevron,
+                          { color: themeColors.textSecondary },
+                        ]}
+                      >
+                        ›
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
                   <TouchableOpacity
-                    key={cat.key}
                     style={[styles.quickAccessCard, { backgroundColor: themeColors.surface }]}
-                    onPress={() => navigation.navigate(cat.nav)}
+                    onPress={() => navigation.navigate('VesselCrewSafety')}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.quickAccessCardIcon}>{cat.icon}</Text>
-                    <Text style={[styles.quickAccessCardLabel, { color: themeColors.textPrimary }]} numberOfLines={1}>{cat.label}</Text>
-                    <Text style={[styles.quickAccessCardChevron, { color: themeColors.textSecondary }]}>›</Text>
+                    <Text style={styles.quickAccessCardIcon}>🦺</Text>
+                    <Text style={[styles.quickAccessCardLabel, { color: themeColors.textPrimary }]}>
+                      Vessel & Crew Safety
+                    </Text>
+                    <Text
+                      style={[styles.quickAccessCardChevron, { color: themeColors.textSecondary }]}
+                    >
+                      ›
+                    </Text>
                   </TouchableOpacity>
-                ))}
-                <TouchableOpacity
-                  style={[styles.quickAccessCard, { backgroundColor: themeColors.surface }]}
-                  onPress={() => navigation.navigate('VesselCrewSafety')}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.quickAccessCardIcon}>🦺</Text>
-                  <Text style={[styles.quickAccessCardLabel, { color: themeColors.textPrimary }]}>Vessel & Crew Safety</Text>
-                  <Text style={[styles.quickAccessCardChevron, { color: themeColors.textSecondary }]}>›</Text>
-                </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          </>
-        )}
-
-      </View>
-    </ScrollView>
+            </>
+          )}
+        </View>
+      </ScrollView>
     </>
   );
 };
@@ -566,4 +731,30 @@ const styles = StyleSheet.create({
   },
   shortcutIcon: { fontSize: FONTS['2xl'], marginRight: SPACING.lg },
   shortcutLabel: { fontSize: FONTS.lg, fontWeight: '600', flex: 1 },
+  welcomeModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.xl,
+  },
+  welcomeModalCard: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.xl,
+    ...SHADOWS.sm,
+  },
+  welcomeModalTitle: {
+    fontSize: FONTS.xl,
+    fontWeight: '700',
+    marginBottom: SPACING.md,
+    textAlign: 'center',
+  },
+  welcomeModalMessage: {
+    fontSize: FONTS.sm,
+    lineHeight: 22,
+    marginBottom: SPACING.lg,
+    textAlign: 'left',
+  },
 });

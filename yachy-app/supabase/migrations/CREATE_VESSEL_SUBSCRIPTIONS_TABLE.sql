@@ -1,6 +1,6 @@
 -- Vessel Subscriptions
 -- Captains (HODs) pay for vessel plans before accessing invite codes.
--- Card checkout: Paddle Billing. Native: RevenueCat (in-app). See migration 20260322120000_vessel_subscriptions_paddle.sql.
+-- Card checkout: Paddle Billing (web). App hands off to nautical-ops.com/pricing via auth link flow. See migration 20260322120000_vessel_subscriptions_paddle.sql.
 
 CREATE TABLE IF NOT EXISTS public.vessel_subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -28,7 +28,7 @@ CREATE POLICY "Vessel members can read vessel subscription"
   FOR SELECT
   USING (vessel_id IN (SELECT vessel_id FROM public.users WHERE id = auth.uid()));
 
--- Only service role / webhooks can insert/update (Paddle, RevenueCat)
+-- Only service role / webhooks can insert/update (Paddle webhooks, etc.)
 -- App uses RPC or Edge Functions for writes; direct client writes disabled
 CREATE POLICY "No direct insert from client"
   ON public.vessel_subscriptions

@@ -1,5 +1,5 @@
 -- Paddle Billing replaces Stripe for card checkout.
--- RevenueCat / Apple IAP unchanged.
+-- Native IAP removed; subscriptions via web (Paddle) + app magic-link handoff to pricing.
 
 ALTER TABLE public.vessel_subscriptions
   ADD COLUMN IF NOT EXISTS paddle_subscription_id TEXT,
