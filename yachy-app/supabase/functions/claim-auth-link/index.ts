@@ -26,6 +26,20 @@ const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 );
 
+/** Must match entries in Supabase → Authentication → URL Configuration → Redirect URLs (exact string). */
+const DEFAULT_PRICING_REDIRECT = 'https://nautical-ops.com/pricing';
+const ALLOWED_REDIRECT_TOS = [
+  'https://nautical-ops.com/pricing',
+  'https://www.nautical-ops.com/pricing',
+  'https://nautical-ops.vercel.app/pricing',
+];
+
+function resolveRedirectTo(raw: string | undefined): string {
+  const t = typeof raw === 'string' ? raw.trim().replace(/\/+$/, '') : '';
+  if (t && ALLOWED_REDIRECT_TOS.includes(t)) return t;
+  return DEFAULT_PRICING_REDIRECT;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, {
@@ -69,10 +83,7 @@ Deno.serve(async (req) => {
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
       });
     }
-    const redirectTo =
-      typeof body.redirect_to === 'string' && body.redirect_to
-        ? body.redirect_to
-        : 'https://www.nautical-ops.com';
+    const redirectTo = resolveRedirectTo(body.redirect_to);
     const { data: row } = await supabaseAdmin
       .from('auth_links')
       .select('expires_at')
@@ -96,7 +107,7 @@ Deno.serve(async (req) => {
       options: { redirectTo },
     });
     if (linkError || !linkData?.properties?.action_link) {
-      console.error('generateLink error:', linkError);
+      console.error('generateLink error:', linkError, 'redirectTo:', redirectTo);
       return new Response(JSON.stringify({ error: 'Failed to generate link' }), {
         status: 500,
         headers: corsHeaders(req, { 'Content-Type': 'application/json' }),

@@ -547,6 +547,8 @@ function initSubscribeButtons() {
 }
 
 async function main() {
+  console.log('[pricing] window.location.href on load:', window.location.href);
+
   initBillingSelector();
   applyPeriodToCards();
   initSubscribeButtons();
