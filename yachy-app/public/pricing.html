@@ -305,7 +305,10 @@ let supabase = null;
 if (cfg.supabaseUrl && cfg.supabaseAnonKey) {
   supabase = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {
     auth: {
-      flowType: 'pkce',
+      // Implicit grant matches server-generated magic links opened in Safari: redirect uses
+      // #access_token=…&refresh_token=… . PKCE needs a code_verifier in this browser (missing when
+      // the user starts from the native app), so exchangeCodeForSession would fail.
+      flowType: 'implicit',
       detectSessionInUrl: true,
       persistSession: true,
       storage: window.localStorage,
@@ -314,12 +317,40 @@ if (cfg.supabaseUrl && cfg.supabaseAnonKey) {
   });
 }
 
+/** Same rules as @supabase/auth-js parseParametersFromURL: hash first, then query overrides. */
+function parseAuthParamsFromLocation() {
+  const url = new URL(window.location.href);
+  const out = {};
+  if (url.hash && url.hash.startsWith('#')) {
+    try {
+      new URLSearchParams(url.hash.slice(1)).forEach((value, key) => {
+        out[key] = value;
+      });
+    } catch (e) {
+      /* ignore malformed hash */
+    }
+  }
+  url.searchParams.forEach((value, key) => {
+    out[key] = value;
+  });
+  return out;
+}
+
 function stripAuthFromUrl() {
   try {
     const u = new URL(window.location.href);
-    ['code', 'token', 'token_hash', 'type', 'error', 'error_description'].forEach((k) =>
-      u.searchParams.delete(k)
-    );
+    [
+      'code',
+      'token',
+      'token_hash',
+      'type',
+      'error',
+      'error_description',
+      'access_token',
+      'refresh_token',
+      'expires_in',
+      'token_type',
+    ].forEach((k) => u.searchParams.delete(k));
     const clean = u.pathname + (u.search || '');
     window.history.replaceState({}, document.title, clean);
   } catch (e) {
@@ -330,52 +361,54 @@ function stripAuthFromUrl() {
 async function completeAuthFromUrl() {
   if (!supabase) return;
 
-  const url = new URL(window.location.href);
-  const params = url.searchParams;
-  const code = params.get('code');
-  if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+  const href = window.location.href;
+  const p = parseAuthParamsFromLocation();
+
+  const access_token = p.access_token;
+  const refresh_token = p.refresh_token;
+  if (access_token && refresh_token) {
+    const { error } = await supabase.auth.setSession({ access_token, refresh_token });
     if (!error) {
       stripAuthFromUrl();
       return;
     }
-    console.warn('exchangeCodeForSession', error);
+    console.warn('setSession from URL (hash or query)', error);
   }
 
-  const hash = window.location.hash.replace(/^#/, '');
-  if (hash) {
-    const hp = new URLSearchParams(hash);
-    const access_token = hp.get('access_token');
-    const refresh_token = hp.get('refresh_token');
-    if (access_token && refresh_token) {
-      const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+  if (p.code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(href);
+    if (!error) {
+      stripAuthFromUrl();
+      return;
+    }
+    console.warn('exchangeCodeForSession (requires PKCE code_verifier in this browser)', error);
+  }
+
+  const linkToken = p.token || p.token_hash;
+  if (linkToken) {
+    const types = ['email', 'magiclink', 'signup'];
+    for (let i = 0; i < types.length; i++) {
+      const { error } = await supabase.auth.verifyOtp({ token_hash: linkToken, type: types[i] });
       if (!error) {
         stripAuthFromUrl();
         return;
       }
-      console.warn('setSession from hash', error);
     }
-  }
-
-  const token = params.get('token') || params.get('token_hash');
-  const typeRaw = params.get('type') || 'magiclink';
-  if (token) {
-    const type = typeRaw === 'signup' ? 'signup' : 'magiclink';
-    const { error } = await supabase.auth.verifyOtp({ token_hash: token, type });
-    if (!error) {
-      stripAuthFromUrl();
-      return;
-    }
-    const email = params.get('email');
-    if (email) {
-      const { error: err2 } = await supabase.auth.verifyOtp({ email, token, type });
+    if (p.email) {
+      const { error: err2 } = await supabase.auth.verifyOtp({
+        email: p.email,
+        token: linkToken,
+        type: 'email',
+      });
       if (!err2) {
         stripAuthFromUrl();
         return;
       }
-      console.warn('verifyOtp', error, err2);
+      console.warn('verifyOtp with email+token', err2);
     } else {
-      console.warn('verifyOtp', error);
+      console.warn(
+        'verifyOtp(token_hash) failed for types email/magiclink/signup. Ensure Supabase redirect uses hash tokens or add ?email= to the redirect for OTP-style verification.'
+      );
     }
   }
 }
@@ -520,6 +553,7 @@ async function main() {
   initPaddle();
 
   if (supabase) {
+    await supabase.auth.getSession();
     await completeAuthFromUrl();
     const { data: { session } } = await supabase.auth.getSession();
     updateAuthUi(session);
