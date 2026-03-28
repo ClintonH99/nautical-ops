@@ -27,10 +27,10 @@ const supabaseAdmin = createClient(
 );
 
 /** Must match entries in Supabase → Authentication → URL Configuration → Redirect URLs (exact string). */
-const DEFAULT_PRICING_REDIRECT = 'https://nautical-ops.com/pricing';
+const DEFAULT_PRICING_REDIRECT = 'https://www.nautical-ops.com/pricing';
 const ALLOWED_REDIRECT_TOS = [
-  'https://nautical-ops.com/pricing',
   'https://www.nautical-ops.com/pricing',
+  'https://nautical-ops.com/pricing',
   'https://nautical-ops.vercel.app/pricing',
 ];
 

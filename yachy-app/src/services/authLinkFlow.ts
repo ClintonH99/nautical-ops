@@ -5,8 +5,8 @@
 
 import { supabase } from './supabase';
 
-/** After Supabase verify, user lands here. Must match Supabase Auth → URL Configuration → Redirect URLs exactly (also add https://www.nautical-ops.com/pricing if you use www). */
-const PRICING_REDIRECT = 'https://nautical-ops.com/pricing';
+/** After Supabase verify, user lands here. Must match Supabase Auth redirect allowlist (canonical www). */
+const PRICING_REDIRECT = 'https://www.nautical-ops.com/pricing';
 
 export type OpenWebPricingResult = { actionLink: string } | { errorMessage: string };
 
