@@ -417,6 +417,7 @@ let currentPeriod = 'monthly';
 let vesselIdCache = '';
 let sessionRef = null;
 let paddleReady = false;
+let paddleInitializing = false;
 
 function updateAuthUi(session) {
   sessionRef = session;
@@ -430,12 +431,20 @@ function updateAuthUi(session) {
 
 async function refreshVesselId(userId) {
   vesselIdCache = '';
-  if (!supabase || !userId) return;
+  if (!supabase || !userId) {
+    console.log('[pricing] vessel_id: skip (no supabase or userId)');
+    return;
+  }
   try {
     const { data, error } = await supabase.from('users').select('vessel_id').eq('id', userId).maybeSingle();
-    if (!error && data?.vessel_id) vesselIdCache = String(data.vessel_id);
+    if (error) {
+      console.warn('[pricing] vessel_id query error', error);
+      return;
+    }
+    if (data?.vessel_id) vesselIdCache = String(data.vessel_id);
+    console.log('[pricing] vessel_id loaded', { vesselIdCache, raw: data?.vessel_id });
   } catch (e) {
-    console.warn('vessel_id fetch', e);
+    console.warn('[pricing] vessel_id fetch', e);
   }
 }
 
@@ -478,62 +487,138 @@ function showSuccess() {
   successEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-function initPaddle() {
-  const raw = cfg.paddleClientToken;
-  const token = typeof raw === 'string' ? raw.trim() : '';
-  if (!token || typeof window.Paddle === 'undefined') {
-    console.warn('Paddle.js not initialized: missing token or Paddle global');
-    return;
-  }
-  // Sandbox checkout requires a client-side token from Paddle Sandbox (starts with test_).
-  if (token.startsWith('live_')) {
-    console.warn(
-      '[Paddle] EXPO_PUBLIC_PADDLE_CLIENT_TOKEN looks like a live token but checkout is initialized for sandbox. Use a sandbox (test_) token or Paddle will show a generic error.'
-    );
-  }
-  // Per Paddle.js docs: set environment before any other Paddle calls, then Initialize (replaces deprecated Setup).
-  window.Paddle.Environment.set('sandbox');
-  window.Paddle.Initialize({
-    environment: 'sandbox',
-    token,
-    eventCallback: function (event) {
-      if (event && event.name === 'checkout.completed') {
-        showSuccess();
+function waitForPaddleGlobal(timeoutMs) {
+  const limit = timeoutMs ?? 15000;
+  const start = Date.now();
+  return new Promise((resolve) => {
+    function tick() {
+      if (typeof window.Paddle !== 'undefined') {
+        resolve(true);
+        return;
       }
-    },
+      if (Date.now() - start >= limit) {
+        resolve(false);
+        return;
+      }
+      setTimeout(tick, 50);
+    }
+    tick();
   });
-  paddleReady = true;
 }
 
-function openCheckout(tierId) {
-  if (!sessionRef?.user?.email) {
+/** Call only after Supabase session is ready (and vessel_id fetched if possible). Idempotent. */
+async function initPaddleWhenReady() {
+  if (paddleReady) return;
+  while (paddleInitializing) {
+    await new Promise((r) => setTimeout(r, 40));
+  }
+  if (paddleReady) return;
+
+  const raw = cfg.paddleClientToken;
+  const token = typeof raw === 'string' ? raw.trim() : '';
+  if (!token) {
+    console.warn('[pricing] Paddle: missing EXPO_PUBLIC_PADDLE_CLIENT_TOKEN');
+    return;
+  }
+
+  paddleInitializing = true;
+  try {
+    const loaded = await waitForPaddleGlobal(15000);
+    if (!loaded) {
+      console.warn('[pricing] Paddle: window.Paddle never loaded (check script / CSP)');
+      return;
+    }
+    if (paddleReady) return;
+    if (token.startsWith('live_')) {
+      console.warn(
+        '[Paddle] Client token looks live_ but checkout uses sandbox — use a test_ token for sandbox.'
+      );
+    }
+    window.Paddle.Environment.set('sandbox');
+    window.Paddle.Initialize({
+      environment: 'sandbox',
+      token,
+      eventCallback: function (event) {
+        if (event && event.name === 'checkout.completed') {
+          showSuccess();
+        }
+      },
+    });
+    paddleReady = true;
+    console.log('[pricing] Paddle.Initialize done');
+  } finally {
+    paddleInitializing = false;
+  }
+}
+
+async function openCheckout(tierId) {
+  console.log('[pricing] Subscribe Now click', { tierId, currentPeriod });
+
+  let session = sessionRef;
+  if (supabase) {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) console.warn('[pricing] getSession at click', error);
+    session = data.session;
+    sessionRef = session;
+    updateAuthUi(session);
+  }
+
+  const email = session?.user?.email;
+  console.log('[pricing] session at click', {
+    hasSession: !!session,
+    hasUser: !!session?.user,
+    email: email || null,
+    userId: session?.user?.id || null,
+  });
+
+  if (!email) {
     alert('Please sign in first. Use Activate Vessel Plan in the Nautical Ops app to open this page with your account.');
     return;
   }
+
+  if (!paddleReady) {
+    console.log('[pricing] Paddle not ready yet — initializing now');
+    await initPaddleWhenReady();
+  }
   if (!paddleReady || !cfg.paddleClientToken) {
     alert('Checkout is not configured. Add EXPO_PUBLIC_PADDLE_CLIENT_TOKEN (Paddle client-side token) in Vercel and redeploy.');
+    console.warn('[pricing] abort openCheckout: paddleReady=', paddleReady);
     return;
   }
+
   const priceId = PADDLE_PRICE_IDS[tierId]?.[currentPeriod];
+  console.log('[pricing] calling Paddle.Checkout.open', {
+    priceId: priceId || null,
+    vesselIdCache,
+    billing_period: currentPeriod,
+  });
+
   if (!priceId) {
     alert('No price is configured for this selection.');
     return;
   }
-  window.Paddle.Checkout.open({
-    settings: {
-      displayMode: 'overlay',
-      variant: 'one-page',
-      theme: 'dark',
-    },
-    items: [{ priceId, quantity: 1 }],
-    customer: { email: sessionRef.user.email },
-    customData: {
-      vessel_id: vesselIdCache || '',
-      user_id: sessionRef.user.id,
-      plan_tier: tierId,
-      billing_period: currentPeriod,
-    },
-  });
+
+  try {
+    window.Paddle.Checkout.open({
+      settings: {
+        displayMode: 'overlay',
+        variant: 'one-page',
+        theme: 'dark',
+      },
+      items: [{ priceId, quantity: 1 }],
+      customer: { email },
+      customData: {
+        vessel_id: vesselIdCache || '',
+        user_id: session.user.id,
+        plan_tier: tierId,
+        billing_period: currentPeriod,
+      },
+    });
+    console.log('[pricing] Paddle.Checkout.open invoked');
+  } catch (e) {
+    console.error('[pricing] Paddle.Checkout.open threw', e);
+    alert('Could not open checkout. Please try again.');
+  }
 }
 
 function initSubscribeButtons() {
@@ -541,7 +626,11 @@ function initSubscribeButtons() {
     btn.addEventListener('click', () => {
       const card = btn.closest('.plan-card');
       const tier = card?.getAttribute('data-tier');
-      if (tier) openCheckout(tier);
+      if (tier) {
+        openCheckout(tier).catch((err) => console.error('[pricing] openCheckout', err));
+      } else {
+        console.warn('[pricing] Subscribe click: no data-tier on card');
+      }
     });
   });
 }
@@ -552,7 +641,6 @@ async function main() {
   initBillingSelector();
   applyPeriodToCards();
   initSubscribeButtons();
-  initPaddle();
 
   if (supabase) {
     await supabase.auth.getSession();
@@ -560,10 +648,12 @@ async function main() {
     const { data: { session } } = await supabase.auth.getSession();
     updateAuthUi(session);
     if (session?.user?.id) await refreshVesselId(session.user.id);
+    await initPaddleWhenReady();
 
-    supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.onAuthStateChange(async (_event, session) => {
       updateAuthUi(session);
-      if (session?.user?.id) refreshVesselId(session.user.id);
+      if (session?.user?.id) await refreshVesselId(session.user.id);
+      if (session?.user?.email) await initPaddleWhenReady();
     });
   } else {
     updateAuthUi(null);
