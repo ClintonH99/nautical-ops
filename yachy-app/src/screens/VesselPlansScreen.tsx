@@ -52,7 +52,14 @@ export const VesselPlansScreen = ({ navigation }: any) => {
         Alert.alert('Unable to open pricing', result.errorMessage);
         return;
       }
-      await Linking.openURL(result.actionLink);
+      const cleanUrl = result.actionLink.trim();
+      console.log('[ActivatePlan] URL:', cleanUrl);
+      console.log('[ActivatePlan] Length:', cleanUrl.length);
+      if (!cleanUrl.startsWith('https://')) {
+        Alert.alert('Error', 'Invalid link generated. Please try again.');
+        return;
+      }
+      await Linking.openURL(cleanUrl);
       await refetchSubscription();
     } catch {
       Alert.alert('Error', 'Failed to open pricing. Please try again.');

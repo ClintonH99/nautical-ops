@@ -97,14 +97,18 @@ export async function openWebPricingWithMagicLink(): Promise<OpenWebPricingResul
     if (linkPayload?.error) {
       return { errorMessage: String(linkPayload.error) };
     }
-    const actionLink = linkPayload?.action_link;
-    if (!actionLink || typeof actionLink !== 'string') {
+    const rawLink = linkPayload?.action_link;
+    if (!rawLink || typeof rawLink !== 'string') {
       return {
         errorMessage:
           linkPayload?.status === 'pending'
             ? 'Auth link is not ready yet. Please try again.'
             : 'Could not retrieve sign-in link. Please try again.',
       };
+    }
+    const actionLink = rawLink.trim();
+    if (!actionLink) {
+      return { errorMessage: 'Could not retrieve sign-in link. Please try again.' };
     }
 
     return { actionLink };

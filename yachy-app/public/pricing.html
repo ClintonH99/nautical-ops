@@ -446,13 +446,22 @@ function showSuccess() {
 }
 
 function initPaddle() {
-  const token = cfg.paddleClientToken;
+  const raw = cfg.paddleClientToken;
+  const token = typeof raw === 'string' ? raw.trim() : '';
   if (!token || typeof window.Paddle === 'undefined') {
     console.warn('Paddle.js not initialized: missing token or Paddle global');
     return;
   }
+  // Sandbox checkout requires a client-side token from Paddle Sandbox (starts with test_).
+  if (token.startsWith('live_')) {
+    console.warn(
+      '[Paddle] EXPO_PUBLIC_PADDLE_CLIENT_TOKEN looks like a live token but checkout is initialized for sandbox. Use a sandbox (test_) token or Paddle will show a generic error.'
+    );
+  }
+  // Per Paddle.js docs: set environment before any other Paddle calls, then Initialize (replaces deprecated Setup).
   window.Paddle.Environment.set('sandbox');
   window.Paddle.Initialize({
+    environment: 'sandbox',
     token,
     eventCallback: function (event) {
       if (event && event.name === 'checkout.completed') {
