@@ -2,6 +2,8 @@
  * Writes public/pricing-config.js from environment variables (Vercel / local .env).
  * Run before `expo export --platform web` so the static pricing page can load Supabase + Paddle.
  *
+ * First log line is intentional so Vercel build logs show this step before Metro.
+ *
  * Expected env (any of the listed names):
  * - Supabase URL: EXPO_PUBLIC_SUPABASE_URL or SUPABASE_URL
  * - Supabase anon: EXPO_PUBLIC_SUPABASE_ANON_KEY or SUPABASE_ANON_KEY
@@ -11,6 +13,8 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
+console.log('[inject-pricing-config] start — writing public/pricing-config.js from env');
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const outPath = path.join(__dirname, '..', 'public', 'pricing-config.js');

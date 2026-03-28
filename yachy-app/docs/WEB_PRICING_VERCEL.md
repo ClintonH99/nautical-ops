@@ -1,13 +1,14 @@
 # Web pricing page (`/pricing`)
 
-Static page: [`public/pricing.html`](../public/pricing.html). Vercel serves it via rewrite `/pricing` → `/pricing.html` (see [`vercel.json`](../vercel.json)).
+Static page: [`public/pricing.html`](../public/pricing.html). Vercel serves it via rewrite `/pricing` → `/pricing.html` (see repo root [`vercel.json`](../../vercel.json)).
 
 ## Build
 
-`vercel.json` runs:
+Use **only** the root `vercel.json` (Vercel **Root Directory** = repository root, not `yachy-app`). The build runs `cd yachy-app && npm run vercel-build`, which:
 
-1. `node scripts/inject-pricing-config.mjs` — writes [`public/pricing-config.js`](../public/pricing-config.js)
+1. `node scripts/inject-pricing-config.mjs` — writes [`public/pricing-config.js`](../public/pricing-config.js) from env
 2. `npx expo export --platform web`
+3. `node scripts/copy-public-to-dist.mjs` — copies HTML + `pricing-config.js` into `dist/` (guaranteed on CI)
 
 Local:
 

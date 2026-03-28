@@ -14,7 +14,7 @@ Push to GitHub → website updates automatically. Here’s how to set it up.
 3. **Configure the project**
    - **Framework Preset**: Other (Expo is custom)
    - **Root Directory**: `.` (project root)
-   - **Build Command**: `cd yachy-app && npx expo export --platform web` (or leave default – `vercel.json` defines it)
+   - **Build Command**: leave empty — root `vercel.json` runs `cd yachy-app && npm run vercel-build` (inject config → expo export → copy static HTML into `dist`)
    - **Output Directory**: `yachy-app/dist` (or leave default – `vercel.json` defines it)
 
 4. **Add environment variables**
