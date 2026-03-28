@@ -1,6 +1,6 @@
 {
   "installCommand": "cd yachy-app && npm install",
-  "buildCommand": "cd yachy-app && npx expo export --platform web",
+  "buildCommand": "cd yachy-app && node scripts/inject-pricing-config.mjs && npx expo export --platform web",
   "outputDirectory": "yachy-app/dist",
   "framework": null,
   "rewrites": [
