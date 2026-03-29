@@ -812,7 +812,7 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
           label="Notes"
           value={notes}
           onChangeText={setNotes}
-          placeholder="Any additional notes"
+          placeholder="Any additional notes ie found oil leak under generator."
           multiline
           numberOfLines={2}
         />

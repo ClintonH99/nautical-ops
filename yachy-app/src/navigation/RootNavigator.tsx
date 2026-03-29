@@ -6,7 +6,7 @@
 import React, { useEffect } from 'react';
 import { NavigationContainer, DefaultTheme, getStateFromPath } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { ActivityIndicator, View, StyleSheet, Platform } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Platform, AppState } from 'react-native';
 import {
   WelcomeScreen,
   LoginScreen,
@@ -367,6 +367,26 @@ export const RootNavigator = () => {
     }
     return () => stopRealtimeSync();
   }, [isAuthenticated, user?.id, user?.vesselId, setUser]);
+
+  // Resume: restart token auto-refresh and refresh profile after backgrounding (Supabase RN guidance)
+  useEffect(() => {
+    const onAppStateChange = (state: string) => {
+      if (state === 'active') {
+        supabase.auth.startAutoRefresh();
+        void authService.getSession().then((session) => {
+          if (!session?.user?.id) return;
+          void authService.getUserProfile(session.user.id).then((fresh) => {
+            if (fresh) setUser(fresh);
+          });
+        });
+      } else {
+        supabase.auth.stopAutoRefresh();
+      }
+    };
+
+    const sub = AppState.addEventListener('change', onAppStateChange);
+    return () => sub.remove();
+  }, [setUser]);
 
   if (isLoading) {
     return (

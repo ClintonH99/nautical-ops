@@ -86,38 +86,35 @@ class GeneralWasteLogsService {
           description_of_garbage: input.descriptionOfGarbage.trim() || null,
           weight: input.weight ?? null,
           weight_unit: input.weightUnit ?? 'kgs',
-          created_by_name: input.createdByName,
+          created_by_name: input.createdByName?.trim() || null,
         },
       ])
-      .select()
-      .single();
+      .select();
 
     if (error) throw error;
-    return this.mapRow(data);
+    const row = data?.[0];
+    if (!row) throw new Error('Could not save waste entry. Check your connection and try again.');
+    return this.mapRow(row);
   }
 
   async update(id: string, input: UpdateGeneralWasteLogData): Promise<void> {
     const patch: Record<string, any> = {};
     if (input.logDate !== undefined) patch.log_date = input.logDate;
     if (input.logTime !== undefined) patch.log_time = input.logTime;
-    if (input.positionLocation !== undefined) patch.position_location = input.positionLocation.trim() || null;
-    if (input.descriptionOfGarbage !== undefined) patch.description_of_garbage = input.descriptionOfGarbage.trim() || null;
+    if (input.positionLocation !== undefined)
+      patch.position_location = input.positionLocation.trim() || null;
+    if (input.descriptionOfGarbage !== undefined)
+      patch.description_of_garbage = input.descriptionOfGarbage.trim() || null;
     if (input.weight !== undefined) patch.weight = input.weight;
     if (input.weightUnit !== undefined) patch.weight_unit = input.weightUnit;
 
-    const { error } = await supabase
-      .from('general_waste_logs')
-      .update(patch)
-      .eq('id', id);
+    const { error } = await supabase.from('general_waste_logs').update(patch).eq('id', id);
 
     if (error) throw error;
   }
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('general_waste_logs')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabase.from('general_waste_logs').delete().eq('id', id);
 
     if (error) throw error;
   }

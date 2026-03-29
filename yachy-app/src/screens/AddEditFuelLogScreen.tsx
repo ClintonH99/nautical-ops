@@ -34,6 +34,12 @@ function formatTime(d: Date): string {
   return `${hh}:${min}`;
 }
 
+/** Treat comma as decimal separator (keypad), then parse */
+function parseMoneyInput(raw: string): number {
+  const normalized = raw.replace(/,/g, '.');
+  return parseFloat(normalized);
+}
+
 export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
@@ -70,9 +76,9 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
           t.setHours(hh, mm, 0, 0);
           setTime(t);
           setLocationOfRefueling(log.locationOfRefueling);
-          setAmountOfFuel(String(log.amountOfFuel));
-          setPricePerGallon(String(log.pricePerGallon));
-          setTotalPriceInput(String(log.totalPrice));
+          setAmountOfFuel(Number(log.amountOfFuel).toFixed(2));
+          setPricePerGallon(Number(log.pricePerGallon).toFixed(2));
+          setTotalPriceInput(Number(log.totalPrice).toFixed(2));
         }
       } catch {
         Alert.alert('Error', 'Could not load entry.');
@@ -91,20 +97,23 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
       Alert.alert('Required', 'Please enter a location of refueling.');
       return;
     }
-    const parsedAmount = parseFloat(amountOfFuel);
-    if (!amountOfFuel || isNaN(parsedAmount) || parsedAmount <= 0) {
+    const parsedAmount = parseMoneyInput(amountOfFuel);
+    if (!amountOfFuel.trim() || isNaN(parsedAmount) || parsedAmount <= 0) {
       Alert.alert('Required', 'Please enter a valid amount of fuel.');
       return;
     }
-    let parsedPrice = parseFloat(pricePerGallon);
-    let parsedTotal = parseFloat(totalPriceInput);
-    if (!isNaN(parsedTotal) && parsedTotal > 0 && parsedAmount > 0) {
+    let parsedPrice = parseMoneyInput(pricePerGallon);
+    let parsedTotal = parseMoneyInput(totalPriceInput);
+    if (!isNaN(parsedTotal) && parsedTotal > 0) {
       parsedPrice = parsedTotal / parsedAmount;
-    } else if (isNaN(parsedPrice) || parsedPrice <= 0) {
+    } else if (!isNaN(parsedPrice) && parsedPrice > 0) {
+      parsedTotal = parsedAmount * parsedPrice;
+    } else {
       Alert.alert('Required', 'Please enter either price per gallon or total price.');
       return;
     }
-    parsedTotal = parsedAmount * parsedPrice;
+    parsedPrice = Math.round(parsedPrice * 100) / 100;
+    parsedTotal = Math.round(parsedTotal * 100) / 100;
 
     setSaving(true);
     try {
@@ -270,7 +279,18 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
         <Input
           label="Amount of Fuel (gallons)"
           value={amountOfFuel}
-          onChangeText={setAmountOfFuel}
+          onChangeText={(text) => {
+            setAmountOfFuel(text);
+            const amt = parseMoneyInput(text);
+            const pp = parseMoneyInput(pricePerGallon);
+            const tot = parseMoneyInput(totalPriceInput);
+            if (isNaN(amt) || amt <= 0) return;
+            if (!isNaN(pp) && pp > 0) {
+              setTotalPriceInput((amt * pp).toFixed(2));
+            } else if (!isNaN(tot) && tot > 0) {
+              setPricePerGallon((tot / amt).toFixed(2));
+            }
+          }}
           placeholder="e.g. 250"
           keyboardType="decimal-pad"
         />
@@ -281,8 +301,8 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
           value={pricePerGallon}
           onChangeText={(text) => {
             setPricePerGallon(text);
-            const amt = parseFloat(amountOfFuel);
-            const val = parseFloat(text);
+            const amt = parseMoneyInput(amountOfFuel);
+            const val = parseMoneyInput(text);
             if (!isNaN(amt) && !isNaN(val) && amt > 0) {
               setTotalPriceInput((amt * val).toFixed(2));
             }
@@ -297,8 +317,8 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
           value={totalPriceInput}
           onChangeText={(text) => {
             setTotalPriceInput(text);
-            const amt = parseFloat(amountOfFuel);
-            const val = parseFloat(text);
+            const amt = parseMoneyInput(amountOfFuel);
+            const val = parseMoneyInput(text);
             if (!isNaN(amt) && !isNaN(val) && amt > 0) {
               setPricePerGallon((val / amt).toFixed(2));
             }

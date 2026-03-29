@@ -35,6 +35,12 @@ function formatTime(d: Date): string {
   return `${hh}:${min}`;
 }
 
+function parseWeightInput(raw: string): number | null {
+  if (!raw.trim()) return null;
+  const n = parseFloat(raw.replace(/,/g, '.'));
+  return Number.isFinite(n) ? n : null;
+}
+
 export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
@@ -100,7 +106,7 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
     setSaving(true);
     try {
       if (isEdit) {
-        const parsedWeight = weight.trim() ? parseFloat(weight) : null;
+        const parsedWeight = parseWeightInput(weight);
         await generalWasteLogsService.update(logId!, {
           logDate: formatDate(date),
           logTime: formatTime(time),
@@ -113,7 +119,7 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
           { text: 'OK', onPress: () => navigation.goBack() },
         ]);
       } else {
-        const parsedWeight = weight.trim() ? parseFloat(weight) : null;
+        const parsedWeight = parseWeightInput(weight);
         await generalWasteLogsService.create({
           vesselId,
           logDate: formatDate(date),
@@ -126,8 +132,15 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
         });
         Alert.alert('Saved', 'Entry added.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
       }
-    } catch {
-      Alert.alert('Error', 'Could not save entry.');
+    } catch (err: unknown) {
+      const message =
+        err &&
+        typeof err === 'object' &&
+        'message' in err &&
+        typeof (err as { message: unknown }).message === 'string'
+          ? (err as { message: string }).message
+          : 'Could not save entry.';
+      Alert.alert('Error', message);
     } finally {
       setSaving(false);
     }
@@ -261,7 +274,9 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
 
         {/* Weight */}
         <View style={styles.fieldContainer}>
-          <Text style={[styles.label, { color: themeColors.textPrimary }]}>Weight</Text>
+          <Text style={[styles.label, { color: themeColors.textPrimary }]}>
+            Weight ({weightUnit === 'kgs' ? 'kg' : 'lbs'})
+          </Text>
           <View style={styles.weightRow}>
             <Input
               value={weight}
@@ -283,7 +298,7 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
                     weightUnit === 'kgs' && styles.unitLabelSelected,
                   ]}
                 >
-                  kgs
+                  kg
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity

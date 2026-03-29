@@ -634,6 +634,9 @@ class AuthService {
    * Listen to auth state changes
    */
   onAuthStateChange(callback: (user: User | null) => void) {
+    const PROFILE_FETCH_MS = 15000;
+    const profileFetchTimedOut = Symbol('profileFetchTimedOut');
+
     return supabase.auth.onAuthStateChange(async (event, session) => {
       try {
         if (event === 'TOKEN_REFRESHED' && !session) {
@@ -646,13 +649,29 @@ class AuthService {
           return;
         }
         if (session?.user) {
-          const userData = await this.getUserProfile(session.user.id);
-          callback(userData);
+          const result = await Promise.race([
+            this.getUserProfile(session.user.id),
+            new Promise<typeof profileFetchTimedOut>((resolve) =>
+              setTimeout(() => resolve(profileFetchTimedOut), PROFILE_FETCH_MS)
+            ),
+          ]);
+          if (result === profileFetchTimedOut) {
+            if (__DEV__) {
+              console.warn(
+                '[Auth] Profile fetch timed out after resume/refresh; keeping current session in UI.'
+              );
+            }
+            return;
+          }
+          callback(result);
         } else {
           callback(null);
         }
       } catch (error) {
         if (__DEV__) console.error('Auth state change handler error:', error);
+        if (session?.user) {
+          return;
+        }
         callback(null);
       }
     });

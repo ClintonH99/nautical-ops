@@ -210,8 +210,9 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
           ) : (
             filteredLogs.map((log) => {
               const selected = selectedIds.has(log.id);
-              const weightStr =
-                log.weight != null ? `${log.weight} ${log.weightUnit ?? 'kgs'}` : '';
+              const unitDisp =
+                log.weightUnit === 'kgs' ? 'kg' : log.weightUnit === 'lbs' ? 'lbs' : 'kg';
+              const weightStr = log.weight != null ? `${log.weight} ${unitDisp}` : '';
               return (
                 <ButtonTagCard
                   key={log.id}
