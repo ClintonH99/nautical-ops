@@ -23,22 +23,20 @@ export interface UpdateVesselTaskData {
   doneByDate?: string | null;
   status?: string;
   recurring?: TaskRecurring;
-  completedBy?: string;
-  completedAt?: string;
-  completedByName?: string;
+  completedBy?: string | null;
+  completedAt?: string | null;
+  completedByName?: string | null;
 }
 
 class VesselTasksService {
-  async getByVesselAndCategory(
-    vesselId: string,
-    category: TaskCategory
-  ): Promise<VesselTask[]> {
+  async getByVesselAndCategory(vesselId: string, category: TaskCategory): Promise<VesselTask[]> {
     try {
       const { data, error } = await supabase
         .from('vessel_tasks')
         .select('*')
         .eq('vessel_id', vesselId)
         .eq('category', category)
+        .neq('status', 'COMPLETED')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -51,7 +49,9 @@ class VesselTasksService {
 
   async create(input: CreateVesselTaskData): Promise<VesselTask> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from('vessel_tasks')
         .insert([
@@ -92,12 +92,10 @@ class VesselTasksService {
       if (input.recurring !== undefined) payload.recurring = input.recurring || null;
       if (input.completedBy !== undefined) payload.completed_by = input.completedBy || null;
       if (input.completedAt !== undefined) payload.completed_at = input.completedAt || null;
-      if (input.completedByName !== undefined) payload.completed_by_name = input.completedByName || null;
+      if (input.completedByName !== undefined)
+        payload.completed_by_name = input.completedByName || null;
 
-      const { error } = await supabase
-        .from('vessel_tasks')
-        .update(payload)
-        .eq('id', taskId);
+      const { error } = await supabase.from('vessel_tasks').update(payload).eq('id', taskId);
 
       if (error) throw error;
     } catch (error) {
@@ -108,10 +106,7 @@ class VesselTasksService {
 
   async delete(taskId: string): Promise<void> {
     try {
-      const { error } = await supabase
-        .from('vessel_tasks')
-        .delete()
-        .eq('id', taskId);
+      const { error } = await supabase.from('vessel_tasks').delete().eq('id', taskId);
 
       if (error) throw error;
     } catch (error) {
@@ -128,22 +123,20 @@ class VesselTasksService {
     const task = await this.getById(taskId);
     if (!task) throw new Error('Task not found');
 
-    // Recurring tasks: create next occurrence and delete the completed one (don't keep it populated)
+    // Recurring: advance next due date on the same row and reset status (stays in category list)
     if (task.recurring && task.doneByDate) {
       const days = task.recurring === '7_DAYS' ? 7 : task.recurring === '14_DAYS' ? 14 : 30;
       const nextDate = new Date(task.doneByDate);
       nextDate.setDate(nextDate.getDate() + days);
-      const next = await this.create({
-        vesselId: task.vesselId,
-        category: task.category,
-        department: task.department,
-        title: task.title,
-        notes: task.notes || undefined,
-        doneByDate: nextDate.toISOString().slice(0, 10),
-        recurring: task.recurring,
+      const nextDue = nextDate.toISOString().slice(0, 10);
+      await this.update(taskId, {
+        status: 'NOT_STARTED',
+        doneByDate: nextDue,
+        completedBy: null,
+        completedAt: null,
+        completedByName: null,
       });
-      await this.delete(taskId);
-      return { createdNext: next };
+      return {};
     }
 
     // Non-recurring: mark as completed
@@ -294,7 +287,7 @@ class VesselTasksService {
       title: row.title as string,
       notes: (row.notes as string) ?? '',
       doneByDate: (row.done_by_date as string) ?? null,
-      status: (row.status as string) as VesselTask['status'],
+      status: row.status as string as VesselTask['status'],
       recurring: (row.recurring as TaskRecurring) ?? null,
       completedBy: row.completed_by as string | undefined,
       completedAt: row.completed_at as string | undefined,

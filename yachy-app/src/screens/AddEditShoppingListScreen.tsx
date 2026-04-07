@@ -100,14 +100,6 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
       return next;
     });
   };
-  const toggleChecked = (index: number) => {
-    setItems((prev) => {
-      const next = [...prev];
-      next[index] = { ...next[index], checked: !next[index].checked };
-      return next;
-    });
-  };
-
   const handleSave = async () => {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
@@ -115,7 +107,7 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
       return;
     }
     const trimmedItems: ShoppingListItem[] = items
-      .map((item) => ({ text: item.text.trim(), checked: item.checked }))
+      .map((item) => ({ text: item.text.trim(), checked: false }))
       .filter((item) => item.text.length > 0);
     if (!vesselId) return;
     setSaving(true);
@@ -257,18 +249,10 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
         <Text style={[styles.label, { color: themeColors.textPrimary }]}>Items</Text>
         {items.map((item, index) => (
           <View key={index} style={styles.itemRow}>
-            <TouchableOpacity
-              onPress={() => toggleChecked(index)}
-              style={[styles.checkbox, item.checked && styles.checkboxChecked]}
-              activeOpacity={0.7}
-            >
-              {item.checked ? <Text style={styles.checkboxTick}>✓</Text> : null}
-            </TouchableOpacity>
             <TextInput
               style={[
                 styles.itemInput,
                 { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
-                item.checked && styles.itemInputChecked,
               ]}
               value={item.text}
               onChangeText={(v) => setItemAt(index, v)}
@@ -345,21 +329,6 @@ const styles = StyleSheet.create({
   deptSection: { marginBottom: SPACING.lg },
   deptLabel: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs },
   itemRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    marginRight: SPACING.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: COLORS.success,
-    borderColor: COLORS.success,
-  },
-  checkboxTick: { color: COLORS.white, fontSize: 14, fontWeight: '700' },
   itemInput: {
     flex: 1,
     borderWidth: 1,
@@ -369,7 +338,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     fontSize: FONTS.base,
   },
-  itemInputChecked: { textDecorationLine: 'line-through', color: COLORS.textTertiary },
   addItemBtn: { paddingVertical: SPACING.sm, paddingHorizontal: SPACING.sm, marginTop: SPACING.xs },
   addItemBtnText: { fontSize: FONTS.sm, fontWeight: '600', color: COLORS.primary },
   removeBtn: { paddingVertical: SPACING.sm, paddingHorizontal: SPACING.sm, marginLeft: SPACING.xs },

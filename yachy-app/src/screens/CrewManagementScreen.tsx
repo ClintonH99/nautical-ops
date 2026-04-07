@@ -27,6 +27,7 @@ import userService from '../services/user';
 import { User, Department } from '../types';
 import { getPlanTier } from '../constants/subscriptionPlans';
 import { LoadingSpinner } from '../components';
+import { canAccessVesselManagement, isMasterOfVessel } from '../utils/access';
 
 export const CrewManagementScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -39,21 +40,18 @@ export const CrewManagementScreen = ({ navigation }: any) => {
     'all' | 'permanent' | 'temporary' | 'rotational'
   >('all');
 
-  // Check if user is HOD or MOV (Captain)
-  const isHOD = currentUser?.role === 'HOD';
-  const isMOV = currentUser?.position?.toLowerCase().includes('captain');
+  const canManageCrew = canAccessVesselManagement(currentUser);
+  const isMOV = isMasterOfVessel(currentUser);
 
   useFocusEffect(
     useCallback(() => {
-      if (!isHOD) {
-        Alert.alert('Access Denied', 'Only HODs can access crew management', [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
+      if (!canManageCrew) {
+        navigation.goBack();
         return;
       }
 
       loadData();
-    }, [isHOD])
+    }, [canManageCrew, navigation])
   );
 
   const loadData = async () => {
@@ -435,7 +433,7 @@ export const CrewManagementScreen = ({ navigation }: any) => {
     </View>
   );
 
-  if (!isHOD) {
+  if (!canManageCrew) {
     return null;
   }
 

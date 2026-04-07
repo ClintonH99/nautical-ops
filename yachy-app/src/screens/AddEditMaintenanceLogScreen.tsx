@@ -753,7 +753,8 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
                     { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
                   ]}
                 >
-                  No previous entries for this combination yet. Save a log to add one.
+                  Once you have logged a service for a specific equipment at a location, the serial
+                  number will be saved under Recent for future logs.
                 </Text>
               ) : (
                 <ScrollView style={styles.dropdownList} keyboardShouldPersistTaps="handled">
@@ -812,7 +813,7 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
           label="Notes"
           value={notes}
           onChangeText={setNotes}
-          placeholder="Any additional notes ie found oil leak under generator."
+          placeholder="Any additional notes i.e found oil leak under generator."
           multiline
           numberOfLines={2}
         />

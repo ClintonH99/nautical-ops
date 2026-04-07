@@ -26,6 +26,7 @@ import vesselService from '../services/vessel';
 import userService from '../services/user';
 import { Vessel } from '../types';
 import { getPlanTier, getBillingPeriod } from '../constants/subscriptionPlans';
+import { canAccessVesselManagement } from '../utils/access';
 
 export const VesselSettingsScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -64,8 +65,12 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
 
   useFocusEffect(
     useCallback(() => {
+      if (!canAccessVesselManagement(user)) {
+        navigation.goBack();
+        return;
+      }
       refetchSubscription();
-    }, [refetchSubscription])
+    }, [user, navigation, refetchSubscription])
   );
 
   const loadVessel = async () => {

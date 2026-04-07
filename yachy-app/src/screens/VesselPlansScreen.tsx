@@ -23,6 +23,7 @@ import {
   getBillingPeriod,
 } from '../constants/subscriptionPlans';
 import type { PlanTierId, BillingPeriodId } from '../constants/subscriptionPlans';
+import { canAccessVesselManagement } from '../utils/access';
 
 export const VesselPlansScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -40,8 +41,12 @@ export const VesselPlansScreen = ({ navigation }: any) => {
 
   useFocusEffect(
     useCallback(() => {
+      if (!canAccessVesselManagement(user)) {
+        navigation.goBack();
+        return;
+      }
       refetchSubscription();
-    }, [refetchSubscription])
+    }, [user, navigation, refetchSubscription])
   );
 
   const handleActivateVesselPlan = async () => {

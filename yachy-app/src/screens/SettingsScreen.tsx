@@ -21,14 +21,14 @@ import { useAuthStore, useThemeStore, BACKGROUND_THEMES } from '../store';
 import { Button } from '../components';
 import authService from '../services/auth';
 import userService from '../services/user';
-import { canAccessDepartmentColorSettings } from '../utils/access';
+import { canAccessDepartmentColorSettings, canAccessVesselManagement } from '../utils/access';
 
 export const SettingsScreen = ({ navigation }: any) => {
   const { user, logout, setUser } = useAuthStore();
   const backgroundTheme = useThemeStore((s) => s.backgroundTheme);
   const themeColors = BACKGROUND_THEMES[backgroundTheme];
-  const isHOD = user?.role === 'HOD';
   const canDeptColors = canAccessDepartmentColorSettings(user);
+  const canVesselAdmin = canAccessVesselManagement(user);
   const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
   const profilePhotoUrl =
     user?.profilePhoto || (user?.id ? userService.getProfilePhotoUrl(user.id) : null);
@@ -61,7 +61,7 @@ export const SettingsScreen = ({ navigation }: any) => {
         },
       ],
     },
-    ...(isHOD
+    ...(canVesselAdmin
       ? [
           {
             title: 'Vessel Management',
