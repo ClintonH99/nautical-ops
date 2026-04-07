@@ -78,7 +78,6 @@ import { CreateVesselScreen, CaptainWelcomeScreen } from '../screens';
 import { MainTabsNavigator } from './MainTabsNavigator';
 import { useAuthStore, useDepartmentColorStore, useThemeStore, BACKGROUND_THEMES } from '../store';
 import authService from '../services/auth';
-import { getVesselSubscription } from '../services/subscription';
 import { supabase } from '../services/supabase';
 import { startRealtimeSync, stopRealtimeSync } from '../services/realtimeSync';
 import { COLORS } from '../constants/theme';
@@ -215,7 +214,7 @@ export const RootNavigator = () => {
   const { isAuthenticated, isLoading, setUser, setLoading, user } = useAuthStore();
   const isCaptain = user?.position?.toLowerCase().includes('captain') ?? false;
   const hasVessel = !!user?.vesselId;
-  // Welcome screen shows on every app open (cold start) per ADMIN rule
+  // Welcome: logged-out cold start only. Logged-in users skip Welcome (straight to MainTabs / CaptainWelcome).
   // Per ADMIN rule: Crew members never see CaptainWelcome - go straight to MainTabs
   const initialRoute = !isAuthenticated
     ? 'Welcome'
@@ -229,51 +228,47 @@ export const RootNavigator = () => {
 
   useEffect(() => {
     let mounted = true;
-    const MAX_AUTH_WAIT_MS = 4000;
+    const BOOTSTRAP_MAX_MS = 12000;
 
-    const bootstrap = async () => {
+    const runBootstrap = async () => {
       try {
-        await loadTheme();
-      } catch {
-        /* theme load is non-critical */
-      }
-      if (!mounted) return;
+        const [, session] = await Promise.all([
+          loadTheme().catch(() => {
+            /* theme load is non-critical */
+          }),
+          authService.getSession(),
+        ]);
+        if (!mounted) return;
 
-      try {
-        const session = await authService.getSession();
-        if (mounted && session?.user) {
-          let userData = await authService.getUserProfile(session.user.id);
+        if (!session?.user) {
+          return;
+        }
 
-          if (mounted && !userData && Platform.OS === 'web') {
-            try {
-              await supabase.auth.signOut({ scope: 'local' });
-            } catch {
-              /* best-effort clear of stale web session */
-            }
+        let userData = await authService.getUserProfileWithRetry(session.user.id);
+
+        if (mounted && !userData && Platform.OS === 'web') {
+          try {
+            await supabase.auth.signOut({ scope: 'local' });
+          } catch {
+            /* best-effort clear of stale web session */
           }
+          return;
+        }
 
-          if (mounted && userData) {
-            const isCaptain =
-              userData.role === 'HOD' || userData.position?.toLowerCase().includes('captain');
-            if (isCaptain && !userData.vesselId) {
-              const refetch = await authService.getUserProfile(session.user.id);
-              if (mounted && refetch?.vesselId) userData = refetch;
-            }
-            if (isCaptain) {
-              setUser(userData);
-            } else if (userData.vesselId) {
-              // TODO: Re-enable subscription check once payment flow is set up
-              // const subscription = await getVesselSubscription(userData.vesselId);
-              // if (mounted && subscription?.status === 'active') {
-              //   setUser(userData);
-              // } else {
-              //   await supabase.auth.signOut();
-              //   setUser(null);
-              // }
-              if (mounted) setUser(userData);
-            } else {
-              setUser(userData);
-            }
+        if (mounted && userData) {
+          const isCaptain =
+            userData.role === 'HOD' || userData.position?.toLowerCase().includes('captain');
+          if (isCaptain && !userData.vesselId) {
+            const refetch = await authService.getUserProfile(session.user.id);
+            if (mounted && refetch?.vesselId) userData = refetch;
+          }
+          if (isCaptain) {
+            setUser(userData);
+          } else if (userData.vesselId) {
+            // TODO: Re-enable subscription check once payment flow is set up
+            if (mounted) setUser(userData);
+          } else {
+            setUser(userData);
           }
         }
       } catch (error) {
@@ -285,27 +280,19 @@ export const RootNavigator = () => {
             /* best-effort clear on error */
           }
         }
-      } finally {
-        if (mounted) setLoading(false);
       }
     };
 
-    // Cap auth check so the app never hangs (e.g. slow/hanging Supabase on web)
-    const timeoutPromise = new Promise<void>((resolve) => {
-      setTimeout(() => resolve(), MAX_AUTH_WAIT_MS);
-    });
-    Promise.race([bootstrap(), timeoutPromise])
-      .then(() => {
+    void (async () => {
+      try {
+        await Promise.race([
+          runBootstrap(),
+          new Promise<void>((resolve) => setTimeout(() => resolve(), BOOTSTRAP_MAX_MS)),
+        ]);
+      } finally {
         if (mounted) setLoading(false);
-      })
-      .catch(() => {
-        if (mounted) setLoading(false);
-      });
-
-    // Fallback: ensure loading always clears
-    const fallback = setTimeout(() => {
-      if (mounted) setLoading(false);
-    }, MAX_AUTH_WAIT_MS + 1000);
+      }
+    })();
 
     const { data: authListener } = authService.onAuthStateChange(async (user) => {
       try {
@@ -342,19 +329,26 @@ export const RootNavigator = () => {
 
     return () => {
       mounted = false;
-      clearTimeout(fallback);
       authListener?.subscription?.unsubscribe();
     };
-  }, [loadTheme]);
+  }, [loadTheme, setLoading, setUser]);
 
   const loadDepartmentColorOverrides = useDepartmentColorStore((s) => s.loadOverrides);
   useEffect(() => {
-    if (isAuthenticated) loadDepartmentColorOverrides();
+    if (!isAuthenticated) return;
+    const t = setTimeout(() => {
+      loadDepartmentColorOverrides();
+    }, 0);
+    return () => clearTimeout(t);
   }, [isAuthenticated, loadDepartmentColorOverrides]);
 
   // Realtime sync: keep app and web in sync when data changes on either platform
   useEffect(() => {
-    if (isAuthenticated && user?.id) {
+    if (!isAuthenticated || !user?.id) {
+      stopRealtimeSync();
+      return;
+    }
+    const t = setTimeout(() => {
       startRealtimeSync(user.id, user.vesselId, {
         onUserUpdated: (u) => {
           // CreateVesselScreen defers setUser until "Go to Home" to avoid stack remount
@@ -362,10 +356,11 @@ export const RootNavigator = () => {
           setUser(u ?? null);
         },
       });
-    } else {
+    }, 0);
+    return () => {
+      clearTimeout(t);
       stopRealtimeSync();
-    }
-    return () => stopRealtimeSync();
+    };
   }, [isAuthenticated, user?.id, user?.vesselId, setUser]);
 
   // Resume: restart token auto-refresh and refresh profile after backgrounding (Supabase RN guidance)
@@ -375,7 +370,7 @@ export const RootNavigator = () => {
         supabase.auth.startAutoRefresh();
         void authService.getSession().then((session) => {
           if (!session?.user?.id) return;
-          void authService.getUserProfile(session.user.id).then((fresh) => {
+          void authService.getUserProfileWithRetry(session.user.id).then((fresh) => {
             if (fresh) setUser(fresh);
           });
         });
@@ -434,6 +429,7 @@ export const RootNavigator = () => {
           headerTitleStyle: {
             fontWeight: 'bold',
           },
+          headerBackTitle: 'Back',
           contentStyle: { backgroundColor: themeColors.background },
         }}
       >
@@ -498,7 +494,11 @@ export const RootNavigator = () => {
             <Stack.Screen
               name="MainTabs"
               component={MainTabsNavigator}
-              options={{ headerShown: false }}
+              options={{
+                headerShown: false,
+                title: 'Home',
+                headerBackTitle: 'Back',
+              }}
             />
             <Stack.Screen
               name="JoinVessel"

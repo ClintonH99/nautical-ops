@@ -544,6 +544,30 @@ class AuthService {
   }
 
   /**
+   * Load profile with bounded waits and retries (cold start, resume, auth events).
+   * Reduces hangs from a single slow getUserProfile call.
+   */
+  async getUserProfileWithRetry(userId: string): Promise<User | null> {
+    const ATTEMPT_MS = 2500;
+    const BETWEEN_MS = 400;
+    const FINAL_RACE_MS = 5000;
+
+    const race = (ms: number) =>
+      Promise.race([
+        this.getUserProfile(userId),
+        new Promise<User | null>((resolve) => setTimeout(() => resolve(null), ms)),
+      ]);
+
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const row = await race(ATTEMPT_MS);
+      if (row) return row;
+      await new Promise((r) => setTimeout(r, BETWEEN_MS));
+    }
+
+    return race(FINAL_RACE_MS);
+  }
+
+  /**
    * Validate invite code and get vessel
    */
   async validateInviteCode(inviteCode: string) {
@@ -634,9 +658,6 @@ class AuthService {
    * Listen to auth state changes
    */
   onAuthStateChange(callback: (user: User | null) => void) {
-    const PROFILE_FETCH_MS = 15000;
-    const profileFetchTimedOut = Symbol('profileFetchTimedOut');
-
     return supabase.auth.onAuthStateChange(async (event, session) => {
       try {
         if (event === 'TOKEN_REFRESHED' && !session) {
@@ -649,21 +670,16 @@ class AuthService {
           return;
         }
         if (session?.user) {
-          const result = await Promise.race([
-            this.getUserProfile(session.user.id),
-            new Promise<typeof profileFetchTimedOut>((resolve) =>
-              setTimeout(() => resolve(profileFetchTimedOut), PROFILE_FETCH_MS)
-            ),
-          ]);
-          if (result === profileFetchTimedOut) {
+          const userData = await this.getUserProfileWithRetry(session.user.id);
+          if (userData) {
+            callback(userData);
+          } else {
             if (__DEV__) {
               console.warn(
-                '[Auth] Profile fetch timed out after resume/refresh; keeping current session in UI.'
+                '[Auth] Profile still unavailable after retries; keeping current session in UI if any.'
               );
             }
-            return;
           }
-          callback(result);
         } else {
           callback(null);
         }

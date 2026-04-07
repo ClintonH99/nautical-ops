@@ -1,7 +1,8 @@
 /**
  * Welcome Screen
- * Shows for ~3 seconds on every app open (cold start), then transitions based on auth state.
- * Per ADMIN rule: displays for both new and returning members.
+ * Branded splash for logged-out cold start (~3s), then Login.
+ * Logged-in users skip this screen (RootNavigator goes straight to MainTabs / CaptainWelcome).
+ * If auth completes while this screen is visible, navigate home immediately.
  */
 
 import React, { useEffect } from 'react';
@@ -27,17 +28,20 @@ export const WelcomeScreen = ({ navigation }: any) => {
   const hasVessel = !!user?.vesselId;
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!isAuthenticated) {
-        navigation.replace('Login');
-      } else if (isCaptain && !hasVessel) {
+    if (isAuthenticated && user) {
+      if (isCaptain && !hasVessel) {
         navigation.replace('CaptainWelcome');
       } else {
         navigation.replace('MainTabs');
       }
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      navigation.replace('Login');
     }, WELCOME_DURATION_MS);
     return () => clearTimeout(timer);
-  }, [navigation, isAuthenticated, isCaptain, hasVessel]);
+  }, [navigation, isAuthenticated, user, isCaptain, hasVessel]);
 
   return (
     <View style={styles.container}>
@@ -48,12 +52,15 @@ export const WelcomeScreen = ({ navigation }: any) => {
           <Text style={styles.heroBadgeText}>Nautical Ops</Text>
         </View>
         <Text style={styles.heroTitle}>Welcome to</Text>
-        <Text style={[styles.heroNauticalOps, { fontSize: Math.floor((SCREEN_WIDTH - SPACING.xl * 2) / 6) }]}>
+        <Text
+          style={[
+            styles.heroNauticalOps,
+            { fontSize: Math.floor((SCREEN_WIDTH - SPACING.xl * 2) / 6) },
+          ]}
+        >
           Nautical Ops
         </Text>
-        <Text style={styles.heroSubtitle}>
-          An App for Crew from Crew.
-        </Text>
+        <Text style={styles.heroSubtitle}>An App for Crew from Crew.</Text>
         <View style={styles.heroAccent} />
       </View>
     </View>
