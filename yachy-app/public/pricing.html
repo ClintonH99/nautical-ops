@@ -73,7 +73,6 @@
     .nav-links { display: none; }
   }
 </style>
-<!-- Config is injected at deploy time: Vercel runs scripts/inject-pricing-config.mjs before expo export (see vercel.json buildCommand). -->
 <script src="/pricing-config.js"></script>
 <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
 </head>
@@ -134,7 +133,6 @@
 </div>
 
 <div class="plans-section">
-
   <div class="plans-category">
     <div class="category-header">
       <h2 class="category-title">Small to Medium Vessels</h2>
@@ -218,7 +216,6 @@
       </div>
     </div>
   </div>
-
 </div>
 
 <div class="cta-section">
@@ -254,7 +251,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 
 const PADDLE_PRICE_IDS = {
-  '1_5': { monthly: 'pri_01kmtbta8x9jcxzh43dd9r79an', '3_months': 'pri_01kmbf0w42q58zngqdcccge9th', '6_months': 'pri_01kmbf1wrbe30gmhgb9g2pyg16', '12_months': 'pri_01kmbf5fq7jd2p0cx8j0xhakay' },
+  '1_5': { monthly: 'pri_01kmbephg7qqmbqvjck7zymssh', '3_months': 'pri_01kmbf0w42q58zngqdcccge9th', '6_months': 'pri_01kmbf1wrbe30gmhgb9g2pyg16', '12_months': 'pri_01kmbf5fq7jd2p0cx8j0xhakay' },
   '6_10': { monthly: 'pri_01kmber39aaqmmz1m6qbzq7yss', '3_months': 'pri_01kmbf9ej19e1f7h506ts5d73p', '6_months': 'pri_01kmbfabqx4q0654x9kwdh1pr9', '12_months': 'pri_01kmbfb5egpnskb5ecjv6xh77z' },
   '11_15': { monthly: 'pri_01kmbes0mbznxs11we7n8b9e5j', '3_months': 'pri_01kmbfcgm1y8kz52f18281ffrz', '6_months': 'pri_01kmbfdeyvk39w808zdv757rbx', '12_months': 'pri_01kmbfe65782vt1tdfgmhrpeww' },
   '16_25': { monthly: 'pri_01kmbet1wkq596zqe2y0cn8d20', '3_months': 'pri_01kmbff8h99yc7n0pk5che3bva', '6_months': 'pri_01kmbfg15wmgfsktswqhnkgw15', '12_months': 'pri_01kmbfgx5grpk10pt0awwjajhp' },
@@ -305,9 +302,6 @@ let supabase = null;
 if (cfg.supabaseUrl && cfg.supabaseAnonKey) {
   supabase = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {
     auth: {
-      // Implicit grant matches server-generated magic links opened in Safari: redirect uses
-      // #access_token=…&refresh_token=… . PKCE needs a code_verifier in this browser (missing when
-      // the user starts from the native app), so exchangeCodeForSession would fail.
       flowType: 'implicit',
       detectSessionInUrl: true,
       persistSession: true,
@@ -317,7 +311,6 @@ if (cfg.supabaseUrl && cfg.supabaseAnonKey) {
   });
 }
 
-/** Same rules as @supabase/auth-js parseParametersFromURL: hash first, then query overrides. */
 function parseAuthParamsFromLocation() {
   const url = new URL(window.location.href);
   const out = {};
@@ -326,9 +319,7 @@ function parseAuthParamsFromLocation() {
       new URLSearchParams(url.hash.slice(1)).forEach((value, key) => {
         out[key] = value;
       });
-    } catch (e) {
-      /* ignore malformed hash */
-    }
+    } catch (e) {}
   }
   url.searchParams.forEach((value, key) => {
     out[key] = value;
@@ -339,18 +330,7 @@ function parseAuthParamsFromLocation() {
 function stripAuthFromUrl() {
   try {
     const u = new URL(window.location.href);
-    [
-      'code',
-      'token',
-      'token_hash',
-      'type',
-      'error',
-      'error_description',
-      'access_token',
-      'refresh_token',
-      'expires_in',
-      'token_type',
-    ].forEach((k) => u.searchParams.delete(k));
+    ['code','token','token_hash','type','error','error_description','access_token','refresh_token','expires_in','token_type'].forEach((k) => u.searchParams.delete(k));
     const clean = u.pathname + (u.search || '');
     window.history.replaceState({}, document.title, clean);
   } catch (e) {
@@ -360,55 +340,31 @@ function stripAuthFromUrl() {
 
 async function completeAuthFromUrl() {
   if (!supabase) return;
-
   const href = window.location.href;
   const p = parseAuthParamsFromLocation();
-
   const access_token = p.access_token;
   const refresh_token = p.refresh_token;
   if (access_token && refresh_token) {
     const { error } = await supabase.auth.setSession({ access_token, refresh_token });
-    if (!error) {
-      stripAuthFromUrl();
-      return;
-    }
-    console.warn('setSession from URL (hash or query)', error);
+    if (!error) { stripAuthFromUrl(); return; }
+    console.warn('setSession from URL', error);
   }
-
   if (p.code) {
     const { error } = await supabase.auth.exchangeCodeForSession(href);
-    if (!error) {
-      stripAuthFromUrl();
-      return;
-    }
-    console.warn('exchangeCodeForSession (requires PKCE code_verifier in this browser)', error);
+    if (!error) { stripAuthFromUrl(); return; }
+    console.warn('exchangeCodeForSession', error);
   }
-
   const linkToken = p.token || p.token_hash;
   if (linkToken) {
     const types = ['email', 'magiclink', 'signup'];
     for (let i = 0; i < types.length; i++) {
       const { error } = await supabase.auth.verifyOtp({ token_hash: linkToken, type: types[i] });
-      if (!error) {
-        stripAuthFromUrl();
-        return;
-      }
+      if (!error) { stripAuthFromUrl(); return; }
     }
     if (p.email) {
-      const { error: err2 } = await supabase.auth.verifyOtp({
-        email: p.email,
-        token: linkToken,
-        type: 'email',
-      });
-      if (!err2) {
-        stripAuthFromUrl();
-        return;
-      }
+      const { error: err2 } = await supabase.auth.verifyOtp({ email: p.email, token: linkToken, type: 'email' });
+      if (!err2) { stripAuthFromUrl(); return; }
       console.warn('verifyOtp with email+token', err2);
-    } else {
-      console.warn(
-        'verifyOtp(token_hash) failed for types email/magiclink/signup. Ensure Supabase redirect uses hash tokens or add ?email= to the redirect for OTP-style verification.'
-      );
     }
   }
 }
@@ -431,18 +387,12 @@ function updateAuthUi(session) {
 
 async function refreshVesselId(userId) {
   vesselIdCache = '';
-  if (!supabase || !userId) {
-    console.log('[pricing] vessel_id: skip (no supabase or userId)');
-    return;
-  }
+  if (!supabase || !userId) return;
   try {
     const { data, error } = await supabase.from('users').select('vessel_id').eq('id', userId).maybeSingle();
-    if (error) {
-      console.warn('[pricing] vessel_id query error', error);
-      return;
-    }
+    if (error) { console.warn('[pricing] vessel_id query error', error); return; }
     if (data?.vessel_id) vesselIdCache = String(data.vessel_id);
-    console.log('[pricing] vessel_id loaded', { vesselIdCache, raw: data?.vessel_id });
+    console.log('[pricing] vessel_id loaded', { vesselIdCache });
   } catch (e) {
     console.warn('[pricing] vessel_id fetch', e);
   }
@@ -474,10 +424,7 @@ function initBillingSelector() {
     };
     card.addEventListener('click', select);
     card.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        select();
-      }
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(); }
     });
   });
 }
@@ -492,51 +439,35 @@ function waitForPaddleGlobal(timeoutMs) {
   const start = Date.now();
   return new Promise((resolve) => {
     function tick() {
-      if (typeof window.Paddle !== 'undefined') {
-        resolve(true);
-        return;
-      }
-      if (Date.now() - start >= limit) {
-        resolve(false);
-        return;
-      }
+      if (typeof window.Paddle !== 'undefined') { resolve(true); return; }
+      if (Date.now() - start >= limit) { resolve(false); return; }
       setTimeout(tick, 50);
     }
     tick();
   });
 }
 
-/** Call only after Supabase session is ready (and vessel_id fetched if possible). Idempotent. */
 async function initPaddleWhenReady() {
   if (paddleReady) return;
   while (paddleInitializing) {
     await new Promise((r) => setTimeout(r, 40));
   }
   if (paddleReady) return;
-
   const raw = cfg.paddleClientToken;
   const token = typeof raw === 'string' ? raw.trim() : '';
   if (!token) {
     console.warn('[pricing] Paddle: missing EXPO_PUBLIC_PADDLE_CLIENT_TOKEN');
     return;
   }
-
   paddleInitializing = true;
   try {
     const loaded = await waitForPaddleGlobal(15000);
     if (!loaded) {
-      console.warn('[pricing] Paddle: window.Paddle never loaded (check script / CSP)');
+      console.warn('[pricing] Paddle: window.Paddle never loaded');
       return;
     }
     if (paddleReady) return;
-    if (token.startsWith('live_')) {
-      console.warn(
-        '[Paddle] Client token looks live_ but checkout uses sandbox — use a test_ token for sandbox.'
-      );
-    }
-    window.Paddle.Environment.set('sandbox');
     window.Paddle.Initialize({
-      environment: 'sandbox',
       token,
       eventCallback: function (event) {
         if (event && event.name === 'checkout.completed') {
@@ -545,7 +476,7 @@ async function initPaddleWhenReady() {
       },
     });
     paddleReady = true;
-    console.log('[pricing] Paddle.Initialize done');
+    console.log('[pricing] Paddle.Initialize done (live)');
   } finally {
     paddleInitializing = false;
   }
@@ -553,7 +484,6 @@ async function initPaddleWhenReady() {
 
 async function openCheckout(tierId) {
   console.log('[pricing] Subscribe Now click', { tierId, currentPeriod });
-
   let session = sessionRef;
   if (supabase) {
     const { data, error } = await supabase.auth.getSession();
@@ -562,42 +492,23 @@ async function openCheckout(tierId) {
     sessionRef = session;
     updateAuthUi(session);
   }
-
   const email = session?.user?.email;
-  console.log('[pricing] session at click', {
-    hasSession: !!session,
-    hasUser: !!session?.user,
-    email: email || null,
-    userId: session?.user?.id || null,
-  });
-
   if (!email) {
     alert('Please sign in first. Use Activate Vessel Plan in the Nautical Ops app to open this page with your account.');
     return;
   }
-
   if (!paddleReady) {
-    console.log('[pricing] Paddle not ready yet — initializing now');
     await initPaddleWhenReady();
   }
   if (!paddleReady || !cfg.paddleClientToken) {
-    alert('Checkout is not configured. Add EXPO_PUBLIC_PADDLE_CLIENT_TOKEN (Paddle client-side token) in Vercel and redeploy.');
-    console.warn('[pricing] abort openCheckout: paddleReady=', paddleReady);
+    alert('Checkout is not configured. Add EXPO_PUBLIC_PADDLE_CLIENT_TOKEN in Vercel and redeploy.');
     return;
   }
-
   const priceId = PADDLE_PRICE_IDS[tierId]?.[currentPeriod];
-  console.log('[pricing] calling Paddle.Checkout.open', {
-    priceId: priceId || null,
-    vesselIdCache,
-    billing_period: currentPeriod,
-  });
-
   if (!priceId) {
     alert('No price is configured for this selection.');
     return;
   }
-
   try {
     window.Paddle.Checkout.open({
       settings: {
@@ -628,8 +539,6 @@ function initSubscribeButtons() {
       const tier = card?.getAttribute('data-tier');
       if (tier) {
         openCheckout(tier).catch((err) => console.error('[pricing] openCheckout', err));
-      } else {
-        console.warn('[pricing] Subscribe click: no data-tier on card');
       }
     });
   });
@@ -637,11 +546,9 @@ function initSubscribeButtons() {
 
 async function main() {
   console.log('[pricing] window.location.href on load:', window.location.href);
-
   initBillingSelector();
   applyPeriodToCards();
   initSubscribeButtons();
-
   if (supabase) {
     await supabase.auth.getSession();
     await completeAuthFromUrl();
@@ -649,7 +556,6 @@ async function main() {
     updateAuthUi(session);
     if (session?.user?.id) await refreshVesselId(session.user.id);
     await initPaddleWhenReady();
-
     supabase.auth.onAuthStateChange(async (_event, session) => {
       updateAuthUi(session);
       if (session?.user?.id) await refreshVesselId(session.user.id);
