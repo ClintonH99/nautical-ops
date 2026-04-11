@@ -4,61 +4,47 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Refund Policy — Nautical Ops</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <style>
-  :root { --navy: #0d1b2a; --gold: #C8961A; --white: #ffffff; --text: #e8edf2; --muted: #8a9bb0; --border: rgba(200,150,26,0.2); }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--navy); color: var(--text); font-family: 'DM Sans', sans-serif; font-weight: 300; line-height: 1.8; min-height: 100vh; }
-  header { border-bottom: 1px solid var(--border); padding: 24px 40px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; background: rgba(13,27,42,0.95); backdrop-filter: blur(10px); z-index: 100; }
-  .logo-text { font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 18px; color: var(--white); }
-  .logo-icon { width: 36px; height: 36px; }
-  .nav-links { margin-left: auto; display: flex; gap: 28px; list-style: none; }
-  .nav-links a { color: var(--muted); text-decoration: none; font-size: 14px; transition: color 0.2s; }
-  .nav-links a:hover { color: var(--gold); }
-  .hero { padding: 80px 40px 48px; max-width: 800px; margin: 0 auto; text-align: center; }
-  .hero-label { font-size: 11px; letter-spacing: 0.2em; color: var(--gold); text-transform: uppercase; margin-bottom: 16px; }
-  .hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(36px, 5vw, 52px); font-weight: 400; color: var(--white); margin-bottom: 16px; line-height: 1.15; }
-  .hero-date { color: var(--muted); font-size: 14px; }
-  .divider { width: 60px; height: 1px; background: var(--gold); margin: 32px auto; opacity: 0.6; }
-  .content { max-width: 800px; margin: 0 auto; padding: 0 40px 100px; }
-  .section { margin-bottom: 48px; padding-bottom: 48px; border-bottom: 1px solid var(--border); }
-  .section:last-child { border-bottom: none; }
-  .section-num { font-size: 11px; letter-spacing: 0.15em; color: var(--gold); text-transform: uppercase; margin-bottom: 10px; }
-  .section h2 { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 400; color: var(--white); margin-bottom: 16px; }
-  .section p { color: var(--muted); font-size: 15px; line-height: 1.85; }
-  .eligible-box { background: rgba(200,150,26,0.06); border: 1px solid var(--border); border-left: 3px solid var(--gold); padding: 20px 24px; border-radius: 4px; margin-top: 16px; }
-  .eligible-item { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--border); }
-  .eligible-item:last-child { border-bottom: none; padding-bottom: 0; }
-  .eligible-dot { width: 6px; height: 6px; background: var(--gold); border-radius: 50%; margin-top: 8px; flex-shrink: 0; }
-  .eligible-item p { color: var(--muted); font-size: 14px; margin: 0; }
-  .process-steps { display: grid; gap: 16px; margin-top: 20px; }
-  .step { display: flex; gap: 16px; align-items: flex-start; }
-  .step-num { width: 32px; height: 32px; border: 1px solid var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--gold); flex-shrink: 0; font-weight: 500; }
-  .step p { color: var(--muted); font-size: 14px; padding-top: 4px; }
-  .timeline-box { display: flex; gap: 40px; margin-top: 20px; }
-  .timeline-item { text-align: center; flex: 1; }
-  .timeline-num { font-family: 'Playfair Display', serif; font-size: 32px; color: var(--gold); }
-  .timeline-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
-  footer { border-top: 1px solid var(--border); padding: 40px; text-align: center; }
-  footer p { color: var(--muted); font-size: 13px; }
-  footer a { color: var(--gold); text-decoration: none; }
-  @media (max-width: 600px) {
-    header { padding: 16px 20px; }
-    .hero { padding: 48px 20px 32px; }
-    .content { padding: 0 20px 60px; }
-    .nav-links { display: none; }
-    .timeline-box { flex-direction: column; gap: 20px; }
-  }
+  body { background: #eef0f3; color: #1a2340; font-family: 'Inter', sans-serif; font-weight: 400; line-height: 1.7; min-height: 100vh; }
+  header { background: #ffffff; border-bottom: 1px solid #e2e6ea; padding: 16px 20px; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 100; }
+  .logo-icon { width: 32px; height: 32px; }
+  .logo-text { font-size: 17px; font-weight: 700; color: #1a2340; }
+  .nav-links { margin-left: auto; display: flex; gap: 24px; list-style: none; }
+  .nav-links a { color: #6b7280; text-decoration: none; font-size: 14px; }
+  .nav-links a:hover { color: #1a2340; }
+  .page { max-width: 720px; margin: 0 auto; padding: 40px 20px 100px; }
+  .page-title { font-size: 26px; font-weight: 800; color: #1a2340; margin-bottom: 4px; }
+  .page-date { font-size: 13px; color: #6b7280; margin-bottom: 32px; }
+  .section-card { background: #ffffff; border: 1px solid #e2e6ea; border-radius: 14px; padding: 24px; margin-bottom: 12px; }
+  .section-card h2 { font-size: 16px; font-weight: 700; color: #1a2340; margin-bottom: 10px; }
+  .section-card p { font-size: 14px; color: #4b5563; line-height: 1.75; }
+  .eligible-item { border: 1px solid #e2e6ea; border-radius: 10px; padding: 14px 16px; margin-top: 10px; }
+  .eligible-item strong { font-size: 14px; font-weight: 700; color: #1a2340; display: block; margin-bottom: 4px; }
+  .eligible-item p { font-size: 13px; color: #4b5563; }
+  .steps { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+  .step { display: flex; gap: 14px; align-items: flex-start; }
+  .step-num { width: 28px; height: 28px; border: 2px solid #1a2340; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #1a2340; flex-shrink: 0; }
+  .step p { font-size: 14px; color: #4b5563; padding-top: 4px; }
+  .timeline { display: flex; gap: 16px; margin-top: 14px; }
+  .timeline-item { flex: 1; background: #f8faff; border: 1px solid #e2e6ea; border-radius: 10px; padding: 16px; text-align: center; }
+  .timeline-num { font-size: 28px; font-weight: 800; color: #1a2340; }
+  .timeline-label { font-size: 12px; color: #6b7280; margin-top: 4px; line-height: 1.4; }
+  footer { text-align: center; padding: 32px 20px; border-top: 1px solid #e2e6ea; background: #ffffff; }
+  footer p { font-size: 13px; color: #6b7280; }
+  footer a { color: #1a2340; text-decoration: none; font-weight: 500; }
+  @media (max-width: 500px) { .nav-links { display: none; } .timeline { flex-direction: column; } }
 </style>
 </head>
 <body>
 <header>
   <svg class="logo-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M6 26 Q6 30 18 31 Q30 30 30 26 L28 18 L8 18 Z" fill="none" stroke="#C8961A" stroke-width="1.8" stroke-linejoin="round"/>
-    <rect x="11" y="12" width="14" height="7" rx="1.5" fill="none" stroke="#C8961A" stroke-width="1.8"/>
-    <line x1="18" y1="5" x2="18" y2="12" stroke="#C8961A" stroke-width="1.8" stroke-linecap="round"/>
-    <circle cx="18" cy="4" r="1.8" fill="#C8961A"/>
-    <path d="M4 32 Q8 29 12 32 Q16 35 20 32 Q24 29 28 32 Q31 29 33 32" fill="none" stroke="#C8961A" stroke-width="1.4" stroke-linecap="round"/>
+    <path d="M6 26 Q6 30 18 31 Q30 30 30 26 L28 18 L8 18 Z" fill="none" stroke="#f0a500" stroke-width="1.8" stroke-linejoin="round"/>
+    <rect x="11" y="12" width="14" height="7" rx="1.5" fill="none" stroke="#f0a500" stroke-width="1.8"/>
+    <line x1="18" y1="5" x2="18" y2="12" stroke="#f0a500" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="18" cy="4" r="1.8" fill="#f0a500"/>
+    <path d="M4 32 Q8 29 12 32 Q16 35 20 32 Q24 29 28 32 Q31 29 33 32" fill="none" stroke="#f0a500" stroke-width="1.4" stroke-linecap="round"/>
   </svg>
   <span class="logo-text">Nautical Ops</span>
   <ul class="nav-links">
@@ -69,72 +55,47 @@
   </ul>
 </header>
 
-<div class="hero">
-  <p class="hero-label">Legal</p>
-  <h1>Refund Policy</h1>
-  <p class="hero-date">Last updated: March 2025</p>
-  <div class="divider"></div>
-</div>
+<div class="page">
+  <h1 class="page-title">Refund Policy</h1>
+  <p class="page-date">Last updated: March 2025</p>
 
-<div class="content">
-
-  <div class="section">
-    <p class="section-num">01</p>
-    <h2>Introduction</h2>
+  <div class="section-card">
+    <h2>1. Introduction</h2>
     <p>This Refund Policy ("Policy") applies to subscription payments made for Nautical Ops vessel plans. By subscribing to a plan, you agree to this Policy. Nautical Ops is committed to fair and transparent handling of refund requests.</p>
   </div>
 
-  <div class="section">
-    <p class="section-num">02</p>
-    <h2>General Policy</h2>
+  <div class="section-card">
+    <h2>2. General Policy</h2>
     <p>Subscription fees are generally non-refundable. Once a payment has been processed and your vessel plan has been activated, you have access to the Service for the billing period you selected. We do not provide refunds for change of mind, partial use of the Service, or cancellation mid-period.</p>
   </div>
 
-  <div class="section">
-    <p class="section-num">03</p>
-    <h2>Eligible Refunds</h2>
+  <div class="section-card">
+    <h2>3. Eligible Refunds</h2>
     <p>Refunds are available only in the following circumstances:</p>
-    <div class="eligible-box">
-      <div class="eligible-item">
-        <div class="eligible-dot"></div>
-        <p><strong style="color:var(--text);font-weight:500;">Double charges:</strong> If you were charged twice for the same billing period (e.g., duplicate transactions), we will refund the duplicate charge upon verification.</p>
-      </div>
-      <div class="eligible-item">
-        <div class="eligible-dot"></div>
-        <p><strong style="color:var(--text);font-weight:500;">Wrong plan selected:</strong> If you can provide proof that you selected the wrong plan and contact us promptly after the charge, we may, at our discretion, issue a refund or adjust your plan. Proof may include screenshots, transaction records, or other documentation that clearly demonstrates the error.</p>
-      </div>
+    <div class="eligible-item">
+      <strong>Double charges</strong>
+      <p>If you were charged twice for the same billing period (e.g., duplicate transactions), we will refund the duplicate charge upon verification.</p>
+    </div>
+    <div class="eligible-item">
+      <strong>Wrong plan selected</strong>
+      <p>If you can provide proof that you selected the wrong plan and contact us promptly after the charge, we may, at our discretion, issue a refund or adjust your plan. Proof may include screenshots, transaction records, or other documentation that clearly demonstrates the error.</p>
     </div>
   </div>
 
-  <div class="section">
-    <p class="section-num">04</p>
-    <h2>How to Request a Refund</h2>
-    <p>To request a refund, contact us at <a href="mailto:support@nautical-ops.com" style="color:var(--gold);text-decoration:none;">support@nautical-ops.com</a> with the following information:</p>
-    <div class="process-steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <p>Your account email address and vessel name</p>
-      </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <p>Transaction date and a clear description of the issue</p>
-      </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <p>For double charges: include both transaction IDs or receipts</p>
-      </div>
-      <div class="step">
-        <div class="step-num">4</div>
-        <p>For wrong plan selection: include proof as described in Section 3</p>
-      </div>
+  <div class="section-card">
+    <h2>4. How to Request a Refund</h2>
+    <p>To request a refund, contact us at <a href="mailto:support@nautical-ops.com" style="color:#1a2340;font-weight:600;">support@nautical-ops.com</a> with the following:</p>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><p>Your account email address and vessel name</p></div>
+      <div class="step"><div class="step-num">2</div><p>Transaction date and a clear description of the issue</p></div>
+      <div class="step"><div class="step-num">3</div><p>For double charges: include both transaction IDs or receipts</p></div>
+      <div class="step"><div class="step-num">4</div><p>For wrong plan selection: include proof as described in Section 3</p></div>
     </div>
   </div>
 
-  <div class="section">
-    <p class="section-num">05</p>
-    <h2>Processing Times</h2>
-    <p>Here's what to expect after submitting a refund request:</p>
-    <div class="timeline-box">
+  <div class="section-card">
+    <h2>5. Processing Times</h2>
+    <div class="timeline">
       <div class="timeline-item">
         <div class="timeline-num">14</div>
         <div class="timeline-label">Business days to review your request</div>
@@ -144,21 +105,18 @@
         <div class="timeline-label">Business days to process approved refunds</div>
       </div>
     </div>
-    <p style="margin-top:20px;">Approved refunds will be processed to the original payment method. The timing of the refund appearing in your account may vary depending on your bank or payment provider.</p>
+    <p style="margin-top:14px;">Approved refunds will be processed to the original payment method. Timing may vary depending on your bank or payment provider.</p>
   </div>
 
-  <div class="section">
-    <p class="section-num">06</p>
-    <h2>Changes to This Policy</h2>
+  <div class="section-card">
+    <h2>6. Changes to This Policy</h2>
     <p>We may update this Refund Policy from time to time. Material changes will be posted within the application or communicated via email. Your continued use of paid features after changes constitutes acceptance of the updated Policy.</p>
   </div>
 
-  <div class="section">
-    <p class="section-num">07</p>
-    <h2>Contact</h2>
-    <p>For refund requests or questions about this Policy, contact us at <a href="mailto:support@nautical-ops.com" style="color:var(--gold);text-decoration:none;">support@nautical-ops.com</a>.</p>
+  <div class="section-card">
+    <h2>7. Contact</h2>
+    <p>For refund requests or questions about this Policy, contact us at <a href="mailto:support@nautical-ops.com" style="color:#1a2340;font-weight:600;">support@nautical-ops.com</a>.</p>
   </div>
-
 </div>
 
 <footer>
