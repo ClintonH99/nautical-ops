@@ -18,6 +18,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import authService from '../services/auth';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { usePostHog } from 'posthog-react-native';
 
 export const JoinVesselScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -26,6 +27,7 @@ export const JoinVesselScreen = ({ navigation }: any) => {
   const [error, setError] = useState('');
 
   const { user, setUser } = useAuthStore();
+  const posthog = usePostHog();
 
   const handleJoinVessel = async () => {
     if (!inviteCode.trim()) {
@@ -43,27 +45,32 @@ export const JoinVesselScreen = ({ navigation }: any) => {
 
     try {
       const updatedUser = await authService.joinVessel(user.id, inviteCode.trim());
-      
+
       if (updatedUser) {
+        posthog.capture('vessel_joined', {
+          vessel_id: updatedUser.vesselId ?? null,
+        });
         setUser(updatedUser);
-        Alert.alert(
-          'Success!',
-          'You have successfully joined the vessel.',
-          [
-            {
-              text: 'OK',
-              onPress: () => navigation.goBack(),
-            },
-          ]
-        );
+        Alert.alert('Success!', 'You have successfully joined the vessel.', [
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack(),
+          },
+        ]);
       }
     } catch (error: any) {
       const msg = error?.message?.toLowerCase() || '';
-      const isInviteCodeError = msg.includes('invite code') || msg.includes('vessel not found') || msg.includes('cannot coerce') || msg.includes('expired');
+      const isInviteCodeError =
+        msg.includes('invite code') ||
+        msg.includes('vessel not found') ||
+        msg.includes('cannot coerce') ||
+        msg.includes('expired');
       if (!isInviteCodeError) console.error('Join vessel error:', error);
       Alert.alert(
         'Invalid Invite Code',
-        isInviteCodeError ? 'Request new code from the Captain.' : (error.message || 'Failed to join vessel.')
+        isInviteCodeError
+          ? 'Request new code from the Captain.'
+          : error.message || 'Failed to join vessel.'
       );
     } finally {
       setLoading(false);
@@ -75,10 +82,7 @@ export const JoinVesselScreen = ({ navigation }: any) => {
       style={[styles.container, { backgroundColor: themeColors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>

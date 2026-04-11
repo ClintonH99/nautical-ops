@@ -21,6 +21,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
+import { usePostHog } from 'posthog-react-native';
 import preDepartureChecklistsService from '../services/preDepartureChecklists';
 import tripsService from '../services/trips';
 import { PreDepartureChecklistItem, Department } from '../types';
@@ -49,6 +50,7 @@ const DEFAULT_ITEMS = [
 export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
+  const posthog = usePostHog();
   const checklistId = route?.params?.checklistId as string | undefined;
   const isEdit = !!checklistId;
   const isHOD = user?.role === 'HOD';
@@ -169,6 +171,12 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
           department: department || undefined,
           title: trimmedTitle,
           items: itemLabels.map((label) => ({ label })),
+        });
+        posthog.capture('pre_departure_checklist_created', {
+          checklist_id: created.id,
+          department: department ?? 'all',
+          has_linked_trip: !!tripId,
+          item_count: itemLabels.length,
         });
         Alert.alert('Created', 'Pre-departure checklist created.', [
           {

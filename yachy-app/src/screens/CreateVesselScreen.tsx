@@ -24,6 +24,7 @@ import vesselService from '../services/vessel';
 import { supabase } from '../services/supabase';
 import authService from '../services/auth';
 import { useAuthStore } from '../store';
+import { usePostHog } from 'posthog-react-native';
 
 const MARITIME = {
   bgDark: '#0f172a',
@@ -39,6 +40,7 @@ export const CreateVesselScreen = ({ navigation }: any) => {
   const isAuthenticated = useAuthStore((s) => !!s.user);
   const setUser = useAuthStore((state) => state.setUser);
   const setDeferUserUpdate = useAuthStore((state) => state.setDeferUserUpdate);
+  const posthog = usePostHog();
   const [vesselName, setVesselName] = useState('');
   useEffect(() => {
     return () => setDeferUserUpdate(false);
@@ -58,12 +60,10 @@ export const CreateVesselScreen = ({ navigation }: any) => {
     setError('');
 
     try {
-      // Create the vessel
       const vessel = await vesselService.createVessel({
         name: vesselName.trim(),
       });
 
-      // Per ADMIN/Rules/DEFAULT_VESSEL_BANNER.md: upload default banner for new vessels
       try {
         const asset = Asset.fromModule(require('../../assets/default-vessel-banner.png'));
         await asset.downloadAsync();
@@ -74,7 +74,6 @@ export const CreateVesselScreen = ({ navigation }: any) => {
         if (__DEV__) console.warn('Default vessel banner upload failed (non-fatal):', bannerErr);
       }
 
-      // Get current user
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -83,10 +82,8 @@ export const CreateVesselScreen = ({ navigation }: any) => {
         throw new Error('No authenticated user found');
       }
 
-      // Defer realtime sync from calling setUser until "Go to Home" - prevents stack remount
       setDeferUserUpdate(true);
 
-      // Update user's vessel_id and role to HOD
       const { error: updateError } = await supabase
         .from('users')
         .update({
@@ -101,30 +98,19 @@ export const CreateVesselScreen = ({ navigation }: any) => {
         throw updateError;
       }
 
-      // Store updated user but defer setUser until "Go to Home" - prevents RootNavigator remount
-      // (which clears the form) when user gains vesselId. Per ADMIN rule: show success screen first.
       const updatedUser = await authService.getUserProfile(user.id);
       setPendingUpdatedUser(updatedUser);
       setCreatedVessel(vessel);
+      posthog.capture('vessel_created', {
+        vessel_id: vessel.id,
+        vessel_name: vessel.name,
+      });
     } catch (error: any) {
       console.error('Create vessel error:', error);
       setDeferUserUpdate(false);
       Alert.alert('Error', error.message || 'Failed to create vessel');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleShareInviteCode = async () => {
-    if (!createdVessel) return;
-
-    try {
-      await Share.share({
-        message: `Join ${createdVessel.name} on Nautical Ops!\n\nInvite Code: ${createdVessel.inviteCode}\n\nValid until: ${new Date(createdVessel.inviteExpiry).toLocaleDateString()}`,
-        title: `Join ${createdVessel.name}`,
-      });
-    } catch (error) {
-      console.error('Share error:', error);
     }
   };
 
@@ -139,7 +125,6 @@ export const CreateVesselScreen = ({ navigation }: any) => {
   };
 
   if (createdVessel) {
-    // Success view – maritime theme
     return (
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor={MARITIME.bgDark} />
@@ -147,7 +132,6 @@ export const CreateVesselScreen = ({ navigation }: any) => {
           contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 }]}
           showsVerticalScrollIndicator={false}
         >
-          {/* Hero – matches Login/Welcome theme */}
           <View style={styles.hero}>
             <View style={styles.heroBadge}>
               <Ionicons name="boat-outline" size={20} color={MARITIME.gold} />
@@ -156,13 +140,6 @@ export const CreateVesselScreen = ({ navigation }: any) => {
             <Text style={styles.successTitle}>Vessel Created!</Text>
             <Text style={styles.successSubtitle}>{createdVessel.name} is ready to go</Text>
             <View style={styles.heroAccent} />
-          </View>
-
-          {/* Instructions - No invite code until subscription paid */}
-          <View style={[styles.card, styles.cardTransparent]}>
-            <Text style={[styles.successMessage, { color: MARITIME.textOnDark }]}>
-              Your vessel is ready. Go to Vessel Settings to choose a plan and get your invite code.
-            </Text>
           </View>
 
           <View
@@ -188,7 +165,6 @@ export const CreateVesselScreen = ({ navigation }: any) => {
             </Text>
           </View>
 
-          {/* Action Buttons */}
           <View style={styles.actions}>
             <Button
               title="Go to Vessel Settings"
@@ -219,7 +195,6 @@ export const CreateVesselScreen = ({ navigation }: any) => {
     );
   }
 
-  // Create vessel form – Login-style theme
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={MARITIME.bgDark} />
@@ -232,7 +207,6 @@ export const CreateVesselScreen = ({ navigation }: any) => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Hero – matches Login */}
           <View style={styles.hero}>
             <View style={styles.heroBadge}>
               <Ionicons name="boat-outline" size={20} color={MARITIME.gold} />
@@ -245,7 +219,6 @@ export const CreateVesselScreen = ({ navigation }: any) => {
             <View style={styles.heroAccent} />
           </View>
 
-          {/* Form card – matches Login */}
           <View style={[styles.card, styles.cardTransparent]}>
             <Text style={styles.cardTitle}>Create Vessel</Text>
             <Text style={styles.cardSubtitle}>Enter your vessel name to get started</Text>
@@ -290,7 +263,6 @@ export const CreateVesselScreen = ({ navigation }: any) => {
             />
           </View>
 
-          {/* Footer – only show when unauthenticated (auth stack flow) */}
           {!isAuthenticated && (
             <>
               <View style={styles.footer}>
@@ -438,7 +410,6 @@ const styles = StyleSheet.create({
     color: MARITIME.accent,
     textDecorationLine: 'underline',
   },
-  // Success view styles – matches Login theme
   successTitle: {
     fontSize: FONTS['2xl'],
     fontWeight: '700',
@@ -452,39 +423,6 @@ const styles = StyleSheet.create({
     color: MARITIME.textMuted,
     textAlign: 'center',
     marginBottom: SPACING.lg,
-  },
-  successMessage: {
-    fontSize: FONTS.lg,
-    textAlign: 'center',
-    lineHeight: 26,
-  },
-  inviteCodeLabel: {
-    fontSize: FONTS.sm,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.md,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  inviteCodeBox: {
-    backgroundColor: 'rgba(14, 165, 233, 0.12)',
-    paddingVertical: SPACING.lg,
-    paddingHorizontal: SPACING.xl,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 2,
-    borderColor: MARITIME.accent,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-  },
-  inviteCode: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: MARITIME.accent,
-    letterSpacing: 4,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-  },
-  inviteCodeExpiry: {
-    fontSize: FONTS.xs,
-    marginTop: SPACING.md,
   },
   instructionsTitle: {
     fontSize: FONTS.lg,

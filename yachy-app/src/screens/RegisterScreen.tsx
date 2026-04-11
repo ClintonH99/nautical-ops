@@ -18,6 +18,7 @@ import { Department } from '../types';
 import authService from '../services/auth';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { usePostHog } from 'posthog-react-native';
 
 const DEPARTMENTS = [
   { label: 'Bridge', value: 'BRIDGE' },
@@ -45,6 +46,7 @@ export const RegisterScreen = ({ navigation, route }: any) => {
   const [confirmSentEmail, setConfirmSentEmail] = useState<string | null>(null);
 
   const setUser = useAuthStore((state) => state.setUser);
+  const posthog = usePostHog();
 
   // Check if user is creating their own vessel (came from CreateVessel screen)
   const isVesselCreator = !!formData.vesselId;
@@ -128,8 +130,24 @@ export const RegisterScreen = ({ navigation, route }: any) => {
         if (!session) {
           setConfirmSentEmail(formData.email);
         } else {
+          posthog.identify(user.id, {
+            $set: {
+              email: user.email,
+              name: user.name,
+              role: user.role,
+              position: user.position,
+              department: formData.department,
+            },
+            $set_once: { signup_date: new Date().toISOString() },
+          });
+          posthog.capture('user_signed_up', {
+            role: user.role,
+            department: formData.department,
+            has_invite_code: !!formData.inviteCode,
+            is_vessel_creator: isVesselCreator,
+          });
           setUser(user);
-          const roleMessage = formData.vesselId 
+          const roleMessage = formData.vesselId
             ? 'Your vessel is ready! You are the Head of Department.'
             : 'Welcome aboard!';
           Alert.alert('Success', `Account created successfully! ${roleMessage}`);
@@ -137,10 +155,16 @@ export const RegisterScreen = ({ navigation, route }: any) => {
       }
     } catch (error: any) {
       const msg = error?.message?.toLowerCase() || '';
-      const isInviteCodeError = msg.includes('invite code') || msg.includes('vessel not found') || msg.includes('cannot coerce') || msg.includes('expired');
+      const isInviteCodeError =
+        msg.includes('invite code') ||
+        msg.includes('vessel not found') ||
+        msg.includes('cannot coerce') ||
+        msg.includes('expired');
       Alert.alert(
         'Invalid Invite Code',
-        isInviteCodeError ? 'Request new code from the Captain.' : (error.message || 'Failed to create account.')
+        isInviteCodeError
+          ? 'Request new code from the Captain.'
+          : error.message || 'Failed to create account.'
       );
     } finally {
       setLoading(false);
@@ -152,15 +176,17 @@ export const RegisterScreen = ({ navigation, route }: any) => {
       style={[styles.container, { backgroundColor: themeColors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Create Account</Text>
-            <Text style={[styles.subtitle, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>
+            <Text
+              style={[
+                styles.subtitle,
+                { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+              ]}
+            >
               {isVesselCreator ? 'Set up your captain account' : 'Join the crew'}
             </Text>
           </View>
@@ -168,7 +194,8 @@ export const RegisterScreen = ({ navigation, route }: any) => {
           {confirmSentEmail ? (
             <View style={styles.confirmBanner}>
               <Text style={styles.confirmBannerText}>
-                Confirmation email has been sent to {confirmSentEmail}. Please verify your email before signing in.
+                Confirmation email has been sent to {confirmSentEmail}. Please verify your email
+                before signing in.
               </Text>
               <Button
                 title="Go to Login"
@@ -182,136 +209,147 @@ export const RegisterScreen = ({ navigation, route }: any) => {
               />
             </View>
           ) : (
-          <>
-          {/* Form */}
-          <View style={styles.form}>
-            <Input
-              label="Full Name"
-              placeholder="John Doe"
-              value={formData.name}
-              onChangeText={(value) => updateField('name', value)}
-              error={errors.name}
-            />
+            <>
+              {/* Form */}
+              <View style={styles.form}>
+                <Input
+                  label="Full Name"
+                  placeholder="John Doe"
+                  value={formData.name}
+                  onChangeText={(value) => updateField('name', value)}
+                  error={errors.name}
+                />
 
-            <Input
-              label="Email"
-              placeholder="your@email.com"
-              value={formData.email}
-              onChangeText={(value) => updateField('email', value)}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              error={errors.email}
-            />
+                <Input
+                  label="Email"
+                  placeholder="your@email.com"
+                  value={formData.email}
+                  onChangeText={(value) => updateField('email', value)}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  error={errors.email}
+                />
 
-            <Input
-              label="Password"
-              placeholder="Minimum 6 characters"
-              value={formData.password}
-              onChangeText={(value) => updateField('password', value)}
-              secureTextEntry
-              showPasswordToggle
-              autoCapitalize="none"
-              error={errors.password}
-            />
+                <Input
+                  label="Password"
+                  placeholder="Minimum 6 characters"
+                  value={formData.password}
+                  onChangeText={(value) => updateField('password', value)}
+                  secureTextEntry
+                  showPasswordToggle
+                  autoCapitalize="none"
+                  error={errors.password}
+                />
 
-            <Input
-              label="Confirm Password"
-              placeholder="Re-enter password"
-              value={formData.confirmPassword}
-              onChangeText={(value) => updateField('confirmPassword', value)}
-              secureTextEntry
-              showPasswordToggle
-              autoCapitalize="none"
-              error={errors.confirmPassword}
-            />
+                <Input
+                  label="Confirm Password"
+                  placeholder="Re-enter password"
+                  value={formData.confirmPassword}
+                  onChangeText={(value) => updateField('confirmPassword', value)}
+                  secureTextEntry
+                  showPasswordToggle
+                  autoCapitalize="none"
+                  error={errors.confirmPassword}
+                />
 
-            <Input
-              label="Position"
-              placeholder="e.g., Deckhand, Chief Stew, Engineer"
-              value={formData.position}
-              onChangeText={(value) => updateField('position', value)}
-              error={errors.position}
-            />
+                <Input
+                  label="Position"
+                  placeholder="e.g., Deckhand, Chief Stew, Engineer"
+                  value={formData.position}
+                  onChangeText={(value) => updateField('position', value)}
+                  error={errors.position}
+                />
 
-            {/* Department Selection - simplified for now */}
-            <View style={styles.departmentSection}>
-              <Text style={[styles.label, { color: themeColors.textPrimary }]}>Department</Text>
-              <View style={styles.departmentButtons}>
-                {DEPARTMENTS.map((dept) => (
-                  <Button
-                    key={dept.value}
-                    title={dept.label}
-                    variant="outline"
-                    size="small"
-                    onPress={() => updateField('department', dept.value)}
-                    style={formData.department === dept.value ? { ...styles.departmentButton, ...styles.departmentButtonSelected } : styles.departmentButton}
+                {/* Department Selection - simplified for now */}
+                <View style={styles.departmentSection}>
+                  <Text style={[styles.label, { color: themeColors.textPrimary }]}>Department</Text>
+                  <View style={styles.departmentButtons}>
+                    {DEPARTMENTS.map((dept) => (
+                      <Button
+                        key={dept.value}
+                        title={dept.label}
+                        variant="outline"
+                        size="small"
+                        onPress={() => updateField('department', dept.value)}
+                        style={
+                          formData.department === dept.value
+                            ? { ...styles.departmentButton, ...styles.departmentButtonSelected }
+                            : styles.departmentButton
+                        }
+                      />
+                    ))}
+                  </View>
+                  {errors.department && <Text style={styles.error}>{errors.department}</Text>}
+                </View>
+
+                {/* Only show invite code for vessel creators */}
+                {isVesselCreator && (
+                  <Input
+                    label="Invite Code"
+                    placeholder="Auto-generated for your vessel"
+                    value={formData.inviteCode}
+                    onChangeText={(value) => updateField('inviteCode', value)}
+                    autoCapitalize="characters"
+                    error={errors.inviteCode}
+                    editable={false}
                   />
-                ))}
+                )}
+
+                {/* Info message for regular users */}
+                {!isVesselCreator && (
+                  <View style={styles.inviteCodeInfo}>
+                    <Text
+                      style={[
+                        styles.inviteCodeInfoText,
+                        { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                      ]}
+                    >
+                      💡 You can join a vessel after creating your account
+                    </Text>
+                  </View>
+                )}
+
+                {/* Show vessel creator badge */}
+                {isVesselCreator && (
+                  <View style={[styles.creatorBadge, { backgroundColor: themeColors.surface }]}>
+                    <Text style={styles.creatorBadgeText}>
+                      ⚓ Vessel Creator - You'll be assigned as Head of Department
+                    </Text>
+                  </View>
+                )}
+
+                <ConsentCheckbox
+                  checked={acceptedTerms}
+                  onToggle={() => setAcceptedTerms((v) => !v)}
+                  onPressTerms={() => navigation.navigate('TermsConditions')}
+                  onPressPrivacy={() => navigation.navigate('PrivacyPolicy')}
+                  textColor={themeColors.textPrimary}
+                  error={errors.terms}
+                />
+
+                <Button
+                  title="Create Account"
+                  onPress={handleRegister}
+                  loading={loading}
+                  fullWidth
+                  style={styles.registerButton}
+                />
               </View>
-              {errors.department && (
-                <Text style={styles.error}>{errors.department}</Text>
-              )}
-            </View>
 
-            {/* Only show invite code for vessel creators */}
-            {isVesselCreator && (
-              <Input
-                label="Invite Code"
-                placeholder="Auto-generated for your vessel"
-                value={formData.inviteCode}
-                onChangeText={(value) => updateField('inviteCode', value)}
-                autoCapitalize="characters"
-                error={errors.inviteCode}
-                editable={false}
-              />
-            )}
-
-            {/* Info message for regular users */}
-            {!isVesselCreator && (
-              <View style={styles.inviteCodeInfo}>
-                <Text style={[styles.inviteCodeInfoText, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>
-                  💡 You can join a vessel after creating your account
+              {/* Footer */}
+              <View style={styles.footer}>
+                <Text style={[styles.footerText, { color: themeColors.textSecondary }]}>
+                  Already have an account?{' '}
                 </Text>
+                <Button
+                  title="Sign In"
+                  onPress={() => navigation.navigate('Login')}
+                  variant="outline"
+                  size="small"
+                />
               </View>
-            )}
-
-            {/* Show vessel creator badge */}
-            {isVesselCreator && (
-              <View style={[styles.creatorBadge, { backgroundColor: themeColors.surface }]}>
-                <Text style={styles.creatorBadgeText}>⚓ Vessel Creator - You'll be assigned as Head of Department</Text>
-              </View>
-            )}
-
-            <ConsentCheckbox
-              checked={acceptedTerms}
-              onToggle={() => setAcceptedTerms((v) => !v)}
-              onPressTerms={() => navigation.navigate('TermsConditions')}
-              onPressPrivacy={() => navigation.navigate('PrivacyPolicy')}
-              textColor={themeColors.textPrimary}
-              error={errors.terms}
-            />
-
-            <Button
-              title="Create Account"
-              onPress={handleRegister}
-              loading={loading}
-              fullWidth
-              style={styles.registerButton}
-            />
-          </View>
-
-          {/* Footer */}
-          <View style={styles.footer}>
-            <Text style={[styles.footerText, { color: themeColors.textSecondary }]}>Already have an account? </Text>
-            <Button
-              title="Sign In"
-              onPress={() => navigation.navigate('Login')}
-              variant="outline"
-              size="small"
-            />
-          </View>
-          </>
+            </>
           )}
         </View>
       </ScrollView>

@@ -3,9 +3,10 @@
  * Subscription plan selection — respects Day/Night theme.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { usePostHog } from 'posthog-react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -28,9 +29,17 @@ import { canAccessVesselManagement } from '../utils/access';
 export const VesselPlansScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
+  const posthog = usePostHog();
   const [selectedPlanTier, setSelectedPlanTier] = useState<PlanTierId>('1_5');
   const [selectedBillingPeriod, setSelectedBillingPeriod] = useState<BillingPeriodId>('monthly');
   const [isProcessing, setIsProcessing] = useState(false);
+
+  useEffect(() => {
+    posthog.capture('vessel_plans_viewed', {
+      has_active_subscription: false,
+      vessel_id: user?.vesselId ?? null,
+    });
+  }, []);
 
   const {
     hasActiveSubscription,

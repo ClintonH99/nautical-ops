@@ -19,6 +19,7 @@ import { Button, Input } from '../components';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import authService from '../services/auth';
 import { useAuthStore } from '../store';
+import { usePostHog } from 'posthog-react-native';
 
 const MARITIME = {
   bgDark: '#0f172a',
@@ -39,6 +40,7 @@ export const LoginScreen = ({ navigation }: any) => {
 
   const setUser = useAuthStore((state) => state.setUser);
   const [loginError, setLoginError] = useState('');
+  const posthog = usePostHog();
 
   const validateForm = () => {
     let valid = true;
@@ -84,6 +86,15 @@ export const LoginScreen = ({ navigation }: any) => {
         //     return;
         //   }
         // }
+        posthog.identify(user.id, {
+          $set: { email: user.email, name: user.name, role: user.role, position: user.position },
+          $set_once: { first_login_date: new Date().toISOString() },
+        });
+        posthog.capture('user_signed_in', {
+          method: 'email',
+          role: user.role,
+          has_vessel: !!user.vesselId,
+        });
         setUser(user);
       } else {
         const msg = 'Email Address or Password is Incorrect, Try Again.';

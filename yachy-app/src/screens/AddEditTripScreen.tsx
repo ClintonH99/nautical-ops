@@ -21,6 +21,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import tripsService from '../services/trips';
+import { usePostHog } from 'posthog-react-native';
 import { TripType, Department } from '../types';
 import { Input, Button, LoadingSpinner } from '../components';
 import { useVesselTripColors } from '../hooks/useVesselTripColors';
@@ -50,6 +51,7 @@ function getMarkedRange(start: string, end: string, color: string): MarkedDates 
 export const AddEditTripScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
+  const posthog = usePostHog();
   const type = (route.params?.type ?? 'GUEST') as TripType;
   const tripId = route.params?.tripId as string | undefined;
 
@@ -207,6 +209,12 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
           endDate,
           notes: notes.trim() || undefined,
           department: type === 'YARD_PERIOD' ? (department ?? null) : undefined,
+        });
+        posthog.capture('trip_created', {
+          trip_type: type,
+          start_date: startDate,
+          end_date: endDate,
+          has_notes: !!notes.trim(),
         });
         Alert.alert('Created', 'Trip added.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
       }

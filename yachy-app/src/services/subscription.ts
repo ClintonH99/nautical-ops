@@ -2,7 +2,6 @@
  * Subscription Service
  * Vessel subscription status from Supabase (vessel_subscriptions).
  */
-
 import { supabase } from './supabase';
 import type { PlanTierId, BillingPeriodId } from '../constants/subscriptionPlans';
 
@@ -19,8 +18,7 @@ export interface VesselSubscription {
 }
 
 /**
- * Get active subscription for a vessel.
- * Returns the subscription if status is 'active' and current_period_end > now.
+ * Get active or trialing subscription for a vessel.
  */
 export async function getVesselSubscription(vesselId: string): Promise<VesselSubscription | null> {
   try {
@@ -29,7 +27,7 @@ export async function getVesselSubscription(vesselId: string): Promise<VesselSub
       .from('vessel_subscriptions')
       .select('*')
       .eq('vessel_id', vesselId)
-      .eq('status', 'active')
+      .in('status', ['active', 'trialing'])
       .gt('current_period_end', now)
       .order('current_period_end', { ascending: false })
       .limit(1)

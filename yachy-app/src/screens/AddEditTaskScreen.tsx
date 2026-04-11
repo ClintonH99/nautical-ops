@@ -21,6 +21,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import vesselTasksService from '../services/vesselTasks';
+import { usePostHog } from 'posthog-react-native';
 import { TaskCategory, TaskRecurring, Department } from '../types';
 import { Input, Button, LoadingSpinner } from '../components';
 
@@ -39,6 +40,7 @@ const RECURRING_OPTIONS: { value: TaskRecurring; label: string }[] = [
 export const AddEditTaskScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
+  const posthog = usePostHog();
   const categoryFromRoute = route.params?.category as TaskCategory | undefined;
   const taskId = route.params?.taskId as string | undefined;
   const showCategoryPicker = categoryFromRoute === undefined;
@@ -133,6 +135,13 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
           doneByDate: doneByDate || null,
           recurring: recurring || undefined,
         });
+        posthog.capture('task_updated', {
+          task_id: taskId,
+          category,
+          department,
+          has_deadline: !!doneByDate,
+          is_recurring: !!recurring,
+        });
         Alert.alert('Updated', 'Task updated.', [
           { text: 'OK', onPress: () => navigation.goBack() },
         ]);
@@ -145,6 +154,12 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
           notes: notes.trim() || undefined,
           doneByDate: doneByDate || null,
           recurring: recurring || undefined,
+        });
+        posthog.capture('task_created', {
+          category,
+          department,
+          has_deadline: !!doneByDate,
+          is_recurring: !!recurring,
         });
         Alert.alert('Created', 'Task added.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
       }

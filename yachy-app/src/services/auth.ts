@@ -22,31 +22,31 @@ export interface RegisterData extends LoginCredentials {
   name: string;
   position: string;
   department: string;
-  department2?: string | null; // Optional second department for crew
+  department2?: string | null;
   contractType?: string;
   inviteCode?: string;
-  vesselId?: string; // For when user creates their own vessel
+  vesselId?: string;
 }
 
+const PLAN_MAX_CREW: Record<string, number> = {
+  '1_5': 5,
+  '6_10': 10,
+  '11_15': 15,
+  '16_25': 25,
+  '26_40': 40,
+  '40_plus': Infinity,
+};
+
 class AuthService {
-  /**
-   * Sign in with email and password
-   */
   async signIn({ email, password }: LoginCredentials) {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        // Surface clearer messages for common Supabase auth errors
         if (error.message?.includes('Invalid login credentials')) {
           throw new Error('Email Address or Password is Incorrect, Try Again.');
         }
         throw error;
       }
-
       if (data.user) {
         const PROFILE_TIMEOUT_MS = 15000;
         const userDataPromise = this.getUserProfile(data.user.id);
@@ -57,13 +57,11 @@ class AuthService {
           )
         );
         let userData = await Promise.race([userDataPromise, timeoutPromise]);
-        // If auth succeeded but no profile exists (edge case), create one
         if (!userData) {
           userData = await this.ensureOAuthUserProfile(data.user);
         }
         return { user: userData, session: data.session };
       }
-
       return { user: null, session: null };
     } catch (error: any) {
       if (__DEV__) console.error('Sign in error:', error);
@@ -80,41 +78,27 @@ class AuthService {
     }
   }
 
-  /**
-   * Sign in with Google (OAuth)
-   */
   async signInWithGoogle(): Promise<{ user: User | null; session: any }> {
     try {
       WebBrowser.maybeCompleteAuthSession();
-      const redirectTo = makeRedirectUri({
-        scheme: 'nauticalops',
-        preferLocalhost: false,
-      });
+      const redirectTo = makeRedirectUri({ scheme: 'nauticalops', preferLocalhost: false });
       const isLocalhost = redirectTo.includes('localhost') || redirectTo.includes('127.0.0.1');
       if (Platform.OS !== 'web' && Device.isDevice && isLocalhost) {
         throw new Error(
-          'Google Sign-In needs tunnel mode on a physical device. Restart with: cd yachy-app && npx expo start --tunnel\n\n' +
-            'Then add the tunnel URL (shown in the terminal) to Supabase Auth → URL Configuration → Redirect URLs.'
+          'Google Sign-In needs tunnel mode on a physical device. Restart with: cd yachy-app && npx expo start --tunnel\n\nThen add the tunnel URL (shown in the terminal) to Supabase Auth → URL Configuration → Redirect URLs.'
         );
       }
-
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo,
-          skipBrowserRedirect: true,
-        },
+        options: { redirectTo, skipBrowserRedirect: true },
       });
       if (error) throw error;
       if (!data?.url) throw new Error('No OAuth URL returned');
-
       const result = (await WebBrowser.openAuthSessionAsync(data.url, redirectTo)) as {
         type: string;
         url?: string;
       };
-      if (result.type !== 'success' || !result.url) {
-        return { user: null, session: null };
-      }
+      if (result.type !== 'success' || !result.url) return { user: null, session: null };
       const authUrl = result.url;
       const { params, errorCode } = QueryParams.getQueryParams(authUrl);
       if (errorCode) throw new Error(errorCode);
@@ -127,14 +111,12 @@ class AuthService {
         refresh_token = hashParams.get('refresh_token') ?? undefined;
       }
       if (!access_token) return { user: null, session: null };
-
       const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
         access_token,
         refresh_token: refresh_token ?? '',
       });
       if (sessionError) throw sessionError;
       if (!sessionData.user) return { user: null, session: null };
-
       const userData = await this.ensureOAuthUserProfile(sessionData.user);
       return { user: userData, session: sessionData.session };
     } catch (error: any) {
@@ -143,40 +125,25 @@ class AuthService {
     }
   }
 
-  /**
-   * Sign in with Apple (native iOS or web OAuth)
-   */
   async signInWithApple(): Promise<{ user: User | null; session: any }> {
     if (Platform.OS === 'android') {
       throw new Error('Sign in with Apple is not available on Android');
     }
-
-    // Web: use OAuth redirect flow (same as Google)
     if (Platform.OS === 'web') {
       try {
         WebBrowser.maybeCompleteAuthSession();
-        const redirectTo = makeRedirectUri({
-          scheme: 'nauticalops',
-          preferLocalhost: false,
-        });
-
+        const redirectTo = makeRedirectUri({ scheme: 'nauticalops', preferLocalhost: false });
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider: 'apple',
-          options: {
-            redirectTo,
-            skipBrowserRedirect: true,
-          },
+          options: { redirectTo, skipBrowserRedirect: true },
         });
         if (error) throw error;
         if (!data?.url) throw new Error('No OAuth URL returned');
-
         const result = (await WebBrowser.openAuthSessionAsync(data.url, redirectTo)) as {
           type: string;
           url?: string;
         };
-        if (result.type !== 'success' || !result.url) {
-          return { user: null, session: null };
-        }
+        if (result.type !== 'success' || !result.url) return { user: null, session: null };
         const authUrl = result.url;
         const { params, errorCode } = QueryParams.getQueryParams(authUrl);
         if (errorCode) throw new Error(errorCode);
@@ -189,14 +156,12 @@ class AuthService {
           refresh_token = hashParams.get('refresh_token') ?? undefined;
         }
         if (!access_token) return { user: null, session: null };
-
         const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
           access_token,
           refresh_token: refresh_token ?? '',
         });
         if (sessionError) throw sessionError;
         if (!sessionData.user) return { user: null, session: null };
-
         const userData = await this.ensureOAuthUserProfile(sessionData.user);
         return { user: userData, session: sessionData.session };
       } catch (error: any) {
@@ -204,8 +169,6 @@ class AuthService {
         throw error;
       }
     }
-
-    // iOS: native Apple authentication
     try {
       const AppleAuthentication = require('expo-apple-authentication');
       const rawNonce = Crypto.randomUUID();
@@ -213,7 +176,6 @@ class AuthService {
         Crypto.CryptoDigestAlgorithm.SHA256,
         rawNonce
       );
-
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
@@ -221,9 +183,7 @@ class AuthService {
         ],
         nonce: hashedNonce,
       });
-
       if (!credential.identityToken) throw new Error('No identity token from Apple');
-
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
         token: credential.identityToken,
@@ -231,7 +191,6 @@ class AuthService {
       });
       if (error) throw error;
       if (!data.user) return { user: null, session: null };
-
       if (credential.fullName) {
         const fullName = [
           credential.fullName.givenName,
@@ -244,21 +203,15 @@ class AuthService {
           await supabase.auth.updateUser({ data: { full_name: fullName } });
         }
       }
-
       const userData = await this.ensureOAuthUserProfile(data.user, credential.fullName);
       return { user: userData, session: data.session };
     } catch (error: any) {
-      if (error?.code === 'ERR_REQUEST_CANCELED') {
-        return { user: null, session: null };
-      }
+      if (error?.code === 'ERR_REQUEST_CANCELED') return { user: null, session: null };
       if (__DEV__) console.error('Apple sign in error:', error);
       throw error;
     }
   }
 
-  /**
-   * Ensure OAuth user has a profile in users table; create with defaults if missing
-   */
   private async ensureOAuthUserProfile(
     authUser: { id: string; email?: string | null; user_metadata?: Record<string, any> },
     appleFullName?: {
@@ -269,7 +222,6 @@ class AuthService {
   ): Promise<User | null> {
     let profile = await this.getUserProfile(authUser.id);
     if (profile) return profile;
-
     const name = appleFullName
       ? [appleFullName.givenName, appleFullName.middleName, appleFullName.familyName]
           .filter((s): s is string => s != null && s !== '')
@@ -279,7 +231,6 @@ class AuthService {
         authUser.email?.split('@')[0] ??
         'Crew Member');
     const email = authUser.email ?? authUser.user_metadata?.email ?? '';
-
     const userProfile = {
       id: authUser.id,
       email,
@@ -290,13 +241,11 @@ class AuthService {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
-
     const { error } = await supabase.from('users').insert([userProfile]);
     if (error) {
       if (__DEV__) console.error('OAuth profile creation error:', error);
       return null;
     }
-
     return {
       id: userProfile.id,
       email: userProfile.email,
@@ -310,9 +259,6 @@ class AuthService {
     };
   }
 
-  /**
-   * Sign up with email and password
-   */
   async signUp({
     email,
     password,
@@ -331,9 +277,6 @@ class AuthService {
         console.log('🎫 Invite Code:', inviteCode || 'None');
         console.log('⚓ Vessel ID:', vesselId || 'None');
       }
-
-      // For CREW with invite code: validate FIRST before creating any user
-      // This ensures we never reserve the email if the invite code is invalid
       let validatedVessel: { id: string; name: string } | null = null;
       if (inviteCode && inviteCode.trim() && !vesselId) {
         const vessel = await this.validateInviteCode(inviteCode);
@@ -341,13 +284,7 @@ class AuthService {
         validatedVessel = vessel;
         if (__DEV__) console.log('✅ Invite code valid! Vessel:', vessel.name);
       }
-
-      // Create the auth user (only after invite code validated for crew)
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
+      const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
       if (authError) {
         if (__DEV__) console.error('❌ Auth signup error:', authError.message);
         if (
@@ -358,10 +295,8 @@ class AuthService {
         }
         throw authError;
       }
-
       if (authData.user) {
         if (__DEV__) console.log('✅ Auth user created:', authData.user.id);
-
         const role = vesselId ? 'HOD' : 'CREW';
         const userProfile: any = {
           id: authData.user.id,
@@ -375,7 +310,6 @@ class AuthService {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
-
         let joinedViaInviteCode = false;
         if (vesselId) {
           userProfile.vessel_id = vesselId;
@@ -383,12 +317,9 @@ class AuthService {
           userProfile.vessel_id = validatedVessel.id;
           joinedViaInviteCode = true;
         }
-
         if (__DEV__)
           console.log('💾 Creating user profile with vessel_id:', userProfile.vessel_id || 'null');
-
         const { error: profileError } = await supabase.from('users').insert([userProfile]);
-
         if (profileError) {
           if (__DEV__) console.error('❌ Profile creation error:', profileError);
           const code = (profileError as any)?.code;
@@ -402,10 +333,7 @@ class AuthService {
           }
           throw profileError;
         }
-
         if (__DEV__) console.log('✅ User profile created successfully!');
-
-        // Regenerate invite code so it's single-use: one code per crew member
         if (joinedViaInviteCode && userProfile.vessel_id) {
           try {
             const newCode = await vesselService.regenerateInviteCode(userProfile.vessel_id);
@@ -415,8 +343,6 @@ class AuthService {
               console.error('⚠️ Failed to regenerate invite code (non-fatal):', regenError);
           }
         }
-
-        // Map the profile to User type (snake_case -> camelCase)
         const mappedUser: User = {
           id: userProfile.id,
           email: userProfile.email,
@@ -427,12 +353,11 @@ class AuthService {
           contractType: userProfile.contract_type ?? 'permanent',
           rotationGroupId: userProfile.rotation_group_id ?? null,
           role: userProfile.role,
-          vesselId: userProfile.vessel_id, // Map vessel_id to vesselId
+          vesselId: userProfile.vessel_id,
           profilePhoto: userProfile.profile_photo,
           createdAt: userProfile.created_at,
           updatedAt: userProfile.updated_at,
         };
-
         if (__DEV__)
           console.log(
             '🎉 Signup complete! User:',
@@ -440,10 +365,8 @@ class AuthService {
             'Vessel ID:',
             mappedUser.vesselId
           );
-
         return { user: mappedUser, session: authData.session };
       }
-
       return { user: null, session: null };
     } catch (error: any) {
       const msg = error?.message?.toLowerCase() || '';
@@ -451,15 +374,13 @@ class AuthService {
         msg.includes('invite code') ||
         msg.includes('vessel not found') ||
         msg.includes('cannot coerce') ||
-        msg.includes('expired');
+        msg.includes('expired') ||
+        msg.includes('crew limit');
       if (!isInviteCodeError && __DEV__) console.error('❌ Sign up error:', error.message || error);
       throw error;
     }
   }
 
-  /**
-   * Sign out
-   */
   async signOut() {
     try {
       const { error } = await supabase.auth.signOut();
@@ -470,10 +391,6 @@ class AuthService {
     }
   }
 
-  /**
-   * Get current session
-   * Handles invalid/expired refresh tokens by signing out and returning null
-   */
   async getSession() {
     try {
       const { data, error } = await supabase.auth.getSession();
@@ -492,9 +409,8 @@ class AuthService {
         } catch {
           /* best-effort clear */
         }
-        if (__DEV__) {
+        if (__DEV__)
           console.warn('[Auth] Cleared invalid refresh token; user will need to sign in again.');
-        }
       } else if (__DEV__) {
         console.error('Get session error:', error);
       }
@@ -502,9 +418,6 @@ class AuthService {
     }
   }
 
-  /**
-   * Get user profile from database
-   */
   async getUserProfile(userId: string): Promise<User | null> {
     try {
       const { data, error } = await supabase
@@ -512,16 +425,11 @@ class AuthService {
         .select('*')
         .eq('id', userId)
         .maybeSingle();
-
       if (error) throw error;
-
-      // If no user found, return null (user doesn't have a profile yet)
       if (!data) {
         if (__DEV__) console.log('No user profile found for:', userId);
         return null;
       }
-
-      // Map snake_case database columns to camelCase User type
       return {
         id: data.id,
         email: data.email,
@@ -532,7 +440,7 @@ class AuthService {
         contractType: data.contract_type ?? 'permanent',
         rotationGroupId: data.rotation_group_id ?? null,
         role: data.role,
-        vesselId: data.vessel_id, // Map vessel_id to vesselId
+        vesselId: data.vessel_id,
         profilePhoto: data.profile_photo,
         createdAt: data.created_at,
         updatedAt: data.updated_at,
@@ -543,51 +451,33 @@ class AuthService {
     }
   }
 
-  /**
-   * Load profile with bounded waits and retries (cold start, resume, auth events).
-   * Reduces hangs from a single slow getUserProfile call.
-   */
   async getUserProfileWithRetry(userId: string): Promise<User | null> {
     const ATTEMPT_MS = 2500;
     const BETWEEN_MS = 400;
     const FINAL_RACE_MS = 5000;
-
     const race = (ms: number) =>
       Promise.race([
         this.getUserProfile(userId),
         new Promise<User | null>((resolve) => setTimeout(() => resolve(null), ms)),
       ]);
-
     for (let attempt = 0; attempt < 2; attempt++) {
       const row = await race(ATTEMPT_MS);
       if (row) return row;
       await new Promise((r) => setTimeout(r, BETWEEN_MS));
     }
-
     return race(FINAL_RACE_MS);
   }
 
-  /**
-   * Validate invite code and get vessel
-   */
   async validateInviteCode(inviteCode: string) {
     try {
       if (__DEV__) console.log('🔍 Validating invite code in database:', inviteCode);
-
       const { data, error } = await supabase
         .from('vessels')
         .select('*')
         .eq('invite_code', inviteCode)
         .maybeSingle();
-
-      if (error) {
-        throw new Error('Invalid invite code');
-      }
-
-      if (!data) {
-        throw new Error('Invalid invite code');
-      }
-
+      if (error) throw new Error('Invalid invite code');
+      if (!data) throw new Error('Invalid invite code');
       if (__DEV__) console.log('✅ Vessel found:', data.name, 'ID:', data.id);
 
       // Check if invite code is expired
@@ -597,9 +487,31 @@ class AuthService {
         console.log('📅 Expiry date:', expiryDate.toISOString());
         console.log('📅 Current date:', now.toISOString());
       }
+      if (expiryDate < now) throw new Error('Invite code has expired');
 
-      if (expiryDate < now) {
-        throw new Error('Invite code has expired');
+      // Check crew limit against subscription plan
+      const { data: subscription } = await supabase
+        .from('vessel_subscriptions')
+        .select('plan_tier, status')
+        .eq('vessel_id', data.id)
+        .in('status', ['active', 'trialing'])
+        .maybeSingle();
+
+      if (subscription) {
+        const maxCrew = PLAN_MAX_CREW[subscription.plan_tier] ?? Infinity;
+        if (maxCrew !== Infinity) {
+          const { count } = await supabase
+            .from('users')
+            .select('id', { count: 'exact', head: true })
+            .eq('vessel_id', data.id);
+          const currentCount = count ?? 0;
+          if (__DEV__) console.log(`👥 Crew count: ${currentCount}/${maxCrew}`);
+          if (currentCount >= maxCrew) {
+            throw new Error(
+              `This vessel has reached its crew limit of ${maxCrew}. The captain needs to upgrade their plan to add more crew.`
+            );
+          }
+        }
       }
 
       if (__DEV__) console.log('✅ Invite code is valid and not expired');
@@ -609,38 +521,21 @@ class AuthService {
     }
   }
 
-  /**
-   * Join a vessel using invite code (for users who registered without a vessel)
-   */
   async joinVessel(userId: string, inviteCode: string) {
     try {
-      // Validate invite code and get vessel
       const vessel = await this.validateInviteCode(inviteCode);
-
-      if (!vessel) {
-        throw new Error('Invalid invite code');
-      }
-
-      // Update user's vessel_id
+      if (!vessel) throw new Error('Invalid invite code');
       const { error } = await supabase
         .from('users')
-        .update({
-          vessel_id: vessel.id,
-          updated_at: new Date().toISOString(),
-        })
+        .update({ vessel_id: vessel.id, updated_at: new Date().toISOString() })
         .eq('id', userId);
-
       if (error) throw error;
-
-      // Regenerate invite code so it's single-use: one code per crew member
       try {
         await vesselService.regenerateInviteCode(vessel.id);
         if (__DEV__) console.log('🔄 Invite code regenerated for next crew member');
       } catch (regenError) {
         if (__DEV__) console.error('⚠️ Failed to regenerate invite code (non-fatal):', regenError);
       }
-
-      // Return updated user profile
       return await this.getUserProfile(userId);
     } catch (error: any) {
       const msg = error?.message?.toLowerCase() || '';
@@ -648,15 +543,13 @@ class AuthService {
         msg.includes('invite code') ||
         msg.includes('vessel not found') ||
         msg.includes('cannot coerce') ||
-        msg.includes('expired');
+        msg.includes('expired') ||
+        msg.includes('crew limit');
       if (!isInviteCodeError && __DEV__) console.error('Join vessel error:', error);
       throw error;
     }
   }
 
-  /**
-   * Listen to auth state changes
-   */
   onAuthStateChange(callback: (user: User | null) => void) {
     return supabase.auth.onAuthStateChange(async (event, session) => {
       try {
@@ -685,9 +578,7 @@ class AuthService {
         }
       } catch (error) {
         if (__DEV__) console.error('Auth state change handler error:', error);
-        if (session?.user) {
-          return;
-        }
+        if (session?.user) return;
         callback(null);
       }
     });

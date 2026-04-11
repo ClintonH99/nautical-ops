@@ -27,10 +27,12 @@ import userService from '../services/user';
 import { Vessel } from '../types';
 import { getPlanTier, getBillingPeriod } from '../constants/subscriptionPlans';
 import { canAccessVesselManagement } from '../utils/access';
+import { usePostHog } from 'posthog-react-native';
 
 export const VesselSettingsScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
+  const posthog = usePostHog();
   const [vessel, setVessel] = useState<Vessel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditingName, setIsEditingName] = useState(false);
@@ -45,11 +47,8 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
     subscription,
     refetch: refetchSubscription,
   } = useSubscriptionStatus(user?.vesselId ?? null);
-  // TODO: Re-enable subscription gate once payment flow is set up
-  const bypassSubscriptionCheck = true;
-  const hasActiveSubscription = bypassSubscriptionCheck || _hasActiveSubscription;
+  const hasActiveSubscription = _hasActiveSubscription;
 
-  // Check if user is HOD
   const isHOD = user?.role === 'HOD';
 
   useEffect(() => {
@@ -59,7 +58,6 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
       ]);
       return;
     }
-
     loadVessel();
   }, []);
 
@@ -75,7 +73,6 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
 
   const loadVessel = async () => {
     if (!user?.vesselId) return;
-
     setIsLoading(true);
     try {
       const [vesselData, crew] = await Promise.all([
@@ -100,19 +97,12 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
       Alert.alert('Error', 'Vessel name is required');
       return;
     }
-
     if (!user?.vesselId) return;
-
     setIsSavingName(true);
     try {
       await vesselService.updateVesselName(user.vesselId, vesselName.trim());
-
-      // Refresh vessel data
       const updatedVessel = await vesselService.getVessel(user.vesselId);
-      if (updatedVessel) {
-        setVessel(updatedVessel);
-      }
-
+      if (updatedVessel) setVessel(updatedVessel);
       setIsEditingName(false);
       Alert.alert('Success', 'Vessel name updated successfully!');
     } catch (error) {
@@ -139,17 +129,11 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
           style: 'destructive',
           onPress: async () => {
             if (!user?.vesselId) return;
-
             setIsRegeneratingCode(true);
             try {
               const newCode = await vesselService.regenerateInviteCode(user.vesselId);
-
-              // Refresh vessel data
               const updatedVessel = await vesselService.getVessel(user.vesselId);
-              if (updatedVessel) {
-                setVessel(updatedVessel);
-              }
-
+              if (updatedVessel) setVessel(updatedVessel);
               Alert.alert(
                 'Success',
                 `New invite code: ${newCode}\n\nShare this with crew members to join your vessel.`
@@ -200,19 +184,19 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
 
   const handleCopyCode = async () => {
     if (!vessel?.inviteCode) return;
-
     await Clipboard.setStringAsync(vessel.inviteCode);
+    posthog.capture('invite_code_copied', { vessel_id: vessel.id });
     Alert.alert('Copied!', 'Invite code copied to clipboard');
   };
 
   const handleShareCode = async () => {
     if (!vessel?.inviteCode) return;
-
     try {
       await Share.share({
         message: `Join our yacht crew on Nautical Ops!\n\nVessel: ${vessel.name}\nInvite Code: ${vessel.inviteCode}\n\nDownload the app and use this code to get started.`,
         title: 'Nautical Ops Invite',
       });
+      posthog.capture('invite_code_shared', { vessel_id: vessel.id });
     } catch (error) {
       console.error('Share error:', error);
     }
@@ -221,32 +205,22 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
   const currentPlan = subscription ? getPlanTier(subscription.planTier) : null;
   const needsUpgrade =
     currentPlan && crewCount >= currentPlan.maxCrew && currentPlan.maxCrew !== Infinity;
+  const crewLimitReached =
+    currentPlan && crewCount >= currentPlan.maxCrew && currentPlan.maxCrew !== Infinity;
 
   const formatExpiry = (expiryDate: string) => {
     const date = new Date(expiryDate);
     const now = new Date();
     const daysUntilExpiry = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (daysUntilExpiry < 0) {
-      return 'Expired';
-    } else if (daysUntilExpiry === 0) {
-      return 'Expires today';
-    } else if (daysUntilExpiry === 1) {
-      return 'Expires tomorrow';
-    } else if (daysUntilExpiry < 30) {
-      return `Expires in ${daysUntilExpiry} days`;
-    } else {
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
-    }
+    if (daysUntilExpiry < 0) return 'Expired';
+    else if (daysUntilExpiry === 0) return 'Expires today';
+    else if (daysUntilExpiry === 1) return 'Expires tomorrow';
+    else if (daysUntilExpiry < 30) return `Expires in ${daysUntilExpiry} days`;
+    else
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
-  if (!isHOD) {
-    return null;
-  }
+  if (!isHOD) return null;
 
   if (isLoading) {
     return (
@@ -371,7 +345,6 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             )}
           </View>
-
           <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
             {isEditingName ? (
               <>
@@ -413,11 +386,11 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
           </View>
         </View>
 
-        {/* Invite Code Section - Gated until subscription active */}
+        {/* Invite Code Section */}
         <View style={[styles.section, !hasActiveSubscription && { opacity: 0.6 }]}>
           <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Invite Code</Text>
 
-          {hasActiveSubscription ? (
+          {hasActiveSubscription && !crewLimitReached ? (
             <>
               <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
                 <View style={styles.codeContainer}>
@@ -493,6 +466,14 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                 </Text>
               </View>
             </>
+          ) : hasActiveSubscription && crewLimitReached ? (
+            <View style={[styles.card, styles.gatedCard, { backgroundColor: themeColors.surface }]}>
+              <Text style={[styles.gatedText, { color: themeColors.textPrimary }]}>
+                You have reached your crew limit of{' '}
+                <Text style={styles.gatedBold}>{currentPlan!.maxCrew}</Text>. Upgrade your plan in{' '}
+                <Text style={styles.gatedBold}>Vessel Plans</Text> to invite more crew members.
+              </Text>
+            </View>
           ) : (
             <View style={[styles.card, styles.gatedCard, { backgroundColor: themeColors.surface }]}>
               <Text style={[styles.gatedText, { color: themeColors.textPrimary }]}>
@@ -566,50 +547,21 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: SPACING.lg,
-    paddingBottom: SIZES.bottomScrollPadding,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: SPACING.md,
-    fontSize: FONTS.base,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.lg,
-  },
-  errorText: {
-    fontSize: FONTS.lg,
-    color: COLORS.error,
-    marginBottom: SPACING.lg,
-  },
-  section: {
-    marginBottom: SPACING.xl,
-  },
+  container: { flex: 1 },
+  content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: SPACING.md, fontSize: FONTS.base },
+  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
+  errorText: { fontSize: FONTS.lg, color: COLORS.error, marginBottom: SPACING.lg },
+  section: { marginBottom: SPACING.xl },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: SPACING.sm,
   },
-  sectionTitle: {
-    fontSize: FONTS.lg,
-    fontWeight: '600',
-  },
-  sectionSubtitle: {
-    fontSize: FONTS.sm,
-    marginBottom: SPACING.md,
-  },
+  sectionTitle: { fontSize: FONTS.lg, fontWeight: '600' },
+  sectionSubtitle: { fontSize: FONTS.sm, marginBottom: SPACING.md },
   billingPeriodRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -623,14 +575,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  billingPeriodChipText: {
-    fontSize: FONTS.sm,
-    fontWeight: '600',
-  },
-  billingPeriodDiscount: {
-    fontSize: FONTS.xs,
-    marginTop: 2,
-  },
+  billingPeriodChipText: { fontSize: FONTS.sm, fontWeight: '600' },
+  billingPeriodDiscount: { fontSize: FONTS.xs, marginTop: 2 },
   planCard: {
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
@@ -638,81 +584,29 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
   },
-  planCardSelected: {
-    borderColor: COLORS.primary,
-  },
-  planCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  planCardLabel: {
-    fontSize: FONTS.base,
-    fontWeight: '500',
-    flex: 1,
-  },
-  planCardPriceCol: {
-    alignItems: 'flex-end',
-  },
-  planCardPrice: {
-    fontSize: FONTS.base,
-    fontWeight: '700',
-  },
-  planCardTotal: {
-    fontSize: FONTS.xs,
-    marginTop: 2,
-  },
-  planActions: {
-    marginTop: SPACING.lg,
-    gap: SPACING.sm,
-  },
-  planButton: {
-    marginBottom: SPACING.sm,
-  },
-  plansLinkText: {
-    fontSize: FONTS.base,
-    marginBottom: SPACING.md,
-    lineHeight: 22,
-  },
-  currentPlanLabel: {
-    fontSize: FONTS.sm,
-    fontWeight: '600',
-    marginBottom: SPACING.xs,
-  },
-  currentPlanValue: {
-    fontSize: FONTS.lg,
-    fontWeight: 'bold',
-    marginBottom: SPACING.xs,
-  },
-  renewalText: {
-    fontSize: FONTS.sm,
-    marginBottom: SPACING.md,
-  },
+  planCardSelected: { borderColor: COLORS.primary },
+  planCardContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  planCardLabel: { fontSize: FONTS.base, fontWeight: '500', flex: 1 },
+  planCardPriceCol: { alignItems: 'flex-end' },
+  planCardPrice: { fontSize: FONTS.base, fontWeight: '700' },
+  planCardTotal: { fontSize: FONTS.xs, marginTop: 2 },
+  planActions: { marginTop: SPACING.lg, gap: SPACING.sm },
+  planButton: { marginBottom: SPACING.sm },
+  plansLinkText: { fontSize: FONTS.base, marginBottom: SPACING.md, lineHeight: 22 },
+  currentPlanLabel: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs },
+  currentPlanValue: { fontSize: FONTS.lg, fontWeight: 'bold', marginBottom: SPACING.xs },
+  renewalText: { fontSize: FONTS.sm, marginBottom: SPACING.md },
   upgradeBanner: {
     padding: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,
     marginBottom: SPACING.md,
   },
-  upgradeBannerText: {
-    fontSize: FONTS.sm,
-  },
-  gatedCard: {
-    padding: SPACING.xl,
-  },
-  gatedText: {
-    fontSize: FONTS.base,
-    lineHeight: 24,
-    textAlign: 'center',
-  },
-  gatedBold: {
-    fontWeight: '700',
-  },
-  editButton: {
-    fontSize: FONTS.base,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
+  upgradeBannerText: { fontSize: FONTS.sm },
+  gatedCard: { padding: SPACING.xl },
+  gatedText: { fontSize: FONTS.base, lineHeight: 24, textAlign: 'center' },
+  gatedBold: { fontWeight: '700' },
+  editButton: { fontSize: FONTS.base, color: COLORS.primary, fontWeight: '600' },
   card: {
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.lg,
@@ -722,10 +616,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  vesselNameDisplay: {
-    fontSize: FONTS.xl,
-    fontWeight: 'bold',
-  },
+  vesselNameDisplay: { fontSize: FONTS.xl, fontWeight: 'bold' },
   input: {
     fontSize: FONTS.base,
     borderWidth: 1,
@@ -734,22 +625,10 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     marginBottom: SPACING.md,
   },
-  actions: {
-    flexDirection: 'row',
-    gap: SPACING.md,
-  },
-  actionButton: {
-    flex: 1,
-  },
-  codeContainer: {
-    alignItems: 'center',
-    marginBottom: SPACING.lg,
-  },
-  codeLabel: {
-    fontSize: FONTS.sm,
-    fontWeight: '600',
-    marginBottom: SPACING.sm,
-  },
+  actions: { flexDirection: 'row', gap: SPACING.md },
+  actionButton: { flex: 1 },
+  codeContainer: { alignItems: 'center', marginBottom: SPACING.lg },
+  codeLabel: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.sm },
   codeBox: {
     backgroundColor: COLORS.primaryLight,
     paddingHorizontal: SPACING.xl,
@@ -757,28 +636,11 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.md,
     marginBottom: SPACING.xs,
   },
-  codeText: {
-    fontSize: FONTS['2xl'],
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    letterSpacing: 4,
-  },
-  expiryText: {
-    fontSize: FONTS.sm,
-  },
-  codeActions: {
-    flexDirection: 'row',
-    gap: SPACING.md,
-    marginBottom: SPACING.lg,
-  },
-  codeButton: {
-    flex: 1,
-  },
-  regenerateContainer: {
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    paddingTop: SPACING.lg,
-  },
+  codeText: { fontSize: FONTS['2xl'], fontWeight: 'bold', color: COLORS.primary, letterSpacing: 4 },
+  expiryText: { fontSize: FONTS.sm },
+  codeActions: { flexDirection: 'row', gap: SPACING.md, marginBottom: SPACING.lg },
+  codeButton: { flex: 1 },
+  regenerateContainer: { borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: SPACING.lg },
   regenerateWarning: {
     fontSize: FONTS.xs,
     color: COLORS.warning,
@@ -797,11 +659,7 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     marginBottom: SPACING.sm,
   },
-  infoText: {
-    fontSize: FONTS.sm,
-    marginBottom: SPACING.xs,
-    lineHeight: 20,
-  },
+  infoText: { fontSize: FONTS.sm, marginBottom: SPACING.xs, lineHeight: 20 },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -810,19 +668,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
-  infoRowLast: {
-    borderBottomWidth: 0,
-  },
-  photoHint: {
-    fontSize: FONTS.sm,
-    marginTop: SPACING.sm,
-    textAlign: 'center',
-  },
-  infoRowLabel: {
-    fontSize: FONTS.sm,
-  },
-  infoRowValue: {
-    fontSize: FONTS.sm,
-    fontWeight: '500',
-  },
+  infoRowLast: { borderBottomWidth: 0 },
+  photoHint: { fontSize: FONTS.sm, marginTop: SPACING.sm, textAlign: 'center' },
+  infoRowLabel: { fontSize: FONTS.sm },
+  infoRowValue: { fontSize: FONTS.sm, fontWeight: '500' },
 });

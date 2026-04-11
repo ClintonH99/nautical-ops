@@ -23,6 +23,7 @@ import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import maintenanceLogsService from '../services/maintenanceLogs';
 import { Input, Button, LoadingSpinner } from '../components';
+import { usePostHog } from 'posthog-react-native';
 
 const DEFAULT_EQUIPMENT_OPTIONS = [
   'Mains',
@@ -81,6 +82,7 @@ const HIDDEN_LOCATION_STORAGE_KEY = 'maintenance_location_hidden';
 export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
+  const posthog = usePostHog();
   const logId = route.params?.logId as string | undefined;
 
   const [equipment, setEquipment] = useState('');
@@ -376,6 +378,11 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
             return next;
           });
         }
+        posthog.capture('maintenance_log_created', {
+          equipment: trimmedEquipment,
+          has_serial_number: !!serialNumber.trim(),
+          has_hours_of_service: !!hoursOfService.trim(),
+        });
         Alert.alert('Saved', 'Log added.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
       }
     } catch (e) {

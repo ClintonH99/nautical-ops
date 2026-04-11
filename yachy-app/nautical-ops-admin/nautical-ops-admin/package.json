@@ -1,0 +1,8 @@
+{
+  "name": "nautical-ops-admin",
+  "version": "1.0.0",
+  "description": "Nautical Ops Admin Dashboard",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.8"
+  }
+}
