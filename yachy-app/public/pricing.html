@@ -4,73 +4,74 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Pricing — Nautical Ops</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <style>
-  :root { --navy: #0d1b2a; --navy-light: #112236; --gold: #C8961A; --gold-light: #D4A017; --white: #ffffff; --text: #e8edf2; --muted: #8a9bb0; --border: rgba(200,150,26,0.2); }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--navy); color: var(--text); font-family: 'DM Sans', sans-serif; font-weight: 300; line-height: 1.8; min-height: 100vh; }
-  header { border-bottom: 1px solid var(--border); padding: 24px 40px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; background: rgba(13,27,42,0.95); backdrop-filter: blur(10px); z-index: 100; }
-  .logo-text { font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 18px; color: var(--white); }
-  .logo-icon { width: 36px; height: 36px; }
-  .nav-links { margin-left: auto; display: flex; gap: 28px; list-style: none; }
-  .nav-links a { color: var(--muted); text-decoration: none; font-size: 14px; transition: color 0.2s; }
-  .nav-links a:hover { color: var(--gold); }
-  .hero { padding: 80px 40px 48px; max-width: 960px; margin: 0 auto; text-align: center; }
-  .hero-label { font-size: 11px; letter-spacing: 0.2em; color: var(--gold); text-transform: uppercase; margin-bottom: 16px; }
-  .hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(36px, 5vw, 56px); font-weight: 400; color: var(--white); margin-bottom: 16px; }
-  .hero p { color: var(--muted); font-size: 17px; max-width: 500px; margin: 0 auto; }
-  .divider { width: 60px; height: 1px; background: var(--gold); margin: 32px auto; opacity: 0.6; }
-  .auth-hint { font-size: 13px; color: var(--muted); margin-top: 12px; }
-  .config-warning { max-width: 640px; margin: 16px auto 0; padding: 12px 16px; background: rgba(200,150,26,0.12); border: 1px solid var(--gold); border-radius: 8px; color: var(--text); font-size: 13px; text-align: center; }
-  .policy-banner { max-width: 960px; margin: 0 auto 48px; padding: 0 40px; }
-  .policy-inner { background: rgba(200,150,26,0.08); border: 1px solid var(--gold); border-radius: 10px; padding: 16px 24px; display: flex; gap: 12px; align-items: flex-start; }
-  .policy-icon { color: var(--gold); font-size: 16px; margin-top: 2px; flex-shrink: 0; }
-  .policy-inner p { font-size: 14px; color: var(--text); }
-  .policy-inner strong { color: var(--gold); font-weight: 500; }
-  .billing-section { max-width: 960px; margin: 0 auto 56px; padding: 0 40px; }
-  .section-label { font-size: 11px; letter-spacing: 0.2em; color: var(--gold); text-transform: uppercase; margin-bottom: 20px; }
-  .billing-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-  .billing-card { background: var(--navy-light); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; cursor: pointer; transition: all 0.2s; position: relative; display: flex; align-items: center; justify-content: space-between; }
-  .billing-card:hover { border-color: var(--gold); }
-  .billing-card.active { border-color: var(--gold); background: rgba(200,150,26,0.08); }
-  .billing-name { font-size: 15px; color: var(--white); font-weight: 400; }
-  .billing-badge { background: var(--gold); color: var(--navy); font-size: 10px; font-weight: 500; padding: 3px 8px; border-radius: 20px; letter-spacing: 0.05em; }
-  .plans-section { max-width: 960px; margin: 0 auto; padding: 0 40px 100px; }
-  .plans-category { margin-bottom: 48px; }
-  .category-header { margin-bottom: 20px; }
-  .category-title { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 400; color: var(--white); margin-bottom: 4px; }
-  .category-sub { font-size: 13px; color: var(--muted); }
-  .plans-grid { display: grid; gap: 10px; }
-  .plan-card { background: var(--navy-light); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; transition: border-color 0.2s; }
-  .plan-card:hover { border-color: var(--gold); }
-  .plan-card-row { display: flex; align-items: center; justify-content: space-between; }
-  .plan-crew { font-size: 11px; letter-spacing: 0.12em; color: var(--gold); text-transform: uppercase; margin-bottom: 4px; }
-  .plan-price { font-family: 'Playfair Display', serif; font-size: 28px; color: var(--white); }
-  .plan-price span { font-size: 14px; color: var(--muted); font-family: 'DM Sans', sans-serif; }
-  .plan-total { font-size: 12px; color: var(--muted); margin-top: 4px; }
-  .plan-arrow { color: var(--gold); font-size: 18px; opacity: 0.6; }
-  .subscribe-btn { width: 100%; background: var(--gold); color: var(--navy); border: none; padding: 12px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; letter-spacing: 0.02em; transition: opacity 0.2s; }
-  .subscribe-btn:hover { opacity: 0.92; }
-  .subscribe-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-  .cta-section { max-width: 960px; margin: 0 auto; padding: 0 40px 48px; }
-  .success-banner { text-align: center; padding: 24px 28px; background: rgba(200,150,26,0.12); border: 1px solid var(--gold); border-radius: 10px; margin-bottom: 20px; }
-  .success-banner p { font-size: 16px; color: var(--white); font-weight: 500; line-height: 1.5; }
-  .cancel-note { text-align: center; font-size: 13px; color: var(--muted); margin-top: 16px; padding: 14px 20px; background: var(--navy-light); border-radius: 8px; border: 1px solid var(--border); }
-  .features { max-width: 960px; margin: 0 auto 80px; padding: 0 40px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-  .feature { padding: 24px; background: var(--navy-light); border: 1px solid var(--border); border-radius: 10px; }
-  .feature-icon { color: var(--gold); font-size: 20px; margin-bottom: 12px; }
-  .feature h3 { font-size: 15px; color: var(--white); font-weight: 500; margin-bottom: 6px; }
-  .feature p { font-size: 13px; color: var(--muted); line-height: 1.6; }
-  footer { border-top: 1px solid var(--border); padding: 40px; text-align: center; }
-  footer p { color: var(--muted); font-size: 13px; }
-  footer a { color: var(--gold); text-decoration: none; }
-  @media (max-width: 700px) {
-    header { padding: 16px 20px; }
-    .hero { padding: 48px 20px 32px; }
-    .billing-section, .plans-section, .cta-section, .policy-banner { padding: 0 20px; }
-    .billing-grid { grid-template-columns: 1fr 1fr; }
-    .features { grid-template-columns: 1fr; padding: 0 20px; }
-    .nav-links { display: none; }
+  body { background: #eef0f3; color: #1a2340; font-family: 'Inter', sans-serif; font-weight: 400; line-height: 1.6; min-height: 100vh; }
+
+  header { background: #ffffff; border-bottom: 1px solid #e2e6ea; padding: 16px 20px; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 100; }
+  .logo-icon { width: 32px; height: 32px; }
+  .logo-text { font-size: 17px; font-weight: 700; color: #1a2340; }
+  .nav-links { margin-left: auto; display: flex; gap: 24px; list-style: none; }
+  .nav-links a { color: #6b7280; text-decoration: none; font-size: 14px; }
+  .nav-links a:hover { color: #1a2340; }
+
+  .page { max-width: 540px; margin: 0 auto; padding: 24px 16px 100px; }
+
+  .page-title { font-size: 26px; font-weight: 800; color: #1a2340; text-align: center; margin-bottom: 4px; }
+  .page-subtitle { font-size: 14px; color: #6b7280; text-align: center; margin-bottom: 24px; }
+
+  .auth-hint { font-size: 13px; color: #6b7280; text-align: center; margin-bottom: 16px; }
+
+  .policy-card { background: #ffffff; border: 1.5px solid #f0a500; border-radius: 14px; padding: 16px 18px; margin-bottom: 24px; display: flex; gap: 10px; align-items: flex-start; }
+  .policy-icon { font-size: 16px; margin-top: 2px; flex-shrink: 0; }
+  .policy-title { font-size: 14px; font-weight: 700; color: #f0a500; margin-bottom: 4px; }
+  .policy-text { font-size: 13px; color: #4b5563; line-height: 1.5; }
+
+  .section-label { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #6b7280; text-transform: uppercase; margin-bottom: 10px; }
+
+  .billing-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+  .billing-item { background: #ffffff; border: 1.5px solid #e2e6ea; border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: border-color 0.15s; }
+  .billing-item.active { border-color: #1a2340; background: #ffffff; }
+  .billing-item:hover { border-color: #1a2340; }
+  .billing-item-left { display: flex; align-items: center; gap: 10px; }
+  .billing-name { font-size: 15px; font-weight: 500; color: #1a2340; }
+  .billing-badge { background: #10b981; color: #ffffff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px; letter-spacing: 0.03em; }
+  .billing-item-right { display: flex; align-items: center; gap: 8px; }
+  .radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #d1d5db; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .radio.checked { border-color: #1a2340; }
+  .radio.checked::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #1a2340; }
+
+  .plans-group { background: #ffffff; border-radius: 16px; padding: 20px 16px; margin-bottom: 16px; border: 1px solid #e2e6ea; }
+  .group-title { font-size: 18px; font-weight: 800; color: #1a2340; margin-bottom: 4px; }
+  .group-subtitle { font-size: 13px; color: #6b7280; margin-bottom: 16px; }
+  .plan-list { display: flex; flex-direction: column; gap: 8px; }
+  .plan-item { border: 1.5px solid #e2e6ea; border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.15s; }
+  .plan-item.active { border-color: #1a2340; background: #f0f4ff; }
+  .plan-item:hover { border-color: #1a2340; }
+  .plan-crew { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: #6b7280; text-transform: uppercase; margin-bottom: 4px; }
+  .plan-price { font-size: 18px; font-weight: 800; color: #1a2340; }
+  .plan-price span { font-size: 13px; font-weight: 400; color: #6b7280; }
+
+  .cta-section { margin-top: 24px; }
+  .activate-btn { width: 100%; background: #1a2340; color: #ffffff; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 700; font-family: 'Inter', sans-serif; cursor: pointer; transition: opacity 0.2s; letter-spacing: 0.01em; }
+  .activate-btn:hover { opacity: 0.9; }
+  .activate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .cta-hint { font-size: 13px; color: #6b7280; text-align: center; margin-top: 10px; }
+
+  .cancel-card { background: #ffffff; border: 1px solid #e2e6ea; border-radius: 12px; padding: 16px; text-align: center; margin-top: 16px; }
+  .cancel-text { font-size: 13px; color: #6b7280; line-height: 1.6; }
+
+  .success-banner { background: #f0fdf4; border: 1.5px solid #10b981; border-radius: 12px; padding: 16px; text-align: center; margin-bottom: 16px; }
+  .success-text { font-size: 15px; font-weight: 600; color: #065f46; }
+
+  footer { text-align: center; padding: 32px 20px; border-top: 1px solid #e2e6ea; background: #ffffff; }
+  footer p { font-size: 13px; color: #6b7280; }
+  footer a { color: #1a2340; text-decoration: none; font-weight: 500; }
+
+  @media (max-width: 400px) {
+    .page-title { font-size: 22px; }
+    .plan-price { font-size: 16px; }
   }
 </style>
 <script src="/pricing-config.js"></script>
@@ -80,11 +81,11 @@
 
 <header>
   <svg class="logo-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M6 26 Q6 30 18 31 Q30 30 30 26 L28 18 L8 18 Z" fill="none" stroke="#C8961A" stroke-width="1.8" stroke-linejoin="round"/>
-    <rect x="11" y="12" width="14" height="7" rx="1.5" fill="none" stroke="#C8961A" stroke-width="1.8"/>
-    <line x1="18" y1="5" x2="18" y2="12" stroke="#C8961A" stroke-width="1.8" stroke-linecap="round"/>
-    <circle cx="18" cy="4" r="1.8" fill="#C8961A"/>
-    <path d="M4 32 Q8 29 12 32 Q16 35 20 32 Q24 29 28 32 Q31 29 33 32" fill="none" stroke="#C8961A" stroke-width="1.4" stroke-linecap="round"/>
+    <path d="M6 26 Q6 30 18 31 Q30 30 30 26 L28 18 L8 18 Z" fill="none" stroke="#f0a500" stroke-width="1.8" stroke-linejoin="round"/>
+    <rect x="11" y="12" width="14" height="7" rx="1.5" fill="none" stroke="#f0a500" stroke-width="1.8"/>
+    <line x1="18" y1="5" x2="18" y2="12" stroke="#f0a500" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="18" cy="4" r="1.8" fill="#f0a500"/>
+    <path d="M4 32 Q8 29 12 32 Q16 35 20 32 Q24 29 28 32 Q31 29 33 32" fill="none" stroke="#f0a500" stroke-width="1.4" stroke-linecap="round"/>
   </svg>
   <span class="logo-text">Nautical Ops</span>
   <ul class="nav-links">
@@ -95,151 +96,123 @@
   </ul>
 </header>
 
-<div class="hero">
-  <p class="hero-label">Vessel Plans</p>
-  <h1>Simple, transparent pricing</h1>
-  <p class="hero p">Select a billing period and crew tier that fits your vessel.</p>
-  <div class="divider"></div>
-  <p id="auth-status" class="auth-hint" aria-live="polite"></p>
-  <p id="config-warning" class="config-warning" hidden></p>
-</div>
+<div class="page">
+  <h1 class="page-title">Vessel Plans</h1>
+  <p class="page-subtitle">Select a billing period and crew tier for your vessel</p>
+  <p id="auth-status" class="auth-hint"></p>
 
-<div class="policy-banner">
-  <div class="policy-inner">
-    <span class="policy-icon">⚠</span>
-    <p><strong>Payment Policy:</strong> If payment is not made by the due date, access for all crew members will be restricted until payment is completed. Access resumes immediately once payment is made.</p>
+  <div class="policy-card">
+    <span class="policy-icon">⚠️</span>
+    <div>
+      <p class="policy-title">Payment Policy</p>
+      <p class="policy-text">If payment is not made by the due date, access for all crew members will be restricted until payment is completed. Access resumes immediately once payment is made.</p>
+    </div>
   </div>
-</div>
 
-<div class="billing-section">
   <p class="section-label">Billing Period</p>
-  <div class="billing-grid" id="billing-grid">
-    <div class="billing-card active" data-period="monthly" role="button" tabindex="0">
-      <span class="billing-name">Monthly</span>
-    </div>
-    <div class="billing-card" data-period="3_months" role="button" tabindex="0">
-      <span class="billing-name">3 Months</span>
-      <span class="billing-badge">5% OFF</span>
-    </div>
-    <div class="billing-card" data-period="6_months" role="button" tabindex="0">
-      <span class="billing-name">6 Months</span>
-      <span class="billing-badge">8% OFF</span>
-    </div>
-    <div class="billing-card" data-period="12_months" role="button" tabindex="0">
-      <span class="billing-name">Yearly</span>
-      <span class="billing-badge">10% OFF</span>
-    </div>
-  </div>
-</div>
-
-<div class="plans-section">
-  <div class="plans-category">
-    <div class="category-header">
-      <h2 class="category-title">Small to Medium Vessels</h2>
-      <p class="category-sub">All plans include full access to Nautical Ops. Select the tier that fits your crew size.</p>
-    </div>
-    <div class="plans-grid">
-      <div class="plan-card" data-tier="1_5">
-        <div class="plan-card-row">
-          <div>
-            <p class="plan-crew">1–5 Crew Members</p>
-            <p class="plan-price" data-price-display>$79.99 <span>/mo</span></p>
-            <p class="plan-total" data-total-row style="display:none;"></p>
-          </div>
-          <span class="plan-arrow">→</span>
-        </div>
-        <button type="button" class="subscribe-btn" data-subscribe>Subscribe Now</button>
+  <div class="billing-list" id="billing-list">
+    <div class="billing-item active" data-period="monthly">
+      <div class="billing-item-left">
+        <span class="billing-name">Monthly</span>
       </div>
-      <div class="plan-card" data-tier="6_10">
-        <div class="plan-card-row">
-          <div>
-            <p class="plan-crew">6–10 Crew Members</p>
-            <p class="plan-price" data-price-display>$89.99 <span>/mo</span></p>
-            <p class="plan-total" data-total-row style="display:none;"></p>
-          </div>
-          <span class="plan-arrow">→</span>
-        </div>
-        <button type="button" class="subscribe-btn" data-subscribe>Subscribe Now</button>
+      <div class="billing-item-right">
+        <div class="radio checked" id="radio-monthly"></div>
       </div>
-      <div class="plan-card" data-tier="11_15">
-        <div class="plan-card-row">
-          <div>
-            <p class="plan-crew">11–15 Crew Members</p>
-            <p class="plan-price" data-price-display>$119.99 <span>/mo</span></p>
-            <p class="plan-total" data-total-row style="display:none;"></p>
-          </div>
-          <span class="plan-arrow">→</span>
-        </div>
-        <button type="button" class="subscribe-btn" data-subscribe>Subscribe Now</button>
+    </div>
+    <div class="billing-item" data-period="3_months">
+      <div class="billing-item-left">
+        <span class="billing-name">3 Months</span>
+        <span class="billing-badge">5% OFF</span>
+      </div>
+      <div class="billing-item-right">
+        <div class="radio" id="radio-3_months"></div>
+      </div>
+    </div>
+    <div class="billing-item" data-period="6_months">
+      <div class="billing-item-left">
+        <span class="billing-name">6 Months</span>
+        <span class="billing-badge">8% OFF</span>
+      </div>
+      <div class="billing-item-right">
+        <div class="radio" id="radio-6_months"></div>
+      </div>
+    </div>
+    <div class="billing-item" data-period="12_months">
+      <div class="billing-item-left">
+        <span class="billing-name">Yearly</span>
+        <span class="billing-badge">10% OFF</span>
+      </div>
+      <div class="billing-item-right">
+        <div class="radio" id="radio-12_months"></div>
       </div>
     </div>
   </div>
 
-  <div class="plans-category">
-    <div class="category-header">
-      <h2 class="category-title">Medium to Large Vessels</h2>
-      <p class="category-sub">All plans include full access to Nautical Ops. Select the tier that fits your crew size.</p>
-    </div>
-    <div class="plans-grid">
-      <div class="plan-card" data-tier="16_25">
-        <div class="plan-card-row">
-          <div>
-            <p class="plan-crew">16–25 Crew Members</p>
-            <p class="plan-price" data-price-display>$149.99 <span>/mo</span></p>
-            <p class="plan-total" data-total-row style="display:none;"></p>
-          </div>
-          <span class="plan-arrow">→</span>
+  <div class="plans-group">
+    <h2 class="group-title">Small to Medium Vessels</h2>
+    <p class="group-subtitle">All plans include full access to Nautical Ops. Select the tier that fits your crew size.</p>
+    <div class="plan-list" id="plan-list-small">
+      <div class="plan-item active" data-tier="1_5">
+        <div>
+          <p class="plan-crew">1-5 Crew Members</p>
+          <p class="plan-price" data-price-display>$79.99<span>/mo</span></p>
         </div>
-        <button type="button" class="subscribe-btn" data-subscribe>Subscribe Now</button>
+        <div class="radio checked" id="radio-tier-1_5"></div>
       </div>
-      <div class="plan-card" data-tier="26_40">
-        <div class="plan-card-row">
-          <div>
-            <p class="plan-crew">26–40 Crew Members</p>
-            <p class="plan-price" data-price-display>$199.99 <span>/mo</span></p>
-            <p class="plan-total" data-total-row style="display:none;"></p>
-          </div>
-          <span class="plan-arrow">→</span>
+      <div class="plan-item" data-tier="6_10">
+        <div>
+          <p class="plan-crew">6-10 Crew Members</p>
+          <p class="plan-price" data-price-display>$89.99<span>/mo</span></p>
         </div>
-        <button type="button" class="subscribe-btn" data-subscribe>Subscribe Now</button>
+        <div class="radio" id="radio-tier-6_10"></div>
       </div>
-      <div class="plan-card" data-tier="40_plus">
-        <div class="plan-card-row">
-          <div>
-            <p class="plan-crew">40+ Crew Members</p>
-            <p class="plan-price" data-price-display>$249.99 <span>/mo</span></p>
-            <p class="plan-total" data-total-row style="display:none;"></p>
-          </div>
-          <span class="plan-arrow">→</span>
+      <div class="plan-item" data-tier="11_15">
+        <div>
+          <p class="plan-crew">11-15 Crew Members</p>
+          <p class="plan-price" data-price-display>$119.99<span>/mo</span></p>
         </div>
-        <button type="button" class="subscribe-btn" data-subscribe>Subscribe Now</button>
+        <div class="radio" id="radio-tier-11_15"></div>
       </div>
     </div>
   </div>
-</div>
 
-<div class="cta-section">
-  <div id="checkout-success" class="success-banner" hidden>
-    <p>You're all set! Open the Nautical Ops app to start inviting your crew.</p>
+  <div class="plans-group">
+    <h2 class="group-title">Medium to Large Vessels</h2>
+    <p class="group-subtitle">All plans include full access to Nautical Ops. Select the tier that fits your crew size.</p>
+    <div class="plan-list" id="plan-list-large">
+      <div class="plan-item" data-tier="16_25">
+        <div>
+          <p class="plan-crew">16-25 Crew Members</p>
+          <p class="plan-price" data-price-display>$149.99<span>/mo</span></p>
+        </div>
+        <div class="radio" id="radio-tier-16_25"></div>
+      </div>
+      <div class="plan-item" data-tier="26_40">
+        <div>
+          <p class="plan-crew">26-40 Crew Members</p>
+          <p class="plan-price" data-price-display>$199.99<span>/mo</span></p>
+        </div>
+        <div class="radio" id="radio-tier-26_40"></div>
+      </div>
+      <div class="plan-item" data-tier="40_plus">
+        <div>
+          <p class="plan-crew">40+ Crew Members</p>
+          <p class="plan-price" data-price-display>$249.99<span>/mo</span></p>
+        </div>
+        <div class="radio" id="radio-tier-40_plus"></div>
+      </div>
+    </div>
   </div>
-  <p class="cancel-note">Subscriptions can be cancelled at any time. Access to the app will be restricted upon cancellation.</p>
-</div>
 
-<div class="features">
-  <div class="feature">
-    <div class="feature-icon">⚓</div>
-    <h3>Full vessel management</h3>
-    <p>Trips, tasks, checklists, maintenance logs, safety equipment and more — all in one place.</p>
-  </div>
-  <div class="feature">
-    <div class="feature-icon">👥</div>
-    <h3>Crew collaboration</h3>
-    <p>Invite crew via a unique code. Each member gets their own role, department, and access level.</p>
-  </div>
-  <div class="feature">
-    <div class="feature-icon">📄</div>
-    <h3>PDF exports</h3>
-    <p>Export checklists, logs, and reports as PDFs directly from the app for compliance and records.</p>
+  <div class="cta-section">
+    <div id="checkout-success" class="success-banner" style="display:none;">
+      <p class="success-text">🎉 You're all set! Open the Nautical Ops app to start inviting your crew.</p>
+    </div>
+    <button class="activate-btn" id="activate-btn">Activate Vessel Plan</button>
+    <p class="cta-hint">Complete setup to invite crew and unlock all features.</p>
+    <div class="cancel-card">
+      <p class="cancel-text">Subscriptions can be cancelled at any time. Access to the app will be restricted upon cancellation.</p>
+    </div>
   </div>
 </div>
 
@@ -267,47 +240,70 @@ const PERIODS = {
   '12_months': { months: 12, discountPercent: 10 },
 };
 
-function formatMoney(n) {
-  return `$${n.toFixed(2)}`;
-}
-
-function priceForTierPeriod(tierId, periodId) {
-  const monthly = PLAN_MONTHLY[tierId];
-  const p = PERIODS[periodId];
-  if (monthly == null || !p) return { displayMonthly: formatMoney(0) + ' /mo', totalLine: null };
-  const mult = 1 - p.discountPercent / 100;
-  const discountedMonthly = monthly * mult;
-  const total = discountedMonthly * p.months;
-  const displayMonthly = `${formatMoney(discountedMonthly)} <span>/mo</span>`;
-  const totalLine = p.discountPercent > 0 ? `${formatMoney(total)} total` : null;
-  return { displayMonthly, totalLine };
-}
-
-function getCfg() {
-  return window.NAUTICAL_PRICING_CONFIG || {};
-}
-
+function getCfg() { return window.NAUTICAL_PRICING_CONFIG || {}; }
 const cfg = getCfg();
-const authStatusEl = document.getElementById('auth-status');
-const configWarnEl = document.getElementById('config-warning');
-const successEl = document.getElementById('checkout-success');
-
-if (!cfg.supabaseUrl || !cfg.supabaseAnonKey) {
-  configWarnEl.hidden = false;
-  configWarnEl.textContent =
-    'Subscription checkout is not configured on this deploy. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in Vercel, then redeploy.';
-}
 
 let supabase = null;
 if (cfg.supabaseUrl && cfg.supabaseAnonKey) {
   supabase = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {
-    auth: {
-      flowType: 'implicit',
-      detectSessionInUrl: true,
-      persistSession: true,
-      storage: window.localStorage,
-      autoRefreshToken: true,
-    },
+    auth: { flowType: 'implicit', detectSessionInUrl: true, persistSession: true, storage: window.localStorage, autoRefreshToken: true },
+  });
+}
+
+let currentPeriod = 'monthly';
+let currentTier = '1_5';
+let vesselIdCache = '';
+let sessionRef = null;
+let paddleReady = false;
+
+function formatMoney(n) { return `$${n.toFixed(2)}`; }
+
+function getDiscountedPrice(tierId, periodId) {
+  const monthly = PLAN_MONTHLY[tierId];
+  const p = PERIODS[periodId];
+  if (!monthly || !p) return monthly;
+  return monthly * (1 - p.discountPercent / 100);
+}
+
+function updatePrices() {
+  document.querySelectorAll('.plan-item').forEach((item) => {
+    const tier = item.getAttribute('data-tier');
+    const priceEl = item.querySelector('[data-price-display]');
+    if (!tier || !priceEl) return;
+    const price = getDiscountedPrice(tier, currentPeriod);
+    priceEl.innerHTML = `${formatMoney(price)}<span>/mo</span>`;
+  });
+}
+
+function selectBillingPeriod(period) {
+  currentPeriod = period;
+  document.querySelectorAll('.billing-item').forEach((item) => {
+    const p = item.getAttribute('data-period');
+    const radio = item.querySelector('.radio');
+    item.classList.toggle('active', p === period);
+    if (radio) {
+      radio.classList.toggle('checked', p === period);
+    }
+  });
+  updatePrices();
+}
+
+function selectTier(tier) {
+  currentTier = tier;
+  document.querySelectorAll('.plan-item').forEach((item) => {
+    const t = item.getAttribute('data-tier');
+    const radio = item.querySelector('.radio');
+    item.classList.toggle('active', t === tier);
+    if (radio) radio.classList.toggle('checked', t === tier);
+  });
+}
+
+function initSelectors() {
+  document.querySelectorAll('.billing-item').forEach((item) => {
+    item.addEventListener('click', () => selectBillingPeriod(item.getAttribute('data-period')));
+  });
+  document.querySelectorAll('.plan-item').forEach((item) => {
+    item.addEventListener('click', () => selectTier(item.getAttribute('data-tier')));
   });
 }
 
@@ -315,15 +311,9 @@ function parseAuthParamsFromLocation() {
   const url = new URL(window.location.href);
   const out = {};
   if (url.hash && url.hash.startsWith('#')) {
-    try {
-      new URLSearchParams(url.hash.slice(1)).forEach((value, key) => {
-        out[key] = value;
-      });
-    } catch (e) {}
+    try { new URLSearchParams(url.hash.slice(1)).forEach((v, k) => { out[k] = v; }); } catch (e) {}
   }
-  url.searchParams.forEach((value, key) => {
-    out[key] = value;
-  });
+  url.searchParams.forEach((v, k) => { out[k] = v; });
   return out;
 }
 
@@ -331,111 +321,49 @@ function stripAuthFromUrl() {
   try {
     const u = new URL(window.location.href);
     ['code','token','token_hash','type','error','error_description','access_token','refresh_token','expires_in','token_type'].forEach((k) => u.searchParams.delete(k));
-    const clean = u.pathname + (u.search || '');
-    window.history.replaceState({}, document.title, clean);
-  } catch (e) {
-    console.warn('stripAuthFromUrl', e);
-  }
+    window.history.replaceState({}, document.title, u.pathname + (u.search || ''));
+  } catch (e) {}
 }
 
 async function completeAuthFromUrl() {
   if (!supabase) return;
   const href = window.location.href;
   const p = parseAuthParamsFromLocation();
-  const access_token = p.access_token;
-  const refresh_token = p.refresh_token;
-  if (access_token && refresh_token) {
-    const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+  if (p.access_token && p.refresh_token) {
+    const { error } = await supabase.auth.setSession({ access_token: p.access_token, refresh_token: p.refresh_token });
     if (!error) { stripAuthFromUrl(); return; }
-    console.warn('setSession from URL', error);
   }
   if (p.code) {
     const { error } = await supabase.auth.exchangeCodeForSession(href);
     if (!error) { stripAuthFromUrl(); return; }
-    console.warn('exchangeCodeForSession', error);
   }
   const linkToken = p.token || p.token_hash;
   if (linkToken) {
-    const types = ['email', 'magiclink', 'signup'];
-    for (let i = 0; i < types.length; i++) {
-      const { error } = await supabase.auth.verifyOtp({ token_hash: linkToken, type: types[i] });
+    for (const type of ['email', 'magiclink', 'signup']) {
+      const { error } = await supabase.auth.verifyOtp({ token_hash: linkToken, type });
       if (!error) { stripAuthFromUrl(); return; }
-    }
-    if (p.email) {
-      const { error: err2 } = await supabase.auth.verifyOtp({ email: p.email, token: linkToken, type: 'email' });
-      if (!err2) { stripAuthFromUrl(); return; }
-      console.warn('verifyOtp with email+token', err2);
     }
   }
 }
 
-let currentPeriod = 'monthly';
-let vesselIdCache = '';
-let sessionRef = null;
-let paddleReady = false;
-let paddleInitializing = false;
-
 function updateAuthUi(session) {
   sessionRef = session;
-  if (!authStatusEl) return;
-  if (session?.user?.email) {
-    authStatusEl.textContent = 'Signed in as ' + session.user.email;
-  } else {
-    authStatusEl.textContent = 'Open this page from the Nautical Ops app (Activate Vessel Plan) to sign in, then choose a plan.';
-  }
+  const el = document.getElementById('auth-status');
+  if (!el) return;
+  el.textContent = session?.user?.email ? 'Signed in as ' + session.user.email : 'Open this page from the Nautical Ops app (Activate Vessel Plan) to sign in, then choose a plan.';
 }
 
 async function refreshVesselId(userId) {
   vesselIdCache = '';
   if (!supabase || !userId) return;
   try {
-    const { data, error } = await supabase.from('users').select('vessel_id').eq('id', userId).maybeSingle();
-    if (error) { console.warn('[pricing] vessel_id query error', error); return; }
+    const { data } = await supabase.from('users').select('vessel_id').eq('id', userId).maybeSingle();
     if (data?.vessel_id) vesselIdCache = String(data.vessel_id);
-    console.log('[pricing] vessel_id loaded', { vesselIdCache });
-  } catch (e) {
-    console.warn('[pricing] vessel_id fetch', e);
-  }
+  } catch (e) {}
 }
 
-function applyPeriodToCards() {
-  document.querySelectorAll('.plan-card').forEach((card) => {
-    const tier = card.getAttribute('data-tier');
-    const priceEl = card.querySelector('[data-price-display]');
-    const totalEl = card.querySelector('[data-total-row]');
-    if (!tier || !priceEl) return;
-    const { displayMonthly, totalLine } = priceForTierPeriod(tier, currentPeriod);
-    priceEl.innerHTML = displayMonthly;
-    if (totalLine && totalEl) {
-      totalEl.textContent = totalLine;
-      totalEl.style.display = totalLine ? 'block' : 'none';
-    }
-  });
-}
-
-function initBillingSelector() {
-  const grid = document.getElementById('billing-grid');
-  if (!grid) return;
-  grid.querySelectorAll('.billing-card').forEach((card) => {
-    const select = () => {
-      currentPeriod = card.getAttribute('data-period') || 'monthly';
-      grid.querySelectorAll('.billing-card').forEach((c) => c.classList.toggle('active', c === card));
-      applyPeriodToCards();
-    };
-    card.addEventListener('click', select);
-    card.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(); }
-    });
-  });
-}
-
-function showSuccess() {
-  successEl.hidden = false;
-  successEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-
-function waitForPaddleGlobal(timeoutMs) {
-  const limit = timeoutMs ?? 15000;
+function waitForPaddle(ms) {
+  const limit = ms ?? 15000;
   const start = Date.now();
   return new Promise((resolve) => {
     function tick() {
@@ -447,119 +375,80 @@ function waitForPaddleGlobal(timeoutMs) {
   });
 }
 
-async function initPaddleWhenReady() {
+async function initPaddle() {
   if (paddleReady) return;
-  while (paddleInitializing) {
-    await new Promise((r) => setTimeout(r, 40));
-  }
-  if (paddleReady) return;
-  const raw = cfg.paddleClientToken;
-  const token = typeof raw === 'string' ? raw.trim() : '';
-  if (!token) {
-    console.warn('[pricing] Paddle: missing EXPO_PUBLIC_PADDLE_CLIENT_TOKEN');
-    return;
-  }
-  paddleInitializing = true;
-  try {
-    const loaded = await waitForPaddleGlobal(15000);
-    if (!loaded) {
-      console.warn('[pricing] Paddle: window.Paddle never loaded');
-      return;
-    }
-    if (paddleReady) return;
-    window.Paddle.Initialize({
-      token,
-      eventCallback: function (event) {
-        if (event && event.name === 'checkout.completed') {
-          showSuccess();
-        }
-      },
-    });
-    paddleReady = true;
-    console.log('[pricing] Paddle.Initialize done (live)');
-  } finally {
-    paddleInitializing = false;
-  }
+  const token = typeof cfg.paddleClientToken === 'string' ? cfg.paddleClientToken.trim() : '';
+  if (!token) return;
+  const loaded = await waitForPaddle(15000);
+  if (!loaded) return;
+  window.Paddle.Initialize({
+    token,
+    eventCallback: function(event) {
+      if (event && event.name === 'checkout.completed') {
+        document.getElementById('checkout-success').style.display = 'block';
+        document.getElementById('checkout-success').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    },
+  });
+  paddleReady = true;
 }
 
-async function openCheckout(tierId) {
-  console.log('[pricing] Subscribe Now click', { tierId, currentPeriod });
+async function handleActivate() {
   let session = sessionRef;
   if (supabase) {
-    const { data, error } = await supabase.auth.getSession();
-    if (error) console.warn('[pricing] getSession at click', error);
+    const { data } = await supabase.auth.getSession();
     session = data.session;
     sessionRef = session;
     updateAuthUi(session);
   }
-  const email = session?.user?.email;
-  if (!email) {
+
+  if (!session?.user?.email) {
     alert('Please sign in first. Use Activate Vessel Plan in the Nautical Ops app to open this page with your account.');
     return;
   }
+
+  if (!paddleReady) await initPaddle();
   if (!paddleReady) {
-    await initPaddleWhenReady();
-  }
-  if (!paddleReady || !cfg.paddleClientToken) {
-    alert('Checkout is not configured. Add EXPO_PUBLIC_PADDLE_CLIENT_TOKEN in Vercel and redeploy.');
+    alert('Checkout is not configured. Please try again.');
     return;
   }
-  const priceId = PADDLE_PRICE_IDS[tierId]?.[currentPeriod];
-  if (!priceId) {
-    alert('No price is configured for this selection.');
-    return;
-  }
+
+  const priceId = PADDLE_PRICE_IDS[currentTier]?.[currentPeriod];
+  if (!priceId) { alert('No price configured for this selection.'); return; }
+
   try {
     window.Paddle.Checkout.open({
-      settings: {
-        displayMode: 'overlay',
-        variant: 'one-page',
-        theme: 'dark',
-      },
+      settings: { displayMode: 'overlay', variant: 'one-page', theme: 'light' },
       items: [{ priceId, quantity: 1 }],
-      customer: { email },
+      customer: { email: session.user.email },
       customData: {
         vessel_id: vesselIdCache || '',
         user_id: session.user.id,
-        plan_tier: tierId,
+        plan_tier: currentTier,
         billing_period: currentPeriod,
       },
     });
-    console.log('[pricing] Paddle.Checkout.open invoked');
   } catch (e) {
-    console.error('[pricing] Paddle.Checkout.open threw', e);
     alert('Could not open checkout. Please try again.');
   }
 }
 
-function initSubscribeButtons() {
-  document.querySelectorAll('.subscribe-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const card = btn.closest('.plan-card');
-      const tier = card?.getAttribute('data-tier');
-      if (tier) {
-        openCheckout(tier).catch((err) => console.error('[pricing] openCheckout', err));
-      }
-    });
-  });
-}
-
 async function main() {
-  console.log('[pricing] window.location.href on load:', window.location.href);
-  initBillingSelector();
-  applyPeriodToCards();
-  initSubscribeButtons();
+  initSelectors();
+  updatePrices();
+
+  document.getElementById('activate-btn').addEventListener('click', handleActivate);
+
   if (supabase) {
-    await supabase.auth.getSession();
     await completeAuthFromUrl();
     const { data: { session } } = await supabase.auth.getSession();
     updateAuthUi(session);
     if (session?.user?.id) await refreshVesselId(session.user.id);
-    await initPaddleWhenReady();
+    await initPaddle();
     supabase.auth.onAuthStateChange(async (_event, session) => {
       updateAuthUi(session);
       if (session?.user?.id) await refreshVesselId(session.user.id);
-      if (session?.user?.email) await initPaddleWhenReady();
+      if (session?.user?.email) await initPaddle();
     });
   } else {
     updateAuthUi(null);
