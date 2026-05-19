@@ -8,6 +8,7 @@
     { "source": "/privacy-policy", "destination": "/privacy-policy.html" },
     { "source": "/refund-policy", "destination": "/refund-policy.html" },
     { "source": "/terms-and-conditions", "destination": "/terms-and-conditions.html" },
+    { "source": "/support", "destination": "/support.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

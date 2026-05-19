@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Support — Nautical Ops</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #eef0f3; color: #1a2340; font-family: 'Inter', sans-serif; font-weight: 400; line-height: 1.7; min-height: 100vh; }
+  header { background: #ffffff; border-bottom: 1px solid #e2e6ea; padding: 16px 20px; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 100; }
+  .logo-icon { width: 32px; height: 32px; }
+  .logo-text { font-size: 17px; font-weight: 700; color: #1a2340; }
+  .nav-links { margin-left: auto; display: flex; gap: 24px; list-style: none; }
+  .nav-links a { color: #6b7280; text-decoration: none; font-size: 14px; }
+  .nav-links a:hover { color: #1a2340; }
+  .nav-links a.active { color: #1a2340; font-weight: 600; }
+  .page { max-width: 720px; margin: 0 auto; padding: 40px 20px 100px; }
+  .page-title { font-size: 26px; font-weight: 800; color: #1a2340; margin-bottom: 32px; }
+  .section-card { background: #ffffff; border: 1px solid #e2e6ea; border-radius: 14px; padding: 24px; margin-bottom: 12px; }
+  .section-card h2 { font-size: 16px; font-weight: 700; color: #1a2340; margin-bottom: 10px; }
+  .section-card p { font-size: 14px; color: #4b5563; line-height: 1.75; }
+  .section-card a { color: #1a2340; font-weight: 600; text-decoration: none; }
+  .section-card a:hover { text-decoration: underline; }
+  .email-link-row { margin-top: 14px; }
+  .email-btn { display: inline-block; background: #1a2340; color: #f0a500; font-size: 14px; font-weight: 600; padding: 10px 20px; border-radius: 8px; text-decoration: none; letter-spacing: 0.01em; }
+  .email-btn:hover { background: #243060; }
+  .faq-item { padding: 16px 0; border-bottom: 1px solid #f0f2f5; }
+  .faq-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .faq-item:first-child { padding-top: 0; }
+  .faq-q { font-size: 14px; font-weight: 700; color: #1a2340; margin-bottom: 6px; display: flex; gap: 8px; align-items: flex-start; }
+  .faq-q::before { content: "Q"; background: #1a2340; color: #f0a500; font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 4px; flex-shrink: 0; margin-top: 1px; }
+  .faq-a { font-size: 14px; color: #4b5563; line-height: 1.75; padding-left: 28px; }
+  footer { text-align: center; padding: 32px 20px; border-top: 1px solid #e2e6ea; background: #ffffff; }
+  footer p { font-size: 13px; color: #6b7280; }
+  footer a { color: #1a2340; text-decoration: none; font-weight: 500; }
+  @media (max-width: 500px) { .nav-links { display: none; } }
+</style>
+</head>
+<body>
+<header>
+  <svg class="logo-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M6 26 Q6 30 18 31 Q30 30 30 26 L28 18 L8 18 Z" fill="none" stroke="#f0a500" stroke-width="1.8" stroke-linejoin="round"/>
+    <rect x="11" y="12" width="14" height="7" rx="1.5" fill="none" stroke="#f0a500" stroke-width="1.8"/>
+    <line x1="18" y1="5" x2="18" y2="12" stroke="#f0a500" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="18" cy="4" r="1.8" fill="#f0a500"/>
+    <path d="M4 32 Q8 29 12 32 Q16 35 20 32 Q24 29 28 32 Q31 29 33 32" fill="none" stroke="#f0a500" stroke-width="1.4" stroke-linecap="round"/>
+  </svg>
+  <span class="logo-text">Nautical Ops</span>
+  <ul class="nav-links">
+    <li><a href="/pricing">Pricing</a></li>
+    <li><a href="/privacy-policy">Privacy</a></li>
+    <li><a href="/refund-policy">Refunds</a></li>
+    <li><a href="/terms-and-conditions">Terms</a></li>
+    <li><a href="/support" class="active">Support</a></li>
+  </ul>
+</header>
+
+<div class="page">
+  <h1 class="page-title">Support</h1>
+
+  <div class="section-card">
+    <h2>Contact Us</h2>
+    <p>For support with Nautical Ops please email us at <a href="mailto:support@nautical-ops.com">support@nautical-ops.com</a>. We aim to respond to all enquiries within 24 hours.</p>
+    <div class="email-link-row">
+      <a class="email-btn" href="mailto:support@nautical-ops.com">support@nautical-ops.com</a>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <h2>Frequently Asked Questions</h2>
+    <div class="faq-item">
+      <div class="faq-q">How do I create a vessel?</div>
+      <p class="faq-a">After signing up as a Captain, follow the on-screen prompts to set up your vessel.</p>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">How do I invite crew members?</div>
+      <p class="faq-a">Go to Settings, tap Crew Management, and use the invite code to add crew.</p>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">How do I cancel my subscription?</div>
+      <p class="faq-a">Email <a href="mailto:support@nautical-ops.com">support@nautical-ops.com</a> and we will process your cancellation within 24 hours.</p>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">I forgot my password, what do I do?</div>
+      <p class="faq-a">On the login screen tap Forgot Password and follow the instructions.</p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p>© 2025 Nautical Ops. All rights reserved. &nbsp;|&nbsp; <a href="/terms-and-conditions">Terms</a> &nbsp;|&nbsp; <a href="/refund-policy">Refund Policy</a> &nbsp;|&nbsp; <a href="/pricing">Pricing</a> &nbsp;|&nbsp; <a href="/support">Support</a></p>
+</footer>
+</body>
+</html>

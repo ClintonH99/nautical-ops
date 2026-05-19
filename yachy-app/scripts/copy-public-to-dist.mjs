@@ -18,6 +18,7 @@ const FILES = [
   'privacy-policy.html',
   'terms-and-conditions.html',
   'refund-policy.html',
+  'support.html',
 ];
 
 console.log('[copy-public-to-dist] public → dist');
