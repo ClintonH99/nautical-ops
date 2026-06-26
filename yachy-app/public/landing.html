@@ -38,10 +38,10 @@ a{color:inherit;text-decoration:none;}
 
 /* ── Devices.css overrides ───────────── */
 .device-frame .app-screen{width:100%;height:100%;background:#040e1c;overflow:hidden;}
-.device .device-frame{overflow:hidden !important;}
+.device .device-frame{overflow:hidden !important;-webkit-transform:translateZ(0);transform:translateZ(0);}
 .device .device-frame img,.device .device-frame video{display:block;width:100%;height:100%;object-fit:cover;object-position:top;border-radius:inherit;}
 .hero-device-zoom{zoom:0.62;}
-.ss-device-zoom{zoom:0.48;}
+.ss-device-zoom{zoom:0.54;transform:perspective(900px) rotateY(-10deg) rotateX(4deg) rotateZ(-0.5deg);filter:drop-shadow(-14px 22px 40px rgba(0,0,0,0.3)) drop-shadow(-4px 8px 16px rgba(0,0,0,0.15));display:inline-block;}
 .dev-showcase-phone-zoom{zoom:0.52;}
 .dev-showcase-ipad-zoom{zoom:0.42;}
 .dev-showcase-macbook-zoom{zoom:0.46;}
@@ -66,7 +66,7 @@ h1 em{font-style:italic;color:var(--gold);}
 .hero-visual{display:flex;justify-content:center;align-items:center;position:relative;}
 .hero-float{animation:heroFloat 5s ease-in-out infinite;display:inline-block;}
 @keyframes heroFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-14px);}}
-.hero-tilt{transform:perspective(1200px) rotateY(-20deg) rotateX(5deg);display:inline-block;}
+.hero-tilt{transform:perspective(900px) rotateY(-24deg) rotateX(7deg) rotateZ(-1.5deg);filter:drop-shadow(-28px 40px 60px rgba(0,0,0,0.38)) drop-shadow(-8px 12px 20px rgba(0,0,0,0.2));display:inline-block;}
 
 /* Phone screen shared styles */
 .ps-nav{background:#071828;padding:34px 14px 10px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.05);}
@@ -100,7 +100,7 @@ h1 em{font-style:italic;color:var(--gold);}
 .sf-step{min-height:70vh;display:flex;align-items:center;opacity:.35;transition:opacity .4s;}
 .sf-step.active{opacity:1;}
 .sf-phone-col{position:sticky;top:0;height:100vh;display:flex;align-items:center;justify-content:center;}
-.sf-phone-scene{animation:sfSwell 6s ease-in-out infinite;}
+.sf-phone-scene{animation:sfSwell 6s ease-in-out infinite;filter:drop-shadow(-22px 32px 56px rgba(0,0,0,0.32)) drop-shadow(-6px 10px 20px rgba(0,0,0,0.18));}
 @keyframes sfSwell{0%,100%{transform:perspective(1100px) rotateY(-20deg) rotateX(4deg) translateY(0);}50%{transform:perspective(1100px) rotateY(-20deg) rotateX(4deg) translateY(-12px);}}
 .sf-phone{width:248px;height:524px;background:#040e1c;border-radius:42px;border:6px solid rgba(30,58,95,0.12);box-shadow:-20px 28px 70px rgba(30,58,95,0.2),0 40px 80px rgba(0,0,0,0.1);overflow:hidden;position:relative;}
 .sf-screen{display:none;height:100%;}
@@ -335,6 +335,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
             <div class="device-btns"></div>
             <div class="device-power"></div>
           </div>
+        </div>
       </div>
     </div>
   </div>
@@ -347,7 +348,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
     <h2 class="sec-title" style="color:#fff;margin-bottom:12px;">Watch it in action.</h2>
     <p class="sec-sub" style="margin:0 auto 48px;color:rgba(255,255,255,.6);">See how fast it is to log a trip, assign tasks, and manage your crew on board.</p>
     <div style="display:flex;justify-content:center;">
-      <div style="zoom:0.88;">
+      <div style="zoom:0.88;filter:drop-shadow(0 40px 70px rgba(0,0,0,0.35)) drop-shadow(0 12px 24px rgba(0,0,0,0.2));display:inline-block;">
         <div class="device device-iphone-14-pro device-spacegray">
           <div class="device-frame">
             <video src="/app-demo.mp4" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;border-radius:inherit;"></video>
@@ -435,7 +436,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
   <div class="screenshots-intro">
     <div class="sec-eyebrow">See it in action</div>
     <h2 class="sec-title" style="margin-bottom:10px;">Built for life on board.</h2>
-    <p class="sec-sub" style="margin:0 auto;text-align:center;">Drop in your app screenshots below — swap the placeholder divs for &lt;img&gt; tags.</p>
+    <p class="sec-sub" style="margin:0 auto;text-align:center;">A glimpse of what Nautical Ops looks like on your device.</p>
   </div>
   <div class="ss-row">
     <div class="ss-item reveal d1">
