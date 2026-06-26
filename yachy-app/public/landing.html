@@ -4,9 +4,8 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Nautical Ops — Crew Operations, Simplified</title>
-<meta name="description" content="The professional operations app built for superyacht crews. Manage voyages, crew, tasks, and maintenance — all from your iPhone."/>
+<meta name="description" content="The professional operations app built for superyacht crews. Manage voyages, crew, tasks, and maintenance across all your devices."/>
 <meta property="og:title" content="Nautical Ops — Crew Operations, Simplified"/>
-<meta property="og:description" content="The professional operations app built for superyacht crews."/>
 <meta name="theme-color" content="#1e3a5f"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -37,10 +36,10 @@ a{color:inherit;text-decoration:none;}
 .nav{position:fixed;top:0;left:0;right:0;z-index:200;height:60px;background:var(--white);}
 
 /* ── Hero ────────────────────────────── */
-.hero{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:60px;padding:120px 80px 80px;background:var(--white);}
+.hero{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:40px;padding:120px 80px 80px;background:var(--white);overflow:hidden;}
 .eyebrow{display:inline-flex;align-items:center;gap:10px;font-size:11px;font-weight:600;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:22px;}
 .eyebrow::before{content:'';width:24px;height:1.5px;background:var(--gold);}
-h1{font-family:var(--ff-d);font-size:clamp(40px,5vw,68px);font-weight:600;color:var(--navy);line-height:1.08;letter-spacing:-.025em;margin-bottom:22px;}
+h1{font-family:var(--ff-d);font-size:clamp(38px,5vw,66px);font-weight:600;color:var(--navy);line-height:1.08;letter-spacing:-.025em;margin-bottom:22px;}
 h1 em{font-style:italic;color:var(--gold);}
 .hero-sub{font-size:16px;color:var(--muted);line-height:1.7;max-width:420px;margin-bottom:38px;}
 .hero-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
@@ -49,12 +48,14 @@ h1 em{font-style:italic;color:var(--gold);}
 .btn-ghost{display:inline-flex;align-items:center;gap:8px;color:var(--navy);font-size:14px;font-weight:500;padding:13px 24px;border-radius:10px;border:1px solid var(--border);transition:all .2s;}
 .btn-ghost:hover{background:var(--bg);border-color:#cbd5e1;}
 
-/* ── Phone ───────────────────────────── */
-.hero-visual{display:flex;justify-content:center;align-items:center;}
-.phone-wrap{animation:swell 5s ease-in-out infinite;}
-@keyframes swell{0%,100%{transform:translateY(0px) rotate(-.5deg);}50%{transform:translateY(-14px) rotate(.5deg);}}
-.phone{width:258px;height:542px;background:#040e1c;border-radius:44px;border:6px solid rgba(30,58,95,0.15);box-shadow:0 40px 100px rgba(30,58,95,0.18),0 0 0 1px rgba(0,0,0,0.04);overflow:hidden;position:relative;}
+/* ── Hero phone (angled floating) ─────── */
+.hero-visual{display:flex;justify-content:center;align-items:center;position:relative;}
+.hero-phone-wrap{animation:swell 5s ease-in-out infinite;}
+@keyframes swell{0%,100%{transform:perspective(1100px) rotateY(-18deg) rotateX(4deg) translateY(0px);}50%{transform:perspective(1100px) rotateY(-18deg) rotateX(4deg) translateY(-14px);}}
+.phone{width:258px;height:542px;background:#040e1c;border-radius:44px;border:6px solid rgba(30,58,95,0.14);box-shadow:-24px 32px 80px rgba(30,58,95,0.22),0 50px 100px rgba(0,0,0,0.12),0 0 0 1px rgba(0,0,0,0.04);overflow:hidden;position:relative;}
 .phone-notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:86px;height:24px;background:#040e1c;border-radius:0 0 16px 16px;z-index:10;}
+
+/* Phone screen shared styles */
 .ps-nav{background:#071828;padding:34px 14px 10px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.05);}
 .ps-nav-title{font-size:11px;font-weight:700;color:#dceaf6;letter-spacing:.05em;}
 .ps-badge{background:rgba(201,162,39,.18);border:1px solid rgba(201,162,39,.32);color:#c9a227;font-size:9px;font-weight:700;padding:2px 7px;border-radius:7px;}
@@ -78,30 +79,24 @@ h1 em{font-style:italic;color:var(--gold);}
 .ps-tab-lbl{font-size:7px;color:#3d5a70;}
 .ps-tab-lbl.active{color:var(--gold);}
 
-/* ── Sections ────────────────────────── */
-.section{padding:96px 80px;}
-.section.grey{background:var(--bg);}
-.sec-eyebrow{font-size:11px;font-weight:600;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:14px;}
-.sec-title{font-family:var(--ff-d);font-size:clamp(30px,4vw,50px);font-weight:600;color:var(--navy);line-height:1.1;letter-spacing:-.02em;}
-.sec-sub{font-size:16px;color:var(--muted);line-height:1.7;max-width:540px;}
-
-/* ── Features ────────────────────────── */
-.feat-intro{text-align:center;margin-bottom:72px;}
-.feat-intro .sec-title{margin-bottom:12px;}
-.feat-intro .sec-sub{margin:0 auto;}
-.feat-grid{display:flex;flex-direction:column;gap:72px;}
-.feat{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:80px;}
-.feat.rev{direction:rtl;}
-.feat.rev>*{direction:ltr;}
+/* ── Sticky scroll features ──────────── */
+.sf{position:relative;background:var(--bg);}
+.sf-intro{text-align:center;padding:80px 80px 0;}
+.sf-inner{display:grid;grid-template-columns:1fr 1fr;min-height:auto;padding:0 80px;}
+.sf-steps{padding:60px 80px 100px 0;}
+.sf-step{min-height:70vh;display:flex;align-items:center;opacity:.35;transition:opacity .4s;}
+.sf-step.active{opacity:1;}
+.sf-phone-col{position:sticky;top:0;height:100vh;display:flex;align-items:center;justify-content:center;}
+.sf-phone-scene{animation:sfSwell 6s ease-in-out infinite;}
+@keyframes sfSwell{0%,100%{transform:perspective(1100px) rotateY(-20deg) rotateX(4deg) translateY(0);}50%{transform:perspective(1100px) rotateY(-20deg) rotateX(4deg) translateY(-12px);}}
+.sf-phone{width:248px;height:524px;background:#040e1c;border-radius:42px;border:6px solid rgba(30,58,95,0.12);box-shadow:-20px 28px 70px rgba(30,58,95,0.2),0 40px 80px rgba(0,0,0,0.1);overflow:hidden;position:relative;}
+.sf-screen{display:none;height:100%;}
+.sf-screen.active{display:block;}
 .feat-tag{display:inline-block;font-size:11px;font-weight:600;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;}
 .feat-title{font-family:var(--ff-d);font-size:clamp(24px,3vw,38px);font-weight:600;color:var(--navy);line-height:1.15;letter-spacing:-.02em;margin-bottom:12px;}
 .feat-desc{font-size:15px;color:var(--muted);line-height:1.75;}
-.feat-visual{display:flex;justify-content:center;}
-
-/* Feature phones */
-.fp{width:218px;height:456px;background:#040e1c;border-radius:38px;border:5px solid rgba(30,58,95,0.12);box-shadow:0 24px 64px rgba(30,58,95,0.15);overflow:hidden;position:relative;}
-.fp-notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:70px;height:20px;background:#040e1c;border-radius:0 0 13px 13px;z-index:10;}
-.fp-body{padding:28px 12px 12px;height:100%;}
+.fp-notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:78px;height:22px;background:#040e1c;border-radius:0 0 14px 14px;z-index:10;}
+.fp-body{padding:30px 12px 12px;height:100%;}
 .fp-lbl{font-size:8px;font-weight:700;color:#3d5a70;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;}
 .fp-item{background:#0c2236;border:1px solid rgba(180,210,255,.07);border-radius:9px;padding:9px 10px;margin-bottom:6px;}
 .fp-item-row{display:flex;justify-content:space-between;align-items:center;}
@@ -111,10 +106,78 @@ h1 em{font-style:italic;color:var(--gold);}
 .fp-badge{font-size:8px;padding:2px 7px;border-radius:5px;font-weight:600;}
 .fp-badge.done{background:rgba(22,163,74,.15);color:#16a34a;}
 .fp-badge.pending{background:rgba(201,162,39,.15);color:#c9a227;}
-.fp-crew-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;}
-.fp-crew-tag{background:#0c2236;border:1px solid rgba(180,210,255,.07);border-radius:5px;padding:3px 7px;font-size:8px;color:#6e8fa8;}
 .fp-bar-wrap{height:3px;background:rgba(201,162,39,.15);border-radius:2px;margin-top:7px;}
 .fp-bar{height:100%;background:var(--gold);border-radius:2px;}
+
+/* ── Screenshot gallery ──────────────── */
+.screenshots{background:var(--white);padding:80px 80px;}
+.screenshots-intro{text-align:center;margin-bottom:52px;}
+.ss-row{display:flex;gap:24px;justify-content:center;align-items:flex-end;overflow-x:auto;padding-bottom:16px;scrollbar-width:none;}
+.ss-row::-webkit-scrollbar{display:none;}
+.ss-item{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:12px;}
+.ss-item:nth-child(2){transform:translateY(-24px);}
+.ss-item:nth-child(4){transform:translateY(-12px);}
+.ss-frame{width:180px;height:380px;background:#040e1c;border-radius:34px;border:5px solid rgba(30,58,95,0.12);box-shadow:0 20px 56px rgba(30,58,95,0.15);overflow:hidden;}
+.ss-frame img{width:100%;height:100%;object-fit:cover;display:block;}
+.ss-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px;}
+.ss-placeholder-icon{width:36px;height:36px;border-radius:50%;background:rgba(201,162,39,0.15);display:flex;align-items:center;justify-content:center;}
+.ss-placeholder-text{font-size:10px;color:rgba(255,255,255,.3);text-align:center;line-height:1.5;}
+.ss-label{font-size:12px;font-weight:500;color:var(--muted);}
+
+/* ── Devices section ─────────────────── */
+.devices{background:var(--bg);padding:80px 80px;overflow:hidden;}
+.devices-intro{text-align:center;margin-bottom:60px;}
+.devices-intro .sec-title{margin-bottom:10px;}
+.devices-scene{position:relative;display:flex;align-items:flex-end;justify-content:center;gap:0;min-height:360px;}
+
+/* MacBook */
+.macbook-wrap{position:relative;z-index:2;flex-shrink:0;}
+.macbook-lid{width:480px;background:linear-gradient(160deg,#d0d8e4 0%,#c4ccd8 100%);border-radius:12px 12px 0 0;padding:10px 10px 0;border:1px solid #b8c4d0;border-bottom:none;box-shadow:0 -8px 40px rgba(30,58,95,0.1);}
+.macbook-screen{background:#040e1c;border-radius:6px;height:268px;overflow:hidden;position:relative;}
+.macbook-cam{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:#0a1628;}
+.macbook-chin{background:linear-gradient(#d0d8e4,#c0c8d4);height:5px;border-radius:0;}
+.macbook-hinge{background:linear-gradient(#a8b4c0,#98a4b0);height:4px;width:100%;border-radius:0;}
+.macbook-base{background:linear-gradient(160deg,#c8d0dc 0%,#b8c0cc 100%);height:14px;border-radius:0 0 4px 4px;border:1px solid #a8b4c0;border-top:none;box-shadow:0 6px 20px rgba(0,0,0,0.1);}
+.macbook-feet{display:flex;justify-content:space-between;padding:0 60px;margin-top:1px;}
+.macbook-foot{width:60px;height:3px;background:#a0aab4;border-radius:0 0 3px 3px;}
+.macbook-screen-content{padding:20px 16px 10px;}
+.mb-nav{background:#071828;border-radius:6px 6px 0 0;padding:8px 12px;display:flex;align-items:center;gap:6px;margin:-20px -16px 12px;}
+.mb-dot{width:6px;height:6px;border-radius:50%;}
+.mb-title{font-size:8px;color:rgba(255,255,255,.5);margin-left:auto;letter-spacing:.04em;}
+.mb-sidebar{display:flex;gap:10px;height:180px;}
+.mb-sidebar-nav{width:70px;display:flex;flex-direction:column;gap:4px;}
+.mb-nav-item{font-size:7px;padding:5px 8px;border-radius:5px;color:#6e8fa8;}
+.mb-nav-item.active{background:#0c2236;color:#c9a227;font-weight:600;}
+.mb-content{flex:1;display:flex;flex-direction:column;gap:6px;}
+.mb-stat-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;}
+.mb-stat{background:#0c2236;border-radius:5px;padding:6px 8px;}
+.mb-stat-val{font-size:11px;font-weight:700;color:#dceaf6;}
+.mb-stat-lbl{font-size:7px;color:#3d5a70;margin-top:1px;}
+.mb-table-row{background:#0c2236;border-radius:5px;padding:6px 8px;display:flex;justify-content:space-between;align-items:center;}
+.mb-table-title{font-size:8px;color:#dceaf6;}
+.mb-table-badge{font-size:7px;padding:1px 5px;border-radius:4px;background:rgba(22,163,74,.15);color:#16a34a;}
+
+/* iPad */
+.ipad-wrap{position:relative;z-index:1;margin-left:-20px;margin-bottom:16px;flex-shrink:0;}
+.ipad{width:200px;height:270px;background:#040e1c;border-radius:16px;border:7px solid #1a2a3a;box-shadow:0 20px 50px rgba(30,58,95,0.2);overflow:hidden;position:relative;}
+.ipad-cam{position:absolute;top:5px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:#0a1628;z-index:10;}
+.ipad-screen{padding:16px 10px 10px;height:100%;}
+
+/* iPhone (small, beside MacBook) */
+.iphone-wrap{position:relative;z-index:3;margin-left:16px;margin-bottom:0;flex-shrink:0;transform:perspective(800px) rotateY(-8deg);}
+.iphone-s{width:110px;height:234px;background:#040e1c;border-radius:28px;border:5px solid rgba(30,58,95,0.14);box-shadow:0 20px 50px rgba(30,58,95,0.18);overflow:hidden;position:relative;}
+.iphone-s-notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:44px;height:12px;background:#040e1c;border-radius:0 0 8px 8px;z-index:10;}
+.iphone-s-screen{padding:16px 8px 8px;height:100%;}
+.iphone-s-tabbar{position:absolute;bottom:0;left:0;right:0;background:#071828;display:flex;justify-content:space-around;padding:5px 0 8px;}
+.iphone-s-tab{width:14px;height:2.5px;border-radius:2px;background:rgba(255,255,255,.1);}
+.iphone-s-tab.active{background:var(--gold);}
+
+/* ── Sections ────────────────────────── */
+.section{padding:88px 80px;}
+.section.grey{background:var(--bg);}
+.sec-eyebrow{font-size:11px;font-weight:600;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:14px;}
+.sec-title{font-family:var(--ff-d);font-size:clamp(30px,4vw,50px);font-weight:600;color:var(--navy);line-height:1.1;letter-spacing:-.02em;}
+.sec-sub{font-size:16px;color:var(--muted);line-height:1.7;max-width:540px;}
 
 /* ── Roles ───────────────────────────── */
 .roles-intro{text-align:center;margin-bottom:48px;}
@@ -128,34 +191,18 @@ h1 em{font-style:italic;color:var(--gold);}
 .role-sub-title{font-size:12px;font-weight:500;color:var(--gold);letter-spacing:.04em;margin-bottom:10px;}
 .role-desc{font-size:14px;color:var(--muted);line-height:1.65;}
 
-/* ── Screenshots ─────────────────────── */
-.screenshots{background:var(--bg);overflow:hidden;}
-.screenshots-intro{text-align:center;margin-bottom:48px;}
-.screenshots-intro .sec-title{margin-bottom:10px;}
-.screenshots-row{display:flex;gap:20px;justify-content:center;align-items:flex-end;flex-wrap:nowrap;overflow-x:auto;padding:0 20px 20px;scrollbar-width:none;}
-.screenshots-row::-webkit-scrollbar{display:none;}
-.ss-wrap{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:12px;}
-.ss-wrap:nth-child(2){transform:translateY(-20px);}
-.ss-wrap:nth-child(4){transform:translateY(-10px);}
-.ss-phone{width:190px;height:400px;background:#040e1c;border-radius:36px;border:5px solid rgba(30,58,95,0.12);box-shadow:0 24px 60px rgba(30,58,95,0.14);overflow:hidden;position:relative;}
-.ss-phone img{width:100%;height:100%;object-fit:cover;display:block;}
-.ss-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;}
-.ss-placeholder-icon{width:36px;height:36px;border-radius:50%;background:rgba(201,162,39,0.2);display:flex;align-items:center;justify-content:center;}
-.ss-placeholder-text{font-size:11px;font-weight:500;color:rgba(255,255,255,0.4);text-align:center;padding:0 12px;line-height:1.5;}
-.ss-label{font-size:12px;font-weight:500;color:var(--muted);}
-
 /* ── Download CTA ────────────────────── */
-.download{background:var(--navy);text-align:center;}
+.download{background:var(--navy);text-align:center;padding:88px 80px;}
 .dl-inner{max-width:600px;margin:0 auto;}
 .dl-title{font-family:var(--ff-d);font-size:clamp(34px,5vw,60px);font-weight:600;color:#fff;line-height:1.1;letter-spacing:-.025em;margin-bottom:16px;}
 .dl-title em{font-style:italic;color:var(--gold);}
-.dl-sub{font-size:16px;color:rgba(255,255,255,0.65);margin-bottom:36px;line-height:1.7;}
+.dl-sub{font-size:16px;color:rgba(255,255,255,0.6);margin-bottom:36px;line-height:1.7;}
 .dl-actions{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;}
 .btn-white{display:inline-flex;align-items:center;gap:8px;background:#fff;color:var(--navy);font-size:14px;font-weight:600;padding:13px 24px;border-radius:10px;transition:all .2s;}
 .btn-white:hover{background:#f0f4ff;transform:translateY(-2px);}
-.btn-ghost-white{display:inline-flex;align-items:center;gap:8px;color:#fff;font-size:14px;font-weight:500;padding:13px 24px;border-radius:10px;border:1px solid rgba(255,255,255,0.25);transition:all .2s;}
-.btn-ghost-white:hover{background:rgba(255,255,255,0.08);}
-.dl-note{font-size:13px;color:rgba(255,255,255,0.4);margin-top:16px;}
+.btn-ghost-white{display:inline-flex;align-items:center;gap:8px;color:#fff;font-size:14px;font-weight:500;padding:13px 24px;border-radius:10px;border:1px solid rgba(255,255,255,.25);transition:all .2s;}
+.btn-ghost-white:hover{background:rgba(255,255,255,.08);}
+.dl-note{font-size:13px;color:rgba(255,255,255,.35);margin-top:14px;}
 
 /* ── FAQ ─────────────────────────────── */
 .faq-inner{max-width:720px;margin:0 auto;}
@@ -180,12 +227,12 @@ footer{background:var(--navy);padding:56px 80px 40px;}
 .footer-logo{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
 .footer-logo svg{width:26px;height:26px;}
 .footer-logo-name{font-family:var(--ff-d);font-size:17px;font-weight:600;color:#fff;}
-.footer-tagline{font-size:13px;color:rgba(255,255,255,0.45);max-width:200px;line-height:1.6;}
-.footer-col h4{font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px;}
+.footer-tagline{font-size:13px;color:rgba(255,255,255,.4);max-width:200px;line-height:1.6;}
+.footer-col h4{font-size:11px;font-weight:600;color:rgba(255,255,255,.45);letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px;}
 .footer-col ul{list-style:none;display:flex;flex-direction:column;gap:9px;}
-.footer-col a{font-size:13px;color:rgba(255,255,255,0.5);transition:color .15s;}
+.footer-col a{font-size:13px;color:rgba(255,255,255,.45);transition:color .15s;}
 .footer-col a:hover{color:#fff;}
-.footer-bottom{border-top:1px solid rgba(255,255,255,0.1);padding-top:26px;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:rgba(255,255,255,0.3);flex-wrap:wrap;gap:10px;}
+.footer-bottom{border-top:1px solid rgba(255,255,255,.1);padding-top:26px;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:rgba(255,255,255,.28);flex-wrap:wrap;gap:10px;}
 
 /* ── Reveal ──────────────────────────── */
 .reveal{opacity:0;transform:translateY(28px);transition:opacity .6s ease,transform .6s ease;}
@@ -194,45 +241,57 @@ footer{background:var(--navy);padding:56px 80px 40px;}
 
 /* ── Responsive ──────────────────────── */
 @media(max-width:1024px){
-  .hero{padding:100px 40px 72px;gap:40px;}
-  .section{padding:72px 40px;}
+  .hero{padding:100px 40px 72px;}
+  .section{padding:64px 40px;}
+  .screenshots,.devices{padding:64px 40px;}
+  .download{padding:72px 40px;}
   footer{padding:48px 40px 32px;}
-  .nav{padding:0 32px;}
+  .sf-intro,.sf-inner{padding-left:40px;padding-right:40px;}
+  .sf-steps{padding-right:40px;}
+  .macbook-lid{width:380px;}
+  .macbook-screen{height:212px;}
 }
 @media(max-width:768px){
-  .hero{grid-template-columns:1fr;padding:96px 24px 56px;text-align:center;}
+  .hero{grid-template-columns:1fr;padding:88px 24px 56px;text-align:center;}
   .hero-visual{order:-1;}
   .hero-sub{margin:0 auto 34px;}
   .hero-actions{justify-content:center;}
   .eyebrow{justify-content:center;}
-  .section{padding:60px 24px;}
-  .feat,.feat.rev{grid-template-columns:1fr;direction:ltr;gap:36px;text-align:center;}
-  .feat-visual{order:-1;}
+  .section,.screenshots,.devices,.download{padding:56px 24px;}
+  .sf-intro{padding:56px 24px 0;}
+  .sf-inner{grid-template-columns:1fr;padding:0 24px;}
+  .sf-phone-col{display:none;}
+  .sf-step{min-height:auto;padding:32px 0;opacity:1;}
+  .sf-steps{padding:32px 0 56px;}
   .roles-grid{grid-template-columns:1fr;}
-  .nav{padding:0 20px;}
   footer{padding:40px 24px 28px;}
   .footer-top{flex-direction:column;gap:28px;}
   .footer-bottom{flex-direction:column;text-align:center;}
-  .phone-wrap{transform:scale(.85);}
+  .devices-scene{flex-wrap:wrap;justify-content:center;gap:20px;min-height:auto;}
+  .ipad-wrap,.iphone-wrap{margin:0;}
+  .hero-phone-wrap{animation:swellMobile 5s ease-in-out infinite;}
+  @keyframes swellMobile{0%,100%{transform:perspective(1100px) rotateY(-12deg) rotateX(3deg) translateY(0);}50%{transform:perspective(1100px) rotateY(-12deg) rotateX(3deg) translateY(-10px);}}
 }
 @media(max-width:480px){
-  h1{font-size:34px;}
+  h1{font-size:32px;}
   .hero-actions,.dl-actions{flex-direction:column;align-items:center;}
   .btn-primary,.btn-ghost,.btn-white,.btn-ghost-white{width:100%;justify-content:center;}
+  .macbook-lid{width:280px;}
+  .macbook-screen{height:156px;}
 }
 @media(prefers-reduced-motion:reduce){
   .reveal{transition:none;}
-  .phone-wrap{animation:none;}
+  .hero-phone-wrap,.sf-phone-scene{animation:none;}
 }
 </style>
 </head>
 <body>
 
-<nav class="nav" id="nav"></nav>
+<nav class="nav"></nav>
 
 <main>
 
-<!-- Hero -->
+<!-- ── Hero ─────────────────────────── -->
 <section class="hero">
   <div class="hero-content">
     <div class="eyebrow">Built by crew, for crew</div>
@@ -245,33 +304,22 @@ footer{background:var(--navy);padding:56px 80px 40px;}
       </a>
       <a href="/login" class="btn-ghost">
         Log in to Web App
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </a>
     </div>
   </div>
   <div class="hero-visual">
-    <div class="phone-wrap">
+    <div class="hero-phone-wrap">
       <div class="phone">
         <div class="phone-notch"></div>
-        <div class="ps-nav">
-          <span class="ps-nav-title">NAUTICAL OPS</span>
-          <span class="ps-badge">HOD</span>
-        </div>
+        <div class="ps-nav"><span class="ps-nav-title">NAUTICAL OPS</span><span class="ps-badge">HOD</span></div>
         <div class="ps-body">
           <div class="ps-lbl">Your vessel</div>
           <div class="ps-vessel">LADY MARGARET</div>
           <div class="ps-lbl">Upcoming</div>
-          <div class="ps-card">
-            <div class="ps-card-tag">Guest Trip</div>
-            <div class="ps-card-title">Mediterranean Charter</div>
-            <div class="ps-card-sub">Departs tomorrow · 14 guests</div>
-          </div>
-          <div class="ps-card">
-            <div class="ps-card-tag">Delivery Run</div>
-            <div class="ps-card-title">Monaco → Antibes</div>
-            <div class="ps-card-sub">Friday · 3 days</div>
-          </div>
-          <div class="ps-lbl" style="margin-top:11px;">Tasks</div>
+          <div class="ps-card"><div class="ps-card-tag">Guest Trip</div><div class="ps-card-title">Mediterranean Charter</div><div class="ps-card-sub">Departs tomorrow · 14 guests</div></div>
+          <div class="ps-card"><div class="ps-card-tag">Delivery Run</div><div class="ps-card-title">Monaco → Antibes</div><div class="ps-card-sub">Friday · 3 days</div></div>
+          <div class="ps-lbl" style="margin-top:10px;">Tasks</div>
           <div class="ps-task"><div class="ps-dot done"></div><div class="ps-txt done">Safety drill completed</div></div>
           <div class="ps-task"><div class="ps-dot done"></div><div class="ps-txt done">Tender inspection</div></div>
           <div class="ps-task"><div class="ps-dot"></div><div class="ps-txt">Provision checklist</div></div>
@@ -287,50 +335,147 @@ footer{background:var(--navy);padding:56px 80px 40px;}
   </div>
 </section>
 
-<!-- Screenshots -->
-<section class="section screenshots">
-  <div class="screenshots-intro reveal">
-    <div class="sec-eyebrow">See it in action</div>
-    <h2 class="sec-title">Built for life on board.</h2>
-    <p class="sec-sub" style="margin:0 auto;">A glimpse of what Nautical Ops looks like on your device.</p>
+<!-- ── Sticky scroll features ─────────── -->
+<section class="sf" id="features">
+  <div class="sf-intro reveal">
+    <div class="sec-eyebrow">What's on board</div>
+    <h2 class="sec-title">Everything your vessel needs to run smoothly.</h2>
   </div>
-  <div class="screenshots-row">
-    <!-- Screenshot 1 — replace ss-placeholder div with <img src="your-screenshot.png" alt="..."> -->
-    <div class="ss-wrap reveal d1">
-      <div class="ss-phone">
-        <div class="ss-placeholder" style="background:linear-gradient(160deg,#071828 0%,#0c2236 100%);">
-          <div class="ss-placeholder-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c9a227" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>
-          <div class="ss-placeholder-text">Home Screen<br>screenshot here</div>
+  <div class="sf-inner">
+    <div class="sf-steps">
+
+      <div class="sf-step active" data-step="0">
+        <div>
+          <span class="feat-tag">Voyage Management</span>
+          <h3 class="feat-title">Every trip, logged and organised.</h3>
+          <p class="feat-desc">Record guest charters, owner voyages, delivery runs, and yard periods in seconds. Your vessel's full history — always at hand, beautifully organised by date and type.</p>
+        </div>
+      </div>
+
+      <div class="sf-step" data-step="1">
+        <div>
+          <span class="feat-tag">Crew & Tasks</span>
+          <h3 class="feat-title">Your crew, always in sync.</h3>
+          <p class="feat-desc">Assign tasks by department, set priorities and deadlines, and track completion in real time. Your crew knows exactly what needs doing — and so do you.</p>
+        </div>
+      </div>
+
+      <div class="sf-step" data-step="2">
+        <div>
+          <span class="feat-tag">Maintenance & Yard</span>
+          <h3 class="feat-title">Keep your vessel in peak condition.</h3>
+          <p class="feat-desc">Log maintenance records, manage yard period jobs by department, and keep a full audit trail. Nothing falls through the cracks — from engine room to deckhead.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="sf-phone-col">
+      <div class="sf-phone-scene">
+        <div class="sf-phone">
+          <div class="fp-notch"></div>
+
+          <!-- Screen 0: Voyages -->
+          <div class="sf-screen active" data-step="0">
+            <div class="fp-body">
+              <div class="fp-lbl">Trip Types</div>
+              <div class="fp-item"><div class="fp-item-row"><div class="fp-item-title" style="display:flex;align-items:center;gap:6px;"><div class="fp-dot" style="background:#0ea5e9;"></div>Guest Trip</div></div></div>
+              <div class="fp-item"><div class="fp-item-row"><div class="fp-item-title" style="display:flex;align-items:center;gap:6px;"><div class="fp-dot" style="background:#c9a227;"></div>Owner Voyage</div></div></div>
+              <div class="fp-item"><div class="fp-item-row"><div class="fp-item-title" style="display:flex;align-items:center;gap:6px;"><div class="fp-dot" style="background:#a855f7;"></div>Delivery Run</div></div></div>
+              <div class="fp-item"><div class="fp-item-row"><div class="fp-item-title" style="display:flex;align-items:center;gap:6px;"><div class="fp-dot" style="background:#f97316;"></div>Yard Period</div></div></div>
+              <div class="fp-lbl" style="margin-top:14px;">Recent</div>
+              <div style="border-bottom:1px solid rgba(255,255,255,.04);padding:7px 0;"><div class="fp-item-title">Monaco Charter</div><div class="fp-item-sub">Jun 14–21 · 8 guests</div></div>
+              <div style="border-bottom:1px solid rgba(255,255,255,.04);padding:7px 0;"><div class="fp-item-title">Antibes Delivery</div><div class="fp-item-sub">Jun 7–9 · 2 crew</div></div>
+              <div style="padding:7px 0;"><div class="fp-item-title">Owner Voyage</div><div class="fp-item-sub">May 28–Jun 2</div></div>
+            </div>
+          </div>
+
+          <!-- Screen 1: Tasks -->
+          <div class="sf-screen" data-step="1">
+            <div class="fp-body">
+              <div class="fp-lbl">Tasks · Interior</div>
+              <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title">Cabin turnover</div><div class="fp-item-sub">Assigned to Maria</div></div><span class="fp-badge done">Done</span></div></div>
+              <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title">Laundry run</div><div class="fp-item-sub">Assigned to Tom</div></div><span class="fp-badge pending">Active</span></div></div>
+              <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title">Guest amenities</div><div class="fp-item-sub">Assigned to Emma</div></div><span class="fp-badge done">Done</span></div></div>
+              <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title">Deck wash-down</div><div class="fp-item-sub">Assigned to James</div></div><span class="fp-badge pending">Active</span></div></div>
+              <div class="fp-lbl" style="margin-top:14px;">Crew on board · 12</div>
+              <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">
+                <span style="background:#0c2236;border:1px solid rgba(180,210,255,.07);border-radius:5px;padding:3px 7px;font-size:8px;color:#6e8fa8;">Deck · 4</span>
+                <span style="background:#0c2236;border:1px solid rgba(180,210,255,.07);border-radius:5px;padding:3px 7px;font-size:8px;color:#6e8fa8;">Interior · 5</span>
+                <span style="background:#0c2236;border:1px solid rgba(180,210,255,.07);border-radius:5px;padding:3px 7px;font-size:8px;color:#6e8fa8;">Engine · 3</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Screen 2: Maintenance -->
+          <div class="sf-screen" data-step="2">
+            <div class="fp-body">
+              <div class="fp-lbl">Maintenance Log</div>
+              <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title">Engine service</div><div class="fp-item-sub">Engine room · Jun 18</div></div><span class="fp-badge done">Done</span></div></div>
+              <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title">Hull inspection</div><div class="fp-item-sub">Deck · Jun 22</div></div><span class="fp-badge pending">Pending</span></div></div>
+              <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title">Watermaker filter</div><div class="fp-item-sub">Engine room · Jun 25</div></div><span class="fp-badge done">Done</span></div></div>
+              <div class="fp-lbl" style="margin-top:14px;">Yard Period</div>
+              <div class="fp-item" style="border-color:rgba(201,162,39,.18);">
+                <div class="fp-item-title" style="color:#c9a227;">La Spezia Refit</div>
+                <div class="fp-item-sub">Jul 1 – Aug 15 · 14 jobs</div>
+                <div class="fp-bar-wrap"><div class="fp-bar" style="width:35%;"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ps-tabbar">
+            <div class="ps-tab"><div class="ps-tab-bar"></div><div class="ps-tab-lbl">Home</div></div>
+            <div class="ps-tab"><div class="ps-tab-bar active"></div><div class="ps-tab-lbl active">Trips</div></div>
+            <div class="ps-tab"><div class="ps-tab-bar"></div><div class="ps-tab-lbl">Tasks</div></div>
+            <div class="ps-tab"><div class="ps-tab-bar"></div><div class="ps-tab-lbl">Crew</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Screenshot gallery ─────────────── -->
+<section class="screenshots reveal">
+  <div class="screenshots-intro">
+    <div class="sec-eyebrow">See it in action</div>
+    <h2 class="sec-title" style="margin-bottom:10px;">Built for life on board.</h2>
+    <p class="sec-sub" style="margin:0 auto;text-align:center;">Drop in your app screenshots below — swap the placeholder divs for &lt;img&gt; tags.</p>
+  </div>
+  <div class="ss-row">
+    <!-- Replace ss-placeholder with: <img src="screenshot1.png" alt="Home screen"> -->
+    <div class="ss-item reveal d1">
+      <div class="ss-frame">
+        <div class="ss-placeholder" style="background:linear-gradient(160deg,#071828,#0c2236);">
+          <div class="ss-placeholder-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c9a227" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>
+          <div class="ss-placeholder-text">Home Screen</div>
         </div>
       </div>
       <span class="ss-label">Home</span>
     </div>
-    <!-- Screenshot 2 -->
-    <div class="ss-wrap reveal d2">
-      <div class="ss-phone">
-        <div class="ss-placeholder" style="background:linear-gradient(160deg,#0a1e35 0%,#0e2a45 100%);">
-          <div class="ss-placeholder-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c9a227" stroke-width="1.8"><path d="M4 17.5Q4 20 12 20.5Q20 20 20 17.5L18.5 11H5.5Z"/><rect x="7.5" y="7" width="9" height="5" rx="1"/><line x1="12" y1="3" x2="12" y2="7"/></svg></div>
-          <div class="ss-placeholder-text">Trips Screen<br>screenshot here</div>
+    <div class="ss-item reveal d2">
+      <div class="ss-frame">
+        <div class="ss-placeholder" style="background:linear-gradient(160deg,#0a1e35,#0e2a45);">
+          <div class="ss-placeholder-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c9a227" stroke-width="1.8"><path d="M4 17.5Q4 20 12 20.5Q20 20 20 17.5L18.5 11H5.5Z"/><rect x="7.5" y="7" width="9" height="5" rx="1"/></svg></div>
+          <div class="ss-placeholder-text">Trips Screen</div>
         </div>
       </div>
       <span class="ss-label">Voyages</span>
     </div>
-    <!-- Screenshot 3 -->
-    <div class="ss-wrap reveal d2">
-      <div class="ss-phone">
-        <div class="ss-placeholder" style="background:linear-gradient(160deg,#071828 0%,#0c2236 100%);">
-          <div class="ss-placeholder-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c9a227" stroke-width="1.8"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
-          <div class="ss-placeholder-text">Tasks Screen<br>screenshot here</div>
+    <div class="ss-item reveal d2">
+      <div class="ss-frame">
+        <div class="ss-placeholder" style="background:linear-gradient(160deg,#071828,#0c2236);">
+          <div class="ss-placeholder-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c9a227" stroke-width="1.8"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+          <div class="ss-placeholder-text">Tasks Screen</div>
         </div>
       </div>
       <span class="ss-label">Tasks</span>
     </div>
-    <!-- Screenshot 4 -->
-    <div class="ss-wrap reveal d3">
-      <div class="ss-phone">
-        <div class="ss-placeholder" style="background:linear-gradient(160deg,#0a1e35 0%,#0e2a45 100%);">
-          <div class="ss-placeholder-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c9a227" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
-          <div class="ss-placeholder-text">Crew Screen<br>screenshot here</div>
+    <div class="ss-item reveal d3">
+      <div class="ss-frame">
+        <div class="ss-placeholder" style="background:linear-gradient(160deg,#0a1e35,#0e2a45);">
+          <div class="ss-placeholder-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c9a227" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+          <div class="ss-placeholder-text">Crew Screen</div>
         </div>
       </div>
       <span class="ss-label">Crew</span>
@@ -338,89 +483,108 @@ footer{background:var(--navy);padding:56px 80px 40px;}
   </div>
 </section>
 
-<!-- Features -->
-<section class="section grey" id="features">
-  <div class="feat-intro reveal">
-    <div class="sec-eyebrow">What's on board</div>
-    <h2 class="sec-title">Everything your vessel<br>needs to run smoothly.</h2>
-    <p class="sec-sub">From first departure to final log — Nautical Ops keeps your whole operation in one place.</p>
+<!-- ── Device showcase ────────────────── -->
+<section class="devices">
+  <div class="devices-intro reveal">
+    <div class="sec-eyebrow">Every device, covered</div>
+    <h2 class="sec-title" style="margin-bottom:10px;">Works on all your devices.</h2>
+    <p class="sec-sub" style="margin:0 auto;text-align:center;">iPhone, iPad, or desktop browser — Nautical Ops is always there when you need it.</p>
   </div>
-  <div class="feat-grid">
+  <div class="devices-scene reveal">
 
-    <div class="feat reveal">
-      <div>
-        <span class="feat-tag">Voyage Management</span>
-        <h3 class="feat-title">Every trip, logged and organised.</h3>
-        <p class="feat-desc">Record guest charters, owner voyages, delivery runs, and yard periods in seconds. Your vessel's full history — always at hand, beautifully organised by date and type.</p>
+    <!-- MacBook -->
+    <div class="macbook-wrap">
+      <div class="macbook-lid">
+        <div class="macbook-screen">
+          <div class="macbook-cam"></div>
+          <div class="macbook-screen-content">
+            <div class="mb-nav">
+              <div class="mb-dot" style="background:#ff5f57;"></div>
+              <div class="mb-dot" style="background:#ffbd2e;margin-left:4px;"></div>
+              <div class="mb-dot" style="background:#28ca41;margin-left:4px;"></div>
+              <span class="mb-title">nautical-ops.com</span>
+            </div>
+            <div class="mb-sidebar">
+              <div class="mb-sidebar-nav">
+                <div class="mb-nav-item active">Dashboard</div>
+                <div class="mb-nav-item">Vessels</div>
+                <div class="mb-nav-item">Users</div>
+                <div class="mb-nav-item">Trips</div>
+                <div class="mb-nav-item">Tasks</div>
+              </div>
+              <div class="mb-content">
+                <div class="mb-stat-row">
+                  <div class="mb-stat"><div class="mb-stat-val">9</div><div class="mb-stat-lbl">Vessels</div></div>
+                  <div class="mb-stat"><div class="mb-stat-val">42</div><div class="mb-stat-lbl">Crew</div></div>
+                  <div class="mb-stat"><div class="mb-stat-val">7</div><div class="mb-stat-lbl">Active</div></div>
+                </div>
+                <div class="mb-table-row"><span class="mb-table-title">Lady Margaret</span><span class="mb-table-badge">Active</span></div>
+                <div class="mb-table-row"><span class="mb-table-title">Serenity IV</span><span class="mb-table-badge">Active</span></div>
+                <div class="mb-table-row"><span class="mb-table-title">Aurora Belle</span><span class="mb-table-badge">Active</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="macbook-chin"></div>
       </div>
-      <div class="feat-visual">
-        <div class="fp">
-          <div class="fp-notch"></div>
-          <div class="fp-body">
-            <div class="fp-lbl">Trip Types</div>
-            <div class="fp-item"><div class="fp-item-row"><div class="fp-item-title" style="display:flex;align-items:center;gap:6px;"><div class="fp-dot" style="background:#0ea5e9;"></div>Guest Trip</div></div></div>
-            <div class="fp-item"><div class="fp-item-row"><div class="fp-item-title" style="display:flex;align-items:center;gap:6px;"><div class="fp-dot" style="background:#c9a227;"></div>Owner Voyage</div></div></div>
-            <div class="fp-item"><div class="fp-item-row"><div class="fp-item-title" style="display:flex;align-items:center;gap:6px;"><div class="fp-dot" style="background:#a855f7;"></div>Delivery Run</div></div></div>
-            <div class="fp-item"><div class="fp-item-row"><div class="fp-item-title" style="display:flex;align-items:center;gap:6px;"><div class="fp-dot" style="background:#f97316;"></div>Yard Period</div></div></div>
-            <div class="fp-lbl" style="margin-top:14px;">Recent</div>
-            <div style="border-bottom:1px solid rgba(255,255,255,.04);padding:7px 0;">
-              <div class="fp-item-title">Monaco Charter</div>
-              <div class="fp-item-sub">Jun 14 – Jun 21 · 8 guests</div>
-            </div>
-            <div style="padding:7px 0;">
-              <div class="fp-item-title">Antibes Delivery</div>
-              <div class="fp-item-sub">Jun 7 – Jun 9 · 2 crew</div>
-            </div>
+      <div class="macbook-hinge"></div>
+      <div class="macbook-base"></div>
+      <div class="macbook-feet"><div class="macbook-foot"></div><div class="macbook-foot"></div></div>
+    </div>
+
+    <!-- iPad -->
+    <div class="ipad-wrap">
+      <div class="ipad">
+        <div class="ipad-cam"></div>
+        <div class="ipad-screen">
+          <div style="font-size:8px;font-weight:700;color:#3d5a70;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;padding-top:4px;">UPCOMING TRIPS</div>
+          <div style="background:#0c2236;border:1px solid rgba(180,210,255,.07);border-radius:7px;padding:8px 9px;margin-bottom:5px;">
+            <div style="font-size:8px;color:#c9a227;font-weight:600;letter-spacing:.06em;text-transform:uppercase;">Guest Trip</div>
+            <div style="font-size:9px;font-weight:600;color:#dceaf6;margin-top:2px;">Mediterranean Charter</div>
+            <div style="font-size:7px;color:#3d5a70;margin-top:1px;">Tomorrow · 14 guests</div>
+          </div>
+          <div style="background:#0c2236;border:1px solid rgba(180,210,255,.07);border-radius:7px;padding:8px 9px;margin-bottom:10px;">
+            <div style="font-size:8px;color:#a855f7;font-weight:600;letter-spacing:.06em;text-transform:uppercase;">Delivery</div>
+            <div style="font-size:9px;font-weight:600;color:#dceaf6;margin-top:2px;">Monaco → Antibes</div>
+            <div style="font-size:7px;color:#3d5a70;margin-top:1px;">Friday · 3 days</div>
+          </div>
+          <div style="font-size:8px;font-weight:700;color:#3d5a70;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">TASKS</div>
+          <div style="display:flex;align-items:center;gap:5px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);">
+            <div style="width:5px;height:5px;border-radius:50%;background:#16a34a;flex-shrink:0;"></div>
+            <div style="font-size:8px;color:#3d5a70;text-decoration:line-through;">Safety drill</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;padding:4px 0;">
+            <div style="width:5px;height:5px;border-radius:50%;background:rgba(201,162,39,.4);flex-shrink:0;"></div>
+            <div style="font-size:8px;color:#6e8fa8;">Provision checklist</div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="feat rev reveal">
-      <div>
-        <span class="feat-tag">Crew & Tasks</span>
-        <h3 class="feat-title">Your crew, always in sync.</h3>
-        <p class="feat-desc">Assign tasks by department, set priorities and deadlines, and track completion in real time. Your crew knows exactly what needs doing — and so do you.</p>
-      </div>
-      <div class="feat-visual">
-        <div class="fp">
-          <div class="fp-notch"></div>
-          <div class="fp-body">
-            <div class="fp-lbl">Tasks · Interior</div>
-            <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title">Cabin turnover</div><div class="fp-item-sub">Assigned to Maria</div></div><span class="fp-badge done">Done</span></div></div>
-            <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title">Laundry run</div><div class="fp-item-sub">Assigned to Tom</div></div><span class="fp-badge pending">Active</span></div></div>
-            <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title">Guest amenities</div><div class="fp-item-sub">Assigned to Emma</div></div><span class="fp-badge done">Done</span></div></div>
-            <div class="fp-lbl" style="margin-top:14px;">Crew on board · 12</div>
-            <div class="fp-crew-tags">
-              <span class="fp-crew-tag">Deck · 4</span>
-              <span class="fp-crew-tag">Interior · 5</span>
-              <span class="fp-crew-tag">Engine · 3</span>
-            </div>
+    <!-- iPhone -->
+    <div class="iphone-wrap">
+      <div class="iphone-s">
+        <div class="iphone-s-notch"></div>
+        <div class="iphone-s-screen">
+          <div style="font-size:7px;font-weight:700;color:#3d5a70;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;">TASKS</div>
+          <div style="background:#0c2236;border-radius:6px;padding:6px 7px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;">
+            <div><div style="font-size:8px;color:#dceaf6;font-weight:600;">Cabin turnover</div><div style="font-size:7px;color:#3d5a70;margin-top:1px;">Maria</div></div>
+            <div style="width:12px;height:12px;border-radius:50%;background:rgba(22,163,74,.2);border:1.5px solid #16a34a;"></div>
+          </div>
+          <div style="background:#0c2236;border-radius:6px;padding:6px 7px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;">
+            <div><div style="font-size:8px;color:#dceaf6;font-weight:600;">Deck wash</div><div style="font-size:7px;color:#3d5a70;margin-top:1px;">James</div></div>
+            <div style="width:12px;height:12px;border-radius:50%;background:rgba(201,162,39,.1);border:1.5px solid rgba(201,162,39,.4);"></div>
+          </div>
+          <div style="background:#0c2236;border-radius:6px;padding:6px 7px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
+            <div><div style="font-size:8px;color:#dceaf6;font-weight:600;">Provisions</div><div style="font-size:7px;color:#3d5a70;margin-top:1px;">Tom</div></div>
+            <div style="width:12px;height:12px;border-radius:50%;background:rgba(22,163,74,.2);border:1.5px solid #16a34a;"></div>
           </div>
         </div>
-      </div>
-    </div>
-
-    <div class="feat reveal">
-      <div>
-        <span class="feat-tag">Maintenance & Yard</span>
-        <h3 class="feat-title">Keep your vessel in peak condition.</h3>
-        <p class="feat-desc">Log maintenance records, manage yard period jobs by department, and keep a full audit trail. Nothing falls through the cracks — from engine room to deckhead.</p>
-      </div>
-      <div class="feat-visual">
-        <div class="fp">
-          <div class="fp-notch"></div>
-          <div class="fp-body">
-            <div class="fp-lbl">Maintenance Log</div>
-            <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title">Engine service</div><div class="fp-item-sub">Engine room · Jun 18</div></div><span class="fp-badge done">Done</span></div></div>
-            <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title">Hull inspection</div><div class="fp-item-sub">Deck · Jun 22</div></div><span class="fp-badge pending">Pending</span></div></div>
-            <div class="fp-lbl" style="margin-top:14px;">Current Yard Period</div>
-            <div class="fp-item" style="border-color:rgba(201,162,39,.2);">
-              <div class="fp-item-title" style="color:#c9a227;">La Spezia Refit</div>
-              <div class="fp-item-sub">Jul 1 – Aug 15 · 14 jobs</div>
-              <div class="fp-bar-wrap"><div class="fp-bar" style="width:35%;"></div></div>
-            </div>
-          </div>
+        <div class="iphone-s-tabbar">
+          <div class="iphone-s-tab"></div>
+          <div class="iphone-s-tab"></div>
+          <div class="iphone-s-tab active"></div>
+          <div class="iphone-s-tab"></div>
         </div>
       </div>
     </div>
@@ -428,8 +592,8 @@ footer{background:var(--navy);padding:56px 80px 40px;}
   </div>
 </section>
 
-<!-- Roles -->
-<section class="section">
+<!-- ── Roles ──────────────────────────── -->
+<section class="section grey">
   <div class="roles-intro reveal">
     <div class="sec-eyebrow">Designed for every rank</div>
     <h2 class="sec-title" style="margin-bottom:10px;">Built for everyone on board.</h2>
@@ -437,25 +601,19 @@ footer{background:var(--navy);padding:56px 80px 40px;}
   </div>
   <div class="roles-grid">
     <div class="role-card reveal d1">
-      <div class="role-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><line x1="12" y1="22" x2="12" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></svg>
-      </div>
+      <div class="role-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><line x1="12" y1="22" x2="12" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></svg></div>
       <div class="role-title">Captain — MOV</div>
       <div class="role-sub-title">Master of Vessel</div>
       <div class="role-desc">Full vessel oversight. Schedule voyages, manage your crew, log maintenance, and see everything happening on board — in one dashboard.</div>
     </div>
     <div class="role-card reveal d2">
-      <div class="role-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      </div>
+      <div class="role-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
       <div class="role-title">HOD</div>
       <div class="role-sub-title">Head of Department</div>
       <div class="role-desc">Manage your team with precision. Assign and track tasks within your department, handle yard jobs, and stay coordinated with the bridge.</div>
     </div>
     <div class="role-card reveal d3">
-      <div class="role-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-      </div>
+      <div class="role-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
       <div class="role-title">Crew Member</div>
       <div class="role-sub-title">All departments</div>
       <div class="role-desc">See your tasks, check upcoming trips, and stay on top of your responsibilities. No guesswork, no missed briefs — everything in your pocket.</div>
@@ -463,10 +621,10 @@ footer{background:var(--navy);padding:56px 80px 40px;}
   </div>
 </section>
 
-<!-- Download CTA -->
-<section class="section download">
+<!-- ── Download CTA ───────────────────── -->
+<section class="download">
   <div class="dl-inner reveal">
-    <div class="sec-eyebrow" style="text-align:center;color:rgba(201,162,39,0.8);">Available now</div>
+    <div class="sec-eyebrow" style="color:rgba(201,162,39,0.75);">Available now</div>
     <h2 class="dl-title">Your vessel,<br><em>always organised.</em></h2>
     <p class="dl-sub">Download on iOS and get your whole crew on board. Web access included — log in from any device, anywhere in the world.</p>
     <div class="dl-actions">
@@ -476,14 +634,14 @@ footer{background:var(--navy);padding:56px 80px 40px;}
       </a>
       <a href="/login" class="btn-ghost-white">
         Access Web App
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </a>
     </div>
     <p class="dl-note">iOS 16+. Android coming soon.</p>
   </div>
 </section>
 
-<!-- FAQ -->
+<!-- ── FAQ ────────────────────────────── -->
 <section class="section grey" id="faq">
   <div class="faq-inner">
     <div class="faq-hdr reveal">
@@ -491,13 +649,13 @@ footer{background:var(--navy);padding:56px 80px 40px;}
       <h2 class="sec-title">Anything you want to know.</h2>
     </div>
     <div class="faq-list">
-      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">What is Nautical Ops?<span class="faq-icon"></span></button><div class="faq-a">Nautical Ops is a professional crew operations app built specifically for superyacht and commercial vessel crews. It lets captains and crew log voyages, manage tasks, track maintenance, and run yard periods — all from a single iPhone app, with full web access included.</div></div>
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">What is Nautical Ops?<span class="faq-icon"></span></button><div class="faq-a">Nautical Ops is a professional crew operations app built specifically for superyacht and commercial vessel crews. Log voyages, manage tasks, track maintenance, and run yard periods — from your iPhone, iPad, or browser.</div></div>
       <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">Who is it designed for?<span class="faq-icon"></span></button><div class="faq-a">Nautical Ops is built for professional superyacht crews — captains, heads of department, and crew members across all departments. Whether you're running a 40-metre motor yacht or a 90-metre sailing vessel, the app adapts to your team size and structure.</div></div>
       <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">Is there a free trial?<span class="faq-icon"></span></button><div class="faq-a">Yes — every vessel gets a 30-day free trial when they subscribe. You can invite your full crew, log trips, assign tasks, and explore all features before committing to a plan. No credit card required to get started.</div></div>
-      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">What platforms is it available on?<span class="faq-icon"></span></button><div class="faq-a">Nautical Ops is available on iOS (iPhone and iPad) via the App Store, and as a web app accessible from any browser at nautical-ops.com. Android support is coming soon.</div></div>
-      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">How is pricing structured?<span class="faq-icon"></span></button><div class="faq-a">Pricing is based on the number of crew on your vessel — from 1–5 crew up to 40+ crew. Plans are available monthly or annually. Visit our <a href="/pricing">pricing page</a> to see all options and current rates.</div></div>
-      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">How secure is our vessel data?<span class="faq-icon"></span></button><div class="faq-a">All data is encrypted in transit and at rest, hosted on enterprise-grade infrastructure. Your vessel's operational data is private to your crew — we never share or sell it. Read our full <a href="/privacy-policy">privacy policy</a> for details.</div></div>
-      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">How do I get a refund?<span class="faq-icon"></span></button><div class="faq-a">Subscriptions are managed through Apple's App Store. Refund requests are handled directly through Apple within 48 hours of purchase for unused subscriptions. Read our full <a href="/refund-policy">refund policy</a> for details.</div></div>
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">What devices is it available on?<span class="faq-icon"></span></button><div class="faq-a">Nautical Ops is available on iOS (iPhone and iPad) via the App Store, and as a web app accessible from any browser at nautical-ops.com. Android support is coming soon.</div></div>
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">How is pricing structured?<span class="faq-icon"></span></button><div class="faq-a">Pricing is based on the number of crew on your vessel — from 1–5 crew up to 40+ crew. Plans are available monthly or annually. Visit our <a href="/pricing">pricing page</a> for full details.</div></div>
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">How secure is our vessel data?<span class="faq-icon"></span></button><div class="faq-a">All data is encrypted in transit and at rest on enterprise-grade infrastructure. Your vessel's operational data is private to your crew — we never share or sell it. Read our <a href="/privacy-policy">privacy policy</a> for details.</div></div>
+      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">How do I get a refund?<span class="faq-icon"></span></button><div class="faq-a">Subscriptions are managed through Apple's App Store. Refunds are handled directly through Apple within 48 hours of purchase for unused subscriptions. See our <a href="/refund-policy">refund policy</a> for full details.</div></div>
     </div>
   </div>
 </section>
@@ -508,41 +666,14 @@ footer{background:var(--navy);padding:56px 80px 40px;}
   <div class="footer-top">
     <div>
       <div class="footer-logo">
-        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M6 26 Q6 30 18 31 Q30 30 30 26 L28 18 L8 18 Z" fill="none" stroke="#c9a227" stroke-width="1.8" stroke-linejoin="round"/>
-          <rect x="11" y="12" width="14" height="7" rx="1.5" fill="none" stroke="#c9a227" stroke-width="1.8"/>
-          <line x1="18" y1="5" x2="18" y2="12" stroke="#c9a227" stroke-width="1.8" stroke-linecap="round"/>
-          <circle cx="18" cy="4" r="1.8" fill="#c9a227"/>
-        </svg>
+        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 26 Q6 30 18 31 Q30 30 30 26 L28 18 L8 18 Z" fill="none" stroke="#c9a227" stroke-width="1.8" stroke-linejoin="round"/><rect x="11" y="12" width="14" height="7" rx="1.5" fill="none" stroke="#c9a227" stroke-width="1.8"/><line x1="18" y1="5" x2="18" y2="12" stroke="#c9a227" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="4" r="1.8" fill="#c9a227"/></svg>
         <span class="footer-logo-name">Nautical Ops</span>
       </div>
       <p class="footer-tagline">The operations app built by crew, for crew.</p>
     </div>
-    <div class="footer-col">
-      <h4>Product</h4>
-      <ul>
-        <li><a href="#features">Features</a></li>
-        <li><a href="/pricing">Pricing</a></li>
-        <li><a href="https://apps.apple.com/app/nautical-ops/id6760950524">Download iOS App</a></li>
-        <li><a href="/login">Web App Login</a></li>
-      </ul>
-    </div>
-    <div class="footer-col">
-      <h4>Support</h4>
-      <ul>
-        <li><a href="/support">Help & Support</a></li>
-        <li><a href="#faq">FAQ</a></li>
-        <li><a href="mailto:support@nautical-ops.com">Contact Us</a></li>
-      </ul>
-    </div>
-    <div class="footer-col">
-      <h4>Legal</h4>
-      <ul>
-        <li><a href="/privacy-policy">Privacy Policy</a></li>
-        <li><a href="/terms-and-conditions">Terms & Conditions</a></li>
-        <li><a href="/refund-policy">Refund Policy</a></li>
-      </ul>
-    </div>
+    <div class="footer-col"><h4>Product</h4><ul><li><a href="#features">Features</a></li><li><a href="/pricing">Pricing</a></li><li><a href="https://apps.apple.com/app/nautical-ops/id6760950524">Download iOS App</a></li><li><a href="/login">Web App Login</a></li></ul></div>
+    <div class="footer-col"><h4>Support</h4><ul><li><a href="/support">Help &amp; Support</a></li><li><a href="#faq">FAQ</a></li><li><a href="mailto:support@nautical-ops.com">Contact Us</a></li></ul></div>
+    <div class="footer-col"><h4>Legal</h4><ul><li><a href="/privacy-policy">Privacy Policy</a></li><li><a href="/terms-and-conditions">Terms &amp; Conditions</a></li><li><a href="/refund-policy">Refund Policy</a></li></ul></div>
   </div>
   <div class="footer-bottom">
     <span>© 2026 Nautical Ops · The Lumen Digital</span>
@@ -551,16 +682,35 @@ footer{background:var(--navy);padding:56px 80px 40px;}
 </footer>
 
 <script>
+// FAQ
 function toggleFaq(btn){
   const ans=btn.nextElementSibling;
   const wasOpen=btn.classList.contains('open');
   document.querySelectorAll('.faq-q.open').forEach(q=>{q.classList.remove('open');q.nextElementSibling.classList.remove('open');});
   if(!wasOpen){btn.classList.add('open');ans.classList.add('open');}
 }
+
+// Scroll reveal
 const obs=new IntersectionObserver((entries)=>{
   entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target);}});
 },{threshold:.1,rootMargin:'0px 0px -40px 0px'});
 document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+
+// Sticky scroll feature swapper
+const sfSteps=document.querySelectorAll('.sf-step');
+const sfScreens=document.querySelectorAll('.sf-screen');
+
+const sfObs=new IntersectionObserver((entries)=>{
+  entries.forEach(entry=>{
+    if(entry.isIntersecting){
+      const step=entry.target.dataset.step;
+      sfSteps.forEach(s=>s.classList.toggle('active',s.dataset.step===step));
+      sfScreens.forEach(s=>s.classList.toggle('active',s.dataset.step===step));
+    }
+  });
+},{threshold:0.6,rootMargin:'-20% 0px -20% 0px'});
+
+sfSteps.forEach(s=>sfObs.observe(s));
 </script>
 </body>
 </html>
