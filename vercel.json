@@ -2,14 +2,14 @@
   "installCommand": "cd yachy-app && npm install",
   "buildCommand": "cd yachy-app && npm run vercel-build",
   "outputDirectory": "yachy-app/dist",
-  "framework": null,
-  "rewrites": [
-    { "source": "/", "destination": "/landing.html" },
-    { "source": "/pricing", "destination": "/pricing.html" },
-    { "source": "/privacy-policy", "destination": "/privacy-policy.html" },
-    { "source": "/refund-policy", "destination": "/refund-policy.html" },
-    { "source": "/terms-and-conditions", "destination": "/terms-and-conditions.html" },
-    { "source": "/support", "destination": "/support.html" },
-    { "source": "/(.*)", "destination": "/index.html" }
+  "routes": [
+    { "src": "/", "dest": "/landing.html" },
+    { "handle": "filesystem" },
+    { "src": "/pricing", "dest": "/pricing.html" },
+    { "src": "/privacy-policy", "dest": "/privacy-policy.html" },
+    { "src": "/refund-policy", "dest": "/refund-policy.html" },
+    { "src": "/terms-and-conditions", "dest": "/terms-and-conditions.html" },
+    { "src": "/support", "dest": "/support.html" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
