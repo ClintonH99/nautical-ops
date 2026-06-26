@@ -45,7 +45,10 @@ a{color:inherit;text-decoration:none;}
 .dev-showcase-macbook-zoom{zoom:0.46;}
 
 /* ── Hero ────────────────────────────── */
-.hero{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:40px;padding:120px 80px 80px;background:var(--white);overflow:hidden;}
+.hero{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:40px;padding:120px 80px 80px;background:var(--white);overflow:hidden;position:relative;}
+.hero-bg-img{position:absolute;inset:0;background-image:url('/yacht-bg.jpg');background-size:cover;background-position:center 55%;opacity:.4;z-index:0;}
+.hero-overlay{position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.6) 0%,rgba(255,255,255,.3) 60%,rgba(255,255,255,.1) 100%);z-index:1;}
+.hero-content,.hero-visual{position:relative;z-index:2;}
 .eyebrow{display:inline-flex;align-items:center;gap:10px;font-size:11px;font-weight:600;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:22px;}
 .eyebrow::before{content:'';width:24px;height:1.5px;background:var(--gold);}
 h1{font-family:var(--ff-d);font-size:clamp(38px,5vw,66px);font-weight:600;color:var(--navy);line-height:1.08;letter-spacing:-.025em;margin-bottom:22px;}
@@ -55,7 +58,7 @@ h1 em{font-style:italic;color:var(--gold);}
 .btn-primary{display:inline-flex;align-items:center;gap:8px;background:var(--navy);color:#fff;font-size:14px;font-weight:600;padding:13px 24px;border-radius:10px;transition:all .2s;}
 .btn-primary:hover{background:var(--navy-dark);transform:translateY(-2px);box-shadow:0 8px 24px rgba(30,58,95,0.2);}
 .btn-ghost{display:inline-flex;align-items:center;gap:8px;color:var(--navy);font-size:14px;font-weight:500;padding:13px 24px;border-radius:10px;border:1px solid var(--border);transition:all .2s;}
-.btn-ghost:hover{background:var(--bg);border-color:#cbd5e1;}
+.btn-ghost:hover{background:rgba(30,58,95,.06);border-color:#94a3b8;}
 
 /* ── Hero phone (devices.css) ────────── */
 .hero-visual{display:flex;justify-content:center;align-items:center;position:relative;}
@@ -299,6 +302,8 @@ footer{background:var(--navy);padding:56px 80px 40px;}
 
 <!-- ── Hero ─────────────────────────── -->
 <section class="hero">
+  <div class="hero-bg-img" aria-hidden="true"></div>
+  <div class="hero-overlay" aria-hidden="true"></div>
   <div class="hero-content">
     <div class="eyebrow">Built by crew, for crew</div>
     <h1>Operations built for<br><em>superyacht crews.</em></h1>
@@ -320,26 +325,33 @@ footer{background:var(--navy);padding:56px 80px 40px;}
         <div class="hero-device-zoom">
           <div class="device device-iphone-14-pro device-spacegray">
             <div class="device-frame">
-              <div class="app-screen">
-                <div class="ps-nav"><span class="ps-nav-title">NAUTICAL OPS</span><span class="ps-badge">HOD</span></div>
-                <div class="ps-body">
-                  <div class="ps-lbl">Your vessel</div>
-                  <div class="ps-vessel">LADY MARGARET</div>
-                  <div class="ps-lbl">Upcoming</div>
-                  <div class="ps-card"><div class="ps-card-tag">Guest Trip</div><div class="ps-card-title">Mediterranean Charter</div><div class="ps-card-sub">Departs tomorrow · 14 guests</div></div>
-                  <div class="ps-card"><div class="ps-card-tag">Delivery Run</div><div class="ps-card-title">Monaco → Antibes</div><div class="ps-card-sub">Friday · 3 days</div></div>
-                  <div class="ps-lbl" style="margin-top:10px;">Tasks</div>
-                  <div class="ps-task"><div class="ps-dot done"></div><div class="ps-txt done">Safety drill completed</div></div>
-                  <div class="ps-task"><div class="ps-dot done"></div><div class="ps-txt done">Tender inspection</div></div>
-                  <div class="ps-task"><div class="ps-dot"></div><div class="ps-txt">Provision checklist</div></div>
-                </div>
-                <div class="ps-tabbar">
-                  <div class="ps-tab"><div class="ps-tab-bar active"></div><div class="ps-tab-lbl active">Home</div></div>
-                  <div class="ps-tab"><div class="ps-tab-bar"></div><div class="ps-tab-lbl">Trips</div></div>
-                  <div class="ps-tab"><div class="ps-tab-bar"></div><div class="ps-tab-lbl">Tasks</div></div>
-                  <div class="ps-tab"><div class="ps-tab-bar"></div><div class="ps-tab-lbl">Crew</div></div>
-                </div>
-              </div>
+              <img src="/screen-home.png" style="width:100%;height:100%;object-fit:cover;object-position:top;" alt="Nautical Ops home screen"/>
+            </div>
+            <div class="device-stripe"></div>
+            <div class="device-header"></div>
+            <div class="device-sensors"></div>
+            <div class="device-btns"></div>
+            <div class="device-power"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Video showcase ─────────────────── -->
+<section class="section" style="background:var(--navy);text-align:center;">
+  <div class="reveal">
+    <div class="sec-eyebrow" style="color:rgba(201,162,39,0.75);">See it in motion</div>
+    <h2 class="sec-title" style="color:#fff;margin-bottom:12px;">Watch it in action.</h2>
+    <p class="sec-sub" style="margin:0 auto 48px;color:rgba(255,255,255,.6);">See how fast it is to log a trip, assign tasks, and manage your crew on board.</p>
+    <div style="display:flex;justify-content:center;">
+      <div class="hero-tilt" style="display:inline-block;">
+        <div class="hero-device-zoom">
+          <div class="device device-iphone-14-pro device-spacegray">
+            <div class="device-frame">
+              <!-- Replace the div below with: <video src="/app-demo.mp4" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;"></video> -->
+              <video src="/app-demo.mp4" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;object-position:top;"></video>
             </div>
             <div class="device-stripe"></div>
             <div class="device-header"></div>
@@ -395,50 +407,17 @@ footer{background:var(--navy);padding:56px 80px 40px;}
 
           <!-- Screen 0: Voyages -->
           <div class="sf-screen active" data-step="0">
-            <div class="fp-body">
-              <div class="fp-lbl">Trip Types</div>
-              <div class="fp-item"><div class="fp-item-row"><div class="fp-item-title" style="display:flex;align-items:center;gap:6px;"><div class="fp-dot" style="background:#0ea5e9;"></div>Guest Trip</div></div></div>
-              <div class="fp-item"><div class="fp-item-row"><div class="fp-item-title" style="display:flex;align-items:center;gap:6px;"><div class="fp-dot" style="background:#c9a227;"></div>Owner Voyage</div></div></div>
-              <div class="fp-item"><div class="fp-item-row"><div class="fp-item-title" style="display:flex;align-items:center;gap:6px;"><div class="fp-dot" style="background:#a855f7;"></div>Delivery Run</div></div></div>
-              <div class="fp-item"><div class="fp-item-row"><div class="fp-item-title" style="display:flex;align-items:center;gap:6px;"><div class="fp-dot" style="background:#f97316;"></div>Yard Period</div></div></div>
-              <div class="fp-lbl" style="margin-top:14px;">Recent</div>
-              <div style="border-bottom:1px solid rgba(255,255,255,.04);padding:7px 0;"><div class="fp-item-title">Monaco Charter</div><div class="fp-item-sub">Jun 14–21 · 8 guests</div></div>
-              <div style="border-bottom:1px solid rgba(255,255,255,.04);padding:7px 0;"><div class="fp-item-title">Antibes Delivery</div><div class="fp-item-sub">Jun 7–9 · 2 crew</div></div>
-              <div style="padding:7px 0;"><div class="fp-item-title">Owner Voyage</div><div class="fp-item-sub">May 28–Jun 2</div></div>
-            </div>
+            <img src="/screen-trips.png" style="width:100%;height:100%;object-fit:cover;object-position:top;" alt="Trips screen"/>
           </div>
 
           <!-- Screen 1: Tasks -->
           <div class="sf-screen" data-step="1">
-            <div class="fp-body">
-              <div class="fp-lbl">Tasks · Interior</div>
-              <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title">Cabin turnover</div><div class="fp-item-sub">Assigned to Maria</div></div><span class="fp-badge done">Done</span></div></div>
-              <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title">Laundry run</div><div class="fp-item-sub">Assigned to Tom</div></div><span class="fp-badge pending">Active</span></div></div>
-              <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title">Guest amenities</div><div class="fp-item-sub">Assigned to Emma</div></div><span class="fp-badge done">Done</span></div></div>
-              <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title">Deck wash-down</div><div class="fp-item-sub">Assigned to James</div></div><span class="fp-badge pending">Active</span></div></div>
-              <div class="fp-lbl" style="margin-top:14px;">Crew on board · 12</div>
-              <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">
-                <span style="background:#0c2236;border:1px solid rgba(180,210,255,.07);border-radius:5px;padding:3px 7px;font-size:8px;color:#6e8fa8;">Deck · 4</span>
-                <span style="background:#0c2236;border:1px solid rgba(180,210,255,.07);border-radius:5px;padding:3px 7px;font-size:8px;color:#6e8fa8;">Interior · 5</span>
-                <span style="background:#0c2236;border:1px solid rgba(180,210,255,.07);border-radius:5px;padding:3px 7px;font-size:8px;color:#6e8fa8;">Engine · 3</span>
-              </div>
-            </div>
+            <img src="/screen-tasks.png" style="width:100%;height:100%;object-fit:cover;object-position:top;" alt="Tasks screen"/>
           </div>
 
           <!-- Screen 2: Maintenance -->
           <div class="sf-screen" data-step="2">
-            <div class="fp-body">
-              <div class="fp-lbl">Maintenance Log</div>
-              <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title">Engine service</div><div class="fp-item-sub">Engine room · Jun 18</div></div><span class="fp-badge done">Done</span></div></div>
-              <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title">Hull inspection</div><div class="fp-item-sub">Deck · Jun 22</div></div><span class="fp-badge pending">Pending</span></div></div>
-              <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title">Watermaker filter</div><div class="fp-item-sub">Engine room · Jun 25</div></div><span class="fp-badge done">Done</span></div></div>
-              <div class="fp-lbl" style="margin-top:14px;">Yard Period</div>
-              <div class="fp-item" style="border-color:rgba(201,162,39,.18);">
-                <div class="fp-item-title" style="color:#c9a227;">La Spezia Refit</div>
-                <div class="fp-item-sub">Jul 1 – Aug 15 · 14 jobs</div>
-                <div class="fp-bar-wrap"><div class="fp-bar" style="width:35%;"></div></div>
-              </div>
-            </div>
+            <img src="/screen-maintenance.png" style="width:100%;height:100%;object-fit:cover;object-position:top;" alt="Maintenance screen"/>
           </div>
 
           <div class="ps-tabbar">
@@ -465,12 +444,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
       <div class="ss-device-zoom">
         <div class="device device-iphone-14-pro device-spacegray">
           <div class="device-frame">
-            <div class="app-screen">
-              <div class="ss-placeholder" style="background:linear-gradient(160deg,#071828,#0c2236);">
-                <div class="ss-placeholder-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c9a227" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>
-                <div class="ss-placeholder-text">Home Screen<br>Add screenshot here</div>
-              </div>
-            </div>
+            <img src="/screen-home.png" style="width:100%;height:100%;object-fit:cover;object-position:top;" alt="Home screen"/>
           </div>
           <div class="device-stripe"></div><div class="device-header"></div><div class="device-sensors"></div><div class="device-btns"></div><div class="device-power"></div>
         </div>
@@ -481,12 +455,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
       <div class="ss-device-zoom">
         <div class="device device-iphone-14-pro device-spacegray">
           <div class="device-frame">
-            <div class="app-screen">
-              <div class="ss-placeholder" style="background:linear-gradient(160deg,#0a1e35,#0e2a45);">
-                <div class="ss-placeholder-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c9a227" stroke-width="1.8"><path d="M4 17.5Q4 20 12 20.5Q20 20 20 17.5L18.5 11H5.5Z"/><rect x="7.5" y="7" width="9" height="5" rx="1"/></svg></div>
-                <div class="ss-placeholder-text">Trips Screen<br>Add screenshot here</div>
-              </div>
-            </div>
+            <img src="/screen-trips.png" style="width:100%;height:100%;object-fit:cover;object-position:top;" alt="Trips screen"/>
           </div>
           <div class="device-stripe"></div><div class="device-header"></div><div class="device-sensors"></div><div class="device-btns"></div><div class="device-power"></div>
         </div>
@@ -497,12 +466,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
       <div class="ss-device-zoom">
         <div class="device device-iphone-14-pro device-spacegray">
           <div class="device-frame">
-            <div class="app-screen">
-              <div class="ss-placeholder" style="background:linear-gradient(160deg,#071828,#0c2236);">
-                <div class="ss-placeholder-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c9a227" stroke-width="1.8"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
-                <div class="ss-placeholder-text">Tasks Screen<br>Add screenshot here</div>
-              </div>
-            </div>
+            <img src="/screen-tasks.png" style="width:100%;height:100%;object-fit:cover;object-position:top;" alt="Tasks screen"/>
           </div>
           <div class="device-stripe"></div><div class="device-header"></div><div class="device-sensors"></div><div class="device-btns"></div><div class="device-power"></div>
         </div>
@@ -513,17 +477,12 @@ footer{background:var(--navy);padding:56px 80px 40px;}
       <div class="ss-device-zoom">
         <div class="device device-iphone-14-pro device-spacegray">
           <div class="device-frame">
-            <div class="app-screen">
-              <div class="ss-placeholder" style="background:linear-gradient(160deg,#0a1e35,#0e2a45);">
-                <div class="ss-placeholder-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c9a227" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
-                <div class="ss-placeholder-text">Crew Screen<br>Add screenshot here</div>
-              </div>
-            </div>
+            <img src="/screen-maintenance.png" style="width:100%;height:100%;object-fit:cover;object-position:top;" alt="Maintenance screen"/>
           </div>
           <div class="device-stripe"></div><div class="device-header"></div><div class="device-sensors"></div><div class="device-btns"></div><div class="device-power"></div>
         </div>
       </div>
-      <span class="ss-label">Crew</span>
+      <span class="ss-label">Maintenance</span>
     </div>
   </div>
 </section>
@@ -536,119 +495,12 @@ footer{background:var(--navy);padding:56px 80px 40px;}
     <p class="sec-sub" style="margin:0 auto;text-align:center;">iPhone, iPad, or desktop browser — Nautical Ops is always there when you need it.</p>
   </div>
   <div class="devices-scene reveal">
-
-    <!-- MacBook Pro -->
-    <div class="dev-showcase-macbook-zoom" style="z-index:1;">
-      <div class="device device-macbook-pro">
-        <div class="device-frame">
-          <div class="app-screen" style="display:flex;flex-direction:column;">
-            <div class="mb-nav">
-              <div class="mb-dot" style="background:#ff5f57;"></div>
-              <div class="mb-dot" style="background:#ffbd2e;margin-left:4px;"></div>
-              <div class="mb-dot" style="background:#28ca41;margin-left:4px;"></div>
-              <span class="mb-title">nautical-ops.com</span>
-            </div>
-            <div class="mb-sidebar">
-              <div class="mb-sidebar-nav">
-                <div class="mb-nav-item active">Dashboard</div>
-                <div class="mb-nav-item">Vessels</div>
-                <div class="mb-nav-item">Users</div>
-                <div class="mb-nav-item">Trips</div>
-                <div class="mb-nav-item">Tasks</div>
-              </div>
-              <div class="mb-content">
-                <div class="mb-stat-row">
-                  <div class="mb-stat"><div class="mb-stat-val">9</div><div class="mb-stat-lbl">Vessels</div></div>
-                  <div class="mb-stat"><div class="mb-stat-val">42</div><div class="mb-stat-lbl">Crew</div></div>
-                  <div class="mb-stat"><div class="mb-stat-val">7</div><div class="mb-stat-lbl">Active</div></div>
-                </div>
-                <div class="mb-table-row"><span class="mb-table-title">Lady Margaret</span><span class="mb-table-badge">Active</span></div>
-                <div class="mb-table-row"><span class="mb-table-title">Serenity IV</span><span class="mb-table-badge">Active</span></div>
-                <div class="mb-table-row"><span class="mb-table-title">Aurora Belle</span><span class="mb-table-badge">Active</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="device-stripe"></div>
-        <div class="device-header"></div>
-        <div class="device-sensors"></div>
-        <div class="device-power"></div>
-        <div class="device-home"></div>
-      </div>
+    <!-- Replace src with /devices-mockup.png once saved to public folder -->
+    <img src="/devices-mockup.png" alt="Nautical Ops on MacBook, iPad and iPhone" style="max-width:100%;height:auto;border-radius:12px;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+    <div style="display:none;flex-direction:column;align-items:center;gap:16px;padding:40px;color:var(--muted);font-size:14px;">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      Save devices-mockup.png to public folder
     </div>
-
-    <!-- iPad Pro -->
-    <div class="dev-showcase-ipad-zoom" style="z-index:2;margin-left:-40px;margin-bottom:30px;transform:rotate(-3deg);">
-      <div class="device device-ipad-pro">
-        <div class="device-frame">
-          <div class="app-screen">
-            <div style="padding:16px 12px 10px;">
-              <div style="font-size:9px;font-weight:700;color:#3d5a70;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;">UPCOMING TRIPS</div>
-              <div style="background:#0c2236;border:1px solid rgba(180,210,255,.07);border-radius:8px;padding:10px 11px;margin-bottom:7px;">
-                <div style="font-size:9px;color:#c9a227;font-weight:600;letter-spacing:.06em;text-transform:uppercase;">Guest Trip</div>
-                <div style="font-size:11px;font-weight:600;color:#dceaf6;margin-top:3px;">Mediterranean Charter</div>
-                <div style="font-size:8px;color:#3d5a70;margin-top:2px;">Tomorrow · 14 guests</div>
-              </div>
-              <div style="background:#0c2236;border:1px solid rgba(180,210,255,.07);border-radius:8px;padding:10px 11px;margin-bottom:14px;">
-                <div style="font-size:9px;color:#a855f7;font-weight:600;letter-spacing:.06em;text-transform:uppercase;">Delivery</div>
-                <div style="font-size:11px;font-weight:600;color:#dceaf6;margin-top:3px;">Monaco → Antibes</div>
-                <div style="font-size:8px;color:#3d5a70;margin-top:2px;">Friday · 3 days</div>
-              </div>
-              <div style="font-size:9px;font-weight:700;color:#3d5a70;letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;">TASKS</div>
-              <div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);"><div style="width:5px;height:5px;border-radius:50%;background:#16a34a;flex-shrink:0;"></div><div style="font-size:9px;color:#3d5a70;text-decoration:line-through;">Safety drill</div></div>
-              <div style="display:flex;align-items:center;gap:6px;padding:5px 0;"><div style="width:5px;height:5px;border-radius:50%;background:rgba(201,162,39,.4);flex-shrink:0;"></div><div style="font-size:9px;color:#6e8fa8;">Provision checklist</div></div>
-            </div>
-          </div>
-        </div>
-        <div class="device-stripe"></div>
-        <div class="device-header"></div>
-        <div class="device-sensors"></div>
-        <div class="device-btns"></div>
-        <div class="device-power"></div>
-        <div class="device-home"></div>
-      </div>
-    </div>
-
-    <!-- iPhone 14 Pro -->
-    <div class="dev-showcase-phone-zoom" style="z-index:3;margin-left:20px;transform:rotate(4deg);">
-      <div class="device device-iphone-14-pro device-spacegray">
-        <div class="device-frame">
-          <div class="app-screen">
-            <div style="background:#071828;padding:40px 12px 8px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.05);">
-              <span style="font-size:10px;font-weight:700;color:#dceaf6;letter-spacing:.04em;">NAUTICAL OPS</span>
-              <span style="background:rgba(201,162,39,.18);border:1px solid rgba(201,162,39,.3);color:#c9a227;font-size:8px;font-weight:700;padding:2px 6px;border-radius:6px;">HOD</span>
-            </div>
-            <div style="padding:10px 12px 50px;">
-              <div style="font-size:8px;font-weight:700;color:#3d5a70;letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;">TASKS</div>
-              <div style="background:#0c2236;border:1px solid rgba(180,210,255,.07);border-radius:8px;padding:8px 9px;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;">
-                <div><div style="font-size:9px;font-weight:600;color:#dceaf6;">Cabin turnover</div><div style="font-size:8px;color:#3d5a70;margin-top:1px;">Maria</div></div>
-                <div style="width:13px;height:13px;border-radius:50%;background:rgba(22,163,74,.2);border:1.5px solid #16a34a;"></div>
-              </div>
-              <div style="background:#0c2236;border:1px solid rgba(180,210,255,.07);border-radius:8px;padding:8px 9px;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;">
-                <div><div style="font-size:9px;font-weight:600;color:#dceaf6;">Deck wash</div><div style="font-size:8px;color:#3d5a70;margin-top:1px;">James</div></div>
-                <div style="width:13px;height:13px;border-radius:50%;background:rgba(201,162,39,.1);border:1.5px solid rgba(201,162,39,.4);"></div>
-              </div>
-              <div style="background:#0c2236;border:1px solid rgba(180,210,255,.07);border-radius:8px;padding:8px 9px;display:flex;justify-content:space-between;align-items:center;">
-                <div><div style="font-size:9px;font-weight:600;color:#dceaf6;">Provisions</div><div style="font-size:8px;color:#3d5a70;margin-top:1px;">Tom</div></div>
-                <div style="width:13px;height:13px;border-radius:50%;background:rgba(22,163,74,.2);border:1.5px solid #16a34a;"></div>
-              </div>
-            </div>
-            <div style="position:absolute;bottom:0;left:0;right:0;background:#071828;border-top:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-around;padding:7px 0 10px;">
-              <div style="width:16px;height:2.5px;border-radius:2px;background:rgba(255,255,255,.1);"></div>
-              <div style="width:16px;height:2.5px;border-radius:2px;background:rgba(255,255,255,.1);"></div>
-              <div style="width:16px;height:2.5px;border-radius:2px;background:#c9a227;"></div>
-              <div style="width:16px;height:2.5px;border-radius:2px;background:rgba(255,255,255,.1);"></div>
-            </div>
-          </div>
-        </div>
-        <div class="device-stripe"></div>
-        <div class="device-header"></div>
-        <div class="device-sensors"></div>
-        <div class="device-btns"></div>
-        <div class="device-power"></div>
-      </div>
-    </div>
-
   </div>
 </section>
 
