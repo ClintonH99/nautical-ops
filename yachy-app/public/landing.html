@@ -38,8 +38,10 @@ a{color:inherit;text-decoration:none;}
 
 /* ── Devices.css overrides ───────────── */
 .device-frame .app-screen{width:100%;height:100%;background:#040e1c;overflow:hidden;}
+.device .device-frame{overflow:hidden !important;}
+.device .device-frame img,.device .device-frame video{display:block;width:100%;height:100%;object-fit:cover;object-position:top;border-radius:inherit;}
 .hero-device-zoom{zoom:0.62;}
-.ss-device-zoom{zoom:0.44;}
+.ss-device-zoom{zoom:0.48;}
 .dev-showcase-phone-zoom{zoom:0.52;}
 .dev-showcase-ipad-zoom{zoom:0.42;}
 .dev-showcase-macbook-zoom{zoom:0.46;}
@@ -325,7 +327,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
         <div class="hero-device-zoom">
           <div class="device device-iphone-14-pro device-spacegray">
             <div class="device-frame">
-              <img src="/screen-home.png" style="width:100%;height:100%;object-fit:cover;object-position:top;" alt="Nautical Ops home screen"/>
+              <img src="/screen-home.png" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;border-radius:inherit;" alt="Nautical Ops home screen"/>
             </div>
             <div class="device-stripe"></div>
             <div class="device-header"></div>
@@ -346,19 +348,16 @@ footer{background:var(--navy);padding:56px 80px 40px;}
     <h2 class="sec-title" style="color:#fff;margin-bottom:12px;">Watch it in action.</h2>
     <p class="sec-sub" style="margin:0 auto 48px;color:rgba(255,255,255,.6);">See how fast it is to log a trip, assign tasks, and manage your crew on board.</p>
     <div style="display:flex;justify-content:center;">
-      <div class="hero-tilt" style="display:inline-block;">
-        <div class="hero-device-zoom">
-          <div class="device device-iphone-14-pro device-spacegray">
-            <div class="device-frame">
-              <!-- Replace the div below with: <video src="/app-demo.mp4" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;"></video> -->
-              <video src="/app-demo.mp4" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;object-position:top;"></video>
-            </div>
-            <div class="device-stripe"></div>
-            <div class="device-header"></div>
-            <div class="device-sensors"></div>
-            <div class="device-btns"></div>
-            <div class="device-power"></div>
+      <div style="zoom:0.88;">
+        <div class="device device-iphone-14-pro device-spacegray">
+          <div class="device-frame">
+            <video src="/app-demo.mp4" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;border-radius:inherit;"></video>
           </div>
+          <div class="device-stripe"></div>
+          <div class="device-header"></div>
+          <div class="device-sensors"></div>
+          <div class="device-btns"></div>
+          <div class="device-power"></div>
         </div>
       </div>
     </div>
@@ -407,17 +406,17 @@ footer{background:var(--navy);padding:56px 80px 40px;}
 
           <!-- Screen 0: Voyages -->
           <div class="sf-screen active" data-step="0">
-            <img src="/screen-trips.png" style="width:100%;height:100%;object-fit:cover;object-position:top;" alt="Trips screen"/>
+            <img src="/screen-trips.png" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;border-radius:inherit;" alt="Trips screen"/>
           </div>
 
           <!-- Screen 1: Tasks -->
           <div class="sf-screen" data-step="1">
-            <img src="/screen-tasks.png" style="width:100%;height:100%;object-fit:cover;object-position:top;" alt="Tasks screen"/>
+            <img src="/screen-tasks.png" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;border-radius:inherit;" alt="Tasks screen"/>
           </div>
 
           <!-- Screen 2: Maintenance -->
           <div class="sf-screen" data-step="2">
-            <img src="/screen-maintenance.png" style="width:100%;height:100%;object-fit:cover;object-position:top;" alt="Maintenance screen"/>
+            <img src="/screen-maintenance.png" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;border-radius:inherit;" alt="Maintenance screen"/>
           </div>
 
           <div class="ps-tabbar">
@@ -444,7 +443,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
       <div class="ss-device-zoom">
         <div class="device device-iphone-14-pro device-spacegray">
           <div class="device-frame">
-            <img src="/screen-home.png" style="width:100%;height:100%;object-fit:cover;object-position:top;" alt="Home screen"/>
+            <img src="/screen-home.png" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;border-radius:inherit;" alt="Home screen"/>
           </div>
           <div class="device-stripe"></div><div class="device-header"></div><div class="device-sensors"></div><div class="device-btns"></div><div class="device-power"></div>
         </div>
@@ -455,7 +454,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
       <div class="ss-device-zoom">
         <div class="device device-iphone-14-pro device-spacegray">
           <div class="device-frame">
-            <img src="/screen-trips.png" style="width:100%;height:100%;object-fit:cover;object-position:top;" alt="Trips screen"/>
+            <img src="/screen-trips.png" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;border-radius:inherit;" alt="Trips screen"/>
           </div>
           <div class="device-stripe"></div><div class="device-header"></div><div class="device-sensors"></div><div class="device-btns"></div><div class="device-power"></div>
         </div>
@@ -466,7 +465,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
       <div class="ss-device-zoom">
         <div class="device device-iphone-14-pro device-spacegray">
           <div class="device-frame">
-            <img src="/screen-tasks.png" style="width:100%;height:100%;object-fit:cover;object-position:top;" alt="Tasks screen"/>
+            <img src="/screen-tasks.png" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;border-radius:inherit;" alt="Tasks screen"/>
           </div>
           <div class="device-stripe"></div><div class="device-header"></div><div class="device-sensors"></div><div class="device-btns"></div><div class="device-power"></div>
         </div>
@@ -477,7 +476,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
       <div class="ss-device-zoom">
         <div class="device device-iphone-14-pro device-spacegray">
           <div class="device-frame">
-            <img src="/screen-maintenance.png" style="width:100%;height:100%;object-fit:cover;object-position:top;" alt="Maintenance screen"/>
+            <img src="/screen-maintenance.png" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;border-radius:inherit;" alt="Maintenance screen"/>
           </div>
           <div class="device-stripe"></div><div class="device-header"></div><div class="device-sensors"></div><div class="device-btns"></div><div class="device-power"></div>
         </div>
