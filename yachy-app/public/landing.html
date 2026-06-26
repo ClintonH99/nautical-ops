@@ -7,72 +7,65 @@
 <meta name="description" content="The professional operations app built for superyacht crews. Manage voyages, crew, tasks, and maintenance — all from your iPhone."/>
 <meta property="og:title" content="Nautical Ops — Crew Operations, Simplified"/>
 <meta property="og:description" content="The professional operations app built for superyacht crews."/>
-<meta name="theme-color" content="#030c1a"/>
+<meta name="theme-color" content="#1e3a5f"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600;9..144,700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
 html{scroll-behavior:smooth;}
-body{background:#030c1a;color:#dceaf6;font-family:'Inter',sans-serif;font-size:15px;line-height:1.6;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+body{background:#fff;color:#1e293b;font-family:'Inter',sans-serif;font-size:15px;line-height:1.6;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
 a{color:inherit;text-decoration:none;}
 
 :root{
-  --void:#030c1a;
-  --deep:#071828;
-  --hull:#0c2236;
-  --wake:rgba(180,210,255,0.08);
-  --wake2:rgba(180,210,255,0.15);
+  --navy:#1e3a5f;
+  --navy-dark:#152d4a;
+  --navy-light:#e8eef5;
+  --bg:#f7f8fa;
+  --white:#ffffff;
+  --border:#e2e8f0;
+  --text:#1e293b;
+  --muted:#64748b;
+  --light:#94a3b8;
   --gold:#c9a227;
-  --gold-dim:rgba(201,162,39,0.14);
-  --chart:#dceaf6;
-  --mist:#6e8fa8;
+  --gold-dim:rgba(201,162,39,0.12);
   --ff-d:'Fraunces',Georgia,serif;
   --ff-b:'Inter',sans-serif;
 }
 
 /* ── Nav ─────────────────────────────── */
-.nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:22px 56px;display:flex;align-items:center;justify-content:space-between;transition:background .3s,padding .3s;}
-.nav.solid{background:rgba(3,12,26,.9);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--wake);padding:14px 56px;}
+.nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:0 56px;height:60px;display:flex;align-items:center;justify-content:space-between;background:var(--navy);box-shadow:0 1px 0 rgba(255,255,255,0.08);}
 .nav-logo{display:flex;align-items:center;gap:10px;}
 .nav-logo svg{width:26px;height:26px;flex-shrink:0;}
-.nav-logo-name{font-family:var(--ff-d);font-size:17px;font-weight:600;color:var(--chart);letter-spacing:-.01em;}
-.nav-links{display:flex;align-items:center;gap:28px;}
-.nav-links a{font-size:13px;color:var(--mist);transition:color .15s;}
-.nav-links a:hover{color:var(--chart);}
+.nav-logo-name{font-family:var(--ff-d);font-size:17px;font-weight:600;color:#fff;letter-spacing:-.01em;}
 .nav-actions{display:flex;align-items:center;gap:10px;}
-.btn-ghost-sm{font-size:13px;font-weight:500;color:var(--mist);padding:7px 16px;border:1px solid var(--wake2);border-radius:8px;transition:all .15s;}
-.btn-ghost-sm:hover{color:var(--chart);background:var(--wake);}
-.btn-gold-sm{font-size:13px;font-weight:600;color:#000;background:var(--gold);padding:7px 16px;border-radius:8px;transition:all .15s;white-space:nowrap;}
-.btn-gold-sm:hover{background:#d4aa2e;transform:translateY(-1px);}
+.btn-nav-ghost{font-size:13px;font-weight:500;color:rgba(255,255,255,0.7);padding:7px 16px;border:1px solid rgba(255,255,255,0.2);border-radius:8px;transition:all .15s;}
+.btn-nav-ghost:hover{color:#fff;background:rgba(255,255,255,0.1);}
+.btn-nav-gold{font-size:13px;font-weight:600;color:#000;background:var(--gold);padding:7px 16px;border-radius:8px;transition:all .15s;white-space:nowrap;}
+.btn-nav-gold:hover{background:#d4aa2e;transform:translateY(-1px);}
 
 /* ── Hero ────────────────────────────── */
-.hero{min-height:100vh;position:relative;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:60px;padding:140px 80px 100px;overflow:hidden;}
-.hero-bg{position:absolute;inset:0;z-index:0;background:var(--void);}
-.hero-bg::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 90% 70% at 75% 90%,rgba(14,42,80,.65) 0%,transparent 55%),radial-gradient(ellipse 50% 60% at 10% 10%,rgba(10,28,55,.4) 0%,transparent 50%);animation:depthPulse 10s ease-in-out infinite alternate;}
-.hero-bg::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 40% 40% at 50% 110%,rgba(201,162,39,.04) 0%,transparent 60%);}
-@keyframes depthPulse{from{opacity:.7;transform:scale(1);}to{opacity:1;transform:scale(1.06);}}
-.hero-content{position:relative;z-index:1;}
-.eyebrow{display:inline-flex;align-items:center;gap:10px;font-size:11px;font-weight:500;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:24px;}
-.eyebrow::before{content:'';width:24px;height:1px;background:var(--gold);}
-h1{font-family:var(--ff-d);font-size:clamp(42px,5vw,70px);font-weight:600;color:var(--chart);line-height:1.08;letter-spacing:-.025em;margin-bottom:22px;}
+.hero{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:60px;padding:120px 80px 80px;background:var(--white);}
+.eyebrow{display:inline-flex;align-items:center;gap:10px;font-size:11px;font-weight:600;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:22px;}
+.eyebrow::before{content:'';width:24px;height:1.5px;background:var(--gold);}
+h1{font-family:var(--ff-d);font-size:clamp(40px,5vw,68px);font-weight:600;color:var(--navy);line-height:1.08;letter-spacing:-.025em;margin-bottom:22px;}
 h1 em{font-style:italic;color:var(--gold);}
-.hero-sub{font-size:16px;color:var(--mist);line-height:1.7;max-width:420px;margin-bottom:40px;}
+.hero-sub{font-size:16px;color:var(--muted);line-height:1.7;max-width:420px;margin-bottom:38px;}
 .hero-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
-.btn-primary{display:inline-flex;align-items:center;gap:8px;background:var(--gold);color:#000;font-size:14px;font-weight:600;padding:13px 24px;border-radius:10px;transition:all .2s;}
-.btn-primary:hover{background:#d4aa2e;transform:translateY(-2px);box-shadow:0 8px 24px rgba(201,162,39,.25);}
-.btn-ghost{display:inline-flex;align-items:center;gap:8px;color:var(--chart);font-size:14px;font-weight:500;padding:13px 24px;border-radius:10px;border:1px solid var(--wake2);transition:all .2s;}
-.btn-ghost:hover{background:var(--wake);border-color:rgba(180,210,255,.2);}
+.btn-primary{display:inline-flex;align-items:center;gap:8px;background:var(--navy);color:#fff;font-size:14px;font-weight:600;padding:13px 24px;border-radius:10px;transition:all .2s;}
+.btn-primary:hover{background:var(--navy-dark);transform:translateY(-2px);box-shadow:0 8px 24px rgba(30,58,95,0.2);}
+.btn-ghost{display:inline-flex;align-items:center;gap:8px;color:var(--navy);font-size:14px;font-weight:500;padding:13px 24px;border-radius:10px;border:1px solid var(--border);transition:all .2s;}
+.btn-ghost:hover{background:var(--bg);border-color:#cbd5e1;}
 
-/* ── Phone mockup ────────────────────── */
-.hero-visual{position:relative;z-index:1;display:flex;justify-content:center;align-items:center;}
+/* ── Phone ───────────────────────────── */
+.hero-visual{display:flex;justify-content:center;align-items:center;}
 .phone-wrap{animation:swell 5s ease-in-out infinite;}
 @keyframes swell{0%,100%{transform:translateY(0px) rotate(-.5deg);}50%{transform:translateY(-14px) rotate(.5deg);}}
-.phone{width:258px;height:542px;background:#040e1c;border-radius:44px;border:6px solid rgba(200,220,255,.1);box-shadow:0 50px 120px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.03);overflow:hidden;position:relative;}
+.phone{width:258px;height:542px;background:#040e1c;border-radius:44px;border:6px solid rgba(30,58,95,0.15);box-shadow:0 40px 100px rgba(30,58,95,0.18),0 0 0 1px rgba(0,0,0,0.04);overflow:hidden;position:relative;}
 .phone-notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:86px;height:24px;background:#040e1c;border-radius:0 0 16px 16px;z-index:10;}
 .ps-nav{background:#071828;padding:34px 14px 10px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.05);}
 .ps-nav-title{font-size:11px;font-weight:700;color:#dceaf6;letter-spacing:.05em;}
-.ps-badge{background:rgba(201,162,39,.18);border:1px solid rgba(201,162,39,.32);color:#c9a227;font-size:9px;font-weight:700;padding:2px 7px;border-radius:7px;letter-spacing:.04em;}
+.ps-badge{background:rgba(201,162,39,.18);border:1px solid rgba(201,162,39,.32);color:#c9a227;font-size:9px;font-weight:700;padding:2px 7px;border-radius:7px;}
 .ps-body{padding:12px 14px 60px;}
 .ps-lbl{font-size:9px;font-weight:600;color:#3d5a70;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;}
 .ps-vessel{font-size:13px;font-weight:700;color:#dceaf6;margin-bottom:12px;}
@@ -94,27 +87,27 @@ h1 em{font-style:italic;color:var(--gold);}
 .ps-tab-lbl.active{color:var(--gold);}
 
 /* ── Sections ────────────────────────── */
-.section{padding:100px 80px;}
-.sec-eyebrow{font-size:11px;font-weight:500;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:14px;}
-.sec-title{font-family:var(--ff-d);font-size:clamp(32px,4vw,52px);font-weight:600;color:var(--chart);line-height:1.1;letter-spacing:-.02em;}
-.sec-sub{font-size:16px;color:var(--mist);line-height:1.7;max-width:540px;}
+.section{padding:96px 80px;}
+.section.grey{background:var(--bg);}
+.sec-eyebrow{font-size:11px;font-weight:600;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:14px;}
+.sec-title{font-family:var(--ff-d);font-size:clamp(30px,4vw,50px);font-weight:600;color:var(--navy);line-height:1.1;letter-spacing:-.02em;}
+.sec-sub{font-size:16px;color:var(--muted);line-height:1.7;max-width:540px;}
 
 /* ── Features ────────────────────────── */
-.features{background:var(--void);}
-.feat-intro{text-align:center;margin-bottom:80px;}
-.feat-intro .sec-title{margin-bottom:14px;}
+.feat-intro{text-align:center;margin-bottom:72px;}
+.feat-intro .sec-title{margin-bottom:12px;}
 .feat-intro .sec-sub{margin:0 auto;}
-.feat-grid{display:flex;flex-direction:column;gap:80px;}
+.feat-grid{display:flex;flex-direction:column;gap:72px;}
 .feat{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:80px;}
 .feat.rev{direction:rtl;}
 .feat.rev>*{direction:ltr;}
-.feat-tag{display:inline-block;font-size:11px;font-weight:600;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px;}
-.feat-title{font-family:var(--ff-d);font-size:clamp(26px,3vw,40px);font-weight:600;color:var(--chart);line-height:1.15;letter-spacing:-.02em;margin-bottom:14px;}
-.feat-desc{font-size:15px;color:var(--mist);line-height:1.75;}
+.feat-tag{display:inline-block;font-size:11px;font-weight:600;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;}
+.feat-title{font-family:var(--ff-d);font-size:clamp(24px,3vw,38px);font-weight:600;color:var(--navy);line-height:1.15;letter-spacing:-.02em;margin-bottom:12px;}
+.feat-desc{font-size:15px;color:var(--muted);line-height:1.75;}
 .feat-visual{display:flex;justify-content:center;}
 
 /* Feature phones */
-.fp{width:218px;height:456px;background:#040e1c;border-radius:38px;border:5px solid rgba(200,220,255,.09);box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden;position:relative;}
+.fp{width:218px;height:456px;background:#040e1c;border-radius:38px;border:5px solid rgba(30,58,95,0.12);box-shadow:0 24px 64px rgba(30,58,95,0.15);overflow:hidden;position:relative;}
 .fp-notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:70px;height:20px;background:#040e1c;border-radius:0 0 13px 13px;z-index:10;}
 .fp-body{padding:28px 12px 12px;height:100%;}
 .fp-lbl{font-size:8px;font-weight:700;color:#3d5a70;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;}
@@ -132,97 +125,95 @@ h1 em{font-style:italic;color:var(--gold);}
 .fp-bar{height:100%;background:var(--gold);border-radius:2px;}
 
 /* ── Roles ───────────────────────────── */
-.roles{background:var(--deep);}
-.roles-intro{text-align:center;margin-bottom:52px;}
-.roles-intro .sec-title{margin-bottom:12px;}
+.roles-intro{text-align:center;margin-bottom:48px;}
+.roles-intro .sec-title{margin-bottom:10px;}
 .roles-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
-.role-card{background:var(--hull);border:1px solid var(--wake);border-radius:16px;padding:30px 26px;transition:border-color .2s,transform .2s;}
-.role-card:hover{border-color:var(--wake2);transform:translateY(-4px);}
-.role-icon{width:42px;height:42px;background:var(--gold-dim);border-radius:11px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;}
+.role-card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:28px 24px;transition:border-color .2s,transform .2s,box-shadow .2s;}
+.role-card:hover{border-color:#94a3b8;transform:translateY(-4px);box-shadow:0 12px 32px rgba(30,58,95,0.08);}
+.role-icon{width:42px;height:42px;background:var(--navy-light);border-radius:11px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
 .role-icon svg{width:20px;height:20px;}
-.role-title{font-family:var(--ff-d);font-size:21px;font-weight:600;color:var(--chart);margin-bottom:8px;}
-.role-desc{font-size:14px;color:var(--mist);line-height:1.65;}
+.role-title{font-family:var(--ff-d);font-size:20px;font-weight:600;color:var(--navy);margin-bottom:8px;}
+.role-desc{font-size:14px;color:var(--muted);line-height:1.65;}
 
 /* ── Download CTA ────────────────────── */
-.download{background:var(--void);text-align:center;}
+.download{background:var(--navy);text-align:center;}
 .dl-inner{max-width:600px;margin:0 auto;}
-.dl-title{font-family:var(--ff-d);font-size:clamp(36px,5vw,64px);font-weight:600;color:var(--chart);line-height:1.1;letter-spacing:-.025em;margin-bottom:18px;}
+.dl-title{font-family:var(--ff-d);font-size:clamp(34px,5vw,60px);font-weight:600;color:#fff;line-height:1.1;letter-spacing:-.025em;margin-bottom:16px;}
 .dl-title em{font-style:italic;color:var(--gold);}
-.dl-sub{font-size:16px;color:var(--mist);margin-bottom:38px;line-height:1.7;}
+.dl-sub{font-size:16px;color:rgba(255,255,255,0.65);margin-bottom:36px;line-height:1.7;}
 .dl-actions{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;}
-.dl-note{font-size:13px;color:var(--mist);margin-top:16px;opacity:.65;}
+.btn-white{display:inline-flex;align-items:center;gap:8px;background:#fff;color:var(--navy);font-size:14px;font-weight:600;padding:13px 24px;border-radius:10px;transition:all .2s;}
+.btn-white:hover{background:#f0f4ff;transform:translateY(-2px);}
+.btn-ghost-white{display:inline-flex;align-items:center;gap:8px;color:#fff;font-size:14px;font-weight:500;padding:13px 24px;border-radius:10px;border:1px solid rgba(255,255,255,0.25);transition:all .2s;}
+.btn-ghost-white:hover{background:rgba(255,255,255,0.08);}
+.dl-note{font-size:13px;color:rgba(255,255,255,0.4);margin-top:16px;}
 
 /* ── FAQ ─────────────────────────────── */
-.faq{background:var(--deep);}
 .faq-inner{max-width:720px;margin:0 auto;}
-.faq-hdr{text-align:center;margin-bottom:52px;}
+.faq-hdr{text-align:center;margin-bottom:48px;}
 .faq-hdr .sec-title{margin-bottom:0;}
-.faq-list{display:flex;flex-direction:column;}
-.faq-item{border-bottom:1px solid var(--wake);}
-.faq-item:first-child{border-top:1px solid var(--wake);}
-.faq-q{width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:20px 0;display:flex;justify-content:space-between;align-items:center;gap:20px;font-size:15px;font-weight:500;color:var(--chart);font-family:var(--ff-b);transition:color .15s;}
-.faq-q:hover,.faq-q.open{color:var(--gold);}
+.faq-item{border-bottom:1px solid var(--border);}
+.faq-item:first-child{border-top:1px solid var(--border);}
+.faq-q{width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:20px 0;display:flex;justify-content:space-between;align-items:center;gap:20px;font-size:15px;font-weight:500;color:var(--text);font-family:var(--ff-b);transition:color .15s;}
+.faq-q:hover,.faq-q.open{color:var(--navy);}
 .faq-icon{flex-shrink:0;width:18px;height:18px;position:relative;}
 .faq-icon::before,.faq-icon::after{content:'';position:absolute;background:currentColor;border-radius:1px;transition:transform .25s,opacity .25s;}
 .faq-icon::before{width:13px;height:1.5px;top:50%;left:50%;transform:translate(-50%,-50%);}
 .faq-icon::after{width:1.5px;height:13px;top:50%;left:50%;transform:translate(-50%,-50%);}
 .faq-q.open .faq-icon::after{transform:translate(-50%,-50%) rotate(90deg);opacity:0;}
-.faq-a{font-size:14px;color:var(--mist);line-height:1.75;max-height:0;overflow:hidden;transition:max-height .35s ease,padding .35s;padding:0;}
+.faq-a{font-size:14px;color:var(--muted);line-height:1.75;max-height:0;overflow:hidden;transition:max-height .35s ease,padding .35s;padding:0;}
 .faq-a.open{max-height:400px;padding:0 0 20px;}
-.faq-a a{color:var(--gold);}
+.faq-a a{color:var(--navy);font-weight:500;}
 
 /* ── Footer ──────────────────────────── */
-footer{background:var(--void);border-top:1px solid var(--wake);padding:56px 80px 40px;}
+footer{background:var(--navy);padding:56px 80px 40px;}
 .footer-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:48px;flex-wrap:wrap;gap:40px;}
 .footer-logo{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
 .footer-logo svg{width:26px;height:26px;}
-.footer-logo-name{font-family:var(--ff-d);font-size:17px;font-weight:600;color:var(--chart);}
-.footer-tagline{font-size:13px;color:var(--mist);max-width:200px;line-height:1.6;}
-.footer-col h4{font-size:11px;font-weight:600;color:var(--chart);letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px;}
+.footer-logo-name{font-family:var(--ff-d);font-size:17px;font-weight:600;color:#fff;}
+.footer-tagline{font-size:13px;color:rgba(255,255,255,0.45);max-width:200px;line-height:1.6;}
+.footer-col h4{font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px;}
 .footer-col ul{list-style:none;display:flex;flex-direction:column;gap:9px;}
-.footer-col a{font-size:13px;color:var(--mist);transition:color .15s;}
-.footer-col a:hover{color:var(--chart);}
-.footer-bottom{border-top:1px solid var(--wake);padding-top:26px;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--mist);flex-wrap:wrap;gap:10px;}
+.footer-col a{font-size:13px;color:rgba(255,255,255,0.5);transition:color .15s;}
+.footer-col a:hover{color:#fff;}
+.footer-bottom{border-top:1px solid rgba(255,255,255,0.1);padding-top:26px;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:rgba(255,255,255,0.3);flex-wrap:wrap;gap:10px;}
 
 /* ── Reveal ──────────────────────────── */
-.reveal{opacity:0;transform:translateY(32px);transition:opacity .65s ease,transform .65s ease;}
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .6s ease,transform .6s ease;}
 .reveal.visible{opacity:1;transform:translateY(0);}
 .d1{transition-delay:.1s;}.d2{transition-delay:.2s;}.d3{transition-delay:.3s;}
 
 /* ── Responsive ──────────────────────── */
 @media(max-width:1024px){
-  .hero{padding:120px 40px 80px;gap:40px;}
-  .section{padding:80px 40px;}
+  .hero{padding:100px 40px 72px;gap:40px;}
+  .section{padding:72px 40px;}
   footer{padding:48px 40px 32px;}
-  .nav,.nav.solid{padding-left:32px;padding-right:32px;}
+  .nav{padding:0 32px;}
 }
 @media(max-width:768px){
-  .hero{grid-template-columns:1fr;padding:110px 24px 60px;text-align:center;}
+  .hero{grid-template-columns:1fr;padding:96px 24px 56px;text-align:center;}
   .hero-visual{order:-1;}
-  .hero-sub{margin:0 auto 36px;}
+  .hero-sub{margin:0 auto 34px;}
   .hero-actions{justify-content:center;}
   .eyebrow{justify-content:center;}
-  .section{padding:64px 24px;}
-  .feat,.feat.rev{grid-template-columns:1fr;direction:ltr;gap:40px;text-align:center;}
+  .section{padding:60px 24px;}
+  .feat,.feat.rev{grid-template-columns:1fr;direction:ltr;gap:36px;text-align:center;}
   .feat-visual{order:-1;}
   .roles-grid{grid-template-columns:1fr;}
-  .nav-links{display:none;}
-  .nav{padding:16px 24px;}
-  .nav.solid{padding:12px 24px;}
+  .nav{padding:0 20px;}
   footer{padding:40px 24px 28px;}
   .footer-top{flex-direction:column;gap:28px;}
   .footer-bottom{flex-direction:column;text-align:center;}
   .phone-wrap{transform:scale(.85);}
 }
 @media(max-width:480px){
-  h1{font-size:36px;}
+  h1{font-size:34px;}
   .hero-actions,.dl-actions{flex-direction:column;align-items:center;}
-  .btn-primary,.btn-ghost{width:100%;justify-content:center;}
+  .btn-primary,.btn-ghost,.btn-white,.btn-ghost-white{width:100%;justify-content:center;}
 }
 @media(prefers-reduced-motion:reduce){
   .reveal{transition:none;}
   .phone-wrap{animation:none;}
-  .hero-bg::before{animation:none;}
 }
 </style>
 </head>
@@ -238,35 +229,28 @@ footer{background:var(--void);border-top:1px solid var(--wake);padding:56px 80px
     </svg>
     <span class="nav-logo-name">Nautical Ops</span>
   </a>
-  <div class="nav-links">
-    <a href="#features">Features</a>
-    <a href="#faq">FAQ</a>
-    <a href="/support">Support</a>
-    <a href="/pricing">Pricing</a>
-  </div>
   <div class="nav-actions">
-    <a href="/login" class="btn-ghost-sm">Log in</a>
-    <a href="https://apps.apple.com/app/nautical-ops/id6760950524" class="btn-gold-sm">Download App</a>
+    <a href="/login" class="btn-nav-ghost">Log in</a>
+    <a href="https://apps.apple.com/app/nautical-ops/id6760950524" class="btn-nav-gold">Download App</a>
   </div>
 </nav>
 
 <main>
 
-<!-- ── Hero ─────────────────────────── -->
+<!-- Hero -->
 <section class="hero">
-  <div class="hero-bg" aria-hidden="true"></div>
   <div class="hero-content">
     <div class="eyebrow">Built by crew, for crew</div>
     <h1>Operations built for<br><em>superyacht crews.</em></h1>
     <p class="hero-sub">Manage voyages, crew, tasks, and maintenance — all from your iPhone. Everything your vessel needs, in one place.</p>
     <div class="hero-actions">
       <a href="https://apps.apple.com/app/nautical-ops/id6760950524" class="btn-primary">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
         Download for iOS
       </a>
       <a href="/login" class="btn-ghost">
         Log in to Web App
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </a>
     </div>
   </div>
@@ -308,8 +292,8 @@ footer{background:var(--void);border-top:1px solid var(--wake);padding:56px 80px
   </div>
 </section>
 
-<!-- ── Features ──────────────────────── -->
-<section class="section features" id="features">
+<!-- Features -->
+<section class="section grey" id="features">
   <div class="feat-intro reveal">
     <div class="sec-eyebrow">What's on board</div>
     <h2 class="sec-title">Everything your vessel<br>needs to run smoothly.</h2>
@@ -328,16 +312,16 @@ footer{background:var(--void);border-top:1px solid var(--wake);padding:56px 80px
           <div class="fp-notch"></div>
           <div class="fp-body">
             <div class="fp-lbl">Trip Types</div>
-            <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title" style="display:flex;align-items:center;gap:6px;"><div class="fp-dot" style="background:#0ea5e9;"></div>Guest Trip</div></div></div></div>
-            <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title" style="display:flex;align-items:center;gap:6px;"><div class="fp-dot" style="background:#c9a227;"></div>Owner Voyage</div></div></div></div>
-            <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title" style="display:flex;align-items:center;gap:6px;"><div class="fp-dot" style="background:#a855f7;"></div>Delivery Run</div></div></div></div>
-            <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title" style="display:flex;align-items:center;gap:6px;"><div class="fp-dot" style="background:#f97316;"></div>Yard Period</div></div></div></div>
-            <div class="fp-lbl" style="margin-top:14px;">Recent Voyages</div>
+            <div class="fp-item"><div class="fp-item-row"><div class="fp-item-title" style="display:flex;align-items:center;gap:6px;"><div class="fp-dot" style="background:#0ea5e9;"></div>Guest Trip</div></div></div>
+            <div class="fp-item"><div class="fp-item-row"><div class="fp-item-title" style="display:flex;align-items:center;gap:6px;"><div class="fp-dot" style="background:#c9a227;"></div>Owner Voyage</div></div></div>
+            <div class="fp-item"><div class="fp-item-row"><div class="fp-item-title" style="display:flex;align-items:center;gap:6px;"><div class="fp-dot" style="background:#a855f7;"></div>Delivery Run</div></div></div>
+            <div class="fp-item"><div class="fp-item-row"><div class="fp-item-title" style="display:flex;align-items:center;gap:6px;"><div class="fp-dot" style="background:#f97316;"></div>Yard Period</div></div></div>
+            <div class="fp-lbl" style="margin-top:14px;">Recent</div>
             <div style="border-bottom:1px solid rgba(255,255,255,.04);padding:7px 0;">
               <div class="fp-item-title">Monaco Charter</div>
               <div class="fp-item-sub">Jun 14 – Jun 21 · 8 guests</div>
             </div>
-            <div style="border-bottom:1px solid rgba(255,255,255,.04);padding:7px 0;">
+            <div style="padding:7px 0;">
               <div class="fp-item-title">Antibes Delivery</div>
               <div class="fp-item-sub">Jun 7 – Jun 9 · 2 crew</div>
             </div>
@@ -357,24 +341,9 @@ footer{background:var(--void);border-top:1px solid var(--wake);padding:56px 80px
           <div class="fp-notch"></div>
           <div class="fp-body">
             <div class="fp-lbl">Tasks · Interior</div>
-            <div class="fp-item">
-              <div class="fp-item-row">
-                <div><div class="fp-item-title">Cabin turnover</div><div class="fp-item-sub">Assigned to Maria</div></div>
-                <span class="fp-badge done">Done</span>
-              </div>
-            </div>
-            <div class="fp-item">
-              <div class="fp-item-row">
-                <div><div class="fp-item-title">Laundry run</div><div class="fp-item-sub">Assigned to Tom</div></div>
-                <span class="fp-badge pending">Active</span>
-              </div>
-            </div>
-            <div class="fp-item">
-              <div class="fp-item-row">
-                <div><div class="fp-item-title">Guest amenities</div><div class="fp-item-sub">Assigned to Emma</div></div>
-                <span class="fp-badge done">Done</span>
-              </div>
-            </div>
+            <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title">Cabin turnover</div><div class="fp-item-sub">Assigned to Maria</div></div><span class="fp-badge done">Done</span></div></div>
+            <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title">Laundry run</div><div class="fp-item-sub">Assigned to Tom</div></div><span class="fp-badge pending">Active</span></div></div>
+            <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title">Guest amenities</div><div class="fp-item-sub">Assigned to Emma</div></div><span class="fp-badge done">Done</span></div></div>
             <div class="fp-lbl" style="margin-top:14px;">Crew on board · 12</div>
             <div class="fp-crew-tags">
               <span class="fp-crew-tag">Deck · 4</span>
@@ -397,20 +366,10 @@ footer{background:var(--void);border-top:1px solid var(--wake);padding:56px 80px
           <div class="fp-notch"></div>
           <div class="fp-body">
             <div class="fp-lbl">Maintenance Log</div>
-            <div class="fp-item">
-              <div class="fp-item-row">
-                <div><div class="fp-item-title">Engine service</div><div class="fp-item-sub">Engine room · Jun 18</div></div>
-                <span class="fp-badge done">Done</span>
-              </div>
-            </div>
-            <div class="fp-item">
-              <div class="fp-item-row">
-                <div><div class="fp-item-title">Hull inspection</div><div class="fp-item-sub">Deck · Jun 22</div></div>
-                <span class="fp-badge pending">Pending</span>
-              </div>
-            </div>
+            <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title">Engine service</div><div class="fp-item-sub">Engine room · Jun 18</div></div><span class="fp-badge done">Done</span></div></div>
+            <div class="fp-item"><div class="fp-item-row"><div><div class="fp-item-title">Hull inspection</div><div class="fp-item-sub">Deck · Jun 22</div></div><span class="fp-badge pending">Pending</span></div></div>
             <div class="fp-lbl" style="margin-top:14px;">Current Yard Period</div>
-            <div class="fp-item" style="border-color:rgba(201,162,39,.18);">
+            <div class="fp-item" style="border-color:rgba(201,162,39,.2);">
               <div class="fp-item-title" style="color:#c9a227;">La Spezia Refit</div>
               <div class="fp-item-sub">Jul 1 – Aug 15 · 14 jobs</div>
               <div class="fp-bar-wrap"><div class="fp-bar" style="width:35%;"></div></div>
@@ -423,31 +382,31 @@ footer{background:var(--void);border-top:1px solid var(--wake);padding:56px 80px
   </div>
 </section>
 
-<!-- ── Roles ──────────────────────────── -->
-<section class="section roles">
+<!-- Roles -->
+<section class="section">
   <div class="roles-intro reveal">
     <div class="sec-eyebrow">Designed for every rank</div>
-    <h2 class="sec-title" style="margin-bottom:12px;">Built for everyone<br>on board.</h2>
+    <h2 class="sec-title" style="margin-bottom:10px;">Built for everyone on board.</h2>
     <p class="sec-sub" style="margin:0 auto;">Whether you're running the vessel or reporting to the bridge, Nautical Ops fits your role.</p>
   </div>
   <div class="roles-grid">
     <div class="role-card reveal d1">
       <div class="role-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#c9a227" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><line x1="12" y1="22" x2="12" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><line x1="12" y1="22" x2="12" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></svg>
       </div>
       <div class="role-title">Captain & HOD</div>
       <div class="role-desc">Full vessel oversight. Schedule voyages, manage your crew, log maintenance, and see everything happening on board — in one dashboard.</div>
     </div>
     <div class="role-card reveal d2">
       <div class="role-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#c9a227" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       </div>
       <div class="role-title">Department Head</div>
       <div class="role-desc">Manage your team with precision. Assign and track tasks within your department, handle yard jobs, and stay coordinated with the bridge.</div>
     </div>
     <div class="role-card reveal d3">
       <div class="role-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#c9a227" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
       </div>
       <div class="role-title">Crew Member</div>
       <div class="role-desc">See your tasks, check upcoming trips, and stay on top of your responsibilities. No guesswork, no missed briefs — everything in your pocket.</div>
@@ -455,32 +414,32 @@ footer{background:var(--void);border-top:1px solid var(--wake);padding:56px 80px
   </div>
 </section>
 
-<!-- ── Download CTA ───────────────────── -->
+<!-- Download CTA -->
 <section class="section download">
   <div class="dl-inner reveal">
-    <div class="sec-eyebrow" style="text-align:center;">Available now</div>
+    <div class="sec-eyebrow" style="text-align:center;color:rgba(201,162,39,0.8);">Available now</div>
     <h2 class="dl-title">Your vessel,<br><em>always organised.</em></h2>
     <p class="dl-sub">Download on iOS and get your whole crew on board. Web access included — log in from any device, anywhere in the world.</p>
     <div class="dl-actions">
-      <a href="https://apps.apple.com/app/nautical-ops/id6760950524" class="btn-primary">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+      <a href="https://apps.apple.com/app/nautical-ops/id6760950524" class="btn-white">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
         Download on the App Store
       </a>
-      <a href="/login" class="btn-ghost">
+      <a href="/login" class="btn-ghost-white">
         Access Web App
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </a>
     </div>
     <p class="dl-note">iOS 16+. Android coming soon.</p>
   </div>
 </section>
 
-<!-- ── FAQ ────────────────────────────── -->
-<section class="section faq" id="faq">
+<!-- FAQ -->
+<section class="section grey" id="faq">
   <div class="faq-inner">
     <div class="faq-hdr reveal">
       <div class="sec-eyebrow">Common questions</div>
-      <h2 class="sec-title">Anything you want<br>to know.</h2>
+      <h2 class="sec-title">Anything you want to know.</h2>
     </div>
     <div class="faq-list">
       <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">What is Nautical Ops?<span class="faq-icon"></span></button><div class="faq-a">Nautical Ops is a professional crew operations app built specifically for superyacht and commercial vessel crews. It lets captains and crew log voyages, manage tasks, track maintenance, and run yard periods — all from a single iPhone app, with full web access included.</div></div>
@@ -543,16 +502,12 @@ footer{background:var(--void);border-top:1px solid var(--wake);padding:56px 80px
 </footer>
 
 <script>
-const nav=document.getElementById('nav');
-window.addEventListener('scroll',()=>{nav.classList.toggle('solid',window.scrollY>60);},{passive:true});
-
 function toggleFaq(btn){
   const ans=btn.nextElementSibling;
   const wasOpen=btn.classList.contains('open');
   document.querySelectorAll('.faq-q.open').forEach(q=>{q.classList.remove('open');q.nextElementSibling.classList.remove('open');});
   if(!wasOpen){btn.classList.add('open');ans.classList.add('open');}
 }
-
 const obs=new IntersectionObserver((entries)=>{
   entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target);}});
 },{threshold:.1,rootMargin:'0px 0px -40px 0px'});
