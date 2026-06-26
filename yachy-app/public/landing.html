@@ -34,15 +34,7 @@ a{color:inherit;text-decoration:none;}
 }
 
 /* ── Nav ─────────────────────────────── */
-.nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:0 56px;height:60px;display:flex;align-items:center;justify-content:space-between;background:var(--navy);box-shadow:0 1px 0 rgba(255,255,255,0.08);}
-.nav-logo{display:flex;align-items:center;gap:10px;}
-.nav-logo svg{width:26px;height:26px;flex-shrink:0;}
-.nav-logo-name{font-family:var(--ff-d);font-size:17px;font-weight:600;color:#fff;letter-spacing:-.01em;}
-.nav-actions{display:flex;align-items:center;gap:10px;}
-.btn-nav-ghost{font-size:13px;font-weight:500;color:rgba(255,255,255,0.7);padding:7px 16px;border:1px solid rgba(255,255,255,0.2);border-radius:8px;transition:all .15s;}
-.btn-nav-ghost:hover{color:#fff;background:rgba(255,255,255,0.1);}
-.btn-nav-gold{font-size:13px;font-weight:600;color:#000;background:var(--gold);padding:7px 16px;border-radius:8px;transition:all .15s;white-space:nowrap;}
-.btn-nav-gold:hover{background:#d4aa2e;transform:translateY(-1px);}
+.nav{position:fixed;top:0;left:0;right:0;z-index:200;height:60px;background:var(--white);}
 
 /* ── Hero ────────────────────────────── */
 .hero{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:60px;padding:120px 80px 80px;background:var(--white);}
@@ -132,8 +124,25 @@ h1 em{font-style:italic;color:var(--gold);}
 .role-card:hover{border-color:#94a3b8;transform:translateY(-4px);box-shadow:0 12px 32px rgba(30,58,95,0.08);}
 .role-icon{width:42px;height:42px;background:var(--navy-light);border-radius:11px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
 .role-icon svg{width:20px;height:20px;}
-.role-title{font-family:var(--ff-d);font-size:20px;font-weight:600;color:var(--navy);margin-bottom:8px;}
+.role-title{font-family:var(--ff-d);font-size:20px;font-weight:600;color:var(--navy);margin-bottom:2px;}
+.role-sub-title{font-size:12px;font-weight:500;color:var(--gold);letter-spacing:.04em;margin-bottom:10px;}
 .role-desc{font-size:14px;color:var(--muted);line-height:1.65;}
+
+/* ── Screenshots ─────────────────────── */
+.screenshots{background:var(--bg);overflow:hidden;}
+.screenshots-intro{text-align:center;margin-bottom:48px;}
+.screenshots-intro .sec-title{margin-bottom:10px;}
+.screenshots-row{display:flex;gap:20px;justify-content:center;align-items:flex-end;flex-wrap:nowrap;overflow-x:auto;padding:0 20px 20px;scrollbar-width:none;}
+.screenshots-row::-webkit-scrollbar{display:none;}
+.ss-wrap{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:12px;}
+.ss-wrap:nth-child(2){transform:translateY(-20px);}
+.ss-wrap:nth-child(4){transform:translateY(-10px);}
+.ss-phone{width:190px;height:400px;background:#040e1c;border-radius:36px;border:5px solid rgba(30,58,95,0.12);box-shadow:0 24px 60px rgba(30,58,95,0.14);overflow:hidden;position:relative;}
+.ss-phone img{width:100%;height:100%;object-fit:cover;display:block;}
+.ss-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;}
+.ss-placeholder-icon{width:36px;height:36px;border-radius:50%;background:rgba(201,162,39,0.2);display:flex;align-items:center;justify-content:center;}
+.ss-placeholder-text{font-size:11px;font-weight:500;color:rgba(255,255,255,0.4);text-align:center;padding:0 12px;line-height:1.5;}
+.ss-label{font-size:12px;font-weight:500;color:var(--muted);}
 
 /* ── Download CTA ────────────────────── */
 .download{background:var(--navy);text-align:center;}
@@ -219,21 +228,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
 </head>
 <body>
 
-<nav class="nav" id="nav">
-  <a href="/" class="nav-logo">
-    <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M6 26 Q6 30 18 31 Q30 30 30 26 L28 18 L8 18 Z" fill="none" stroke="#c9a227" stroke-width="1.8" stroke-linejoin="round"/>
-      <rect x="11" y="12" width="14" height="7" rx="1.5" fill="none" stroke="#c9a227" stroke-width="1.8"/>
-      <line x1="18" y1="5" x2="18" y2="12" stroke="#c9a227" stroke-width="1.8" stroke-linecap="round"/>
-      <circle cx="18" cy="4" r="1.8" fill="#c9a227"/>
-    </svg>
-    <span class="nav-logo-name">Nautical Ops</span>
-  </a>
-  <div class="nav-actions">
-    <a href="/login" class="btn-nav-ghost">Log in</a>
-    <a href="https://apps.apple.com/app/nautical-ops/id6760950524" class="btn-nav-gold">Download App</a>
-  </div>
-</nav>
+<nav class="nav" id="nav"></nav>
 
 <main>
 
@@ -242,7 +237,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
   <div class="hero-content">
     <div class="eyebrow">Built by crew, for crew</div>
     <h1>Operations built for<br><em>superyacht crews.</em></h1>
-    <p class="hero-sub">Manage voyages, crew, tasks, and maintenance — all from your iPhone. Everything your vessel needs, in one place.</p>
+    <p class="hero-sub">Manage voyages, crew, tasks, and maintenance — all from your mobile devices. Everything your vessel needs, in one place.</p>
     <div class="hero-actions">
       <a href="https://apps.apple.com/app/nautical-ops/id6760950524" class="btn-primary">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
@@ -288,6 +283,57 @@ footer{background:var(--navy);padding:56px 80px 40px;}
           <div class="ps-tab"><div class="ps-tab-bar"></div><div class="ps-tab-lbl">Crew</div></div>
         </div>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- Screenshots -->
+<section class="section screenshots">
+  <div class="screenshots-intro reveal">
+    <div class="sec-eyebrow">See it in action</div>
+    <h2 class="sec-title">Built for life on board.</h2>
+    <p class="sec-sub" style="margin:0 auto;">A glimpse of what Nautical Ops looks like on your device.</p>
+  </div>
+  <div class="screenshots-row">
+    <!-- Screenshot 1 — replace ss-placeholder div with <img src="your-screenshot.png" alt="..."> -->
+    <div class="ss-wrap reveal d1">
+      <div class="ss-phone">
+        <div class="ss-placeholder" style="background:linear-gradient(160deg,#071828 0%,#0c2236 100%);">
+          <div class="ss-placeholder-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c9a227" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>
+          <div class="ss-placeholder-text">Home Screen<br>screenshot here</div>
+        </div>
+      </div>
+      <span class="ss-label">Home</span>
+    </div>
+    <!-- Screenshot 2 -->
+    <div class="ss-wrap reveal d2">
+      <div class="ss-phone">
+        <div class="ss-placeholder" style="background:linear-gradient(160deg,#0a1e35 0%,#0e2a45 100%);">
+          <div class="ss-placeholder-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c9a227" stroke-width="1.8"><path d="M4 17.5Q4 20 12 20.5Q20 20 20 17.5L18.5 11H5.5Z"/><rect x="7.5" y="7" width="9" height="5" rx="1"/><line x1="12" y1="3" x2="12" y2="7"/></svg></div>
+          <div class="ss-placeholder-text">Trips Screen<br>screenshot here</div>
+        </div>
+      </div>
+      <span class="ss-label">Voyages</span>
+    </div>
+    <!-- Screenshot 3 -->
+    <div class="ss-wrap reveal d2">
+      <div class="ss-phone">
+        <div class="ss-placeholder" style="background:linear-gradient(160deg,#071828 0%,#0c2236 100%);">
+          <div class="ss-placeholder-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c9a227" stroke-width="1.8"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+          <div class="ss-placeholder-text">Tasks Screen<br>screenshot here</div>
+        </div>
+      </div>
+      <span class="ss-label">Tasks</span>
+    </div>
+    <!-- Screenshot 4 -->
+    <div class="ss-wrap reveal d3">
+      <div class="ss-phone">
+        <div class="ss-placeholder" style="background:linear-gradient(160deg,#0a1e35 0%,#0e2a45 100%);">
+          <div class="ss-placeholder-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c9a227" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+          <div class="ss-placeholder-text">Crew Screen<br>screenshot here</div>
+        </div>
+      </div>
+      <span class="ss-label">Crew</span>
     </div>
   </div>
 </section>
@@ -394,14 +440,16 @@ footer{background:var(--navy);padding:56px 80px 40px;}
       <div class="role-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><line x1="12" y1="22" x2="12" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></svg>
       </div>
-      <div class="role-title">Captain & HOD</div>
+      <div class="role-title">Captain — MOV</div>
+      <div class="role-sub-title">Master of Vessel</div>
       <div class="role-desc">Full vessel oversight. Schedule voyages, manage your crew, log maintenance, and see everything happening on board — in one dashboard.</div>
     </div>
     <div class="role-card reveal d2">
       <div class="role-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       </div>
-      <div class="role-title">Department Head</div>
+      <div class="role-title">HOD</div>
+      <div class="role-sub-title">Head of Department</div>
       <div class="role-desc">Manage your team with precision. Assign and track tasks within your department, handle yard jobs, and stay coordinated with the bridge.</div>
     </div>
     <div class="role-card reveal d3">
@@ -409,6 +457,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
         <svg viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
       </div>
       <div class="role-title">Crew Member</div>
+      <div class="role-sub-title">All departments</div>
       <div class="role-desc">See your tasks, check upcoming trips, and stay on top of your responsibilities. No guesswork, no missed briefs — everything in your pocket.</div>
     </div>
   </div>
