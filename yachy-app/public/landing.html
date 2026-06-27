@@ -306,32 +306,54 @@ footer{background:var(--navy);padding:56px 80px 40px;}
   .macbook-screen{height:212px;}
 }
 @media(max-width:768px){
-  .hero{grid-template-columns:1fr;padding:88px 24px 56px;text-align:center;}
-  .hero-visual{order:-1;}
-  .hero-sub{margin:0 auto 34px;}
+  /* 1. Hero - reduce size significantly */
+  .hero{grid-template-columns:1fr;padding:72px 24px 40px;text-align:center;}
+  .hero-visual{order:-1;margin-bottom:-20px;}
+  .hero-float{zoom:0.7;}
+  .hero h1{font-size:clamp(32px,8vw,44px);margin-bottom:14px;}
+  .hero-sub{margin:0 auto 28px;font-size:15px;}
   .hero-actions{justify-content:center;}
   .eyebrow{justify-content:center;}
-  .section,.screenshots,.devices,.download{padding:56px 24px;}
-  .sf-intro{padding:56px 24px 0;}
+
+  /* 2. General sections */
+  .section,.screenshots,.devices,.download{padding:48px 24px;}
+  .sf-intro{padding:48px 24px 0;}
   .sf-inner{grid-template-columns:1fr;padding:0 24px;}
   .sf-phone-col{display:none;}
-  .sf-step{min-height:auto;padding:32px 0;opacity:1;}
-  .sf-steps{padding:32px 0 56px;}
+  .sf-step{min-height:auto;padding:28px 0;opacity:1;}
+  .sf-steps{padding:28px 0 48px;}
   .roles-grid{grid-template-columns:1fr;}
+
+  /* 3. About section - Mission box stacks AFTER text */
+  .about-grid{grid-template-columns:1fr !important;gap:32px !important;padding-bottom:48px !important;}
+
+  /* 4. Ocean impact stats - Total Donated full width top, other two side by side */
+  .stat-card-donated{grid-column:1 / -1;order:-1;top:0 !important;}
+  .stat-card-subscribers,.stat-card-projected{grid-column:span 1;}
+  .ocean-stats{grid-template-columns:1fr 1fr !important;gap:14px !important;}
+
+  /* 5. Footer - Product+Support side by side, Legal below */
   footer{padding:40px 24px 28px;}
-  .footer-top{flex-direction:column;gap:28px;}
+  .footer-top{flex-direction:row;flex-wrap:wrap;gap:0 !important;}
+  .footer-top > div:first-child{width:100%;margin-bottom:24px;}
+  .footer-col:nth-child(2){width:50%;padding-right:8px;}
+  .footer-col:nth-child(3){width:50%;padding-left:8px;}
+  .footer-col:nth-child(4){width:100%;margin-top:20px;padding-top:20px;border-top:1px solid rgba(255,255,255,.08);}
   .footer-bottom{flex-direction:column;text-align:center;}
+
   .devices-scene{flex-wrap:wrap;justify-content:center;gap:20px;min-height:auto;}
   .ipad-wrap,.iphone-wrap{margin:0;}
   .hero-phone-wrap{animation:swellMobile 5s ease-in-out infinite;}
   @keyframes swellMobile{0%,100%{transform:perspective(1100px) rotateY(-12deg) rotateX(3deg) translateY(0);}50%{transform:perspective(1100px) rotateY(-12deg) rotateX(3deg) translateY(-10px);}}
 }
 @media(max-width:480px){
-  h1{font-size:32px;}
+  h1{font-size:30px;}
+  .hero{padding:64px 20px 36px;}
   .hero-actions,.dl-actions{flex-direction:column;align-items:center;}
   .btn-primary,.btn-ghost,.btn-white,.btn-ghost-white{width:100%;justify-content:center;}
   .macbook-lid{width:280px;}
   .macbook-screen{height:156px;}
+  .footer-col{width:100%;}
 }
 @media(prefers-reduced-motion:reduce){
   .reveal{transition:none;}
@@ -462,7 +484,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
 <!-- ── About ───────────────────────────── -->
 <section class="section" style="background:var(--white);padding-top:96px;padding-bottom:0;">
   <div style="max-width:900px;margin:0 auto;">
-    <div class="reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:72px;align-items:center;padding-bottom:96px;">
+    <div class="about-grid reveal" style="display:grid;grid-template-columns:1fr;max-width:720px;padding-bottom:96px;">
       <div>
         <div class="sec-eyebrow">The story behind the app</div>
         <h2 class="sec-title" style="margin-bottom:20px;">Built by someone who's been there.</h2>
@@ -470,13 +492,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
         <p style="font-size:16px;color:var(--muted);line-height:1.8;margin-bottom:16px;">So I decided to build one. Nautical Ops will never be "done" — I'm constantly updating it, keeping it user-friendly and relevant, not just for professional yacht crew, but for family-run boats and anyone who finds it useful for their maritime needs.</p>
         <p style="font-size:16px;color:var(--muted);line-height:1.8;">I'm not just building this because I'm in the industry. I'm building it because I believe there's a better way to run a vessel — and I want everyone on the water to have access to it.</p>
       </div>
-      <div style="position:relative;border-radius:20px;overflow:hidden;min-height:360px;background:var(--navy);">
-        <div style="position:absolute;inset:0;background-image:url('/yacht-bg.jpg');background-size:cover;background-position:center;opacity:0.35;"></div>
-        <div style="position:relative;z-index:2;padding:40px 36px;display:flex;flex-direction:column;justify-content:flex-end;height:100%;min-height:360px;">
-          <div style="font-size:11px;font-weight:600;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px;">The Mission</div>
-          <p style="font-family:'Fraunces',serif;font-size:28px;font-weight:600;color:#fff;line-height:1.25;margin:0;">"An app that keeps getting better — for every crew on every vessel."</p>
-        </div>
-      </div>
+
     </div>
   </div>
 </section>
@@ -501,8 +517,8 @@ footer{background:var(--navy);padding:56px 80px 40px;}
       <p style="font-size:16px;color:var(--muted);max-width:560px;margin:0 auto;line-height:1.75;">As a nature lover, I understand that even when we follow the rules, we're still part of the problem. Every subscription to Nautical Ops contributes directly to ocean cleanup — because the sea deserves better.</p>
     </div>
 
-    <div class="reveal" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;">
-      <div style="background:#fff;border:1px solid var(--border);border-radius:20px;padding:36px 28px;text-align:center;box-shadow:0 4px 24px rgba(30,58,95,0.06);">
+    <div class="ocean-stats reveal" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;">
+      <div class="stat-card-subscribers" style="background:#fff;border:1px solid var(--border);border-radius:20px;padding:36px 28px;text-align:center;box-shadow:0 4px 24px rgba(30,58,95,0.06);">
         <div style="width:48px;height:48px;background:var(--navy-light);border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </div>
@@ -511,7 +527,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
         <div style="font-size:13px;color:var(--light);">vessels on the water</div>
       </div>
 
-      <div style="background:#fff;border:2px solid var(--gold);border-radius:20px;padding:36px 28px;text-align:center;box-shadow:0 8px 40px rgba(201,162,39,0.12);position:relative;top:-8px;">
+      <div class="stat-card-donated" style="background:#fff;border:2px solid var(--gold);border-radius:20px;padding:36px 28px;text-align:center;box-shadow:0 8px 40px rgba(201,162,39,0.12);position:relative;top:-8px;">
         <div style="width:48px;height:48px;background:rgba(201,162,39,0.1);border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c9a227" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </div>
@@ -520,7 +536,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
         <div style="font-size:13px;color:var(--light);">to ocean cleanup</div>
       </div>
 
-      <div style="background:#fff;border:1px solid var(--border);border-radius:20px;padding:36px 28px;text-align:center;box-shadow:0 4px 24px rgba(30,58,95,0.06);">
+      <div class="stat-card-projected" style="background:#fff;border:1px solid var(--border);border-radius:20px;padding:36px 28px;text-align:center;box-shadow:0 4px 24px rgba(30,58,95,0.06);">
         <div style="width:48px;height:48px;background:var(--navy-light);border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
         </div>
