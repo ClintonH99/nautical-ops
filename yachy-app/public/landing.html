@@ -41,7 +41,7 @@ a{color:inherit;text-decoration:none;}
 .device .device-frame{overflow:hidden !important;-webkit-transform:translateZ(0);transform:translateZ(0);}
 .device .device-frame img,.device .device-frame video{display:block;width:100%;height:100%;object-fit:cover;object-position:top;border-radius:inherit;}
 .hero-device-zoom{zoom:0.62;}
-.ss-device-zoom{zoom:0.54;filter:drop-shadow(0 20px 40px rgba(0,0,0,0.18));display:inline-block;}
+.ss-device-zoom{zoom:0.54;transform:perspective(900px) rotateY(-10deg) rotateX(4deg) rotateZ(-0.5deg);filter:drop-shadow(-14px 22px 40px rgba(0,0,0,0.3)) drop-shadow(-4px 8px 16px rgba(0,0,0,0.15));display:inline-block;}
 .dev-showcase-phone-zoom{zoom:0.52;}
 .dev-showcase-ipad-zoom{zoom:0.42;}
 .dev-showcase-macbook-zoom{zoom:0.46;}
@@ -442,7 +442,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
 </section>
 
 <!-- ── Screenshot gallery ─────────────── -->
-<!-- About -->
+<!-- ── About ───────────────────────────── -->
 <section class="section" style="background:var(--white);padding-top:96px;padding-bottom:0;">
   <div style="max-width:900px;margin:0 auto;">
     <div class="reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:72px;align-items:center;padding-bottom:96px;">
@@ -464,30 +464,49 @@ footer{background:var(--navy);padding:56px 80px 40px;}
   </div>
 </section>
 
-<!-- Ocean Impact -->
+<!-- ── Ocean Impact ──────────────────────── -->
 <section style="position:relative;padding:96px 80px;overflow:hidden;background:#fff;">
-  <video autoplay loop muted playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.12;z-index:0;" onerror="this.style.display='none'">
+
+  <!-- Faded ocean cleanup video background -->
+  <!-- Save an ocean cleanup video as /ocean-cleanup.mp4 to activate -->
+  <video autoplay loop muted playsinline
+    style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.30;z-index:0;"
+    onerror="this.style.display='none'">
     <source src="/ocean-cleanup.mp4" type="video/mp4"/>
   </video>
+  <!-- Fallback subtle wave gradient if no video -->
   <div style="position:absolute;inset:0;background:linear-gradient(160deg,rgba(30,58,95,0.04) 0%,rgba(201,162,39,0.03) 100%);z-index:1;pointer-events:none;"></div>
+
   <div style="position:relative;z-index:2;max-width:960px;margin:0 auto;">
     <div class="reveal" style="text-align:center;margin-bottom:64px;">
       <div class="sec-eyebrow">Our commitment</div>
       <h2 class="sec-title" style="margin-bottom:16px;">5% of every subscription<br>goes back to the ocean.</h2>
       <p style="font-size:16px;color:var(--muted);max-width:560px;margin:0 auto;line-height:1.75;">As a nature lover, I understand that even when we follow the rules, we're still part of the problem. Every subscription to Nautical Ops contributes directly to ocean cleanup — because the sea deserves better.</p>
     </div>
+
     <div class="reveal" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;">
       <div style="background:#fff;border:1px solid var(--border);border-radius:20px;padding:36px 28px;text-align:center;box-shadow:0 4px 24px rgba(30,58,95,0.06);">
+        <div style="width:48px;height:48px;background:var(--navy-light);border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
         <div style="font-size:11px;font-weight:600;color:var(--light);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px;">Active Subscribers</div>
         <div id="stat-subscribers" style="font-family:'Fraunces',serif;font-size:56px;font-weight:600;color:var(--navy);line-height:1;margin-bottom:8px;">—</div>
         <div style="font-size:13px;color:var(--light);">vessels on the water</div>
       </div>
+
       <div style="background:#fff;border:2px solid var(--gold);border-radius:20px;padding:36px 28px;text-align:center;box-shadow:0 8px 40px rgba(201,162,39,0.12);position:relative;top:-8px;">
+        <div style="width:48px;height:48px;background:rgba(201,162,39,0.1);border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c9a227" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
         <div style="font-size:11px;font-weight:600;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px;">Total Donated</div>
         <div id="stat-donated" style="font-family:'Fraunces',serif;font-size:56px;font-weight:600;color:var(--gold);line-height:1;margin-bottom:8px;">—</div>
         <div style="font-size:13px;color:var(--light);">to ocean cleanup</div>
       </div>
+
       <div style="background:#fff;border:1px solid var(--border);border-radius:20px;padding:36px 28px;text-align:center;box-shadow:0 4px 24px rgba(30,58,95,0.06);">
+        <div style="width:48px;height:48px;background:var(--navy-light);border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        </div>
         <div style="font-size:11px;font-weight:600;color:var(--light);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px;">2026 Projection</div>
         <div id="stat-projected" style="font-family:'Fraunces',serif;font-size:56px;font-weight:600;color:var(--navy);line-height:1;margin-bottom:8px;">—</div>
         <div style="font-size:13px;color:var(--light);">estimated this year</div>
@@ -495,44 +514,6 @@ footer{background:var(--navy);padding:56px 80px 40px;}
     </div>
   </div>
 </section>
-
-<!-- hidden screenshots kept for later -->
-<section class="screenshots reveal" style="display:none;">
-  <div class="screenshots-intro">
-    <div class="sec-eyebrow">See it in action</div>
-    <h2 class="sec-title" style="margin-bottom:10px;">Built for life on board.</h2>
-    <p class="sec-sub" style="margin:0 auto;text-align:center;">A glimpse of what Nautical Ops looks like on your device.</p>
-  </div>
-  <div class="ss-row">
-    <div class="ss-item reveal d1">
-      <div class="ss-phone-frame">
-        <img src="/screen-home.png" alt="Home screen"/>
-      </div>
-      <span class="ss-label">Home</span>
-    </div>
-    <div class="ss-item ss-raise reveal d2">
-      <div class="ss-phone-frame">
-        <img src="/screen-trips.png" alt="Trips screen"/>
-      </div>
-      <span class="ss-label">Voyages</span>
-    </div>
-    <div class="ss-item reveal d2">
-      <div class="ss-phone-frame">
-        <img src="/screen-tasks.png" alt="Tasks screen"/>
-      </div>
-      <span class="ss-label">Tasks</span>
-    </div>
-    <div class="ss-item ss-raise2 reveal d3">
-      <div class="ss-phone-frame">
-        <img src="/screen-maintenance.png" alt="Maintenance screen"/>
-      </div>
-      <span class="ss-label">Maintenance</span>
-    </div>
-  </div>
-</section>
-
-<!-- ── Device showcase ────────────────── -->
-
 
 <!-- ── Roles ──────────────────────────── -->
 <section class="section grey">
@@ -613,7 +594,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
       </div>
       <p class="footer-tagline">The operations app built by crew, for crew.</p>
     </div>
-    <div class="footer-col"><h4>Product</h4><ul><li><a href="#features">Features</a></li><li><a href="/pricing">Pricing</a></li><li><a href="https://apps.apple.com/app/nautical-ops/id6760950524">Download iOS App</a></li><li><a href="/login">Web App Login</a></li></ul></div>
+    <div class="footer-col"><h4>Product</h4><ul><li><a href="#features">Features</a></li><li><a href="/pricing">Pricing</a></li><li><a href="/about">About</a></li><li><a href="https://apps.apple.com/app/nautical-ops/id6760950524">Download iOS App</a></li><li><a href="/login">Web App Login</a></li></ul></div>
     <div class="footer-col"><h4>Support</h4><ul><li><a href="/support">Help &amp; Support</a></li><li><a href="#faq">FAQ</a></li><li><a href="mailto:support@nautical-ops.com">Contact Us</a></li></ul></div>
     <div class="footer-col"><h4>Legal</h4><ul><li><a href="/privacy-policy">Privacy Policy</a></li><li><a href="/terms-and-conditions">Terms &amp; Conditions</a></li><li><a href="/refund-policy">Refund Policy</a></li></ul></div>
   </div>
@@ -631,6 +612,65 @@ function toggleFaq(btn){
   document.querySelectorAll('.faq-q.open').forEach(q=>{q.classList.remove('open');q.nextElementSibling.classList.remove('open');});
   if(!wasOpen){btn.classList.add('open');ans.classList.add('open');}
 }
+
+// ── Ocean impact stats from Supabase ──
+async function loadImpactStats(){
+  // ── CONFIG: update ANON_KEY if it changes ──────────────────────────
+  const SUPABASE_URL = 'https://grtrcjgsvfsknpnlarxv.supabase.co';
+  const ANON_KEY     = 'YOUR_SUPABASE_ANON_KEY'; // paste your anon key here
+  // ── PRICING: average monthly revenue per subscriber (adjust as needed)
+  const AVG_MONTHLY_PER_SUB = 29; // approximate average plan price
+  const DONATION_PCT = 0.05;
+  // ──────────────────────────────────────────────────────────────────
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?select=id`, {
+      headers: {
+        'apikey': ANON_KEY,
+        'Authorization': `Bearer ${ANON_KEY}`,
+        'Prefer': 'count=exact',
+        'Range': '0-0'
+      }
+    });
+    const count = parseInt(res.headers.get('content-range')?.split('/')[1] || '0');
+    if (!count) return;
+
+    const totalMonthlyRevenue = count * AVG_MONTHLY_PER_SUB;
+    const monthsSinceLaunch   = 1; // update as months pass
+    const totalDonated        = totalMonthlyRevenue * DONATION_PCT * monthsSinceLaunch;
+    const yearlyProjection    = totalMonthlyRevenue * DONATION_PCT * 12;
+
+    animateCount('stat-subscribers', count, '');
+    animateCount('stat-donated',     totalDonated,    '$');
+    animateCount('stat-projected',   yearlyProjection,'$');
+  } catch(e) {
+    // silently fail — stats stay as dashes
+  }
+}
+
+function animateCount(id, target, prefix){
+  const el = document.getElementById(id);
+  if (!el) return;
+  const duration = 1800;
+  const start    = performance.now();
+  const isFloat  = target % 1 !== 0;
+  function step(now){
+    const progress = Math.min((now - start) / duration, 1);
+    const eased    = 1 - Math.pow(1 - progress, 3);
+    const value    = Math.floor(eased * target);
+    el.textContent = prefix + (prefix === '$' ? value.toLocaleString() : value);
+    if (progress < 1) requestAnimationFrame(step);
+    else el.textContent = prefix + (prefix === '$' ? Math.floor(target).toLocaleString() : target);
+  }
+  requestAnimationFrame(step);
+}
+
+// Load stats when impact section scrolls into view
+const impactObs = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if(e.isIntersecting){ loadImpactStats(); impactObs.disconnect(); }});
+}, { threshold: 0.3 });
+const impactEl = document.getElementById('stat-subscribers');
+if(impactEl) impactObs.observe(impactEl.closest('section') || impactEl);
 
 // Scroll reveal
 const obs=new IntersectionObserver((entries)=>{
@@ -653,41 +693,6 @@ const sfObs=new IntersectionObserver((entries)=>{
 },{threshold:0.6,rootMargin:'-20% 0px -20% 0px'});
 
 sfSteps.forEach(s=>sfObs.observe(s));
-
-async function loadImpactStats(){
-  const SUPABASE_URL = 'https://grtrcjgsvfsknpnlarxv.supabase.co';
-  const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdydHJjamdzdmZza25wbmxhcnh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5NDgzNTAsImV4cCI6MjA4NjUyNDM1MH0._EsvO6djy3Xa8q7U0_s-YKz0P2JNcr6RQtRcS4O-tBs';
-  const AVG_MONTHLY_PER_SUB = 29;
-  try {
-    const res = await fetch(SUPABASE_URL+'/rest/v1/users?select=id',{
-      headers:{'apikey':ANON_KEY,'Authorization':'Bearer '+ANON_KEY,'Prefer':'count=exact','Range':'0-0'}
-    });
-    const count = parseInt(res.headers.get('content-range')?.split('/')[1]||'0');
-    if(!count) return;
-    const totalDonated = count * AVG_MONTHLY_PER_SUB * 0.05 * 1;
-    const yearlyProjection = count * AVG_MONTHLY_PER_SUB * 0.05 * 12;
-    animateCount('stat-subscribers', count, '');
-    animateCount('stat-donated', totalDonated, '$');
-    animateCount('stat-projected', yearlyProjection, '$');
-  } catch(e) {}
-}
-function animateCount(id, target, prefix){
-  const el=document.getElementById(id);
-  if(!el)return;
-  const start=performance.now();
-  function step(now){
-    const p=Math.min((now-start)/1800,1);
-    const e=1-Math.pow(1-p,3);
-    const v=Math.floor(e*target);
-    el.textContent=prefix+(prefix==='$'?v.toLocaleString():v);
-    if(p<1)requestAnimationFrame(step);
-    else el.textContent=prefix+(prefix==='$'?Math.floor(target).toLocaleString():target);
-  }
-  requestAnimationFrame(step);
-}
-const _io=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){loadImpactStats();_io.disconnect();}});},{threshold:0.3});
-const _el=document.getElementById('stat-subscribers');
-if(_el)_io.observe(_el.parentElement.parentElement.parentElement||_el);
 </script>
 </body>
 </html>
