@@ -125,14 +125,36 @@ h1 em{font-style:italic;color:var(--gold);}
 /* ── Screenshot gallery ──────────────── */
 .screenshots{background:var(--white);padding:80px 80px;}
 .screenshots-intro{text-align:center;margin-bottom:52px;}
-.ss-row{display:flex;gap:16px;justify-content:center;align-items:flex-end;overflow-x:auto;padding-bottom:20px;scrollbar-width:none;}
+.ss-row{display:flex;gap:20px;justify-content:center;align-items:flex-end;overflow-x:auto;padding-bottom:20px;scrollbar-width:none;}
 .ss-row::-webkit-scrollbar{display:none;}
-.ss-item{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:12px;}
+.ss-item{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:14px;}
 .ss-raise{transform:translateY(-28px);}
 .ss-raise2{transform:translateY(-14px);}
-.ss-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px;}
-.ss-placeholder-icon{width:36px;height:36px;border-radius:50%;background:rgba(201,162,39,.15);display:flex;align-items:center;justify-content:center;}
-.ss-placeholder-text{font-size:10px;color:rgba(255,255,255,.3);text-align:center;line-height:1.5;}
+.ss-phone-frame{
+  width:210px;
+  background:#000;
+  border-radius:40px;
+  border:6px solid #1c1c1e;
+  box-shadow:0 24px 60px rgba(0,0,0,0.22),0 8px 20px rgba(0,0,0,0.12),inset 0 0 0 1px rgba(255,255,255,0.08);
+  overflow:hidden;
+  position:relative;
+}
+.ss-phone-frame::before{
+  content:'';
+  position:absolute;
+  top:0;left:50%;
+  transform:translateX(-50%);
+  width:95px;height:28px;
+  background:#000;
+  border-radius:0 0 18px 18px;
+  z-index:2;
+}
+.ss-phone-frame img{
+  width:100%;
+  display:block;
+  object-fit:cover;
+  object-position:top;
+}
 .ss-label{font-size:12px;font-weight:500;color:var(--muted);}
 
 /* ── Devices section ─────────────────── */
@@ -440,46 +462,26 @@ footer{background:var(--navy);padding:56px 80px 40px;}
   </div>
   <div class="ss-row">
     <div class="ss-item reveal d1">
-      <div class="ss-device-zoom">
-        <div class="device device-iphone-14-pro device-spacegray">
-          <div class="device-frame">
-            <img src="/screen-home.png" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;border-radius:inherit;" alt="Home screen"/>
-          </div>
-          <div class="device-stripe"></div><div class="device-header"></div><div class="device-sensors"></div><div class="device-btns"></div><div class="device-power"></div>
-        </div>
+      <div class="ss-phone-frame">
+        <img src="/screen-home.png" alt="Home screen"/>
       </div>
       <span class="ss-label">Home</span>
     </div>
     <div class="ss-item ss-raise reveal d2">
-      <div class="ss-device-zoom">
-        <div class="device device-iphone-14-pro device-spacegray">
-          <div class="device-frame">
-            <img src="/screen-trips.png" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;border-radius:inherit;" alt="Trips screen"/>
-          </div>
-          <div class="device-stripe"></div><div class="device-header"></div><div class="device-sensors"></div><div class="device-btns"></div><div class="device-power"></div>
-        </div>
+      <div class="ss-phone-frame">
+        <img src="/screen-trips.png" alt="Trips screen"/>
       </div>
       <span class="ss-label">Voyages</span>
     </div>
     <div class="ss-item reveal d2">
-      <div class="ss-device-zoom">
-        <div class="device device-iphone-14-pro device-spacegray">
-          <div class="device-frame">
-            <img src="/screen-tasks.png" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;border-radius:inherit;" alt="Tasks screen"/>
-          </div>
-          <div class="device-stripe"></div><div class="device-header"></div><div class="device-sensors"></div><div class="device-btns"></div><div class="device-power"></div>
-        </div>
+      <div class="ss-phone-frame">
+        <img src="/screen-tasks.png" alt="Tasks screen"/>
       </div>
       <span class="ss-label">Tasks</span>
     </div>
     <div class="ss-item ss-raise2 reveal d3">
-      <div class="ss-device-zoom">
-        <div class="device device-iphone-14-pro device-spacegray">
-          <div class="device-frame">
-            <img src="/screen-maintenance.png" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;border-radius:inherit;" alt="Maintenance screen"/>
-          </div>
-          <div class="device-stripe"></div><div class="device-header"></div><div class="device-sensors"></div><div class="device-btns"></div><div class="device-power"></div>
-        </div>
+      <div class="ss-phone-frame">
+        <img src="/screen-maintenance.png" alt="Maintenance screen"/>
       </div>
       <span class="ss-label">Maintenance</span>
     </div>
