@@ -305,18 +305,28 @@ footer{background:var(--navy);padding:56px 80px 40px;}
   .macbook-lid{width:380px;}
   .macbook-screen{height:212px;}
 }
+/* Read More button - hidden on desktop */
+.read-more-btn{display:none;}
+
+/* About expandable - always visible on desktop */
+.about-expandable{display:block;}
+
 @media(max-width:768px){
-  /* 1. Hero - reduce size significantly */
-  .hero{grid-template-columns:1fr;padding:72px 24px 40px;text-align:center;}
-  .hero-visual{order:-1;margin-bottom:-20px;}
-  .hero-float{zoom:0.7;}
-  .hero h1{font-size:clamp(32px,8vw,44px);margin-bottom:14px;}
+  /* 1. Hero - hide device mockup, reduce size */
+  .hero{grid-template-columns:1fr;padding:56px 24px 36px;text-align:center;}
+  .hero-visual{display:none;}
+  .hero h1{font-size:clamp(30px,8vw,42px);margin-bottom:14px;}
   .hero-sub{margin:0 auto 28px;font-size:15px;}
   .hero-actions{justify-content:center;}
   .eyebrow{justify-content:center;}
 
-  /* 2. General sections */
-  .section,.screenshots,.devices,.download{padding:48px 24px;}
+  /* 2. Nav smaller */
+  nav.nav,.nav{height:52px !important;padding:0 20px !important;}
+  .nav-logo-name{font-size:15px !important;}
+  .nav-logo svg{width:22px !important;height:22px !important;}
+
+  /* 3. General sections */
+  .section,.screenshots,.devices{padding:48px 24px;}
   .sf-intro{padding:48px 24px 0;}
   .sf-inner{grid-template-columns:1fr;padding:0 24px;}
   .sf-phone-col{display:none;}
@@ -324,15 +334,21 @@ footer{background:var(--navy);padding:56px 80px 40px;}
   .sf-steps{padding:28px 0 48px;}
   .roles-grid{grid-template-columns:1fr;}
 
-  /* 3. About section - Mission box stacks AFTER text */
+  /* 4. About - Read More collapse */
   .about-grid{grid-template-columns:1fr !important;gap:32px !important;padding-bottom:48px !important;}
+  .about-expandable{display:none;margin-top:12px;}
+  .about-expandable.open{display:block;}
+  .read-more-btn{display:inline-flex;align-items:center;gap:6px;margin-top:16px;background:none;border:1.5px solid var(--navy);color:var(--navy);font-size:14px;font-weight:600;font-family:'Inter',sans-serif;padding:10px 20px;border-radius:8px;cursor:pointer;transition:all .2s;}
+  .read-more-btn:hover{background:var(--navy);color:#fff;}
+  .read-more-btn.open::after{content:' ▲';font-size:10px;}
+  .read-more-btn:not(.open)::after{content:' ▼';font-size:10px;}
 
-  /* 4. Ocean impact stats - Total Donated full width top, other two side by side */
+  /* 5. Ocean stats - centred, Total Donated top, others side by side */
+  .ocean-stats{grid-template-columns:1fr 1fr !important;gap:14px !important;margin:0 auto;width:100%;}
   .stat-card-donated{grid-column:1 / -1;order:-1;top:0 !important;}
   .stat-card-subscribers,.stat-card-projected{grid-column:span 1;}
-  .ocean-stats{grid-template-columns:1fr 1fr !important;gap:14px !important;}
 
-  /* 5. Footer - Product+Support side by side, Legal below */
+  /* 6. Footer - Product+Support side by side, Legal below */
   footer{padding:40px 24px 28px;}
   .footer-top{flex-direction:row;flex-wrap:wrap;gap:0 !important;}
   .footer-top > div:first-child{width:100%;margin-bottom:24px;}
@@ -347,9 +363,9 @@ footer{background:var(--navy);padding:56px 80px 40px;}
   @keyframes swellMobile{0%,100%{transform:perspective(1100px) rotateY(-12deg) rotateX(3deg) translateY(0);}50%{transform:perspective(1100px) rotateY(-12deg) rotateX(3deg) translateY(-10px);}}
 }
 @media(max-width:480px){
-  h1{font-size:30px;}
-  .hero{padding:64px 20px 36px;}
-  .hero-actions,.dl-actions{flex-direction:column;align-items:center;}
+  h1{font-size:28px;}
+  .hero{padding:52px 20px 32px;}
+  .hero-actions{flex-direction:column;align-items:center;}
   .btn-primary,.btn-ghost,.btn-white,.btn-ghost-white{width:100%;justify-content:center;}
   .macbook-lid{width:280px;}
   .macbook-screen{height:156px;}
@@ -488,9 +504,12 @@ footer{background:var(--navy);padding:56px 80px 40px;}
       <div>
         <div class="sec-eyebrow">The story behind the app</div>
         <h2 class="sec-title" style="margin-bottom:20px;">Built by someone who's been there.</h2>
-        <p style="font-size:16px;color:var(--muted);line-height:1.8;margin-bottom:16px;">My name is <strong style="color:var(--navy);font-weight:600;">Clinton Handford</strong>. I've been in the yachting industry for about 4 years now, and in that time I noticed something missing — there wasn't a single app that handled everything we need day-to-day. No real all-in-one solution built for crew, by crew.</p>
-        <p style="font-size:16px;color:var(--muted);line-height:1.8;margin-bottom:16px;">So I decided to build one. Nautical Ops will never be "done" — I'm constantly updating it, keeping it user-friendly and relevant, not just for professional yacht crew, but for family-run boats and anyone who finds it useful for their maritime needs.</p>
-        <p style="font-size:16px;color:var(--muted);line-height:1.8;">I'm not just building this because I'm in the industry. I'm building it because I believe there's a better way to run a vessel — and I want everyone on the water to have access to it.</p>
+        <div class="about-expandable">
+          <p style="font-size:16px;color:var(--muted);line-height:1.8;margin-bottom:16px;">My name is <strong style="color:var(--navy);font-weight:600;">Clinton Handford</strong>. I've been in the yachting industry for about 4 years now, and in that time I noticed something missing — there wasn't a single app that handled everything we need day-to-day. No real all-in-one solution built for crew, by crew.</p>
+          <p style="font-size:16px;color:var(--muted);line-height:1.8;margin-bottom:16px;">So I decided to build one. Nautical Ops will never be "done" — I'm constantly updating it, keeping it user-friendly and relevant, not just for professional yacht crew, but for family-run boats and anyone who finds it useful for their maritime needs.</p>
+          <p style="font-size:16px;color:var(--muted);line-height:1.8;">I'm not just building this because I'm in the industry. I'm building it because I believe there's a better way to run a vessel — and I want everyone on the water to have access to it.</p>
+        </div>
+        <button class="read-more-btn" onclick="toggleReadMore(this)" aria-expanded="false">Read more</button>
       </div>
 
     </div>
@@ -498,7 +517,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
 </section>
 
 <!-- ── Ocean Impact ──────────────────────── -->
-<section style="position:relative;padding:96px 80px;overflow:hidden;background:#fff;">
+<section class="ocean-section" style="position:relative;padding:96px 80px;overflow:hidden;background:#fff;">
 
   <!-- Faded ocean cleanup video background -->
   <!-- Save an ocean cleanup video as /ocean-cleanup.mp4 to activate -->
@@ -578,24 +597,6 @@ footer{background:var(--navy);padding:56px 80px 40px;}
 </section>
 
 <!-- ── Download CTA ───────────────────── -->
-<section class="download">
-  <div class="dl-inner reveal">
-    <div class="sec-eyebrow" style="color:rgba(201,162,39,0.75);">Available now</div>
-    <h2 class="dl-title">Your vessel,<br><em>always organised.</em></h2>
-    <p class="dl-sub">Download on iOS and get your whole crew on board. Web access included — log in from any device, anywhere in the world.</p>
-    <div class="dl-actions">
-      <a href="https://apps.apple.com/app/nautical-ops/id6760950524" class="btn-white">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-        Download on the App Store
-      </a>
-      <a href="/login" class="btn-ghost-white">
-        Access Web App
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-      </a>
-    </div>
-    <p class="dl-note">iOS 16+. Android coming soon.</p>
-  </div>
-</section>
 
 <!-- ── FAQ ────────────────────────────── -->
 <section class="section grey" id="faq">
@@ -639,6 +640,19 @@ footer{background:var(--navy);padding:56px 80px 40px;}
 
 <script>
 // FAQ
+function toggleReadMore(btn){
+  const expandable = btn.previousElementSibling;
+  const isOpen = btn.classList.contains('open');
+  if(isOpen){
+    expandable.classList.remove('open');
+    btn.classList.remove('open');
+    btn.childNodes[0].textContent = 'Read more';
+  } else {
+    expandable.classList.add('open');
+    btn.classList.add('open');
+    btn.childNodes[0].textContent = 'Read less';
+  }
+}
 function toggleFaq(btn){
   const ans=btn.nextElementSibling;
   const wasOpen=btn.classList.contains('open');
