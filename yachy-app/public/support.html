@@ -4,92 +4,97 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Support — Nautical Ops</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #eef0f3; color: #1a2340; font-family: 'Inter', sans-serif; font-weight: 400; line-height: 1.7; min-height: 100vh; }
-  header { background: #ffffff; border-bottom: 1px solid #e2e6ea; padding: 16px 20px; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 100; }
-  .logo-icon { width: 32px; height: 32px; }
-  .logo-text { font-size: 17px; font-weight: 700; color: #1a2340; }
-  .nav-links { margin-left: auto; display: flex; gap: 24px; list-style: none; }
-  .nav-links a { color: #6b7280; text-decoration: none; font-size: 14px; }
-  .nav-links a:hover { color: #1a2340; }
-  .nav-links a.active { color: #1a2340; font-weight: 600; }
-  .page { max-width: 720px; margin: 0 auto; padding: 40px 20px 100px; }
-  .page-title { font-size: 26px; font-weight: 800; color: #1a2340; margin-bottom: 32px; }
-  .section-card { background: #ffffff; border: 1px solid #e2e6ea; border-radius: 14px; padding: 24px; margin-bottom: 12px; }
-  .section-card h2 { font-size: 16px; font-weight: 700; color: #1a2340; margin-bottom: 10px; }
-  .section-card p { font-size: 14px; color: #4b5563; line-height: 1.75; }
-  .section-card a { color: #1a2340; font-weight: 600; text-decoration: none; }
-  .section-card a:hover { text-decoration: underline; }
-  .email-link-row { margin-top: 14px; }
-  .email-btn { display: inline-block; background: #1a2340; color: #ffffff; font-size: 14px; font-weight: 600; padding: 10px 20px; border-radius: 8px; text-decoration: none; letter-spacing: 0.01em; }
-  .email-btn:hover { background: #243060; }
-  .faq-item { padding: 16px 0; border-bottom: 1px solid #f0f2f5; }
-  .faq-item:last-child { border-bottom: none; padding-bottom: 0; }
-  .faq-item:first-child { padding-top: 0; }
-  .faq-q { font-size: 14px; font-weight: 700; color: #1a2340; margin-bottom: 6px; display: flex; gap: 8px; align-items: flex-start; }
-  .faq-q::before { content: "Q"; background: #1a2340; color: #f0a500; font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 4px; flex-shrink: 0; margin-top: 1px; }
-  .faq-a { font-size: 14px; color: #4b5563; line-height: 1.75; padding-left: 28px; }
-  footer { text-align: center; padding: 32px 20px; border-top: 1px solid #e2e6ea; background: #ffffff; }
-  footer p { font-size: 13px; color: #6b7280; }
-  footer a { color: #1a2340; text-decoration: none; font-weight: 500; }
-  @media (max-width: 500px) { .nav-links { display: none; } }
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{background:#fff;color:#1e293b;font-family:'Inter',sans-serif;font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased;}
+a{color:#1e3a5f;text-decoration:underline;}a:hover{color:#152d4a;}
+:root{--navy:#1e3a5f;--gold:#c9a227;--border:#e2e8f0;--muted:#64748b;--bg:#f7f8fa;}
+.nav{background:#fff;border-bottom:1px solid var(--border);padding:0 80px;height:60px;display:flex;align-items:center;justify-content:space-between;}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.nav-logo-name{font-family:'Fraunces',Georgia,serif;font-size:17px;font-weight:600;color:var(--navy);}
+.nav-back{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:5px;transition:color .15s;text-decoration:none;}
+.nav-back:hover{color:var(--navy);}
+.hero{text-align:center;padding:72px 80px 56px;background:#fff;}
+.hero h1{font-family:'Fraunces',Georgia,serif;font-size:clamp(32px,5vw,52px);font-weight:600;color:var(--navy);margin-bottom:14px;letter-spacing:-.02em;}
+.hero p{font-size:17px;color:var(--muted);max-width:480px;margin:0 auto;}
+.cards-wrap{padding:16px 80px 72px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;max-width:960px;margin:0 auto;}
+.contact-card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:32px 28px;transition:border-color .2s,box-shadow .2s;}
+.contact-card:hover{border-color:#94a3b8;box-shadow:0 8px 28px rgba(30,58,95,.07);}
+.card-icon{width:44px;height:44px;background:var(--bg);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;}
+.card-icon svg{width:22px;height:22px;color:var(--navy);}
+.card-title{font-size:17px;font-weight:600;color:var(--navy);margin-bottom:8px;}
+.card-desc{font-size:14px;color:var(--muted);line-height:1.65;margin-bottom:16px;}
+.card-link{display:inline-flex;align-items:center;gap:5px;font-size:14px;font-weight:600;color:var(--navy);text-decoration:none;border-bottom:1.5px solid rgba(30,58,95,.25);padding-bottom:1px;transition:border-color .15s;}
+.card-link:hover{border-color:var(--navy);}
+.faq-q.open .faq-icon::after{transform:translate(-50%,-50%) rotate(90deg);opacity:0;}
+footer{background:var(--navy);padding:32px 80px;}
+.footer-inner{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;}
+.footer-copy{font-size:12px;color:rgba(255,255,255,.28);}
+.footer-links{display:flex;gap:20px;}
+.footer-links a{font-size:12px;color:rgba(255,255,255,.4);text-decoration:none;transition:color .15s;}
+.footer-links a:hover{color:#fff;}
+@media(max-width:1024px){.nav,.hero,.cards-wrap,footer{padding-left:40px;padding-right:40px;}}
+@media(max-width:768px){.nav,.hero,.cards-wrap,footer{padding-left:24px;padding-right:24px;}.cards-wrap{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
-<header>
-  <svg class="logo-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M6 26 Q6 30 18 31 Q30 30 30 26 L28 18 L8 18 Z" fill="none" stroke="#f0a500" stroke-width="1.8" stroke-linejoin="round"/>
-    <rect x="11" y="12" width="14" height="7" rx="1.5" fill="none" stroke="#f0a500" stroke-width="1.8"/>
-    <line x1="18" y1="5" x2="18" y2="12" stroke="#f0a500" stroke-width="1.8" stroke-linecap="round"/>
-    <circle cx="18" cy="4" r="1.8" fill="#f0a500"/>
-    <path d="M4 32 Q8 29 12 32 Q16 35 20 32 Q24 29 28 32 Q31 29 33 32" fill="none" stroke="#f0a500" stroke-width="1.4" stroke-linecap="round"/>
-  </svg>
-  <span class="logo-text">Nautical Ops</span>
-  <ul class="nav-links">
-    <li><a href="/pricing">Pricing</a></li>
-    <li><a href="/privacy-policy">Privacy</a></li>
-    <li><a href="/refund-policy">Refunds</a></li>
-    <li><a href="/terms-and-conditions">Terms</a></li>
-    <li><a href="/support" class="active">Support</a></li>
-  </ul>
-</header>
+<nav class="nav">
+  <a href="/" class="nav-logo">
+    <svg width="26" height="26" viewBox="0 0 36 36" fill="none"><path d="M6 26 Q6 30 18 31 Q30 30 30 26 L28 18 L8 18 Z" stroke="#c9a227" stroke-width="1.8" stroke-linejoin="round"/><rect x="11" y="12" width="14" height="7" rx="1.5" stroke="#c9a227" stroke-width="1.8"/><line x1="18" y1="5" x2="18" y2="12" stroke="#c9a227" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="4" r="1.8" fill="#c9a227"/></svg>
+    <span class="nav-logo-name">Nautical Ops</span>
+  </a>
+  <a href="/" class="nav-back">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    Back to home
+  </a>
+</nav>
 
-<div class="page">
-  <h1 class="page-title">Support</h1>
+<section class="hero">
+  <h1>How can we help?</h1>
+  <p>We're here for you. Get in touch and we'll respond as quickly as we can.</p>
+</section>
 
-  <div class="section-card">
-    <h2>Contact Us</h2>
-    <p>For support with Nautical Ops please email us at <a href="mailto:support@nautical-ops.com">support@nautical-ops.com</a>. We aim to respond to all enquiries within 24 hours.</p>
-    <div class="email-link-row">
-      <a class="email-btn" href="mailto:support@nautical-ops.com">support@nautical-ops.com</a>
+<div class="cards-wrap">
+  <div class="contact-card">
+    <div class="card-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
     </div>
+    <div class="card-title">Email Support</div>
+    <p class="card-desc">Send us your question or issue and we'll get back to you within 2 business days.</p>
+    <a href="mailto:support@nautical-ops.com" class="card-link">support@nautical-ops.com</a>
   </div>
-
-  <div class="section-card">
-    <h2>Frequently Asked Questions</h2>
-    <div class="faq-item">
-      <div class="faq-q">How do I create a vessel?</div>
-      <p class="faq-a">After signing up as a Captain, follow the on-screen prompts to set up your vessel.</p>
+  <div class="contact-card">
+    <div class="card-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
     </div>
-    <div class="faq-item">
-      <div class="faq-q">How do I invite crew members?</div>
-      <p class="faq-a">Go to Settings, tap Crew Management, and use the invite code to add crew.</p>
+    <div class="card-title">Refund Requests</div>
+    <p class="card-desc">All purchases are made through Apple. Refund requests must be submitted directly via Apple's portal.</p>
+    <a href="https://reportaproblem.apple.com" target="_blank" rel="noopener" class="card-link">reportaproblem.apple.com ↗</a>
+  </div>
+  <div class="contact-card">
+    <div class="card-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
     </div>
-    <div class="faq-item">
-      <div class="faq-q">How do I cancel my subscription?</div>
-      <p class="faq-a">Email <a href="mailto:support@nautical-ops.com">support@nautical-ops.com</a> and we will process your cancellation within 24 hours.</p>
-    </div>
-    <div class="faq-item">
-      <div class="faq-q">I forgot my password, what do I do?</div>
-      <p class="faq-a">On the login screen tap Forgot Password and follow the instructions.</p>
-    </div>
+    <div class="card-title">Manage Subscription</div>
+    <p class="card-desc">To cancel or change your plan, go to your Apple ID subscription settings on your device.</p>
+    <a href="https://apps.apple.com/account/subscriptions" target="_blank" rel="noopener" class="card-link">Manage in App Store ↗</a>
   </div>
 </div>
 
+
 <footer>
-  <p>© 2025 Nautical Ops. All rights reserved. &nbsp;|&nbsp; <a href="/terms-and-conditions">Terms</a> &nbsp;|&nbsp; <a href="/refund-policy">Refund Policy</a> &nbsp;|&nbsp; <a href="/pricing">Pricing</a> &nbsp;|&nbsp; <a href="/support">Support</a></p>
+  <div class="footer-inner">
+    <span class="footer-copy">© 2026 Nautical Ops · The Lumen Digital</span>
+    <div class="footer-links">
+      <a href="/privacy-policy">Privacy Policy</a>
+      <a href="/terms-and-conditions">Terms & Conditions</a>
+      <a href="/refund-policy">Refund Policy</a>
+      <a href="/support">Support</a>
+    </div>
+  </div>
 </footer>
+
 </body>
 </html>
