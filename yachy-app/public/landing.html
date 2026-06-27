@@ -96,8 +96,8 @@ h1 em{font-style:italic;color:var(--gold);}
 .sf{position:relative;background:var(--bg);}
 .sf-bg{position:absolute;inset:0;background-image:url('/yachts-aerial.jpg');background-size:cover;background-position:center;opacity:0.30;z-index:0;pointer-events:none;}
 .sf-intro{text-align:center;padding:80px 80px 0;position:relative;z-index:2;}
-.sf-inner{display:grid;grid-template-columns:1fr 1fr;min-height:auto;padding:0 60px;align-items:start;position:relative;z-index:2;}
-.sf-steps{padding:80px 60px 100px 0;}
+.sf-inner{display:grid;grid-template-columns:1fr 1fr;min-height:auto;padding:0 80px;align-items:start;position:relative;z-index:2;}
+.sf-steps{padding:80px 20px 100px 0;}
 .sf-step{min-height:80vh;display:flex;align-items:center;opacity:.35;transition:opacity .4s;}
 .sf-step.active{opacity:1;}
 .sf-phone-col{position:sticky;top:0;height:100vh;display:flex;align-items:center;justify-content:center;z-index:2;}
@@ -107,6 +107,22 @@ h1 em{font-style:italic;color:var(--gold);}
 .sf-screen{display:none;width:100%;height:100%;position:absolute;top:0;left:0;}
 .sf-screen.active{display:block;}
 .sf-phone-col .device .device-frame{overflow:hidden !important;box-shadow:inset 0 0 0 2px rgba(0,0,0,0.9) !important;}
+/* Clean dark phone frame for sticky scroll */
+.sf-device-wrap{position:relative;width:300px;}
+.sf-device-frame{
+  width:300px;
+  background:#18182a;
+  border-radius:46px;
+  border:8px solid #111120;
+  box-shadow:0 0 0 1.5px rgba(255,255,255,0.06),0 32px 80px rgba(0,0,0,0.45),0 8px 24px rgba(0,0,0,0.3);
+  overflow:hidden;
+  position:relative;
+}
+.sf-device-island{
+  position:absolute;top:12px;left:50%;transform:translateX(-50%);
+  width:96px;height:28px;background:#111120;border-radius:20px;z-index:10;
+}
+.sf-device-frame img{width:100%;display:block;border-radius:38px;}
 .feat-tag{display:block;text-align:center;font-size:12px;font-weight:600;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px;}
 .feat-title{font-family:var(--ff-d);font-size:clamp(30px,4vw,48px);font-weight:600;color:var(--navy);line-height:1.12;letter-spacing:-.02em;margin-bottom:16px;}
 .feat-desc{font-size:17px;color:var(--muted);line-height:1.8;}
@@ -413,31 +429,25 @@ footer{background:var(--navy);padding:56px 80px 40px;}
 
     <div class="sf-phone-col">
       <div class="sf-phone-scene">
-        <div style="zoom:0.88;">
-          <div class="device device-iphone-14-pro device-spacegray">
-            <div class="device-frame" style="overflow:hidden;">
+        <div class="sf-device-wrap">
+          <div class="sf-device-frame">
+            <div class="sf-device-island"></div>
 
-              <!-- Screen 0: Voyages -->
-              <div class="sf-screen active" data-step="0" style="width:100%;height:100%;position:absolute;top:0;left:0;">
-                <img src="/screen-trips.png" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;" alt="Trips screen"/>
-              </div>
-
-              <!-- Screen 1: Tasks -->
-              <div class="sf-screen" data-step="1" style="width:100%;height:100%;position:absolute;top:0;left:0;">
-                <img src="/screen-tasks.png" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;" alt="Tasks screen"/>
-              </div>
-
-              <!-- Screen 2: Maintenance -->
-              <div class="sf-screen" data-step="2" style="width:100%;height:100%;position:absolute;top:0;left:0;">
-                <img src="/screen-maintenance.png" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;" alt="Maintenance screen"/>
-              </div>
-
+            <!-- Screen 0: Voyages -->
+            <div class="sf-screen active" data-step="0">
+              <img src="/screen-trips.png" alt="Trips screen"/>
             </div>
-            <div class="device-stripe"></div>
-            <div class="device-header"></div>
-            <div class="device-sensors"></div>
-            <div class="device-btns"></div>
-            <div class="device-power"></div>
+
+            <!-- Screen 1: Tasks -->
+            <div class="sf-screen" data-step="1">
+              <img src="/screen-tasks.png" alt="Tasks screen"/>
+            </div>
+
+            <!-- Screen 2: Maintenance -->
+            <div class="sf-screen" data-step="2">
+              <img src="/screen-maintenance.png" alt="Maintenance screen"/>
+            </div>
+
           </div>
         </div>
       </div>
