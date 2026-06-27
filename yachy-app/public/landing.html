@@ -442,7 +442,62 @@ footer{background:var(--navy);padding:56px 80px 40px;}
 </section>
 
 <!-- ── Screenshot gallery ─────────────── -->
-<section class="screenshots reveal">
+<!-- About -->
+<section class="section" style="background:var(--white);padding-top:96px;padding-bottom:0;">
+  <div style="max-width:900px;margin:0 auto;">
+    <div class="reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:72px;align-items:center;padding-bottom:96px;">
+      <div>
+        <div class="sec-eyebrow">The story behind the app</div>
+        <h2 class="sec-title" style="margin-bottom:20px;">Built by someone who's been there.</h2>
+        <p style="font-size:16px;color:var(--muted);line-height:1.8;margin-bottom:16px;">My name is <strong style="color:var(--navy);font-weight:600;">Clinton Handford</strong>. I've been in the yachting industry for about 4 years now, and in that time I noticed something missing — there wasn't a single app that handled everything we need day-to-day. No real all-in-one solution built for crew, by crew.</p>
+        <p style="font-size:16px;color:var(--muted);line-height:1.8;margin-bottom:16px;">So I decided to build one. Nautical Ops will never be "done" — I'm constantly updating it, keeping it user-friendly and relevant, not just for professional yacht crew, but for family-run boats and anyone who finds it useful for their maritime needs.</p>
+        <p style="font-size:16px;color:var(--muted);line-height:1.8;">I'm not just building this because I'm in the industry. I'm building it because I believe there's a better way to run a vessel — and I want everyone on the water to have access to it.</p>
+      </div>
+      <div style="position:relative;border-radius:20px;overflow:hidden;min-height:360px;background:var(--navy);">
+        <div style="position:absolute;inset:0;background-image:url('/yacht-bg.jpg');background-size:cover;background-position:center;opacity:0.35;"></div>
+        <div style="position:relative;z-index:2;padding:40px 36px;display:flex;flex-direction:column;justify-content:flex-end;height:100%;min-height:360px;">
+          <div style="font-size:11px;font-weight:600;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px;">The Mission</div>
+          <p style="font-family:'Fraunces',serif;font-size:28px;font-weight:600;color:#fff;line-height:1.25;margin:0;">"An app that keeps getting better — for every crew on every vessel."</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Ocean Impact -->
+<section style="position:relative;padding:96px 80px;overflow:hidden;background:#fff;">
+  <video autoplay loop muted playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.12;z-index:0;" onerror="this.style.display='none'">
+    <source src="/ocean-cleanup.mp4" type="video/mp4"/>
+  </video>
+  <div style="position:absolute;inset:0;background:linear-gradient(160deg,rgba(30,58,95,0.04) 0%,rgba(201,162,39,0.03) 100%);z-index:1;pointer-events:none;"></div>
+  <div style="position:relative;z-index:2;max-width:960px;margin:0 auto;">
+    <div class="reveal" style="text-align:center;margin-bottom:64px;">
+      <div class="sec-eyebrow">Our commitment</div>
+      <h2 class="sec-title" style="margin-bottom:16px;">5% of every subscription<br>goes back to the ocean.</h2>
+      <p style="font-size:16px;color:var(--muted);max-width:560px;margin:0 auto;line-height:1.75;">As a nature lover, I understand that even when we follow the rules, we're still part of the problem. Every subscription to Nautical Ops contributes directly to ocean cleanup — because the sea deserves better.</p>
+    </div>
+    <div class="reveal" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;">
+      <div style="background:#fff;border:1px solid var(--border);border-radius:20px;padding:36px 28px;text-align:center;box-shadow:0 4px 24px rgba(30,58,95,0.06);">
+        <div style="font-size:11px;font-weight:600;color:var(--light);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px;">Active Subscribers</div>
+        <div id="stat-subscribers" style="font-family:'Fraunces',serif;font-size:56px;font-weight:600;color:var(--navy);line-height:1;margin-bottom:8px;">—</div>
+        <div style="font-size:13px;color:var(--light);">vessels on the water</div>
+      </div>
+      <div style="background:#fff;border:2px solid var(--gold);border-radius:20px;padding:36px 28px;text-align:center;box-shadow:0 8px 40px rgba(201,162,39,0.12);position:relative;top:-8px;">
+        <div style="font-size:11px;font-weight:600;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px;">Total Donated</div>
+        <div id="stat-donated" style="font-family:'Fraunces',serif;font-size:56px;font-weight:600;color:var(--gold);line-height:1;margin-bottom:8px;">—</div>
+        <div style="font-size:13px;color:var(--light);">to ocean cleanup</div>
+      </div>
+      <div style="background:#fff;border:1px solid var(--border);border-radius:20px;padding:36px 28px;text-align:center;box-shadow:0 4px 24px rgba(30,58,95,0.06);">
+        <div style="font-size:11px;font-weight:600;color:var(--light);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px;">2026 Projection</div>
+        <div id="stat-projected" style="font-family:'Fraunces',serif;font-size:56px;font-weight:600;color:var(--navy);line-height:1;margin-bottom:8px;">—</div>
+        <div style="font-size:13px;color:var(--light);">estimated this year</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- hidden screenshots kept for later -->
+<section class="screenshots reveal" style="display:none;">
   <div class="screenshots-intro">
     <div class="sec-eyebrow">See it in action</div>
     <h2 class="sec-title" style="margin-bottom:10px;">Built for life on board.</h2>
@@ -598,6 +653,41 @@ const sfObs=new IntersectionObserver((entries)=>{
 },{threshold:0.6,rootMargin:'-20% 0px -20% 0px'});
 
 sfSteps.forEach(s=>sfObs.observe(s));
+
+async function loadImpactStats(){
+  const SUPABASE_URL = 'https://grtrcjgsvfsknpnlarxv.supabase.co';
+  const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdydHJjamdzdmZza25wbmxhcnh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5NDgzNTAsImV4cCI6MjA4NjUyNDM1MH0._EsvO6djy3Xa8q7U0_s-YKz0P2JNcr6RQtRcS4O-tBs';
+  const AVG_MONTHLY_PER_SUB = 29;
+  try {
+    const res = await fetch(SUPABASE_URL+'/rest/v1/users?select=id',{
+      headers:{'apikey':ANON_KEY,'Authorization':'Bearer '+ANON_KEY,'Prefer':'count=exact','Range':'0-0'}
+    });
+    const count = parseInt(res.headers.get('content-range')?.split('/')[1]||'0');
+    if(!count) return;
+    const totalDonated = count * AVG_MONTHLY_PER_SUB * 0.05 * 1;
+    const yearlyProjection = count * AVG_MONTHLY_PER_SUB * 0.05 * 12;
+    animateCount('stat-subscribers', count, '');
+    animateCount('stat-donated', totalDonated, '$');
+    animateCount('stat-projected', yearlyProjection, '$');
+  } catch(e) {}
+}
+function animateCount(id, target, prefix){
+  const el=document.getElementById(id);
+  if(!el)return;
+  const start=performance.now();
+  function step(now){
+    const p=Math.min((now-start)/1800,1);
+    const e=1-Math.pow(1-p,3);
+    const v=Math.floor(e*target);
+    el.textContent=prefix+(prefix==='$'?v.toLocaleString():v);
+    if(p<1)requestAnimationFrame(step);
+    else el.textContent=prefix+(prefix==='$'?Math.floor(target).toLocaleString():target);
+  }
+  requestAnimationFrame(step);
+}
+const _io=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){loadImpactStats();_io.disconnect();}});},{threshold:0.3});
+const _el=document.getElementById('stat-subscribers');
+if(_el)_io.observe(_el.parentElement.parentElement.parentElement||_el);
 </script>
 </body>
 </html>
