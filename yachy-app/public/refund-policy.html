@@ -4,123 +4,132 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Refund Policy — Nautical Ops</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #eef0f3; color: #1a2340; font-family: 'Inter', sans-serif; font-weight: 400; line-height: 1.7; min-height: 100vh; }
-  header { background: #ffffff; border-bottom: 1px solid #e2e6ea; padding: 16px 20px; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 100; }
-  .logo-icon { width: 32px; height: 32px; }
-  .logo-text { font-size: 17px; font-weight: 700; color: #1a2340; }
-  .nav-links { margin-left: auto; display: flex; gap: 24px; list-style: none; }
-  .nav-links a { color: #6b7280; text-decoration: none; font-size: 14px; }
-  .nav-links a:hover { color: #1a2340; }
-  .page { max-width: 720px; margin: 0 auto; padding: 40px 20px 100px; }
-  .page-title { font-size: 26px; font-weight: 800; color: #1a2340; margin-bottom: 4px; }
-  .page-date { font-size: 13px; color: #6b7280; margin-bottom: 32px; }
-  .section-card { background: #ffffff; border: 1px solid #e2e6ea; border-radius: 14px; padding: 24px; margin-bottom: 12px; }
-  .section-card h2 { font-size: 16px; font-weight: 700; color: #1a2340; margin-bottom: 10px; }
-  .section-card p { font-size: 14px; color: #4b5563; line-height: 1.75; }
-  .eligible-item { border: 1px solid #e2e6ea; border-radius: 10px; padding: 14px 16px; margin-top: 10px; }
-  .eligible-item strong { font-size: 14px; font-weight: 700; color: #1a2340; display: block; margin-bottom: 4px; }
-  .eligible-item p { font-size: 13px; color: #4b5563; }
-  .steps { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
-  .step { display: flex; gap: 14px; align-items: flex-start; }
-  .step-num { width: 28px; height: 28px; border: 2px solid #1a2340; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #1a2340; flex-shrink: 0; }
-  .step p { font-size: 14px; color: #4b5563; padding-top: 4px; }
-  .timeline { display: flex; gap: 16px; margin-top: 14px; }
-  .timeline-item { flex: 1; background: #f8faff; border: 1px solid #e2e6ea; border-radius: 10px; padding: 16px; text-align: center; }
-  .timeline-num { font-size: 28px; font-weight: 800; color: #1a2340; }
-  .timeline-label { font-size: 12px; color: #6b7280; margin-top: 4px; line-height: 1.4; }
-  footer { text-align: center; padding: 32px 20px; border-top: 1px solid #e2e6ea; background: #ffffff; }
-  footer p { font-size: 13px; color: #6b7280; }
-  footer a { color: #1a2340; text-decoration: none; font-weight: 500; }
-  @media (max-width: 500px) { .nav-links { display: none; } .timeline { flex-direction: column; } }
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{background:#fff;color:#1e293b;font-family:'Inter',sans-serif;font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased;}
+a{color:#1e3a5f;text-decoration:underline;}a:hover{color:#152d4a;}
+:root{--navy:#1e3a5f;--gold:#c9a227;--border:#e2e8f0;--muted:#64748b;--bg:#f7f8fa;}
+.nav{background:#fff;border-bottom:1px solid var(--border);padding:0 80px;height:60px;display:flex;align-items:center;justify-content:space-between;}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.nav-logo-name{font-family:'Fraunces',Georgia,serif;font-size:17px;font-weight:600;color:var(--navy);}
+.nav-back{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:5px;transition:color .15s;text-decoration:none;}
+.nav-back:hover{color:var(--navy);}
+.page-wrap{max-width:760px;margin:0 auto;padding:64px 80px 96px;}
+.page-header{margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid var(--border);}
+.page-title{font-family:'Fraunces',Georgia,serif;font-size:42px;font-weight:600;color:var(--navy);margin-bottom:12px;letter-spacing:-.02em;}
+.page-meta{font-size:13px;color:var(--muted);}
+.page-meta strong{color:#1e293b;}
+h2{font-family:'Fraunces',Georgia,serif;font-size:22px;font-weight:600;color:var(--navy);margin:40px 0 14px;}
+p{color:var(--muted);margin-bottom:14px;}
+ul{color:var(--muted);padding-left:20px;margin-bottom:14px;}
+li{margin-bottom:6px;}
+.highlight-box{background:var(--bg);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;padding:16px 20px;margin:24px 0;font-size:14px;color:#1e293b;}
+.step-list{list-style:none;padding:0;counter-reset:steps;}
+.step-list li{counter-increment:steps;display:flex;gap:16px;margin-bottom:20px;align-items:flex-start;}
+.step-list li::before{content:counter(steps);display:flex;align-items:center;justify-content:center;width:28px;height:28px;min-width:28px;border-radius:50%;background:var(--navy);color:#fff;font-size:13px;font-weight:600;margin-top:2px;}
+.step-content strong{display:block;font-size:15px;font-weight:600;color:#1e293b;margin-bottom:3px;}
+.step-content span{font-size:14px;color:var(--muted);}
+footer{background:var(--navy);padding:32px 80px;}
+.footer-inner{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;}
+.footer-copy{font-size:12px;color:rgba(255,255,255,.28);}
+.footer-links{display:flex;gap:20px;}
+.footer-links a{font-size:12px;color:rgba(255,255,255,.4);text-decoration:none;transition:color .15s;}
+.footer-links a:hover{color:#fff;}
+@media(max-width:768px){.nav,.page-wrap,footer{padding-left:24px;padding-right:24px;}.page-title{font-size:30px;}}
 </style>
 </head>
 <body>
-<header>
-  <svg class="logo-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M6 26 Q6 30 18 31 Q30 30 30 26 L28 18 L8 18 Z" fill="none" stroke="#f0a500" stroke-width="1.8" stroke-linejoin="round"/>
-    <rect x="11" y="12" width="14" height="7" rx="1.5" fill="none" stroke="#f0a500" stroke-width="1.8"/>
-    <line x1="18" y1="5" x2="18" y2="12" stroke="#f0a500" stroke-width="1.8" stroke-linecap="round"/>
-    <circle cx="18" cy="4" r="1.8" fill="#f0a500"/>
-    <path d="M4 32 Q8 29 12 32 Q16 35 20 32 Q24 29 28 32 Q31 29 33 32" fill="none" stroke="#f0a500" stroke-width="1.4" stroke-linecap="round"/>
-  </svg>
-  <span class="logo-text">Nautical Ops</span>
-  <ul class="nav-links">
-    <li><a href="/pricing">Pricing</a></li>
-    <li><a href="/privacy-policy">Privacy</a></li>
-    <li><a href="/refund-policy">Refunds</a></li>
-    <li><a href="/terms-and-conditions">Terms</a></li>
+<nav class="nav">
+  <a href="/" class="nav-logo">
+    <svg width="26" height="26" viewBox="0 0 36 36" fill="none"><path d="M6 26 Q6 30 18 31 Q30 30 30 26 L28 18 L8 18 Z" stroke="#c9a227" stroke-width="1.8" stroke-linejoin="round"/><rect x="11" y="12" width="14" height="7" rx="1.5" stroke="#c9a227" stroke-width="1.8"/><line x1="18" y1="5" x2="18" y2="12" stroke="#c9a227" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="4" r="1.8" fill="#c9a227"/></svg>
+    <span class="nav-logo-name">Nautical Ops</span>
+  </a>
+  <a href="/" class="nav-back">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    Back to home
+  </a>
+</nav>
+
+<div class="page-wrap">
+  <div class="page-header">
+    <h1 class="page-title">Refund Policy</h1>
+    <p class="page-meta"><strong>Effective date:</strong> 1 June 2026 &nbsp;·&nbsp; <strong>Last updated:</strong> 27 June 2026</p>
+  </div>
+
+  <div class="highlight-box">
+    All Nautical Ops subscriptions are purchased through the Apple App Store. Because Apple processes all payments on our behalf, <strong>all refund requests must be submitted directly to Apple</strong>. The Lumen Digital is unable to issue refunds for App Store purchases.
+  </div>
+
+  <h2>How to Request a Refund</h2>
+  <p>Apple handles all refund requests for Nautical Ops purchases. Follow these steps:</p>
+
+  <ul class="step-list">
+    <li>
+      <div class="step-content">
+        <strong>Visit Apple's refund portal</strong>
+        <span>Go to <a href="https://reportaproblem.apple.com" target="_blank" rel="noopener">reportaproblem.apple.com</a> on any browser.</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-content">
+        <strong>Sign in with your Apple ID</strong>
+        <span>Use the same Apple ID that was used to purchase the Nautical Ops subscription.</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-content">
+        <strong>Find your Nautical Ops purchase</strong>
+        <span>Locate the subscription charge in your purchase history.</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-content">
+        <strong>Submit your request</strong>
+        <span>Select "Request a Refund", choose a reason, and submit. Apple typically responds within 48 hours.</span>
+      </div>
+    </li>
   </ul>
-</header>
 
-<div class="page">
-  <h1 class="page-title">Refund Policy</h1>
-  <p class="page-date">Last updated: March 2025</p>
+  <h2>Apple's Refund Policy</h2>
+  <p>Refund eligibility is determined entirely by Apple in accordance with their Media Services Terms and Conditions. Apple may grant refunds at their discretion, typically in circumstances including:</p>
+  <ul>
+    <li>Accidental purchases</li>
+    <li>Technical issues that prevented use of the app</li>
+    <li>Unauthorised purchases (e.g., made by a minor without permission)</li>
+  </ul>
+  <p>Apple's refund decisions are final. For more information on Apple's policies, visit <a href="https://support.apple.com/en-au/111950" target="_blank" rel="noopener">Apple Support — Request a refund for apps or content</a>.</p>
 
-  <div class="section-card">
-    <h2>1. Introduction</h2>
-    <p>This Refund Policy ("Policy") applies to subscription payments made for Nautical Ops vessel plans. By subscribing to a plan, you agree to this Policy. Nautical Ops is committed to fair and transparent handling of refund requests.</p>
-  </div>
+  <h2>Free Trial Periods</h2>
+  <p>Nautical Ops may offer a free trial period before charging your subscription. If you cancel during the trial period, you will not be charged. Any unused portion of a free trial is forfeited when you start a paid subscription. Apple manages free trial eligibility — each Apple ID is entitled to one free trial per subscription product.</p>
 
-  <div class="section-card">
-    <h2>2. General Policy</h2>
-    <p>Subscription fees are generally non-refundable. Once a payment has been processed and your vessel plan has been activated, you have access to the Service for the billing period you selected. We do not provide refunds for change of mind, partial use of the Service, or cancellation mid-period.</p>
-  </div>
+  <h2>Cancellation</h2>
+  <p>Cancelling your subscription prevents future charges but does not entitle you to a refund for the current billing period. You will retain access to Nautical Ops until the end of the period you have already paid for.</p>
+  <p>To cancel, go to: <strong>Settings → [Your Name] → Subscriptions → Nautical Ops → Cancel Subscription</strong> on your iPhone or iPad.</p>
 
-  <div class="section-card">
-    <h2>3. Eligible Refunds</h2>
-    <p>Refunds are available only in the following circumstances:</p>
-    <div class="eligible-item">
-      <strong>Double charges</strong>
-      <p>If you were charged twice for the same billing period (e.g., duplicate transactions), we will refund the duplicate charge upon verification.</p>
-    </div>
-    <div class="eligible-item">
-      <strong>Wrong plan selected</strong>
-      <p>If you can provide proof that you selected the wrong plan and contact us promptly after the charge, we may, at our discretion, issue a refund or adjust your plan. Proof may include screenshots, transaction records, or other documentation that clearly demonstrates the error.</p>
-    </div>
-  </div>
+  <h2>Our Commitment</h2>
+  <p>While we cannot process refunds directly, we are committed to ensuring Nautical Ops delivers genuine value to your crew. If you are experiencing a technical issue or are unhappy with the app for any reason, please contact us before requesting a refund — we may be able to resolve your issue directly.</p>
 
-  <div class="section-card">
-    <h2>4. How to Request a Refund</h2>
-    <p>To request a refund, contact us at <a href="mailto:support@nautical-ops.com" style="color:#1a2340;font-weight:600;">support@nautical-ops.com</a> with the following:</p>
-    <div class="steps">
-      <div class="step"><div class="step-num">1</div><p>Your account email address and vessel name</p></div>
-      <div class="step"><div class="step-num">2</div><p>Transaction date and a clear description of the issue</p></div>
-      <div class="step"><div class="step-num">3</div><p>For double charges: include both transaction IDs or receipts</p></div>
-      <div class="step"><div class="step-num">4</div><p>For wrong plan selection: include proof as described in Section 3</p></div>
-    </div>
-  </div>
-
-  <div class="section-card">
-    <h2>5. Processing Times</h2>
-    <div class="timeline">
-      <div class="timeline-item">
-        <div class="timeline-num">14</div>
-        <div class="timeline-label">Business days to review your request</div>
-      </div>
-      <div class="timeline-item">
-        <div class="timeline-num">5–10</div>
-        <div class="timeline-label">Business days to process approved refunds</div>
-      </div>
-    </div>
-    <p style="margin-top:14px;">Approved refunds will be processed to the original payment method. Timing may vary depending on your bank or payment provider.</p>
-  </div>
-
-  <div class="section-card">
-    <h2>6. Changes to This Policy</h2>
-    <p>We may update this Refund Policy from time to time. Material changes will be posted within the application or communicated via email. Your continued use of paid features after changes constitutes acceptance of the updated Policy.</p>
-  </div>
-
-  <div class="section-card">
-    <h2>7. Contact</h2>
-    <p>For refund requests or questions about this Policy, contact us at <a href="mailto:support@nautical-ops.com" style="color:#1a2340;font-weight:600;">support@nautical-ops.com</a>.</p>
-  </div>
+  <h2>Contact Us</h2>
+  <p>If you have a technical issue or a complaint about Nautical Ops, please reach out to us first:</p>
+  <ul>
+    <li><strong>Email:</strong> <a href="mailto:support@nautical-ops.com">support@nautical-ops.com</a></li>
+    <li><strong>Support page:</strong> <a href="/support">nautical-ops.com/support</a></li>
+  </ul>
+  <p>We aim to respond to all support requests within 2 business days.</p>
 </div>
 
 <footer>
-  <p>© 2025 Nautical Ops. All rights reserved. &nbsp;|&nbsp; <a href="/terms-and-conditions">Terms</a> &nbsp;|&nbsp; <a href="/privacy-policy">Privacy Policy</a> &nbsp;|&nbsp; <a href="/pricing">Pricing</a></p>
+  <div class="footer-inner">
+    <span class="footer-copy">© 2026 Nautical Ops · The Lumen Digital</span>
+    <div class="footer-links">
+      <a href="/privacy-policy">Privacy Policy</a>
+      <a href="/terms-and-conditions">Terms & Conditions</a>
+      <a href="/refund-policy">Refund Policy</a>
+      <a href="/support">Support</a>
+    </div>
+  </div>
 </footer>
 </body>
 </html>

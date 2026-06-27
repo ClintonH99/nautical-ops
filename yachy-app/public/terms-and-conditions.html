@@ -3,151 +3,166 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Privacy Policy — Nautical Ops</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<title>Terms &amp; Conditions — Nautical Ops</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #eef0f3; color: #1a2340; font-family: 'Inter', sans-serif; font-weight: 400; line-height: 1.7; min-height: 100vh; }
-  header { background: #ffffff; border-bottom: 1px solid #e2e6ea; padding: 16px 20px; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 100; }
-  .logo-icon { width: 32px; height: 32px; }
-  .logo-text { font-size: 17px; font-weight: 700; color: #1a2340; }
-  .nav-links { margin-left: auto; display: flex; gap: 24px; list-style: none; }
-  .nav-links a { color: #6b7280; text-decoration: none; font-size: 14px; }
-  .nav-links a:hover { color: #1a2340; }
-  .page { max-width: 720px; margin: 0 auto; padding: 40px 20px 100px; }
-  .page-title { font-size: 26px; font-weight: 800; color: #1a2340; margin-bottom: 4px; }
-  .page-date { font-size: 13px; color: #6b7280; margin-bottom: 32px; }
-  .section-card { background: #ffffff; border: 1px solid #e2e6ea; border-radius: 14px; padding: 24px; margin-bottom: 12px; }
-  .section-card h2 { font-size: 16px; font-weight: 700; color: #1a2340; margin-bottom: 10px; }
-  .section-card p { font-size: 14px; color: #4b5563; line-height: 1.75; }
-  .tag-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
-  .tag { background: #f0f4ff; border: 1px solid #e2e6ea; color: #1a2340; font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 20px; }
-  .rights-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
-  .right-item { background: #f8faff; border: 1px solid #e2e6ea; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #4b5563; display: flex; gap: 8px; align-items: center; }
-  .right-item::before { content: "→"; color: #1a2340; font-weight: 700; flex-shrink: 0; }
-  footer { text-align: center; padding: 32px 20px; border-top: 1px solid #e2e6ea; background: #ffffff; }
-  footer p { font-size: 13px; color: #6b7280; }
-  footer a { color: #1a2340; text-decoration: none; font-weight: 500; }
-  @media (max-width: 500px) { .nav-links { display: none; } .rights-grid { grid-template-columns: 1fr; } }
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{background:#fff;color:#1e293b;font-family:'Inter',sans-serif;font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased;}
+a{color:#1e3a5f;text-decoration:underline;}a:hover{color:#152d4a;}
+:root{--navy:#1e3a5f;--gold:#c9a227;--border:#e2e8f0;--muted:#64748b;--bg:#f7f8fa;}
+.nav{background:#fff;border-bottom:1px solid var(--border);padding:0 80px;height:60px;display:flex;align-items:center;justify-content:space-between;}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.nav-logo-name{font-family:'Fraunces',Georgia,serif;font-size:17px;font-weight:600;color:var(--navy);}
+.nav-back{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:5px;transition:color .15s;text-decoration:none;}
+.nav-back:hover{color:var(--navy);}
+.page-wrap{max-width:760px;margin:0 auto;padding:64px 80px 96px;}
+.page-header{margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid var(--border);}
+.page-title{font-family:'Fraunces',Georgia,serif;font-size:42px;font-weight:600;color:var(--navy);margin-bottom:12px;letter-spacing:-.02em;}
+.page-meta{font-size:13px;color:var(--muted);}
+.page-meta strong{color:#1e293b;}
+h2{font-family:'Fraunces',Georgia,serif;font-size:22px;font-weight:600;color:var(--navy);margin:40px 0 14px;}
+h3{font-size:16px;font-weight:600;color:#1e293b;margin:24px 0 10px;}
+p{color:var(--muted);margin-bottom:14px;}
+ul{color:var(--muted);padding-left:20px;margin-bottom:14px;}
+li{margin-bottom:6px;}
+.highlight-box{background:var(--bg);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;padding:16px 20px;margin:24px 0;font-size:14px;color:#1e293b;}
+footer{background:var(--navy);padding:32px 80px;}
+.footer-inner{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;}
+.footer-copy{font-size:12px;color:rgba(255,255,255,.28);}
+.footer-links{display:flex;gap:20px;}
+.footer-links a{font-size:12px;color:rgba(255,255,255,.4);text-decoration:none;transition:color .15s;}
+.footer-links a:hover{color:#fff;}
+@media(max-width:768px){.nav,.page-wrap,footer{padding-left:24px;padding-right:24px;}.page-title{font-size:30px;}}
 </style>
 </head>
 <body>
-<header>
-  <svg class="logo-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M6 26 Q6 30 18 31 Q30 30 30 26 L28 18 L8 18 Z" fill="none" stroke="#f0a500" stroke-width="1.8" stroke-linejoin="round"/>
-    <rect x="11" y="12" width="14" height="7" rx="1.5" fill="none" stroke="#f0a500" stroke-width="1.8"/>
-    <line x1="18" y1="5" x2="18" y2="12" stroke="#f0a500" stroke-width="1.8" stroke-linecap="round"/>
-    <circle cx="18" cy="4" r="1.8" fill="#f0a500"/>
-    <path d="M4 32 Q8 29 12 32 Q16 35 20 32 Q24 29 28 32 Q31 29 33 32" fill="none" stroke="#f0a500" stroke-width="1.4" stroke-linecap="round"/>
-  </svg>
-  <span class="logo-text">Nautical Ops</span>
-  <ul class="nav-links">
-    <li><a href="/pricing">Pricing</a></li>
-    <li><a href="/privacy-policy">Privacy</a></li>
-    <li><a href="/refund-policy">Refunds</a></li>
-    <li><a href="/terms-and-conditions">Terms</a></li>
+<nav class="nav">
+  <a href="/" class="nav-logo">
+    <svg width="26" height="26" viewBox="0 0 36 36" fill="none"><path d="M6 26 Q6 30 18 31 Q30 30 30 26 L28 18 L8 18 Z" stroke="#c9a227" stroke-width="1.8" stroke-linejoin="round"/><rect x="11" y="12" width="14" height="7" rx="1.5" stroke="#c9a227" stroke-width="1.8"/><line x1="18" y1="5" x2="18" y2="12" stroke="#c9a227" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="4" r="1.8" fill="#c9a227"/></svg>
+    <span class="nav-logo-name">Nautical Ops</span>
+  </a>
+  <a href="/" class="nav-back">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    Back to home
+  </a>
+</nav>
+
+<div class="page-wrap">
+  <div class="page-header">
+    <h1 class="page-title">Terms &amp; Conditions</h1>
+    <p class="page-meta"><strong>Effective date:</strong> 1 June 2026 &nbsp;·&nbsp; <strong>Last updated:</strong> 27 June 2026</p>
+  </div>
+
+  <div class="highlight-box">
+    These Terms &amp; Conditions ("Terms") govern your use of Nautical Ops, developed and operated by <strong>The Lumen Digital</strong> ("we", "us", "our"). By downloading, installing, or using Nautical Ops, you agree to be bound by these Terms. If you do not agree, please do not use the app.
+  </div>
+
+  <h2>1. About Nautical Ops</h2>
+  <p>Nautical Ops is a vessel crew operations management application available on iOS (iPhone and iPad) and via web browser at nautical-ops.com. It enables vessel crews to log voyages, manage tasks, record maintenance, and coordinate operations.</p>
+
+  <h2>2. Eligibility</h2>
+  <p>You must be at least 18 years of age to use Nautical Ops. By using the app, you confirm that you meet this requirement. The app is intended for professional and personal maritime use.</p>
+
+  <h2>3. Account Registration</h2>
+  <p>To use Nautical Ops you must create an account with a valid email address. You are responsible for:</p>
+  <ul>
+    <li>Keeping your account credentials secure and confidential</li>
+    <li>All activity that occurs under your account</li>
+    <li>Notifying us promptly at <a href="mailto:support@nautical-ops.com">support@nautical-ops.com</a> if you suspect unauthorised access</li>
   </ul>
-</header>
+  <p>You may not share your login credentials with others outside your vessel's crew, or create accounts on behalf of others without their consent.</p>
 
-<div class="page">
-  <h1 class="page-title">Privacy Policy</h1>
-  <p class="page-date">Last updated: March 2025</p>
+  <h2>4. Subscriptions and In-App Purchases</h2>
 
-  <div class="section-card">
-    <h2>1. Introduction</h2>
-    <p>Nautical Ops ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use the Nautical Ops mobile application and related services ("Service"). This policy applies to users globally, including those in the European Union (EU), United Kingdom (UK), and California.</p>
+  <div class="highlight-box">
+    <strong>Important subscription disclosure (required by Apple):</strong> Nautical Ops offers auto-renewing subscriptions. Subscriptions are charged to your Apple ID account. Subscriptions automatically renew unless cancelled at least 24 hours before the end of the current billing period. You can manage and cancel your subscription at any time in your Apple ID account settings.
   </div>
 
-  <div class="section-card">
-    <h2>2. Data We Collect</h2>
-    <div class="tag-row">
-      <span class="tag">Account information</span>
-      <span class="tag">Authentication data</span>
-      <span class="tag">Vessel & operational data</span>
-      <span class="tag">Device identifiers</span>
-      <span class="tag">Push notification tokens</span>
-    </div>
-    <p>This includes your name, email address, position/role, department, optional profile photo, credentials for sign-in, trips, tasks, inventory, maintenance logs, fuel logs, waste logs, pre-departure checklists, watch schedules, shopping lists, contractor information, safety equipment, muster stations, and other vessel operational data. We do not collect financial or medical data.</p>
-  </div>
+  <h3>4.1 Subscription plans</h3>
+  <p>Nautical Ops offers subscription plans based on vessel crew size. Pricing is displayed in the app and at <a href="/pricing">nautical-ops.com/pricing</a>. Available billing periods include monthly, 3-month, 6-month, and annual options (availability varies by plan tier).</p>
 
-  <div class="section-card">
-    <h2>3. How We Collect Data</h2>
-    <p>We collect data directly from you when you register, sign in, or use the Service. We also receive information from third-party authentication providers (Google, Apple) when you choose to sign in with those services. Push notification tokens are collected when you enable notifications.</p>
-  </div>
+  <h3>4.2 Free trial</h3>
+  <p>New subscribers may be offered a free trial period before being charged. The length of the trial is displayed before you confirm your subscription. Payment will be charged to your Apple ID account at the end of the trial period unless you cancel at least 24 hours before the trial expires. Any unused portion of the free trial will be forfeited upon purchase of a subscription. Free trials are available once per Apple ID per subscription product.</p>
 
-  <div class="section-card">
-    <h2>4. Purpose of Use</h2>
-    <p>We use your data to: provide, operate, and improve the Service; authenticate your identity and manage your account; enable vessel-specific collaboration with crew members; send push notifications you have opted into; respond to your requests and support inquiries; comply with legal obligations; and protect the security and integrity of the Service.</p>
-  </div>
+  <h3>4.3 Billing and renewal</h3>
+  <p>Payment is charged to your Apple ID account at confirmation of purchase. Your subscription automatically renews at the end of each billing period for the same duration and price, unless cancelled. Apple will notify you before renewal if the price changes. Charges are made 24 hours before the end of the current period.</p>
 
-  <div class="section-card">
-    <h2>5. Third-Party Services</h2>
-    <p>We use the following third-party services that may process your data: <strong>Supabase</strong> — hosts our database, authentication, and file storage; <strong>Expo</strong> — powers push notifications and app infrastructure; <strong>Google and Apple</strong> — when you use Sign-In with Google or Apple, these providers process authentication data according to their respective privacy policies.</p>
-  </div>
+  <h3>4.4 Cancellation</h3>
+  <p>You may cancel your subscription at any time through your Apple ID account settings (Settings → [Your Name] → Subscriptions → Nautical Ops → Cancel Subscription). Cancellation takes effect at the end of the current billing period. You will retain access to all features until that date. We do not provide refunds for unused portions of a billing period.</p>
 
-  <div class="section-card">
-    <h2>6. Data Sharing</h2>
-    <p>We do not sell your personal data. We share data only as follows: vessel crew members assigned to the same vessel can view and manage vessel-specific data; service providers (Supabase, Expo) operate under contractual arrangements that require them to protect your data; we may disclose data when required by law or to protect our rights, safety, or property.</p>
-  </div>
+  <h3>4.5 Refunds</h3>
+  <p>All purchases are processed by Apple and are subject to Apple's refund policy. To request a refund, visit <a href="https://reportaproblem.apple.com" target="_blank" rel="noopener">reportaproblem.apple.com</a> and follow Apple's process. We cannot issue refunds directly for App Store purchases. See our <a href="/refund-policy">Refund Policy</a> for more details.</p>
 
-  <div class="section-card">
-    <h2>7. Data Retention</h2>
-    <p>We retain your account and operational data for as long as your account is active. When you terminate your account, we will delete or anonymize your personal data within a reasonable period, except where retention is required by law or for legitimate business purposes such as resolving disputes or enforcing agreements.</p>
-  </div>
+  <h3>4.6 Price changes</h3>
+  <p>We reserve the right to change subscription prices. If we change the price of your subscription, Apple will notify you before the change takes effect and your renewal will require your confirmation. Continued use of the app after a price change constitutes acceptance of the new price.</p>
 
-  <div class="section-card">
-    <h2>8. Data Security</h2>
-    <p>We implement industry-standard security measures including encryption in transit (TLS) and at rest, row-level security in our database to isolate vessel data, secure authentication (OAuth, JWT), and access controls. While we strive to protect your data, no method of transmission or storage over the internet is completely secure.</p>
-  </div>
+  <h2>5. Acceptable Use</h2>
+  <p>You agree to use Nautical Ops only for its intended purpose and in accordance with all applicable laws. You must not:</p>
+  <ul>
+    <li>Use the app to store false, misleading, or fraudulent operational records</li>
+    <li>Attempt to gain unauthorised access to other users' vessel data</li>
+    <li>Reverse engineer, decompile, or attempt to extract the source code of the app</li>
+    <li>Use the app in any way that could damage, disable, or impair our servers or networks</li>
+    <li>Share your account credentials to allow access to users outside your vessel's crew</li>
+    <li>Use automated tools to scrape or extract data from the app</li>
+    <li>Violate any applicable maritime laws, safety regulations, or vessel operation requirements</li>
+  </ul>
+  <p>We reserve the right to suspend or terminate accounts that violate these terms.</p>
 
-  <div class="section-card">
-    <h2>9. Your Rights — EU/UK (GDPR)</h2>
-    <p>If you are in the European Economic Area or UK, you have the right to:</p>
-    <div class="rights-grid">
-      <div class="right-item">Access your personal data</div>
-      <div class="right-item">Rectify inaccurate data</div>
-      <div class="right-item">Request erasure</div>
-      <div class="right-item">Data portability</div>
-      <div class="right-item">Object to processing</div>
-      <div class="right-item">Withdraw consent</div>
-      <div class="right-item">Lodge a complaint</div>
-    </div>
-    <p style="margin-top:12px;">To exercise these rights, contact <a href="mailto:support@nautical-ops.com" style="color:#1a2340;font-weight:600;">support@nautical-ops.com</a>.</p>
-  </div>
+  <h2>6. Your Content</h2>
+  <p>You retain ownership of all data you enter into Nautical Ops (trip logs, maintenance records, tasks, notes, etc.). By using the app, you grant The Lumen Digital a limited licence to store, process, and sync your data solely for the purpose of providing the service to you.</p>
+  <p>You are responsible for the accuracy and legality of the data you enter. We are not responsible for any inaccuracies in your operational records.</p>
 
-  <div class="section-card">
-    <h2>10. Your Rights — California (CCPA)</h2>
-    <p>If you are a California resident, you have the right to: know what personal information we collect and how it is used; request deletion of your personal information; opt out of the sale of personal information (we do not sell personal information); and non-discrimination for exercising your rights. Contact <a href="mailto:support@nautical-ops.com" style="color:#1a2340;font-weight:600;">support@nautical-ops.com</a> to submit a request.</p>
-  </div>
+  <h2>7. Intellectual Property</h2>
+  <p>Nautical Ops, including its design, code, branding, and content, is owned by The Lumen Digital and is protected by intellectual property laws. You are granted a limited, non-exclusive, non-transferable licence to use the app for its intended purpose. You may not copy, distribute, modify, or create derivative works based on the app.</p>
 
-  <div class="section-card">
-    <h2>11. Your Rights — Other Regions</h2>
-    <p>If you are located elsewhere, you may have similar rights to access, correct, or delete your personal data. Contact us at <a href="mailto:support@nautical-ops.com" style="color:#1a2340;font-weight:600;">support@nautical-ops.com</a> to submit a request. We will respond within a reasonable timeframe.</p>
-  </div>
+  <h2>8. Availability and Changes</h2>
+  <p>We aim to keep Nautical Ops available at all times but cannot guarantee uninterrupted access. We may modify, update, or temporarily suspend the service for maintenance, improvements, or legal reasons. We will endeavour to provide advance notice of significant changes or outages where possible.</p>
+  <p>We reserve the right to discontinue features or the service as a whole with reasonable notice.</p>
 
-  <div class="section-card">
-    <h2>12. Children</h2>
-    <p>The Service is not intended for individuals under 16 years of age. We do not knowingly collect personal data from children. If you become aware that a child has provided us with personal data, please contact us at <a href="mailto:support@nautical-ops.com" style="color:#1a2340;font-weight:600;">support@nautical-ops.com</a>.</p>
-  </div>
+  <h2>9. Third-Party Services</h2>
+  <p>Nautical Ops integrates with third-party services including Apple (App Store, push notifications) and Supabase (database infrastructure). Your use of these services is also subject to their respective terms and privacy policies. We are not responsible for the practices of third-party service providers.</p>
 
-  <div class="section-card">
-    <h2>13. International Transfers</h2>
-    <p>Your data may be processed in the United States, European Union, or other locations where our service providers operate. We ensure appropriate safeguards for transfers outside the EEA/UK as required by applicable law.</p>
-  </div>
+  <h2>10. Disclaimer of Warranties</h2>
+  <p>Nautical Ops is provided "as is" and "as available" without warranties of any kind, either express or implied. We do not warrant that the app will be error-free, uninterrupted, or meet your specific requirements. To the fullest extent permitted by law, we disclaim all warranties including fitness for a particular purpose and non-infringement.</p>
+  <p><strong>Nautical Ops is a productivity and record-keeping tool. It is not a substitute for professional maritime training, certification, or judgement. Do not rely on Nautical Ops for safety-critical decisions.</strong></p>
 
-  <div class="section-card">
-    <h2>14. Changes to This Policy</h2>
-    <p>We may update this Privacy Policy from time to time. We will notify you of material changes by posting the updated policy within the application or via email. Your continued use of the Service after changes constitutes acceptance of the updated policy.</p>
-  </div>
+  <h2>11. Limitation of Liability</h2>
+  <p>To the fullest extent permitted by applicable law, The Lumen Digital shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of Nautical Ops, including loss of data, revenue, profits, or business. Our total liability to you for any claim arising from use of the service shall not exceed the amount you paid in subscription fees in the 12 months preceding the claim.</p>
+  <p>Some jurisdictions do not allow the exclusion or limitation of certain damages, so the above limitations may not apply to you.</p>
 
-  <div class="section-card">
-    <h2>15. Contact</h2>
-    <p>For privacy inquiries, data requests, or questions about this Privacy Policy, please contact us at <a href="mailto:support@nautical-ops.com" style="color:#1a2340;font-weight:600;">support@nautical-ops.com</a>. We will endeavor to respond within 30 days.</p>
-  </div>
+  <h2>12. Indemnification</h2>
+  <p>You agree to indemnify and hold harmless The Lumen Digital, its directors, employees, and contractors from any claims, damages, losses, or expenses (including legal fees) arising from your use of Nautical Ops, violation of these Terms, or infringement of any third-party rights.</p>
+
+  <h2>13. Termination</h2>
+  <p>We may suspend or terminate your account if you breach these Terms, engage in fraudulent or harmful activity, or if required by law. You may delete your account at any time by contacting <a href="mailto:support@nautical-ops.com">support@nautical-ops.com</a>. Upon termination, your right to use the app ceases immediately. Data deletion following termination is governed by our <a href="/privacy-policy">Privacy Policy</a>.</p>
+
+  <h2>14. Governing Law</h2>
+  <p>These Terms are governed by the laws of Australia, without regard to conflict of law principles. Any disputes shall be subject to the exclusive jurisdiction of the courts of Australia, unless otherwise required by applicable consumer protection laws in your jurisdiction.</p>
+
+  <h2>15. Changes to These Terms</h2>
+  <p>We may update these Terms from time to time. We will notify you of material changes by email or in-app notice. Continued use of Nautical Ops after the updated Terms become effective constitutes your acceptance. If you do not agree to the changes, you must stop using the app and cancel your subscription.</p>
+
+  <h2>16. Contact</h2>
+  <p>For questions about these Terms, please contact us:</p>
+  <ul>
+    <li><strong>Email:</strong> <a href="mailto:support@nautical-ops.com">support@nautical-ops.com</a></li>
+    <li><strong>Website:</strong> <a href="https://www.nautical-ops.com">www.nautical-ops.com</a></li>
+    <li><strong>Operator:</strong> The Lumen Digital</li>
+  </ul>
 </div>
 
 <footer>
-  <p>© 2025 Nautical Ops. All rights reserved. &nbsp;|&nbsp; <a href="/terms-and-conditions">Terms</a> &nbsp;|&nbsp; <a href="/refund-policy">Refund Policy</a> &nbsp;|&nbsp; <a href="/pricing">Pricing</a></p>
+  <div class="footer-inner">
+    <span class="footer-copy">© 2026 Nautical Ops · The Lumen Digital</span>
+    <div class="footer-links">
+      <a href="/privacy-policy">Privacy Policy</a>
+      <a href="/terms-and-conditions">Terms & Conditions</a>
+      <a href="/refund-policy">Refund Policy</a>
+      <a href="/support">Support</a>
+    </div>
+  </div>
 </footer>
 </body>
 </html>
