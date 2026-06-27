@@ -94,19 +94,20 @@ h1 em{font-style:italic;color:var(--gold);}
 
 /* ── Sticky scroll features ──────────── */
 .sf{position:relative;background:var(--bg);}
-.sf-intro{text-align:center;padding:80px 80px 0;}
-.sf-inner{display:grid;grid-template-columns:1fr 1fr;min-height:auto;padding:0 60px;align-items:start;}
+.sf-bg{position:absolute;inset:0;background-image:url('/yachts-aerial.jpg');background-size:cover;background-position:center;opacity:0.30;z-index:0;pointer-events:none;}
+.sf-intro{text-align:center;padding:80px 80px 0;position:relative;z-index:2;}
+.sf-inner{display:grid;grid-template-columns:1fr 1fr;min-height:auto;padding:0 60px;align-items:start;position:relative;z-index:2;}
 .sf-steps{padding:80px 60px 100px 0;}
 .sf-step{min-height:80vh;display:flex;align-items:center;opacity:.35;transition:opacity .4s;}
 .sf-step.active{opacity:1;}
-.sf-phone-col{position:sticky;top:0;height:100vh;display:flex;align-items:center;justify-content:center;}
+.sf-phone-col{position:sticky;top:0;height:100vh;display:flex;align-items:center;justify-content:center;z-index:2;}
 .sf-phone-scene{animation:sfSwell 6s ease-in-out infinite;filter:drop-shadow(0 30px 60px rgba(0,0,0,0.2)) drop-shadow(0 8px 20px rgba(0,0,0,0.12));}
 @keyframes sfSwell{0%,100%{transform:translateY(0);}50%{transform:translateY(-12px);}}
-@keyframes sfSwell{0%,100%{transform:perspective(1100px) rotateY(0deg) rotateX(0deg) translateY(0);}50%{transform:perspective(1100px) rotateY(0deg) rotateX(0deg) translateY(-12px);}}
 .sf-phone{width:248px;height:524px;background:#040e1c;border-radius:42px;border:6px solid rgba(30,58,95,0.12);box-shadow:-20px 28px 70px rgba(30,58,95,0.2),0 40px 80px rgba(0,0,0,0.1);overflow:hidden;position:relative;}
-.sf-screen{display:none;height:100%;}
+.sf-screen{display:none;width:100%;height:100%;position:absolute;top:0;left:0;}
 .sf-screen.active{display:block;}
-.feat-tag{display:inline-block;font-size:12px;font-weight:600;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px;}
+.sf-phone-col .device .device-frame{overflow:hidden !important;box-shadow:inset 0 0 0 2px rgba(0,0,0,0.9) !important;}
+.feat-tag{display:block;text-align:center;font-size:12px;font-weight:600;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px;}
 .feat-title{font-family:var(--ff-d);font-size:clamp(30px,4vw,48px);font-weight:600;color:var(--navy);line-height:1.12;letter-spacing:-.02em;margin-bottom:16px;}
 .feat-desc{font-size:17px;color:var(--muted);line-height:1.8;}
 .fp-notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:78px;height:22px;background:#040e1c;border-radius:0 0 14px 14px;z-index:10;}
@@ -376,6 +377,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
 
 <!-- ── Sticky scroll features ─────────── -->
 <section class="sf" id="features">
+  <div class="sf-bg"></div>
   <div class="sf-intro reveal">
     <div class="sec-eyebrow">What's on board</div>
     <h2 class="sec-title">Everything your vessel needs to run smoothly.</h2>
