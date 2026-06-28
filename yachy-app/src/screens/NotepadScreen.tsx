@@ -36,13 +36,20 @@ export const NotepadScreen = ({ navigation }: any) => {
     Alert.alert('Delete Note', `Delete "${note.title}"?`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: async () => {
-        try { await notesService.deleteNote(note.id); setNotes((prev) => prev.filter((n) => n.id !== note.id)); }
-        catch { Alert.alert('Error', 'Could not delete note.'); }
+        try {
+          await notesService.deleteNote(note.id);
+          setNotes((prev) => prev.filter((n) => n.id !== note.id));
+        } catch {
+          Alert.alert('Error', 'Could not delete note.');
+        }
       }},
     ]);
   };
 
-  const formatDate = (iso: string) => new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  const goToNewNote = () => navigation.navigate('AddEditNote', { noteId: undefined });
 
   if (!vesselId) {
     return (
@@ -54,51 +61,76 @@ export const NotepadScreen = ({ navigation }: any) => {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: themeColors.background }]}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Header row with New Note button */}
+      <View style={styles.headerRow}>
+        <View>
           <Text style={[styles.title, { color: themeColors.textPrimary }]}>Notepad</Text>
-          <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>Vessel notes visible to all crew</Text>
+          <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>Visible to all crew</Text>
         </View>
-        {loading ? (
-          <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
-        ) : notes.length === 0 ? (
-          <View style={[styles.emptyCard, { backgroundColor: themeColors.surface }]}>
-            <Text style={styles.emptyIcon}>📝</Text>
-            <Text style={[styles.emptyTitle, { color: themeColors.textPrimary }]}>No notes yet</Text>
-            <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>Tap the + button to add the first note.</Text>
-          </View>
-        ) : (
-          <>
-            {notes.map((note) => (
-              <TouchableOpacity key={note.id} style={[styles.card, { backgroundColor: themeColors.surface }]}
-                onPress={() => navigation.navigate('AddEditNote', { noteId: note.id })}
-                onLongPress={() => handleDelete(note)} activeOpacity={0.8}>
-                <View style={styles.cardBody}>
-                  <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>{note.title}</Text>
-                  {note.content ? <Text style={[styles.cardPreview, { color: themeColors.textSecondary }]} numberOfLines={2}>{note.content}</Text> : null}
-                  <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>{note.created_by_name} · {formatDate(note.updated_at)}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={themeColors.textSecondary} />
-              </TouchableOpacity>
-            ))}
-          </>
-        )}
-      </ScrollView>
-      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('AddEditNote', {})} activeOpacity={0.85}>
-        <Ionicons name="add" size={28} color={COLORS.white} />
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity
+          style={[styles.newBtn, { backgroundColor: COLORS.primary }]}
+          onPress={goToNewNote}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add" size={18} color="#fff" />
+          <Text style={styles.newBtnText}>New Note</Text>
+        </TouchableOpacity>
+      </View>
+
+      {loading ? (
+        <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
+      ) : notes.length === 0 ? (
+        <TouchableOpacity
+          style={[styles.emptyCard, { backgroundColor: themeColors.surface }]}
+          onPress={goToNewNote}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.emptyIcon}>📝</Text>
+          <Text style={[styles.emptyTitle, { color: themeColors.textPrimary }]}>No notes yet</Text>
+          <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>Tap here or "New Note" to get started.</Text>
+        </TouchableOpacity>
+      ) : (
+        <>
+          {notes.map((note) => (
+            <TouchableOpacity
+              key={note.id}
+              style={[styles.card, { backgroundColor: themeColors.surface }]}
+              onPress={() => navigation.navigate('AddEditNote', { noteId: note.id })}
+              onLongPress={() => handleDelete(note)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.cardBody}>
+                <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>{note.title}</Text>
+                {note.content ? (
+                  <Text style={[styles.cardPreview, { color: themeColors.textSecondary }]} numberOfLines={2}>{note.content}</Text>
+                ) : null}
+                <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>
+                  {note.created_by_name} · {formatDate(note.updated_at)}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={themeColors.textSecondary} />
+            </TouchableOpacity>
+          ))}
+        </>
+      )}
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.xl },
-  content: { padding: SPACING.lg, paddingTop: SPACING.xl * 2, paddingBottom: SIZES.bottomScrollPadding + 80 },
-  header: { marginBottom: SPACING.xl },
-  title: { fontSize: FONTS['2xl'], fontWeight: '700', marginBottom: SPACING.xs },
-  subtitle: { fontSize: FONTS.base },
+  content: { padding: SPACING.lg, paddingTop: SPACING.xl * 2, paddingBottom: SIZES.bottomScrollPadding },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.xl },
+  title: { fontSize: FONTS['2xl'], fontWeight: '700', marginBottom: 2 },
+  subtitle: { fontSize: FONTS.sm },
+  newBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderRadius: BORDER_RADIUS.md },
+  newBtnText: { color: '#fff', fontSize: FONTS.sm, fontWeight: '700', marginLeft: 4 },
   loader: { marginTop: SPACING.xl * 2 },
   emptyCard: { padding: SPACING.xl, borderRadius: BORDER_RADIUS.lg, alignItems: 'center', ...SHADOWS.md },
   emptyIcon: { fontSize: 48, marginBottom: SPACING.md },
@@ -109,5 +141,4 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: FONTS.lg, fontWeight: '700', marginBottom: 4 },
   cardPreview: { fontSize: FONTS.sm, lineHeight: 18, marginBottom: 6 },
   cardMeta: { fontSize: FONTS.xs },
-  fab: { position: 'absolute', bottom: 32, right: 24, width: 56, height: 56, borderRadius: 28, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 8 },
 });
