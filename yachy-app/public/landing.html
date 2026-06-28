@@ -323,7 +323,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
   .sf-steps{padding:28px 0 48px;}
 
   /* 4. About - Read More collapse */
-  .about-grid{grid-template-columns:1fr !important;gap:20px !important;padding-bottom:48px !important;}
+  .about-grid{grid-template-columns:1fr !important;gap:20px !important;padding-bottom:16px !important;}
   .about-expandable{display:none;margin-top:12px;}
   .about-expandable.open{display:block;}
   .read-more-btn{display:inline-flex;align-items:center;gap:6px;margin-top:16px;background:none;border:1.5px solid var(--navy);color:var(--navy);font-size:14px;font-weight:600;font-family:'Mulish',sans-serif;padding:10px 20px;border-radius:8px;cursor:pointer;transition:all .2s;}
@@ -332,7 +332,9 @@ footer{background:var(--navy);padding:56px 80px 40px;}
   .read-more-btn:not(.open)::after{content:' ▼';font-size:10px;}
 
   /* 5. Ocean stats - centred, Total Donated top, others side by side */
-  .ocean-stats{grid-template-columns:1fr 1fr !important;gap:14px !important;margin:0 auto;width:100%;}
+  .ocean-section{padding:40px 24px !important;}
+  .ocean-stats{grid-template-columns:1fr 1fr !important;gap:14px !important;margin:0 auto;width:100%;max-width:100%;}
+  .stat-card-donated,.stat-card-subscribers,.stat-card-projected{width:100%;}
   .stat-card-donated{grid-column:1 / -1;order:-1;top:0 !important;}
   .stat-card-subscribers,.stat-card-projected{grid-column:span 1;}
 
@@ -483,9 +485,9 @@ footer{background:var(--navy);padding:56px 80px 40px;}
 <!-- ── Screenshot gallery ─────────────── -->
 <!-- ── About ───────────────────────────── -->
 <section class="section" style="background:var(--white);padding-top:96px;padding-bottom:0;">
-  <div class="about-grid reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:start;max-width:1200px;margin:0 auto;padding-bottom:96px;">
+  <div class="about-grid reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:start;max-width:1200px;margin:0 auto;padding-bottom:48px;">
     <div>
-      <h2 class="sec-title" style="margin-bottom:0;">Built by someone who's been there.</h2>
+      <h2 class="sec-title" style="margin-bottom:0;">Built by a Crew Member for other Crew.</h2>
     </div>
     <div>
       <div class="about-expandable">
