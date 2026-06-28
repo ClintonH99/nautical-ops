@@ -68,6 +68,8 @@ import {
   AddEditPumpOutLogScreen,
   ContractorDatabaseScreen,
   AddEditContractorScreen,
+  NotepadScreen,
+  AddEditNoteScreen,
   VesselCrewSafetyScreen,
   MusterStationScreen,
   CreateMusterStationScreen,
