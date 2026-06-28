@@ -318,7 +318,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
   .sf-steps{padding:28px 0 48px;}
 
   /* 4. About - Read More collapse */
-  .about-grid{grid-template-columns:1fr !important;gap:32px !important;padding-bottom:48px !important;}
+  .about-grid{grid-template-columns:1fr !important;gap:20px !important;padding-bottom:48px !important;}
   .about-expandable{display:none;margin-top:12px;}
   .about-expandable.open{display:block;}
   .read-more-btn{display:inline-flex;align-items:center;gap:6px;margin-top:16px;background:none;border:1.5px solid var(--navy);color:var(--navy);font-size:14px;font-weight:600;font-family:'Inter',sans-serif;padding:10px 20px;border-radius:8px;cursor:pointer;transition:all .2s;}
@@ -482,19 +482,18 @@ footer{background:var(--navy);padding:56px 80px 40px;}
 <!-- ── Screenshot gallery ─────────────── -->
 <!-- ── About ───────────────────────────── -->
 <section class="section" style="background:var(--white);padding-top:96px;padding-bottom:0;">
-  <div style="max-width:900px;margin:0 auto;">
-    <div class="about-grid reveal" style="display:grid;grid-template-columns:1fr;max-width:720px;padding-bottom:96px;">
-      <div>
-        <div class="sec-eyebrow">The story behind the app</div>
-        <h2 class="sec-title" style="margin-bottom:20px;">Built by someone who's been there.</h2>
-        <div class="about-expandable">
-          <p style="font-size:16px;color:var(--muted);line-height:1.8;margin-bottom:16px;">My name is <strong style="color:var(--navy);font-weight:600;">Clinton Handford</strong>. I've been in the yachting industry for about 4 years now, and in that time I noticed something missing — there wasn't a single app that handled everything we need day-to-day. No real all-in-one solution built for crew, by crew.</p>
-          <p style="font-size:16px;color:var(--muted);line-height:1.8;margin-bottom:16px;">So I decided to build one. Nautical Ops will never be "done" — I'm constantly updating it, keeping it user-friendly and relevant, not just for professional yacht crew, but for family-run boats and anyone who finds it useful for their maritime needs.</p>
-          <p style="font-size:16px;color:var(--muted);line-height:1.8;">I'm not just building this because I'm in the industry. I'm building it because I believe there's a better way to run a vessel — and I want everyone on the water to have access to it.</p>
-        </div>
-        <button class="read-more-btn" onclick="toggleReadMore(this)" aria-expanded="false">Read more</button>
+  <div class="about-grid reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:start;max-width:1200px;margin:0 auto;padding-bottom:96px;">
+    <div>
+      <div class="sec-eyebrow">The story behind the app</div>
+      <h2 class="sec-title" style="margin-bottom:0;">Built by someone who's been there.</h2>
+    </div>
+    <div>
+      <div class="about-expandable">
+        <p style="font-size:16px;color:var(--muted);line-height:1.8;margin-bottom:16px;">My name is <strong style="color:var(--navy);font-weight:600;">Clinton Handford</strong>. I've been in the yachting industry for about 4 years now, and in that time I noticed something missing — there wasn't a single app that handled everything we need day-to-day. No real all-in-one solution built for crew, by crew.</p>
+        <p style="font-size:16px;color:var(--muted);line-height:1.8;margin-bottom:16px;">So I decided to build one. Nautical Ops will never be "done" — I'm constantly updating it, keeping it user-friendly and relevant, not just for professional yacht crew, but for family-run boats and anyone who finds it useful for their maritime needs.</p>
+        <p style="font-size:16px;color:var(--muted);line-height:1.8;">I'm not just building this because I'm in the industry. I'm building it because I believe there's a better way to run a vessel — and I want everyone on the water to have access to it.</p>
       </div>
-
+      <button class="read-more-btn" onclick="toggleReadMore(this)" aria-expanded="false">Read more</button>
     </div>
   </div>
 </section>
