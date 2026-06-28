@@ -962,7 +962,20 @@ export const RootNavigator = () => {
                 }}
               />
               <Stack.Screen
-                name="AddEditContractor"
+                name="Notepad"
+              component={NotepadScreen}
+              options={{ title: 'Notepad', headerShown: true }}
+            />
+            <Stack.Screen
+              name="AddEditNote"
+              component={AddEditNoteScreen}
+              options={({ route }: any) => ({
+                title: route.params?.noteId ? 'Edit Note' : 'New Note',
+                headerShown: true,
+              })}
+            />
+            <Stack.Screen
+              name="AddEditContractor"
                 component={AddEditContractorScreen}
                 options={({ route }: any) => ({
                   title: route.params?.contractorId ? 'Edit Contractor' : 'New Contractor',

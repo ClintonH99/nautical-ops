@@ -28,7 +28,7 @@ export const CATEGORIES = [
   { key: 'watch', label: 'Watch Keeping', icon: '⏱️', nav: 'WatchKeeping' },
   { key: 'logs', label: 'Vessel Logs', icon: '🗒️', nav: 'VesselLogs' },
   { key: 'contractors', label: 'Contractor Database', icon: '👷', nav: 'ContractorDatabase' },
-  { key: 'yard', label: 'Yard Period', icon: '🏗️', nav: 'YardPeriodTrips' },
+  { key: 'notepad', label: 'Notepad', icon: '📝', nav: 'Notepad' },
   { key: 'import', label: 'Import / Export', icon: '📥', nav: 'ImportExport' },
 ];
 

@@ -48,6 +48,28 @@ export const SettingsScreen = ({ navigation }: any) => {
     }, [user?.id, setUser])
   );
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'This will permanently delete your account and remove you from your vessel. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await authService.signOut();
+              logout();
+            } catch {
+              Alert.alert('Error', 'Could not delete account. Please contact support@nautical-ops.com');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const settingsSections = [
     {
       title: 'Account',
@@ -138,7 +160,6 @@ export const SettingsScreen = ({ navigation }: any) => {
           label: 'About',
           description: 'App version and information',
           onPress: () => {
-            // TODO: Implement about screen
             if (__DEV__) console.log('About screen coming soon');
           },
           disabled: true,
@@ -148,6 +169,16 @@ export const SettingsScreen = ({ navigation }: any) => {
     {
       title: 'Support',
       items: [
+        {
+          icon: '❓',
+          label: 'FAQ & Help',
+          description: 'Frequently asked questions and guides',
+          onPress: () =>
+            Linking.openURL('https://www.nautical-ops.com/support').catch(() =>
+              Alert.alert('Support', 'Visit nautical-ops.com/support')
+            ),
+          disabled: false,
+        },
         {
           icon: '💬',
           label: 'Contact Support',
@@ -185,6 +216,19 @@ export const SettingsScreen = ({ navigation }: any) => {
           description: 'Subscription refund terms and conditions',
           onPress: () => navigation.navigate('RefundPolicy'),
           disabled: false,
+        },
+      ],
+    },
+    {
+      title: 'Account Actions',
+      items: [
+        {
+          icon: '🗑️',
+          label: 'Delete Account',
+          description: 'Permanently delete your account and data',
+          onPress: handleDeleteAccount,
+          disabled: false,
+          destructive: true,
         },
       ],
     },
@@ -248,7 +292,16 @@ export const SettingsScreen = ({ navigation }: any) => {
                   <View style={styles.settingsItemLeft}>
                     <Text style={styles.settingsIcon}>{item.icon}</Text>
                     <View style={styles.settingsTextContainer}>
-                      <Text style={[styles.settingsLabel, { color: themeColors.textPrimary }]}>
+                      <Text
+                        style={[
+                          styles.settingsLabel,
+                          {
+                            color: (item as any).destructive
+                              ? '#ef4444'
+                              : themeColors.textPrimary,
+                          },
+                        ]}
+                      >
                         {item.label}
                       </Text>
                       <Text
@@ -293,9 +346,7 @@ export const SettingsScreen = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   content: {
     padding: SPACING.lg,
     paddingTop: SPACING.xl * 2,
@@ -313,14 +364,8 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  avatarContainer: {
-    marginRight: SPACING.md,
-  },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-  },
+  avatarContainer: { marginRight: SPACING.md },
+  avatar: { width: 64, height: 64, borderRadius: 32 },
   avatarPlaceholder: {
     width: 64,
     height: 64,
@@ -334,9 +379,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.white,
   },
-  userInfo: {
-    flex: 1,
-  },
+  userInfo: { flex: 1 },
   userName: {
     fontSize: FONTS.xl,
     fontWeight: 'bold',
@@ -359,9 +402,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     textTransform: 'uppercase',
   },
-  section: {
-    marginBottom: SPACING.xl,
-  },
+  section: { marginBottom: SPACING.xl },
   sectionTitle: {
     fontSize: FONTS.xs,
     fontWeight: '600',
@@ -386,47 +427,28 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     borderBottomWidth: 1,
   },
-  settingsItemLast: {
-    borderBottomWidth: 0,
-  },
-  settingsItemDisabled: {
-    opacity: 0.5,
-  },
+  settingsItemLast: { borderBottomWidth: 0 },
+  settingsItemDisabled: { opacity: 0.5 },
   settingsItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  settingsIcon: {
-    fontSize: 24,
-    marginRight: SPACING.md,
-  },
-  settingsTextContainer: {
-    flex: 1,
-  },
+  settingsIcon: { fontSize: 24, marginRight: SPACING.md },
+  settingsTextContainer: { flex: 1 },
   settingsLabel: {
     fontSize: FONTS.base,
     fontWeight: '600',
     marginBottom: 2,
   },
-  settingsDescription: {
-    fontSize: FONTS.sm,
-  },
-  chevron: {
-    fontSize: 24,
-    fontWeight: '300',
-  },
+  settingsDescription: { fontSize: FONTS.sm },
+  chevron: { fontSize: 24, fontWeight: '300' },
   versionInfo: {
     alignItems: 'center',
     paddingVertical: SPACING.xl,
   },
-  versionText: {
-    fontSize: FONTS.sm,
-    marginBottom: 4,
-  },
-  versionSubtext: {
-    fontSize: FONTS.xs,
-  },
+  versionText: { fontSize: FONTS.sm, marginBottom: 4 },
+  versionSubtext: { fontSize: FONTS.xs },
   signOutButton: {
     marginTop: SPACING.md,
     marginBottom: SPACING.lg,
