@@ -234,29 +234,13 @@ h1 em{font-style:italic;color:var(--gold);}
 .sec-sub{font-size:16px;color:var(--muted);line-height:1.7;max-width:540px;}
 
 /* ── Roles ───────────────────────────── */
-.roles-intro{text-align:center;margin-bottom:48px;}
-.roles-intro .sec-title{margin-bottom:10px;}
-.roles-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+
 .role-card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:28px 24px;transition:border-color .2s,transform .2s,box-shadow .2s;}
 .role-card:hover{border-color:#94a3b8;transform:translateY(-4px);box-shadow:0 12px 32px rgba(30,58,95,0.08);}
 .role-icon{width:42px;height:42px;background:var(--navy-light);border-radius:11px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
 .role-icon svg{width:20px;height:20px;}
 .role-title{font-family:var(--ff-d);font-size:20px;font-weight:600;color:var(--navy);margin-bottom:2px;}
 .role-sub-title{font-size:12px;font-weight:500;color:var(--gold);letter-spacing:.04em;margin-bottom:10px;}
-.role-desc{font-size:14px;color:var(--muted);line-height:1.65;}
-
-/* ── Download CTA ────────────────────── */
-.download{background:var(--navy);text-align:center;padding:88px 80px;}
-.dl-inner{max-width:600px;margin:0 auto;}
-.dl-title{font-family:var(--ff-d);font-size:clamp(34px,5vw,60px);font-weight:600;color:#fff;line-height:1.1;letter-spacing:-.025em;margin-bottom:16px;}
-.dl-title em{font-style:italic;color:var(--gold);}
-.dl-sub{font-size:16px;color:rgba(255,255,255,0.6);margin-bottom:36px;line-height:1.7;}
-.dl-actions{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;}
-.btn-white{display:inline-flex;align-items:center;gap:8px;background:#fff;color:var(--navy);font-size:14px;font-weight:600;padding:13px 24px;border-radius:10px;transition:all .2s;}
-.btn-white:hover{background:#f0f4ff;transform:translateY(-2px);}
-.btn-ghost-white{display:inline-flex;align-items:center;gap:8px;color:#fff;font-size:14px;font-weight:500;padding:13px 24px;border-radius:10px;border:1px solid rgba(255,255,255,.25);transition:all .2s;}
-.btn-ghost-white:hover{background:rgba(255,255,255,.08);}
-.dl-note{font-size:13px;color:rgba(255,255,255,.35);margin-top:14px;}
 
 /* ── FAQ ─────────────────────────────── */
 .faq-inner{max-width:720px;margin:0 auto;}
@@ -298,7 +282,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
   .hero{padding:100px 40px 72px;}
   .section{padding:64px 40px;}
   .screenshots,.devices{padding:64px 40px;}
-  .download{padding:72px 40px;}
+
   footer{padding:48px 40px 32px;}
   .sf-intro,.sf-inner{padding-left:40px;padding-right:40px;}
   .sf-steps{padding-right:40px;}
@@ -312,18 +296,18 @@ footer{background:var(--navy);padding:56px 80px 40px;}
 .about-expandable{display:block;}
 
 @media(max-width:768px){
-  /* 1. Hero - hide device mockup, reduce size */
-  .hero{grid-template-columns:1fr;padding:56px 24px 36px;text-align:center;}
+  /* 1. Hero - hide device mockup, fill full viewport */
+  .hero{grid-template-columns:1fr;padding:28px 24px 40px;text-align:center;min-height:100svh;align-content:center;}
   .hero-visual{display:none;}
   .hero h1{font-size:clamp(30px,8vw,42px);margin-bottom:14px;}
   .hero-sub{margin:0 auto 28px;font-size:15px;}
   .hero-actions{justify-content:center;}
   .eyebrow{justify-content:center;}
 
-  /* 2. Nav smaller */
-  nav.nav,.nav{height:52px !important;padding:0 20px !important;}
+  /* 2. Nav - compact strip */
+  .nav{height:46px !important;padding:0 20px !important;}
   .nav-logo-name{font-size:15px !important;}
-  .nav-logo svg{width:22px !important;height:22px !important;}
+  .nav-logo svg{width:20px !important;height:20px !important;}
 
   /* 3. General sections */
   .section,.screenshots,.devices{padding:48px 24px;}
@@ -332,7 +316,6 @@ footer{background:var(--navy);padding:56px 80px 40px;}
   .sf-phone-col{display:none;}
   .sf-step{min-height:auto;padding:28px 0;opacity:1;}
   .sf-steps{padding:28px 0 48px;}
-  .roles-grid{grid-template-columns:1fr;}
 
   /* 4. About - Read More collapse */
   .about-grid{grid-template-columns:1fr !important;gap:32px !important;padding-bottom:48px !important;}
@@ -364,7 +347,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
 }
 @media(max-width:480px){
   h1{font-size:28px;}
-  .hero{padding:52px 20px 32px;}
+  .hero{padding:20px 20px 32px;}
   .hero-actions{flex-direction:column;align-items:center;}
   .btn-primary,.btn-ghost,.btn-white,.btn-ghost-white{width:100%;justify-content:center;}
   .macbook-lid{width:280px;}
@@ -567,36 +550,7 @@ footer{background:var(--navy);padding:56px 80px 40px;}
   </div>
 </section>
 
-<!-- ── Roles ──────────────────────────── -->
-<section class="section grey">
-  <div class="roles-intro reveal">
-    <div class="sec-eyebrow">Designed for every rank</div>
-    <h2 class="sec-title" style="margin-bottom:10px;">Built for everyone on board.</h2>
-    <p class="sec-sub" style="margin:0 auto;">Whether you're running the vessel or reporting to the bridge, Nautical Ops fits your role.</p>
-  </div>
-  <div class="roles-grid">
-    <div class="role-card reveal d1">
-      <div class="role-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><line x1="12" y1="22" x2="12" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></svg></div>
-      <div class="role-title">Captain — MOV</div>
-      <div class="role-sub-title">Master of Vessel</div>
-      <div class="role-desc">Full vessel oversight. Schedule voyages, manage your crew, log maintenance, and see everything happening on board — in one dashboard.</div>
-    </div>
-    <div class="role-card reveal d2">
-      <div class="role-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-      <div class="role-title">HOD</div>
-      <div class="role-sub-title">Head of Department</div>
-      <div class="role-desc">Manage your team with precision. Assign and track tasks within your department, handle yard jobs, and stay coordinated with the bridge.</div>
-    </div>
-    <div class="role-card reveal d3">
-      <div class="role-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
-      <div class="role-title">Crew Member</div>
-      <div class="role-sub-title">All departments</div>
-      <div class="role-desc">See your tasks, check upcoming trips, and stay on top of your responsibilities. No guesswork, no missed briefs — everything in your pocket.</div>
-    </div>
-  </div>
-</section>
 
-<!-- ── Download CTA ───────────────────── -->
 
 <!-- ── FAQ ────────────────────────────── -->
 <section class="section grey" id="faq">
