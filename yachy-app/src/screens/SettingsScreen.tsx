@@ -148,7 +148,7 @@ export const SettingsScreen = ({ navigation }: any) => {
         {
           icon: '🚀',
           label: 'Future Updates & Features',
-          description: 'See what's coming next to Nautical Ops',
+          description: "See what's coming next to Nautical Ops",
           onPress: () => navigation.navigate('FutureUpdates'),
           disabled: false,
         },

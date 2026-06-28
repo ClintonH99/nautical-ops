@@ -39,7 +39,7 @@ const UPCOMING: { icon: string; title: string; description: string; status: 'soo
     status: 'planned',
   },
   {
-    icon: '🤖',
+    icon: '📱',
     title: 'Android App',
     description: 'A native Android app so the full crew can use Nautical Ops regardless of their device.',
     status: 'in-progress',
