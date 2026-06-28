@@ -71,7 +71,6 @@ import {
   NotepadScreen,
   FutureUpdatesScreen,
   AddEditNoteScreen,
-  FutureUpdatesScreen,
   VesselCrewSafetyScreen,
   MusterStationScreen,
   CreateMusterStationScreen,
