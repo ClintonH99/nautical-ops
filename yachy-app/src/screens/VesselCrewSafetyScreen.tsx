@@ -16,6 +16,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 
 const CATEGORIES = [
+  { icon: '✅', label: 'Pre-Departure Checklist', nav: 'PreDepartureChecklist' as const, enabled: true },
   { icon: '📍', label: 'Muster Station & Duties', nav: 'MusterStation' as const, enabled: true },
   { icon: '🦺', label: 'Safety Equipment', nav: 'SafetyEquipment' as const, enabled: true },
   { icon: '📜', label: 'Rules On-Board', nav: 'Rules' as const, enabled: true },

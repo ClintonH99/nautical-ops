@@ -47,25 +47,30 @@ type MarkedDates = {
 };
 
 function getMarkedDatesFromTrips(trips: Trip[], typeColorMap: Record<string, string>): MarkedDates {
-  const byDate: Record<string, Set<TripType>> = {};
-  trips.forEach((trip) => {
+  const byDate: Record<string, Array<{ tripType: string; startKey: string; endKey: string }>> = {};
+  const visibleTrips = trips.filter((t) => t.type !== 'YARD_PERIOD');
+  visibleTrips.forEach((trip) => {
+    const startKey = trip.startDate.slice(0, 10);
+    const endKey = trip.endDate.slice(0, 10);
     const start = parseLocalDate(trip.startDate);
     const end = parseLocalDate(trip.endDate);
     for (let d = new Date(start.getTime()); d <= end; d.setDate(d.getDate() + 1)) {
       const key = toYYYYMMDD(d);
-      if (!byDate[key]) byDate[key] = new Set();
-      byDate[key].add(trip.type);
+      if (!byDate[key]) byDate[key] = [];
+      byDate[key].push({ tripType: trip.type, startKey, endKey });
     }
   });
   const marked: MarkedDates = {};
-  Object.entries(byDate).forEach(([date, types]) => {
-    const arr = Array.from(types);
-    marked[date] = {
-      startingDay: true,
-      endingDay: true,
-      color: typeColorMap[arr[0]] ?? COLORS.primary,
-      textColor: COLORS.white,
-    };
+  Object.entries(byDate).forEach(([date, entries]) => {
+    const seen = new Set<string>();
+    const periods = entries
+      .filter((e) => { if (seen.has(e.tripType)) return false; seen.add(e.tripType); return true; })
+      .map((e) => ({
+        startingDay: date === e.startKey,
+        endingDay: date === e.endKey,
+        color: typeColorMap[e.tripType] ?? COLORS.primary,
+      }));
+    (marked as any)[date] = { periods };
   });
   return marked;
 }
@@ -79,16 +84,18 @@ function getMarkedDatesFromYardPeriodTrips(
   const marked: MarkedDates = {};
   yardTrips.forEach((trip) => {
     const color = trip.department ? getDeptColor(trip.department) : defaultColor;
+    const startKey = trip.startDate.slice(0, 10);
+    const endKey = trip.endDate.slice(0, 10);
     const start = parseLocalDate(trip.startDate);
     const end = parseLocalDate(trip.endDate);
     for (let d = new Date(start.getTime()); d <= end; d.setDate(d.getDate() + 1)) {
       const key = toYYYYMMDD(d);
-      marked[key] = {
-        startingDay: key === trip.startDate,
-        endingDay: key === trip.endDate,
+      if (!(marked as any)[key]) (marked as any)[key] = { periods: [] };
+      (marked as any)[key].periods.push({
+        startingDay: key === startKey,
+        endingDay: key === endKey,
         color,
-        textColor: COLORS.white,
-      };
+      });
     }
   });
   return marked;
@@ -113,7 +120,6 @@ const TRIP_TYPE_LABELS: Record<string, string> = {
   GUEST: 'Guest',
   BOSS: 'Boss',
   DELIVERY: 'Delivery',
-  YARD_PERIOD: 'Yard Period',
 };
 
 export const HomeScreen = ({ navigation }: any) => {
@@ -125,7 +131,7 @@ export const HomeScreen = ({ navigation }: any) => {
   const [bannerLoadFailed, setBannerLoadFailed] = useState(false);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [tripsLoading, setTripsLoading] = useState(true);
-  const calendarMode = 'trips';
+  const [calendarMode, setCalendarMode] = useState<'trips' | 'yardPeriod'>('trips');
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   const vesselId = user?.vesselId ?? null;
@@ -321,7 +327,7 @@ export const HomeScreen = ({ navigation }: any) => {
                       key={themeColors.isDark ? 'dark' : 'light'}
                       current={new Date().toISOString().slice(0, 10)}
                       markedDates={markedDates}
-                      markingType="period"
+                      markingType="multi-period"
                       theme={{
                         backgroundColor: 'transparent',
                         calendarBackground: 'transparent',
@@ -390,12 +396,12 @@ export const HomeScreen = ({ navigation }: any) => {
                     },
                   ]}
                   onPress={() =>
-                    navigation.navigate('UpcomingTrips')
+                    navigation.navigate(calendarMode === 'trips' ? 'UpcomingTrips' : 'YardPeriodTrips')
                   }
                   activeOpacity={0.8}
                 >
                   <Text style={[styles.seeTripsButtonText, { color: CALENDAR_ACCENT }]}>
-                    {'See trips'}
+                    {calendarMode === 'trips' ? 'See trips' : 'See yard periods'}
                   </Text>
                   <Text style={[styles.seeTripsArrow, { color: CALENDAR_ACCENT }]}>›</Text>
                 </TouchableOpacity>

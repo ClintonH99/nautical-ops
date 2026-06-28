@@ -11,7 +11,6 @@ import { useThemeColors } from '../hooks/useThemeColors';
 
 const CATEGORIES = [
   { icon: '📋', label: 'Maintenance Log', nav: 'MaintenanceLog' as const },
-  { icon: '🏗️', label: 'Yard Period', nav: 'YardPeriodTrips' as const },
   { icon: '📊', label: 'Vessel Logs', nav: 'VesselLogs' as const },
   { icon: '👷', label: 'Contractor Database', nav: 'ContractorDatabase' as const },
 ];
