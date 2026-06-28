@@ -242,7 +242,12 @@ h1 em{font-style:italic;color:var(--gold);}
 .role-title{font-family:var(--ff-d);font-size:20px;font-weight:600;color:var(--navy);margin-bottom:2px;}
 .role-sub-title{font-size:12px;font-weight:500;color:var(--gold);letter-spacing:.04em;margin-bottom:10px;}
 
-/* ── FAQ ─────────────────────────────── */
+/* ── Video section ───────────────────── */
+.video-inner{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;max-width:1100px;margin:0 auto;}
+.video-phone-col{display:flex;justify-content:center;align-items:center;}
+.video-text-col{display:flex;flex-direction:column;justify-content:center;}
+
+
 .faq-inner{max-width:720px;margin:0 auto;}
 .faq-hdr{text-align:center;margin-bottom:48px;}
 .faq-hdr .sec-title{margin-bottom:0;}
@@ -311,6 +316,10 @@ footer{background:var(--navy);padding:56px 80px 40px;}
 
   /* 3. General sections */
   .section,.screenshots,.devices{padding:48px 24px;}
+  .video-section{padding:48px 24px;}
+  .video-inner{grid-template-columns:1fr !important;gap:40px !important;text-align:center;}
+  .video-phone-col{justify-content:center;}
+  .video-text-col{align-items:center;text-align:center;}
   .sf-intro{padding:48px 24px 0;}
   .sf-inner{grid-template-columns:1fr;padding:0 24px;}
   .sf-phone-col{display:none;}
@@ -392,11 +401,9 @@ footer{background:var(--navy);padding:56px 80px 40px;}
 </section>
 
 <!-- ── Video showcase ─────────────────── -->
-<section class="section" style="background:var(--navy);text-align:center;">
-  <div class="reveal">
-    <h2 class="sec-title" style="color:#fff;margin-bottom:12px;">Watch it in action.</h2>
-    <p class="sec-sub" style="margin:0 auto 48px;color:rgba(255,255,255,.6);">See how fast it is to log a trip, assign tasks, and manage your crew on board.</p>
-    <div style="display:flex;justify-content:center;">
+<section class="section video-section" style="background:var(--navy);">
+  <div class="reveal video-inner">
+    <div class="video-phone-col">
       <div style="zoom:0.88;filter:drop-shadow(0 40px 70px rgba(0,0,0,0.35)) drop-shadow(0 12px 24px rgba(0,0,0,0.2));display:inline-block;">
         <div class="device device-iphone-14-pro device-spacegray">
           <div class="device-frame">
@@ -409,6 +416,11 @@ footer{background:var(--navy);padding:56px 80px 40px;}
           <div class="device-power"></div>
         </div>
       </div>
+    </div>
+    <div class="video-text-col">
+      <h2 class="sec-title" style="color:#fff;margin-bottom:16px;">Watch it in action.</h2>
+      <p style="font-size:16px;color:rgba(255,255,255,.6);line-height:1.8;margin-bottom:32px;">See how fast it is to log a trip, assign tasks, and manage your crew on board.</p>
+      <p style="font-size:15px;color:rgba(255,255,255,.45);line-height:1.8;">Most features let you save and export as a <span style="color:rgba(255,255,255,.8);font-weight:500;">PDF</span> — ready for filing, sharing with management, or keeping as an official record on board.</p>
     </div>
   </div>
 </section>
