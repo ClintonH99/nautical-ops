@@ -134,11 +134,22 @@ export const SettingsScreen = ({ navigation }: any) => {
               },
             ]
           : []),
+        ...(Platform.OS !== 'web'
+          ? [
+              {
+                icon: '🔔',
+                label: 'Notifications',
+                description: 'Manage notification preferences',
+                onPress: () => navigation.navigate('NotificationSettings'),
+                disabled: false,
+              },
+            ]
+          : []),
         {
-          icon: '🔔',
-          label: 'Notifications',
-          description: 'Manage notification preferences',
-          onPress: () => navigation.navigate('NotificationSettings'),
+          icon: '🚀',
+          label: 'Future Updates & Features',
+          description: 'See what's coming next to Nautical Ops',
+          onPress: () => navigation.navigate('FutureUpdates'),
           disabled: false,
         },
         ...(Platform.OS !== 'web'

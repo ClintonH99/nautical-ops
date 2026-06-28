@@ -69,7 +69,9 @@ import {
   ContractorDatabaseScreen,
   AddEditContractorScreen,
   NotepadScreen,
+  FutureUpdatesScreen,
   AddEditNoteScreen,
+  FutureUpdatesScreen,
   VesselCrewSafetyScreen,
   MusterStationScreen,
   CreateMusterStationScreen,
@@ -964,7 +966,12 @@ export const RootNavigator = () => {
                 }}
               />
               <Stack.Screen
-                name="Notepad"
+                name="FutureUpdates"
+              component={FutureUpdatesScreen}
+              options={{ title: 'Future Updates', headerShown: true }}
+            />
+            <Stack.Screen
+              name="Notepad"
               component={NotepadScreen}
               options={{ title: 'Notepad', headerShown: true }}
             />

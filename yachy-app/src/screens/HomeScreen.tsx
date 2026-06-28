@@ -101,6 +101,7 @@ const HOME_CATEGORIES = [
   { key: 'tasks', label: 'Tasks', icon: '📝', nav: 'Tasks' as const },
   { key: 'shopping', label: 'Shopping', icon: '🛒', nav: 'ShoppingListCategory' as const },
   { key: 'inventory', label: 'Inventory', icon: '📦', nav: 'Inventory' as const },
+  { key: 'notepad', label: 'Notepad', icon: '🗒️', nav: 'Notepad' as const },
 ];
 
 /** Trips calendar accent – ocean teal */
@@ -124,7 +125,7 @@ export const HomeScreen = ({ navigation }: any) => {
   const [bannerLoadFailed, setBannerLoadFailed] = useState(false);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [tripsLoading, setTripsLoading] = useState(true);
-  const [calendarMode, setCalendarMode] = useState<'trips' | 'yardPeriod'>('trips');
+  const calendarMode = 'trips';
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   const vesselId = user?.vesselId ?? null;
@@ -303,64 +304,7 @@ export const HomeScreen = ({ navigation }: any) => {
                 ]}
               >
                 <View style={styles.tripsCalendarHeader}>
-                  <View style={styles.calendarModeRow}>
-                    <TouchableOpacity
-                      style={[
-                        styles.calendarModeBtn,
-                        {
-                          backgroundColor:
-                            calendarMode === 'trips' ? themeColors.surfaceAlt : 'transparent',
-                          borderColor:
-                            calendarMode === 'trips' ? CALENDAR_ACCENT : themeColors.surfaceAlt,
-                        },
-                      ]}
-                      onPress={() => setCalendarMode('trips')}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        style={[
-                          styles.calendarModeBtnText,
-                          {
-                            color:
-                              calendarMode === 'trips'
-                                ? themeColors.textPrimary
-                                : themeColors.textSecondary,
-                          },
-                        ]}
-                      >
-                        Trips
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        styles.calendarModeBtn,
-                        {
-                          backgroundColor:
-                            calendarMode === 'yardPeriod' ? themeColors.surfaceAlt : 'transparent',
-                          borderColor:
-                            calendarMode === 'yardPeriod'
-                              ? CALENDAR_ACCENT
-                              : themeColors.surfaceAlt,
-                        },
-                      ]}
-                      onPress={() => setCalendarMode('yardPeriod')}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        style={[
-                          styles.calendarModeBtnText,
-                          {
-                            color:
-                              calendarMode === 'yardPeriod'
-                                ? themeColors.textPrimary
-                                : themeColors.textSecondary,
-                          },
-                        ]}
-                      >
-                        Yard Period
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
+  
                   <View
                     style={[styles.tripsCalendarAccent, { backgroundColor: CALENDAR_ACCENT }]}
                   />
@@ -446,14 +390,12 @@ export const HomeScreen = ({ navigation }: any) => {
                     },
                   ]}
                   onPress={() =>
-                    navigation.navigate(
-                      calendarMode === 'trips' ? 'UpcomingTrips' : 'YardPeriodTrips'
-                    )
+                    navigation.navigate('UpcomingTrips')
                   }
                   activeOpacity={0.8}
                 >
                   <Text style={[styles.seeTripsButtonText, { color: CALENDAR_ACCENT }]}>
-                    {calendarMode === 'trips' ? 'See trips' : 'See yard periods'}
+                    {'See trips'}
                   </Text>
                   <Text style={[styles.seeTripsArrow, { color: CALENDAR_ACCENT }]}>›</Text>
                 </TouchableOpacity>
