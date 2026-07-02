@@ -66,8 +66,8 @@ function getMarkedDatesFromTrips(trips: Trip[], typeColorMap: Record<string, str
     const periods = entries
       .filter((e) => { if (seen.has(e.tripType)) return false; seen.add(e.tripType); return true; })
       .map((e) => ({
-        startingDay: date === e.startKey,
-        endingDay: date === e.endKey,
+        startingDay: true,
+        endingDay: true,
         color: typeColorMap[e.tripType] ?? COLORS.primary,
       }));
     (marked as any)[date] = { periods };
@@ -92,8 +92,8 @@ function getMarkedDatesFromYardPeriodTrips(
       const key = toYYYYMMDD(d);
       if (!(marked as any)[key]) (marked as any)[key] = { periods: [] };
       (marked as any)[key].periods.push({
-        startingDay: key === startKey,
-        endingDay: key === endKey,
+        startingDay: true,
+        endingDay: true,
         color,
       });
     }
@@ -310,7 +310,58 @@ export const HomeScreen = ({ navigation }: any) => {
                 ]}
               >
                 <View style={styles.tripsCalendarHeader}>
-  
+                  <View style={styles.calendarModeRow}>
+                    <TouchableOpacity
+                      style={[
+                        styles.calendarModeBtn,
+                        {
+                          borderColor:
+                            calendarMode === 'trips' ? CALENDAR_ACCENT : themeColors.surfaceAlt,
+                          backgroundColor: themeColors.surface,
+                        },
+                      ]}
+                      onPress={() => setCalendarMode('trips')}
+                      activeOpacity={0.8}
+                    >
+                      <Text
+                        style={[
+                          styles.calendarModeBtnText,
+                          {
+                            color:
+                              calendarMode === 'trips' ? CALENDAR_ACCENT : themeColors.textSecondary,
+                          },
+                        ]}
+                      >
+                        Trips
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.calendarModeBtn,
+                        {
+                          borderColor:
+                            calendarMode === 'yardPeriod' ? CALENDAR_ACCENT : themeColors.surfaceAlt,
+                          backgroundColor: themeColors.surface,
+                        },
+                      ]}
+                      onPress={() => setCalendarMode('yardPeriod')}
+                      activeOpacity={0.8}
+                    >
+                      <Text
+                        style={[
+                          styles.calendarModeBtnText,
+                          {
+                            color:
+                              calendarMode === 'yardPeriod'
+                                ? CALENDAR_ACCENT
+                                : themeColors.textSecondary,
+                          },
+                        ]}
+                      >
+                        Yard Period
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                   <View
                     style={[styles.tripsCalendarAccent, { backgroundColor: CALENDAR_ACCENT }]}
                   />

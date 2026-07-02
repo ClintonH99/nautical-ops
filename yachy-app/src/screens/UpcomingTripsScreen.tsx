@@ -170,54 +170,6 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
       }
     >
-      <Text
-        style={[styles.sectionTitle, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}
-      >
-        Calendar
-      </Text>
-      <View style={[styles.calendarCard, { backgroundColor: themeColors.surface }]}>
-        {loading ? (
-          <LoadingSpinner />
-        ) : (
-          <Calendar
-            current={new Date().toISOString().slice(0, 10)}
-            markedDates={markedDates}
-            markingType="period"
-            theme={calendarTheme}
-            onMonthChange={() => {}}
-            hideExtraDays
-            hideArrows={false}
-          />
-        )}
-        <View style={styles.legend}>
-          {visibleTypes.GUEST && (
-            <View style={styles.legendRow}>
-              <View style={[styles.legendDot, { backgroundColor: c.guest }]} />
-              <Text style={[styles.legendText, { color: themeColors.textSecondary }]}>Guest</Text>
-            </View>
-          )}
-          {visibleTypes.BOSS && (
-            <View style={styles.legendRow}>
-              <View style={[styles.legendDot, { backgroundColor: c.boss }]} />
-              <Text style={[styles.legendText, { color: themeColors.textSecondary }]}>Boss</Text>
-            </View>
-          )}
-          {visibleTypes.DELIVERY && (
-            <View style={styles.legendRow}>
-              <View style={[styles.legendDot, { backgroundColor: c.delivery }]} />
-              <Text style={[styles.legendText, { color: themeColors.textSecondary }]}>
-                Delivery
-              </Text>
-            </View>
-          )}
-          {visibleTypes.YARD_PERIOD && (
-            <View style={styles.legendRow}>
-              <View style={[styles.legendDot, { backgroundColor: c.yardPeriod }]} />
-              <Text style={[styles.legendText, { color: themeColors.textSecondary }]}>Yard</Text>
-            </View>
-          )}
-        </View>
-      </View>
 
       {tripsStartingTomorrow.length > 0 && (
         <View style={styles.tripTomorrowBanner}>
@@ -338,39 +290,6 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
             </Text>
           </TouchableOpacity>
         </View>
-        <View
-          style={[
-            styles.optionCard,
-            { backgroundColor: themeColors.surface, borderLeftColor: c.yardPeriod },
-          ]}
-        >
-          <TouchableOpacity
-            style={styles.optionCardMain}
-            onPress={() => navigation.navigate('YardPeriodTrips')}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.optionEmoji}>🔧</Text>
-            <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>
-              Yard Period
-            </Text>
-            <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>
-              Yard / maintenance
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.visibilityBtn}
-            onPress={() => toggleVisible('YARD_PERIOD')}
-          >
-            <Text
-              style={[
-                styles.visibilityBtnText,
-                !visibleTypes.YARD_PERIOD && styles.visibilityBtnTextDim,
-              ]}
-            >
-              {visibleTypes.YARD_PERIOD ? 'Hide' : 'Show'}
-            </Text>
-          </TouchableOpacity>
-        </View>
       </View>
     </ScrollView>
   );
@@ -436,7 +355,7 @@ const styles = StyleSheet.create({
   },
   legendText: { fontSize: FONTS.sm },
   optionsRow: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: SPACING.md,
   },
   optionsRowSecond: {

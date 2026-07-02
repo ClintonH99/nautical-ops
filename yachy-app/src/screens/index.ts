@@ -72,3 +72,6 @@ export { CreateSafetyEquipmentScreen } from './CreateSafetyEquipmentScreen';
 export { RulesScreen } from './RulesScreen';
 export { CreateRulesScreen } from './CreateRulesScreen';
 export { CategoriesScreen } from './CategoriesScreen';
+export { NotepadScreen } from './NotepadScreen';
+export { AddEditNoteScreen } from './AddEditNoteScreen';
+export { FutureUpdatesScreen } from './FutureUpdatesScreen';

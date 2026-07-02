@@ -3,7 +3,7 @@
  * Create button, department filter, list of inventory items. Export mode: select items → Export to PDF.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -24,11 +24,32 @@ import inventoryService, { InventoryItem } from '../services/inventory';
 import { Department } from '../types';
 import { exportInventoryToPdf } from '../utils/inventoryPdf';
 import { Button, Input, ButtonTagCard, ButtonTagRow } from '../components';
+import { InfoModal } from '../components/InfoModal';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
 export const InventoryScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <InfoModal
+          screenKey="inventory"
+          autoShow={false}
+          content={{
+            title: 'Inventory',
+            description: 'Track stock and supplies across departments.',
+            features: [
+              'Create inventory items with quantities and locations',
+              'Filter items by department',
+              'Search across titles, descriptions, and locations',
+              'Select items and export to PDF',
+            ],
+          }}
+        />
+      ),
+    });
+  }, [navigation]);
   const { user } = useAuthStore();
   const overrides = useDepartmentColorStore((s) => s.overrides);
   const [items, setItems] = useState<InventoryItem[]>([]);
