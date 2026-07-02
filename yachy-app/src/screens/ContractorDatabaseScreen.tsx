@@ -2,7 +2,8 @@
  * Contractor Database Screen
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useLayoutEffect } from 'react';
+import { InfoModal } from '../components/InfoModal';
 import {
   View,
   Text,
@@ -48,6 +49,26 @@ const SEARCH_FILTER_OPTIONS: { value: SearchFilter; label: string }[] = [
 ];
 
 export const ContractorDatabaseScreen = ({ navigation }: any) => {
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <InfoModal
+          screenKey="contractor_database"
+          autoShow={false}
+          content={{
+            title: 'Contractor Database',
+            description: 'Keep contractor and supplier contacts on file.',
+            features: [
+              'Store contractor contact details',
+              'Reference trusted suppliers quickly',
+              'Keep records for recurring services',
+              'Update entries as contacts change',
+            ],
+          }}
+        />
+      ),
+    });
+  }, [navigation]);
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const overrides = useDepartmentColorStore((s) => s.overrides);

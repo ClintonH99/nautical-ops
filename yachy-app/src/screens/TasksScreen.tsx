@@ -2,7 +2,8 @@
  * Tasks Screen - Hub: Upcoming Tasks (button), Overdue, then Daily/Weekly/Monthly categories
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useLayoutEffect } from 'react';
+import { InfoModal } from '../components/InfoModal';
 import {
   View,
   Text,
@@ -27,6 +28,26 @@ const CATEGORIES: { key: TaskCategory; label: string; icon: string }[] = [
 ];
 
 export const TasksScreen = ({ navigation }: any) => {
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <InfoModal
+          screenKey="tasks"
+          autoShow={false}
+          content={{
+            title: 'Tasks',
+            description: 'Create, assign, and track tasks across the vessel.',
+            features: [
+              'Create tasks with due dates and departments',
+              'View upcoming, overdue, and completed tasks',
+              'Switch between list and calendar views',
+              'Mark tasks complete as work gets done',
+            ],
+          }}
+        />
+      ),
+    });
+  }, [navigation]);
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;

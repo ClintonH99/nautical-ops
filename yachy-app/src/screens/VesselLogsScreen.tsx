@@ -2,7 +2,8 @@
  * Vessel Logs Screen
  */
 
-import React from 'react';
+import React, { useLayoutEffect } from 'react';
+import { InfoModal } from '../components/InfoModal';
 import {
   View,
   Text,
@@ -32,6 +33,26 @@ const LOG_CATEGORIES = [
 ];
 
 export const VesselLogsScreen = ({ navigation }: any) => {
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <InfoModal
+          screenKey="vessel_logs"
+          autoShow={false}
+          content={{
+            title: 'Vessel Logs',
+            description: 'Record fuel, waste, and pump-out logs.',
+            features: [
+              'Log fuel bunkering and consumption',
+              'Track general waste disposal',
+              'Record pump-out events',
+              'Maintain compliant vessel records',
+            ],
+          }}
+        />
+      ),
+    });
+  }, [navigation]);
   const themeColors = useThemeColors();
   return (
     <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>

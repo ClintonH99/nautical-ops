@@ -3,7 +3,8 @@
  * Hub for maintenance-related features: Maintenance Log, Yard Period, Vessel Logs, Contractor Database
  */
 
-import React from 'react';
+import React, { useLayoutEffect } from 'react';
+import { InfoModal } from '../components/InfoModal';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { COLORS, FONTS, SPACING, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
@@ -17,6 +18,26 @@ const CATEGORIES = [
 
 
 export const MaintenanceHomeScreen = ({ navigation }: any) => {
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <InfoModal
+          screenKey="maintenance"
+          autoShow={false}
+          content={{
+            title: 'Maintenance',
+            description: 'Track maintenance logs and scheduled work.',
+            features: [
+              'Log maintenance work by department',
+              'Keep a history of completed jobs',
+              'Reference past work for recurring tasks',
+              'Stay on top of vessel upkeep',
+            ],
+          }}
+        />
+      ),
+    });
+  }, [navigation]);
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;

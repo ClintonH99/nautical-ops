@@ -3,7 +3,8 @@
  * Watch Keeping Rules (view / HOD edit), then Watch Schedule and Create buttons
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useLayoutEffect } from 'react';
+import { InfoModal } from '../components/InfoModal';
 import {
   View,
   Text,
@@ -25,6 +26,26 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import watchKeepingService, { WatchKeepingRules } from '../services/watchKeeping';
 
 export const WatchKeepingScreen = ({ navigation }: any) => {
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <InfoModal
+          screenKey="watch_keeping"
+          autoShow={false}
+          content={{
+            title: 'Watch Keeping',
+            description: 'Manage watch schedules and timetables.',
+            features: [
+              'Build watch timetables for the crew',
+              'Assign watch periods to crew members',
+              'Keep bridge coverage organized',
+              'Adjust schedules as needed',
+            ],
+          }}
+        />
+      ),
+    });
+  }, [navigation]);
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;

@@ -3,7 +3,8 @@
  * Hub for safety-related features: Pre-Departure Checklist, Rules, Safety Equipment
  */
 
-import React from 'react';
+import React, { useLayoutEffect } from 'react';
+import { InfoModal } from '../components/InfoModal';
 import {
   View,
   Text,
@@ -23,6 +24,26 @@ const CATEGORIES = [
 ];
 
 export const VesselCrewSafetyScreen = ({ navigation }: any) => {
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <InfoModal
+          screenKey="vessel_crew_safety"
+          autoShow={false}
+          content={{
+            title: 'Vessel & Crew Safety',
+            description: 'Central hub for safety information and procedures.',
+            features: [
+              'Access muster stations and crew duties',
+              'Review safety equipment records',
+              'Read the rules on-board',
+              'Run through the pre-departure checklist',
+            ],
+          }}
+        />
+      ),
+    });
+  }, [navigation]);
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;

@@ -2,7 +2,8 @@
  * Safety Equipment Screen
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useLayoutEffect } from 'react';
+import { InfoModal } from '../components/InfoModal';
 import {
   View,
   Text,
@@ -90,6 +91,26 @@ function SafetyEquipmentPreview({
 }
 
 export const SafetyEquipmentScreen = ({ navigation }: any) => {
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <InfoModal
+          screenKey="safety_equipment"
+          autoShow={false}
+          content={{
+            title: 'Safety Equipment',
+            description: 'Log and track safety equipment on-board.',
+            features: [
+              'Record safety equipment and locations',
+              'Track service and expiry dates',
+              'Keep an auditable safety inventory',
+              'Update records after inspections',
+            ],
+          }}
+        />
+      ),
+    });
+  }, [navigation]);
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;

@@ -1,7 +1,8 @@
 /**
  * Notepad Screen
  */
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useLayoutEffect } from 'react';
+import { InfoModal } from '../components/InfoModal';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +11,26 @@ import { useAuthStore, useThemeStore, BACKGROUND_THEMES } from '../store';
 import notesService, { Note } from '../services/notes';
 
 export const NotepadScreen = ({ navigation }: any) => {
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <InfoModal
+          screenKey="notepad"
+          autoShow={false}
+          content={{
+            title: 'Notepad',
+            description: 'Shared vessel notes for the whole crew.',
+            features: [
+              'Create and edit notes visible to all crew',
+              'Keep handover information in one place',
+              'Notes sync across every crew member\'s device',
+              'Edit or remove notes as things change',
+            ],
+          }}
+        />
+      ),
+    });
+  }, [navigation]);
   const { user } = useAuthStore();
   const backgroundTheme = useThemeStore((s) => s.backgroundTheme);
   const themeColors = BACKGROUND_THEMES[backgroundTheme];

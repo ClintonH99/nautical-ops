@@ -2,7 +2,8 @@
  * Rules On-Board Screen
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useLayoutEffect } from 'react';
+import { InfoModal } from '../components/InfoModal';
 import {
   View,
   Text,
@@ -59,6 +60,26 @@ function RulesPreview({
 }
 
 export const RulesScreen = ({ navigation }: any) => {
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <InfoModal
+          screenKey="rules_on_board"
+          autoShow={false}
+          content={{
+            title: 'Rules On-Board',
+            description: 'The vessel\'s standing rules and conduct guidelines.',
+            features: [
+              'Read the vessel\'s on-board rules',
+              'Keep conduct expectations clear for all crew',
+              'Reference standing policies at any time',
+              'Update rules as they evolve',
+            ],
+          }}
+        />
+      ),
+    });
+  }, [navigation]);
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;

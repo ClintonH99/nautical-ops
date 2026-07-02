@@ -3,7 +3,8 @@
  * List of published muster stations, Create button, Download PDF per item
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useLayoutEffect } from 'react';
+import { InfoModal } from '../components/InfoModal';
 import {
   View,
   Text,
@@ -82,6 +83,26 @@ function MusterStationPreview({
 }
 
 export const MusterStationScreen = ({ navigation }: any) => {
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <InfoModal
+          screenKey="muster_station"
+          autoShow={false}
+          content={{
+            title: 'Muster Station & Duties',
+            description: 'Assign crew muster stations and emergency duties.',
+            features: [
+              'Define muster stations for the vessel',
+              'Assign crew roles and duties per station',
+              'Keep emergency responsibilities clear',
+              'Update assignments as crew changes',
+            ],
+          }}
+        />
+      ),
+    });
+  }, [navigation]);
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;

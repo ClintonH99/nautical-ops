@@ -3,7 +3,8 @@
  * Choose between General Shopping or Trip Shopping before viewing/creating lists
  */
 
-import React from 'react';
+import React, { useLayoutEffect } from 'react';
+import { InfoModal } from '../components/InfoModal';
 import {
   View,
   Text,
@@ -29,6 +30,26 @@ const CATEGORIES = [
 ];
 
 export const ShoppingListCategoryScreen = ({ navigation }: any) => {
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <InfoModal
+          screenKey="shopping"
+          autoShow={false}
+          content={{
+            title: 'Shopping',
+            description: 'Manage shopping lists organized by category.',
+            features: [
+              'Browse shopping lists by category',
+              'Add items with quantities and notes',
+              'Check off items as they are purchased',
+              'Keep provisioning organized across departments',
+            ],
+          }}
+        />
+      ),
+    });
+  }, [navigation]);
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;

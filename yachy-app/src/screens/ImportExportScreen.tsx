@@ -3,7 +3,8 @@
  * Download Excel templates and import data for Tasks, Maintenance Log, Yard Period
  */
 
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
+import { InfoModal } from '../components/InfoModal';
 import {
   View,
   Text,
@@ -30,6 +31,26 @@ import { Button } from '../components';
 import inventoryService from '../services/inventory';
 
 export const ImportExportScreen = ({ navigation }: any) => {
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <InfoModal
+          screenKey="import_export"
+          autoShow={false}
+          content={{
+            title: 'Import / Export',
+            description: 'Move vessel data in and out of the app.',
+            features: [
+              'Export vessel data for backup or sharing',
+              'Import data into the app',
+              'Keep records portable between devices',
+              'Transfer information when handing over',
+            ],
+          }}
+        />
+      ),
+    });
+  }, [navigation]);
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const [downloading, setDownloading] = useState<TemplateType | null>(null);
