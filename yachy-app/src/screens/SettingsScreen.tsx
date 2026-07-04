@@ -184,10 +184,7 @@ export const SettingsScreen = ({ navigation }: any) => {
           icon: '❓',
           label: 'FAQ & Help',
           description: 'Frequently asked questions and guides',
-          onPress: () =>
-            Linking.openURL('https://www.nautical-ops.com/support').catch(() =>
-              Alert.alert('Support', 'Visit nautical-ops.com/support')
-            ),
+          onPress: () => navigation.navigate('FAQHelp'),
           disabled: false,
         },
         {

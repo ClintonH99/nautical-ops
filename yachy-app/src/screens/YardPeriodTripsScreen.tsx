@@ -159,7 +159,7 @@ export const YardPeriodTripsScreen = ({ navigation }: any) => {
     return (
       <ButtonTagCard
         headerTitle={item.title ?? ''}
-        accentColor={cardColor}
+        accentColor={item.department ? getDepartmentColor(item.department, overrides) : cardColor}
         onEdit={isHOD ? () => onEdit(item) : undefined}
         onDelete={isHOD ? () => onDelete(item) : undefined}
         onPress={isHOD ? () => onEdit(item) : undefined}
@@ -190,33 +190,6 @@ export const YardPeriodTripsScreen = ({ navigation }: any) => {
 
   const ListHeader = () => (
     <>
-      <View style={[styles.calendarWrap, { backgroundColor: themeColors.surface }]}>
-        {loading ? (
-          <LoadingSpinner />
-        ) : (
-          <Calendar
-            current={new Date().toISOString().slice(0, 10)}
-            markedDates={markedDates}
-            markingType="period"
-            theme={calendarTheme}
-            onMonthChange={() => {}}
-            hideExtraDays
-            hideArrows={false}
-          />
-        )}
-        <View style={styles.legend}>
-          {DEPARTMENTS.map((dept) => (
-            <View key={dept} style={styles.legendRow}>
-              <View
-                style={[styles.legendDot, { backgroundColor: getDepartmentColor(dept, overrides) }]}
-              />
-              <Text style={[styles.legendText, { color: themeColors.textSecondary }]}>
-                {dept.charAt(0) + dept.slice(1).toLowerCase()}
-              </Text>
-            </View>
-          ))}
-        </View>
-      </View>
       {isHOD && (
         <View style={styles.addRow}>
           <Button

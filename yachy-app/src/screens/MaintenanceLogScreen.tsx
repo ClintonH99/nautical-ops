@@ -4,7 +4,8 @@
  * Logs persist until manually deleted.
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useLayoutEffect } from 'react';
+import { InfoModal } from '../components/InfoModal';
 import {
   View,
   Text,
@@ -111,6 +112,26 @@ function escapeHtml(s: string): string {
 }
 
 export const MaintenanceLogScreen = ({ navigation }: any) => {
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <InfoModal
+          screenKey="maintenance_log"
+          autoShow={false}
+          content={{
+            title: 'Maintenance Log',
+            description: 'Record and track maintenance on vessel equipment.',
+            features: [
+              'Add maintenance log entries per equipment',
+              'Filter by equipment, location, serial, and hours',
+              'Track service intervals and hours to next service',
+              'Select entries and export to PDF',
+            ],
+          }}
+        />
+      ),
+    });
+  }, [navigation]);
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const [logs, setLogs] = useState<MaintenanceLog[]>([]);

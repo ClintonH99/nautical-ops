@@ -47,8 +47,11 @@ export const InfoModal: React.FC<InfoModalProps> = ({ screenKey, content, autoSh
 
   return (
     <>
-      <TouchableOpacity onPress={() => setVisible(true)} style={styles.infoButton}>
-        <Text style={styles.infoButtonText}>i</Text>
+      <TouchableOpacity
+        onPress={() => setVisible(true)}
+        style={[styles.infoButton, { borderColor: themeColors.isDark ? '#FFFFFF' : '#1e3a5f' }]}
+      >
+        <Text style={[styles.infoButtonText, { color: themeColors.isDark ? '#FFFFFF' : '#1e3a5f' }]}>i</Text>
       </TouchableOpacity>
 
       <Modal visible={visible} transparent animationType="fade">

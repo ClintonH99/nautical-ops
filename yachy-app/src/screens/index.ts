@@ -75,3 +75,4 @@ export { CategoriesScreen } from './CategoriesScreen';
 export { NotepadScreen } from './NotepadScreen';
 export { AddEditNoteScreen } from './AddEditNoteScreen';
 export { FutureUpdatesScreen } from './FutureUpdatesScreen';
+export { FAQScreen } from './FAQHelpScreen';

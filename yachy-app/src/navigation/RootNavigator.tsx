@@ -56,6 +56,7 @@ import {
   DepartmentColorSettingsScreen,
   ThemeSettingsScreen,
   NotificationSettingsScreen,
+  FAQScreen,
   TermsConditionsScreen,
   PrivacyPolicyScreen,
   RefundPolicyScreen,
@@ -435,7 +436,7 @@ export const RootNavigator = () => {
           initialRouteName={initialRoute}
           screenOptions={{
             headerStyle: {
-              backgroundColor: themeColors.background,
+              backgroundColor: themeColors.surface,
             },
             headerShadowVisible: false,
             headerTintColor: themeColors.isDark ? COLORS.white : themeColors.textPrimary,
@@ -443,6 +444,7 @@ export const RootNavigator = () => {
               fontWeight: 'bold',
             },
             headerBackTitle: 'Back',
+            headerRightContainerStyle: { backgroundColor: 'transparent', paddingRight: 16 },
             contentStyle: { backgroundColor: themeColors.background },
           }}
         >
@@ -525,6 +527,11 @@ export const RootNavigator = () => {
                 name="CreateVessel"
                 component={CreateVesselScreen}
                 options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="FAQHelp"
+                component={FAQScreen}
+                options={{ title: 'FAQ & Help', headerShown: true }}
               />
               <Stack.Screen
                 name="Settings"
