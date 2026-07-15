@@ -1,78 +1,81 @@
 /**
  * Future Updates & Features Screen
- * Shows what's coming next in Nautical Ops
+ * Shows what's coming next in Nautical Ops — pulled live from the admin-managed
+ * app_updates table, grouped by status, so this screen reflects whatever is
+ * added/edited/removed via admin.nautical-ops.com.
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
+  ActivityIndicator,
+  TouchableOpacity,
+  Linking,
+  Alert,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES, SHADOWS } from '../constants/theme';
 import { useThemeStore, BACKGROUND_THEMES } from '../store';
+import { supabase } from '../services/supabase';
 
-const UPCOMING: { icon: string; title: string; description: string; status: 'soon' | 'planned' | 'in-progress' }[] = [
-  {
-    icon: '🤖',
-    title: 'AI Crew Assistant',
-    description: 'Ask questions about your vessel, get maintenance reminders, and receive smart task suggestions powered by AI.',
-    status: 'planned',
-  },
-  {
-    icon: '📄',
-    title: 'Document Storage',
-    description: 'Upload and store vessel certificates, crew documents, and insurance papers securely in the app.',
-    status: 'planned',
-  },
-  {
-    icon: '🌦️',
-    title: 'Weather Integration',
-    description: 'Real-time weather and sea state forecasts linked to your upcoming trips and departure checklists.',
-    status: 'planned',
-  },
-  {
-    icon: '🤝',
-    title: 'Guest Management',
-    description: 'Track guest preferences, dietary requirements, and trip history across multiple charters.',
-    status: 'planned',
-  },
-  {
-    icon: '📱',
-    title: 'Android App',
-    description: 'A native Android app so the full crew can use Nautical Ops regardless of their device.',
-    status: 'in-progress',
-  },
-  {
-    icon: '📊',
-    title: 'Reporting & Analytics',
-    description: 'Monthly and annual reports for maintenance hours, trip summaries, and crew task performance.',
-    status: 'planned',
-  },
-  {
-    icon: '🔗',
-    title: 'Calendar Sync',
-    description: 'Sync your vessel trips and tasks with Apple Calendar, Google Calendar, and Outlook.',
-    status: 'planned',
-  },
-  {
-    icon: '💬',
-    title: 'Crew Messaging',
-    description: 'In-app messaging between crew members, with department-specific channels and announcements.',
-    status: 'planned',
-  },
-];
+interface AppUpdate {
+  id: string;
+  title: string;
+  description: string;
+  category: string | null;
+  status: string;
+  created_at: string;
+}
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  'in-progress': { label: 'In Progress', color: '#0d9488', bg: 'rgba(13,148,136,0.1)' },
-  soon: { label: 'Coming Soon', color: '#d97706', bg: 'rgba(217,119,6,0.1)' },
+  released: { label: 'Released', color: '#16a34a', bg: 'rgba(22,163,74,0.1)' },
+  coming_soon: { label: 'Coming Soon', color: '#d97706', bg: 'rgba(217,119,6,0.1)' },
+  in_progress: { label: 'In Progress', color: '#0d9488', bg: 'rgba(13,148,136,0.1)' },
   planned: { label: 'Planned', color: '#6366f1', bg: 'rgba(99,102,241,0.1)' },
 };
+
+// Section display order
+const STATUS_ORDER = ['released', 'coming_soon', 'in_progress', 'planned'];
 
 export const FutureUpdatesScreen = () => {
   const backgroundTheme = useThemeStore((s) => s.backgroundTheme);
   const themeColors = BACKGROUND_THEMES[backgroundTheme];
+
+  const [updates, setUpdates] = useState<AppUpdate[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadUpdates = async () => {
+      const { data, error } = await supabase
+        .from('app_updates')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        setUpdates(data);
+      }
+      setLoading(false);
+    };
+
+    loadUpdates();
+  }, []);
+
+  const renderCard = (item: AppUpdate) => (
+    <View
+      key={item.id}
+      style={[styles.card, { backgroundColor: themeColors.surface }]}
+    >
+      <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]}>
+        {item.title}
+      </Text>
+      <Text style={[styles.cardDesc, { color: themeColors.textSecondary }]}>
+        {item.description}
+      </Text>
+    </View>
+  );
 
   return (
     <ScrollView
@@ -89,43 +92,57 @@ export const FutureUpdatesScreen = () => {
         </Text>
       </View>
 
-      <View style={styles.list}>
-        {UPCOMING.map((item, i) => {
-          const statusStyle = STATUS_LABELS[item.status];
+      {loading ? (
+        <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.xl }} />
+      ) : updates.length === 0 ? (
+        <Text style={[styles.cardDesc, { color: themeColors.textSecondary }]}>
+          No updates posted yet — check back soon.
+        </Text>
+      ) : (
+        STATUS_ORDER.map((statusKey) => {
+          const itemsForStatus = updates.filter((u) => u.status === statusKey);
+          if (itemsForStatus.length === 0) return null;
+          const statusStyle = STATUS_LABELS[statusKey];
+
           return (
-            <View
-              key={i}
-              style={[styles.card, { backgroundColor: themeColors.surface }]}
-            >
-              <View style={styles.cardTop}>
-                <Text style={styles.cardIcon}>{item.icon}</Text>
-                <View style={styles.cardMeta}>
-                  <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]}>
-                    {item.title}
+            <View key={statusKey} style={styles.section}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={[styles.sectionHeader, { color: themeColors.textPrimary }]}>
+                  {statusStyle.label}
+                </Text>
+                <View style={[styles.badge, { backgroundColor: statusStyle.bg }]}>
+                  <Text style={[styles.badgeText, { color: statusStyle.color }]}>
+                    {itemsForStatus.length}
                   </Text>
-                  <View style={[styles.badge, { backgroundColor: statusStyle.bg }]}>
-                    <Text style={[styles.badgeText, { color: statusStyle.color }]}>
-                      {statusStyle.label}
-                    </Text>
-                  </View>
                 </View>
               </View>
-              <Text style={[styles.cardDesc, { color: themeColors.textSecondary }]}>
-                {item.description}
-              </Text>
+              <View style={styles.list}>
+                {itemsForStatus.map(renderCard)}
+              </View>
             </View>
           );
-        })}
-      </View>
+        })
+      )}
 
       <View style={[styles.feedbackCard, { backgroundColor: themeColors.surface }]}>
         <Text style={[styles.feedbackTitle, { color: themeColors.textPrimary }]}>
-          💡 Have a feature idea?
+          Have a feature idea?
         </Text>
         <Text style={[styles.feedbackText, { color: themeColors.textSecondary }]}>
-          We build Nautical Ops based on feedback from real crew. Send your ideas to{' '}
-          <Text style={{ color: COLORS.primary }}>support@nautical-ops.com</Text>
+          We build Nautical Ops based on feedback from real crew. Send your ideas to:
         </Text>
+        <TouchableOpacity
+          onPress={() => Linking.openURL('mailto:support@nautical-ops.com')}
+          onLongPress={async () => {
+            await Clipboard.setStringAsync('support@nautical-ops.com');
+            Alert.alert('Copied', 'Email address copied to clipboard.');
+          }}
+          activeOpacity={0.7}
+        >
+          <Text style={{ color: COLORS.primary, fontWeight: '600', marginTop: SPACING.xs }}>
+            support@nautical-ops.com
+          </Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -148,7 +165,18 @@ const styles = StyleSheet.create({
     fontSize: FONTS.base,
     lineHeight: 22,
   },
-  list: { gap: SPACING.md, marginBottom: SPACING.xl },
+  section: { marginBottom: SPACING.xl },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  sectionHeader: {
+    fontSize: FONTS.lg,
+    fontWeight: '700',
+  },
+  list: { gap: SPACING.md },
   card: {
     padding: SPACING.lg,
     borderRadius: BORDER_RADIUS.lg,

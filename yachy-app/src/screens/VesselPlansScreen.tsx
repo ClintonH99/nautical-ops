@@ -104,11 +104,6 @@ export const VesselPlansScreen = ({ navigation }: any) => {
         activeOpacity={0.7}
       >
         <Text style={[styles.billingRowLabel, { color: themeColors.textPrimary }]}>{bp.label}</Text>
-        {bp.discountPercent > 0 && (
-          <View style={styles.discountPill}>
-            <Text style={styles.discountPillText}>{bp.discountPercent}% OFF</Text>
-          </View>
-        )}
         <View
           style={[
             styles.radioOuter,
@@ -160,13 +155,8 @@ export const VesselPlansScreen = ({ navigation }: any) => {
         <View style={styles.planBottomRow}>
           <View>
             <Text style={[styles.planPrice, { color: themeColors.textPrimary }]}>
-              {price.displayMonthly}
+              {price.displayTotal}
             </Text>
-            {price.savingsPercent > 0 && (
-              <Text style={[styles.planTotal, { color: themeColors.textSecondary }]}>
-                {price.displayTotal} total
-              </Text>
-            )}
           </View>
           <View
             style={[
