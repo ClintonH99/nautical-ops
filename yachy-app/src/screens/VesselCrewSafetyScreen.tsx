@@ -21,6 +21,7 @@ const CATEGORIES = [
   { icon: '📍', label: 'Muster Station & Duties', nav: 'MusterStation' as const, enabled: true },
   { icon: '🦺', label: 'Safety Equipment', nav: 'SafetyEquipment' as const, enabled: true },
   { icon: '📜', label: 'Rules On-Board', nav: 'Rules' as const, enabled: true },
+  { icon: '💤', label: 'Hours of Rest', nav: 'HoursOfRest' as const, enabled: true },
 ];
 
 export const VesselCrewSafetyScreen = ({ navigation }: any) => {

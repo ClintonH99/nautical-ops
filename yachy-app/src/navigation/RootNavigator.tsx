@@ -46,6 +46,8 @@ import {
   ImportExportScreen,
   TasksCalendarScreen,
   WatchKeepingScreen,
+  HoursOfRestScreen,
+  RestDayEntryScreen,
   WatchScheduleScreen,
   CreateWatchTimetableScreen,
   ShoppingListCategoryScreen,
@@ -800,6 +802,22 @@ export const RootNavigator = () => {
                 component={WatchKeepingScreen}
                 options={{
                   title: 'Watch Keeping',
+                  headerShown: true,
+                }}
+              />
+              <Stack.Screen
+                name="HoursOfRest"
+                component={HoursOfRestScreen}
+                options={{
+                  title: 'Hours of Rest',
+                  headerShown: true,
+                }}
+              />
+              <Stack.Screen
+                name="RestDayEntry"
+                component={RestDayEntryScreen}
+                options={{
+                  title: 'Rest Entry',
                   headerShown: true,
                 }}
               />

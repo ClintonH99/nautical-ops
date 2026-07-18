@@ -76,3 +76,5 @@ export { NotepadScreen } from './NotepadScreen';
 export { AddEditNoteScreen } from './AddEditNoteScreen';
 export { FutureUpdatesScreen } from './FutureUpdatesScreen';
 export { FAQScreen } from './FAQHelpScreen';
+export { HoursOfRestScreen } from './HoursOfRestScreen';
+export { RestDayEntryScreen } from './RestDayEntryScreen';
