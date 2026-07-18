@@ -182,3 +182,107 @@ export async function setDepartmentSigner(
 
   if (error) throw error;
 }
+
+
+export interface DayReviewEntry {
+  userId: string;
+  userName: string;
+  status: 'missing' | 'draft' | 'pending_confirmation' | 'confirmed';
+}
+
+export interface DayReview {
+  date: string;
+  entries: DayReviewEntry[];
+  needsAttention: boolean;
+}
+
+function toDateStr(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+// Builds a per-day review of every crew member's rest status for a given
+// month, most recent day first. Days beyond today are excluded since
+// nothing is due yet. Used by the Captain's "Rest to be Confirmed" queue.
+export async function getMonthReview(vesselId: string, year: number, month: number): Promise<DayReview[]> {
+  const startDate = new Date(year, month - 1, 1);
+  const lastDayOfMonth = new Date(year, month, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const effectiveEnd = lastDayOfMonth < today ? lastDayOfMonth : today;
+
+  const { data: crew } = await supabase
+    .from('users')
+    .select('id, name')
+    .eq('vessel_id', vesselId);
+
+  const startStr = toDateStr(startDate);
+  const endStr = toDateStr(effectiveEnd);
+
+  const { data: entries } = await supabase
+    .from('rest_entries')
+    .select('id, user_id, date, status')
+    .eq('vessel_id', vesselId)
+    .gte('date', startStr)
+    .lte('date', endStr);
+
+  const entryMap = new Map<string, { status: string }>();
+  (entries ?? []).forEach((e) => entryMap.set(`${e.date}|${e.user_id}`, { status: e.status }));
+
+  const days: DayReview[] = [];
+  for (let d = new Date(startDate); d <= effectiveEnd; d.setDate(d.getDate() + 1)) {
+    const dateStr = toDateStr(d);
+    const dayEntries: DayReviewEntry[] = (crew ?? []).map((c) => {
+      const e = entryMap.get(`${dateStr}|${c.id}`);
+      return {
+        userId: c.id,
+        userName: c.name,
+        status: (e?.status as DayReviewEntry['status']) ?? 'missing',
+      };
+    });
+    const needsAttention = dayEntries.some((e) => e.status !== 'confirmed');
+    days.push({ date: dateStr, entries: dayEntries, needsAttention });
+  }
+
+  return days.reverse();
+}
+
+export function getPastMonths(count: number): { year: number; month: number; label: string }[] {
+  const result = [];
+  const now = new Date();
+  for (let i = 0; i < count; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    result.push({
+      year: d.getFullYear(),
+      month: d.getMonth() + 1,
+      label: d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+    });
+  }
+  return result;
+}
+
+export async function confirmEntryForUser(
+  targetUserId: string,
+  vesselId: string,
+  date: string,
+  restPeriods: RestPeriod[],
+  workStart: string | null,
+  workEnd: string | null,
+  lunchStart: string | null,
+  lunchEnd: string | null,
+  confirmedByUserId: string
+): Promise<void> {
+  const entry: RestEntry = {
+    user_id: targetUserId,
+    vessel_id: vesselId,
+    date,
+    rest_periods: restPeriods,
+    work_start: workStart,
+    work_end: workEnd,
+    lunch_start: lunchStart,
+    lunch_end: lunchEnd,
+    status: 'confirmed',
+    confirmed_by: confirmedByUserId,
+    confirmed_at: new Date().toISOString(),
+  };
+  await saveEntry(entry);
+}

@@ -1,7 +1,10 @@
 /**
  * Rest Day Entry Screen
  * Lets a crew member enter their rest, work, and lunch periods for a single
- * day, with a live STCW compliance preview before saving.
+ * day, with a live STCW compliance preview before saving. When opened by
+ * the Captain via the review queue (isManagerEditing), it edits on behalf
+ * of the target crew member and is always unlocked, ending in "Confirm"
+ * rather than "Save".
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -24,8 +27,8 @@ import {
   saveEntry,
   checkCompliance,
   getWeekEntries,
+  confirmEntryForUser,
 } from '../services/restEntries';
-import { supabase } from '../services/supabase';
 
 function timeStringToDate(t: string | null): Date {
   const d = new Date();
@@ -51,7 +54,10 @@ type ActiveField =
 export const RestDayEntryScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
-  const { date } = route.params;
+  const { date, targetUserId, targetUserName, isManagerEditing } = route.params;
+
+  const effectiveUserId = targetUserId ?? user?.id;
+  const isManager = !!isManagerEditing;
 
   const [restPeriods, setRestPeriods] = useState<RestPeriod[]>([{ start: '22:00', end: '08:00' }]);
   const [workStart, setWorkStart] = useState<string | null>('08:00');
@@ -63,8 +69,8 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   const [saving, setSaving] = useState(false);
 
   const loadExisting = useCallback(async () => {
-    if (!user?.id) return;
-    const rows = await getWeekEntries(user.id, date);
+    if (!effectiveUserId) return;
+    const rows = await getWeekEntries(effectiveUserId, date);
     const existing = rows.find((r) => r.date === date);
     if (existing) {
       setRestPeriods(existing.rest_periods?.length ? existing.rest_periods : [{ start: '22:00', end: '08:00' }]);
@@ -74,11 +80,11 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
       setLunchEnd(existing.lunch_end);
       setStatus(existing.status);
     }
-  }, [user?.id, date]);
+  }, [effectiveUserId, date]);
 
   useFocusEffect(useCallback(() => { loadExisting(); }, [loadExisting]));
 
-  const isLocked = status !== 'draft';
+  const isLocked = !isManager && status !== 'draft';
   const compliance = checkCompliance(restPeriods);
 
   const openPicker = (field: ActiveField) => {
@@ -129,6 +135,29 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
     }
   };
 
+  const handleConfirm = async () => {
+    if (!effectiveUserId || !user?.vesselId || !user?.id) return;
+    setSaving(true);
+    try {
+      await confirmEntryForUser(
+        effectiveUserId,
+        user.vesselId,
+        date,
+        restPeriods,
+        workStart,
+        workEnd,
+        lunchStart,
+        lunchEnd,
+        user.id
+      );
+      navigation.goBack();
+    } catch (e) {
+      Alert.alert('Error', 'Failed to confirm. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const renderTimeChip = (label: string, value: string | null, onPress: () => void) => (
     <TouchableOpacity
       style={[styles.chip, { backgroundColor: themeColors.surface }]}
@@ -142,6 +171,9 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   return (
     <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>
       <Text style={[styles.dateTitle, { color: themeColors.textPrimary }]}>{date}</Text>
+      {isManager && targetUserName && (
+        <Text style={{ color: themeColors.textSecondary, marginBottom: SPACING.sm }}>Editing for {targetUserName}</Text>
+      )}
       {isLocked && (
         <Text style={styles.lockedNote}>
           {status === 'pending_confirmation' ? 'Pending confirmation — locked until reviewed' : 'Confirmed — locked'}
@@ -195,10 +227,16 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
         ))}
       </View>
 
-      {!isLocked && (
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
-          <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save'}</Text>
+      {isManager ? (
+        <TouchableOpacity style={styles.saveButton} onPress={handleConfirm} disabled={saving}>
+          <Text style={styles.saveButtonText}>{saving ? 'Confirming...' : 'Confirm'}</Text>
         </TouchableOpacity>
+      ) : (
+        !isLocked && (
+          <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
+            <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save'}</Text>
+          </TouchableOpacity>
+        )
       )}
     </ScrollView>
   );

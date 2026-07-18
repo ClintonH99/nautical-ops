@@ -48,6 +48,7 @@ import {
   WatchKeepingScreen,
   HoursOfRestScreen,
   RestDayEntryScreen,
+  RestToBeConfirmedScreen,
   WatchScheduleScreen,
   CreateWatchTimetableScreen,
   ShoppingListCategoryScreen,
@@ -818,6 +819,14 @@ export const RootNavigator = () => {
                 component={RestDayEntryScreen}
                 options={{
                   title: 'Rest Entry',
+                  headerShown: true,
+                }}
+              />
+              <Stack.Screen
+                name="RestToBeConfirmed"
+                component={RestToBeConfirmedScreen}
+                options={{
+                  title: 'Rest to be Confirmed',
                   headerShown: true,
                 }}
               />

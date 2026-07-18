@@ -177,6 +177,15 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
         </View>
       )}
 
+      {isCaptainOrMov && (
+        <TouchableOpacity
+          style={styles.reviewButton}
+          onPress={() => navigation.navigate('RestToBeConfirmed')}
+        >
+          <Text style={styles.reviewButtonText}>Rest to be confirmed</Text>
+        </TouchableOpacity>
+      )}
+
       {loading ? (
         <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.xl }} />
       ) : (
@@ -226,4 +235,6 @@ const styles = StyleSheet.create({
   legendRow: { flexDirection: 'row', gap: SPACING.lg, justifyContent: 'center', marginTop: SPACING.md },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
+  reviewButton: { backgroundColor: COLORS.primary, padding: SPACING.md, borderRadius: BORDER_RADIUS.md, alignItems: 'center', marginBottom: SPACING.lg },
+  reviewButtonText: { color: '#fff', fontWeight: '600' },
 });
