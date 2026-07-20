@@ -230,6 +230,9 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
                 style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
                 onStartShouldSetResponder={() => true}
               >
+                <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+                  Select department
+                </Text>
                 {(['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'] as Department[]).map(
                   (dept) => (
                     <TouchableOpacity
@@ -240,13 +243,7 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
                         setDepartmentDropdownOpen(false);
                       }}
                     >
-                      <Text
-                        style={[
-                          styles.modalItemText,
-                          { color: themeColors.textPrimary },
-                          department === dept && styles.modalItemTextSelected,
-                        ]}
-                      >
+                      <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
                         {dept.charAt(0) + dept.slice(1).toLowerCase()}
                       </Text>
                     </TouchableOpacity>
@@ -493,30 +490,25 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: SPACING.xl,
+    padding: SPACING.lg,
   },
   modalBox: {
     borderRadius: BORDER_RADIUS.lg,
-    overflow: 'hidden',
-    width: '100%',
-    maxWidth: 320,
+    padding: SPACING.md,
+    minWidth: 260,
+    maxHeight: 400,
   },
+  modalTitle: { fontSize: FONTS.lg, fontWeight: '600', marginBottom: SPACING.md },
   modalItem: {
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.sm,
   },
   modalItemSelected: {
-    backgroundColor: COLORS.primaryLight + '22',
+    backgroundColor: COLORS.gray200,
   },
   modalItemText: {
     fontSize: FONTS.base,
-    fontWeight: '500',
-  },
-  modalItemTextSelected: {
-    color: COLORS.primary,
-    fontWeight: '700',
   },
   categoryRow: {
     flexDirection: 'row',

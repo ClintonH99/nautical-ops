@@ -26,6 +26,7 @@ import {
   checkRollingCompliance,
   getDepartmentSigners,
   setDepartmentSigner,
+  getManagedDepartments,
   DEPARTMENTS,
   Department,
   DepartmentSigner,
@@ -76,6 +77,7 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
   const [deptSigners, setDeptSigners] = useState<DepartmentSigner[]>([]);
   const [crewList, setCrewList] = useState<{ id: string; name: string }[]>([]);
   const [openDeptPicker, setOpenDeptPicker] = useState<Department | null>(null);
+  const [managedDepartments, setManagedDepartments] = useState<Department[] | 'ALL'>([]);
 
   const loadData = useCallback(async () => {
     if (!user?.id) return;
@@ -106,6 +108,11 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
             .select('id, name')
             .eq('vessel_id', user.vesselId);
           setCrewList(crewRows ?? []);
+        }
+
+        if (user.role) {
+          const managed = await getManagedDepartments(user.id, user.role, user.vesselId);
+          setManagedDepartments(managed);
         }
       }
     } catch (e) {
@@ -210,10 +217,10 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
         </View>
       )}
 
-      {isCaptainOrMov && (
+      {(managedDepartments === 'ALL' || managedDepartments.length > 0) && (
         <TouchableOpacity
           style={styles.reviewButton}
-          onPress={() => navigation.navigate('RestToBeConfirmed')}
+          onPress={() => navigation.navigate('RestToBeConfirmed', { managedDepartments })}
         >
           <Text style={styles.reviewButtonText}>Rest to be confirmed</Text>
         </TouchableOpacity>

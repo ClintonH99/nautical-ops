@@ -320,6 +320,7 @@ export async function setDepartmentSigner(
 export interface DayReviewEntry {
   userId: string;
   userName: string;
+  department: Department;
   status: 'missing' | 'draft' | 'pending_confirmation' | 'confirmed';
   compliant?: boolean;
   violations?: string[];
@@ -347,7 +348,7 @@ export async function getMonthReview(vesselId: string, year: number, month: numb
 
   const { data: crew } = await supabase
     .from('users')
-    .select('id, name')
+    .select('id, name, department')
     .eq('vessel_id', vesselId);
 
   // Fetch with 7 days of padding before the month starts, so the rolling
@@ -389,7 +390,7 @@ export async function getMonthReview(vesselId: string, year: number, month: numb
           violations = rolling.violations;
         }
       }
-      return { userId: c.id, userName: c.name, status, compliant, violations };
+      return { userId: c.id, userName: c.name, department: c.department as Department, status, compliant, violations };
     });
     // Only count dates within the actual requested month for needsAttention/
     // display — the padding days before it exist purely for rolling context.
@@ -472,4 +473,26 @@ export async function canManageRestFor(
     .maybeSingle();
 
   return signer?.signer_user_id === viewerUserId;
+}
+
+
+// Returns which departments a user can review rest entries for: the
+// Captain can review every department ('ALL'), while a department signer
+// can only review the department(s) they've been assigned to (possibly
+// more than one, since the same person can be assigned across several
+// departments).
+export async function getManagedDepartments(
+  userId: string,
+  role: string,
+  vesselId: string
+): Promise<Department[] | 'ALL'> {
+  if (role === 'CAPTAIN_MOV') return 'ALL';
+
+  const { data } = await supabase
+    .from('department_signers')
+    .select('department')
+    .eq('vessel_id', vesselId)
+    .eq('signer_user_id', userId);
+
+  return (data ?? []).map((d) => d.department as Department);
 }
