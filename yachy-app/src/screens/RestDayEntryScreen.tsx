@@ -111,6 +111,18 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
     if (event.type === 'set' || event.type === undefined) setActiveField(null);
   };
 
+  const addRestPeriod = () => {
+    if (restPeriods.length >= 2) {
+      Alert.alert('Limit reached', 'STCW allows a maximum of 2 rest periods per day.');
+      return;
+    }
+    setRestPeriods((prev) => [...prev, { start: '13:00', end: '15:00' }]);
+  };
+
+  const removeRestPeriod = (index: number) => {
+    setRestPeriods((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSave = async () => {
     if (!user?.id || !user?.vesselId) return;
     setSaving(true);
@@ -186,8 +198,18 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
           {renderTimeChip('Start', p.start, () => openPicker({ type: 'rest', index: i, edge: 'start' }))}
           <Text style={{ color: themeColors.textSecondary }}>→</Text>
           {renderTimeChip('End', p.end, () => openPicker({ type: 'rest', index: i, edge: 'end' }))}
+          {!isLocked && restPeriods.length > 1 && (
+            <TouchableOpacity onPress={() => removeRestPeriod(i)}>
+              <Text style={{ color: '#dc2626', marginLeft: SPACING.sm }}>Remove</Text>
+            </TouchableOpacity>
+          )}
         </View>
       ))}
+      {!isLocked && restPeriods.length < 2 && (
+        <TouchableOpacity onPress={addRestPeriod}>
+          <Text style={{ color: COLORS.primary, marginBottom: SPACING.lg }}>+ Add another rest period</Text>
+        </TouchableOpacity>
+      )}
 
       <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>Time worked</Text>
       <View style={styles.row}>

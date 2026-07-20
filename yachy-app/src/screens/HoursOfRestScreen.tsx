@@ -22,7 +22,7 @@ import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import {
   RestEntry,
-  checkCompliance,
+  checkRollingCompliance,
   getDepartmentSigners,
   setDepartmentSigner,
   DEPARTMENTS,
@@ -48,6 +48,7 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
   const isCaptainOrMov = user?.role === 'CAPTAIN_MOV';
 
   const [entries, setEntries] = useState<Record<string, RestEntry>>({});
+  const [allEntriesForRolling, setAllEntriesForRolling] = useState<RestEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [deptSigners, setDeptSigners] = useState<DepartmentSigner[]>([]);
   const [crewList, setCrewList] = useState<{ id: string; name: string }[]>([]);
@@ -57,7 +58,10 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const since = toYYYYMMDD(daysAgo(30));
+      // Fetch extra trailing history (37 days back) so the rolling 7-day
+      // window calculation has enough context even for the earliest day
+      // shown in the 30-day view.
+      const since = toYYYYMMDD(daysAgo(37));
       const { data: rows } = await supabase
         .from('rest_entries')
         .select('*')
@@ -67,6 +71,7 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
       const byDate: Record<string, RestEntry> = {};
       (rows ?? []).forEach((r) => { byDate[r.date] = r; });
       setEntries(byDate);
+      setAllEntriesForRolling(rows ?? []);
 
       if (user.vesselId) {
         const signers = await getDepartmentSigners(user.vesselId);
@@ -95,11 +100,16 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
   // connected range — startingDay/endingDay both true per day.
   const markedDates: Record<string, any> = {};
   const todayStr = toYYYYMMDD(new Date());
+  // Calendar reflects submission status only (green = entered, red =
+  // missing) — it's a "what still needs filling in" tracker, not a
+  // compliance indicator. Actual STCW violations surface in the review
+  // queue and the exported PDF, not here.
   for (let i = 0; i < 30; i++) {
     const d = daysAgo(i);
     const dateStr = toYYYYMMDD(d);
     const hasEntry = !!entries[dateStr];
     if (dateStr === todayStr && !hasEntry) continue; // don't flag today until it's past
+
     markedDates[dateStr] = {
       periods: [
         {

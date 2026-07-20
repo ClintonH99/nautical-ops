@@ -32,17 +32,6 @@ function timeToMinutes(t: string): number {
   return h * 60 + m;
 }
 
-// Returns total rest minutes across all periods for one day, handling
-// periods that cross midnight (e.g. 22:00 -> 08:00).
-function totalRestMinutes(periods: RestPeriod[]): number {
-  return periods.reduce((sum, p) => {
-    const start = timeToMinutes(p.start);
-    const end = timeToMinutes(p.end);
-    const duration = end > start ? end - start : 24 * 60 - start + end;
-    return sum + duration;
-  }, 0);
-}
-
 function longestPeriodMinutes(periods: RestPeriod[]): number {
   return periods.reduce((max, p) => {
     const start = timeToMinutes(p.start);
@@ -58,17 +47,24 @@ export interface ComplianceResult {
   violations: string[];
 }
 
-// Checks a single day's rest periods against STCW rules:
-// - at least 10 hours total rest in 24 hours
-// - no more than 2 rest periods
-// - at least one period of 6+ continuous hours
+// Same-day check used while a crew member is actively filling in a single
+// day (before it's placed on the full timeline). Checks the basic shape of
+// that day's periods: count and the 6h-continuous rule. The true 10h/24h
+// and 77h/7day rolling checks require the surrounding days too — see
+// checkRollingCompliance below, which is what actually determines STCW
+// compliance for a date once neighboring days are known.
 export function checkCompliance(periods: RestPeriod[]): ComplianceResult {
   const violations: string[] = [];
-  const totalMinutes = totalRestMinutes(periods);
+  const totalMinutes = periods.reduce((sum, p) => {
+    const start = timeToMinutes(p.start);
+    const end = timeToMinutes(p.end);
+    const duration = end > start ? end - start : 24 * 60 - start + end;
+    return sum + duration;
+  }, 0);
   const totalHours = Math.round((totalMinutes / 60) * 10) / 10;
 
   if (totalMinutes < 10 * 60) {
-    violations.push(`Only ${totalHours}h rest, below the 10h minimum`);
+    violations.push(`Only ${totalHours}h rest today, below the 10h minimum`);
   }
   if (periods.length > 2) {
     violations.push(`${periods.length} rest periods, maximum is 2`);
@@ -78,6 +74,143 @@ export function checkCompliance(periods: RestPeriod[]): ComplianceResult {
   }
 
   return { compliant: violations.length === 0, totalRestHours: totalHours, violations };
+}
+
+interface TimelineInterval {
+  startMin: number; // minutes from the reference date (entries[0]'s date, 00:00)
+  endMin: number;
+}
+
+// Builds a continuous timeline of rest intervals in absolute minutes from a
+// reference date, from a set of daily entries. A period recorded on date D
+// that crosses midnight (end <= start) is anchored to start on D and end on
+// D+1 — this is the convention the day editor already uses, and prevents
+// double-counting since each day's periods are recorded once, on the date
+// they begin.
+function buildTimeline(
+  entries: { date: string; rest_periods: RestPeriod[] }[],
+  referenceDate: Date
+): TimelineInterval[] {
+  const intervals: TimelineInterval[] = [];
+  for (const entry of entries) {
+    const entryDate = new Date(entry.date + 'T00:00:00');
+    const dayOffsetMin = Math.round((entryDate.getTime() - referenceDate.getTime()) / 60000);
+    for (const p of entry.rest_periods || []) {
+      const startMin = dayOffsetMin + timeToMinutes(p.start);
+      let endMin = dayOffsetMin + timeToMinutes(p.end);
+      if (endMin <= startMin) endMin += 24 * 60;
+      intervals.push({ startMin, endMin });
+    }
+  }
+  intervals.sort((a, b) => a.startMin - b.startMin);
+  return intervals;
+}
+
+function restInWindow(intervals: TimelineInterval[], windowStart: number, windowEnd: number): number {
+  let total = 0;
+  for (const iv of intervals) {
+    const overlapStart = Math.max(iv.startMin, windowStart);
+    const overlapEnd = Math.min(iv.endMin, windowEnd);
+    if (overlapEnd > overlapStart) total += overlapEnd - overlapStart;
+  }
+  return total;
+}
+
+// Exactly finds the minimum rest total across every possible window of
+// windowSizeMinutes whose start falls within [rangeStart, rangeEnd]. Rather
+// than brute-force checking every minute, this uses the fact that the total
+// only changes at interval boundaries — so the true minimum is guaranteed
+// to occur at one of a small number of candidate points, which is both
+// exact and fast.
+function minRestInAnyWindow(
+  intervals: TimelineInterval[],
+  rangeStart: number,
+  rangeEnd: number,
+  windowSizeMinutes: number
+): number {
+  const candidates = new Set<number>([rangeStart, rangeEnd]);
+  for (const iv of intervals) {
+    for (const point of [iv.startMin, iv.endMin, iv.startMin - windowSizeMinutes, iv.endMin - windowSizeMinutes]) {
+      if (point >= rangeStart && point <= rangeEnd) candidates.add(point);
+    }
+  }
+  let min = Infinity;
+  candidates.forEach((t) => {
+    const rest = restInWindow(intervals, t, t + windowSizeMinutes);
+    if (rest < min) min = rest;
+  });
+  return min === Infinity ? 0 : min;
+}
+
+export interface RollingComplianceResult {
+  minRestIn24h: number; // hours, worst-case in any 24h window starting this day
+  minRestIn7Days: number; // hours, worst-case in any 7-day window starting this day
+  maxGapBetweenRestHours: number; // largest gap between the end of one rest period and the start of the next, touching this day
+  compliant: boolean;
+  violations: string[];
+}
+
+// The real STCW/MLC check: given a specific date and the full set of
+// entries surrounding it (ideally covering at least 7 days before and 1
+// day after), computes the worst-case rest in any 24-hour and any 7-day
+// window that starts during that date, plus the longest gap between
+// consecutive rest periods. This is what should be shown as the
+// authoritative compliance figure for a date, not the same-day-only check.
+export function checkRollingCompliance(
+  targetDate: string,
+  allEntries: { date: string; rest_periods: RestPeriod[] }[]
+): RollingComplianceResult {
+  const sorted = [...allEntries].sort((a, b) => a.date.localeCompare(b.date));
+  const referenceDate = new Date(sorted[0].date + 'T00:00:00');
+  const intervals = buildTimeline(sorted, referenceDate);
+
+  const target = new Date(targetDate + 'T00:00:00');
+  const dayStartMin = Math.round((target.getTime() - referenceDate.getTime()) / 60000);
+  const dayEndMin = dayStartMin + 24 * 60;
+
+  // Windows are checked BACKWARD from this date (ending during it), not
+  // forward — compliance can only be judged on rest that has actually
+  // happened, not on future days that haven't been entered yet.
+  const minRest24hMin = minRestInAnyWindow(intervals, dayStartMin - 24 * 60, dayEndMin - 24 * 60, 24 * 60);
+  const minRest7dMin = minRestInAnyWindow(intervals, dayStartMin - 7 * 24 * 60, dayEndMin - 7 * 24 * 60, 7 * 24 * 60);
+
+  // A brand-new record won't have 7 days of history yet — that's expected,
+  // not a violation, so the 7-day check is skipped until there's enough
+  // history to actually evaluate it.
+  const daysOfHistory = Math.round((target.getTime() - referenceDate.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+  const has7DaysHistory = daysOfHistory >= 7;
+
+  let maxGapMin = 0;
+  for (let i = 0; i < intervals.length - 1; i++) {
+    const gap = intervals[i + 1].startMin - intervals[i].endMin;
+    // Only count gaps touching this date's 24h window
+    if (intervals[i].endMin >= dayStartMin - 24 * 60 && intervals[i + 1].startMin <= dayEndMin) {
+      maxGapMin = Math.max(maxGapMin, gap);
+    }
+  }
+
+  const minRestIn24h = Math.round((minRest24hMin / 60) * 10) / 10;
+  const minRestIn7Days = Math.round((minRest7dMin / 60) * 10) / 10;
+  const maxGapBetweenRestHours = Math.round((maxGapMin / 60) * 10) / 10;
+
+  const violations: string[] = [];
+  if (minRest24hMin < 10 * 60) {
+    violations.push(`As low as ${minRestIn24h}h rest in a 24h window, below the 10h minimum`);
+  }
+  if (has7DaysHistory && minRest7dMin < 77 * 60) {
+    violations.push(`As low as ${minRestIn7Days}h rest in a 7-day window, below the 77h minimum`);
+  }
+  if (maxGapMin > 14 * 60) {
+    violations.push(`${maxGapBetweenRestHours}h gap between rest periods, exceeds the 14h maximum`);
+  }
+
+  return {
+    minRestIn24h,
+    minRestIn7Days,
+    maxGapBetweenRestHours,
+    compliant: violations.length === 0,
+    violations,
+  };
 }
 
 export async function getWeekEntries(userId: string, weekStartDate: string): Promise<RestEntry[]> {
