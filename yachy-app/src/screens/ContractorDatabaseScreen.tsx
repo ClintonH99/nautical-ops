@@ -201,24 +201,17 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
             <Modal visible transparent animationType="fade">
               <Pressable style={styles.modalBackdrop} onPress={() => setSearchFilterOpen(false)}>
                 <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
+                  <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Search by</Text>
                   {SEARCH_FILTER_OPTIONS.map((opt) => (
                     <TouchableOpacity
                       key={opt.value}
-                      style={[styles.modalItem, { backgroundColor: themeColors.surface }, searchFilter === opt.value && styles.modalItemSelected]}
+                      style={[styles.modalItem, searchFilter === opt.value && styles.modalItemSelected]}
                       onPress={() => {
                         setSearchFilter(opt.value);
                         setSearchFilterOpen(false);
                       }}
                     >
-                      <Text
-                        style={[
-                          styles.modalItemText,
-                          { color: themeColors.textPrimary },
-                          searchFilter === opt.value && styles.modalItemTextSelected,
-                        ]}
-                      >
-                        {opt.label}
-                      </Text>
+                      <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>{opt.label}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -262,32 +255,21 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
             <Modal visible transparent animationType="fade">
               <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentDropdownOpen(false)}>
                 <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
+                  <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Filter by department</Text>
                   <TouchableOpacity
-                    style={[
-                      styles.modalItem,
-                      { backgroundColor: themeColors.surface },
-                      DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected,
-                    ]}
+                    style={[styles.modalItem, DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
                     onPress={() => {
                       setVisibleDepartments(allDeptsVisible);
                       setDepartmentDropdownOpen(false);
                     }}
                   >
-                    <Text
-                      style={[
-                        styles.modalItemText,
-                        { color: themeColors.textPrimary },
-                        DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemTextSelected,
-                      ]}
-                    >
-                      All
-                    </Text>
+                    <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>All Departments</Text>
                   </TouchableOpacity>
                   {DEPARTMENTS.map((dept) => (
                     <TouchableOpacity
                       key={dept}
-                    style={[styles.modalItem, { backgroundColor: themeColors.surface }, visibleDepartments[dept] && styles.modalItemSelected]}
-                    onPress={() => {
+                      style={[styles.modalItem, visibleDepartments[dept] && !DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
+                      onPress={() => {
                         setVisibleDepartments({
                           BRIDGE: dept === 'BRIDGE',
                           ENGINEERING: dept === 'ENGINEERING',
@@ -298,13 +280,7 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
                         setDepartmentDropdownOpen(false);
                       }}
                     >
-                      <Text
-                        style={[
-                          styles.modalItemText,
-                          { color: themeColors.textPrimary },
-                          visibleDepartments[dept] && styles.modalItemTextSelected,
-                        ]}
-                      >
+                      <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
                         {dept.charAt(0) + dept.slice(1).toLowerCase()}
                       </Text>
                     </TouchableOpacity>
@@ -434,11 +410,11 @@ const styles = StyleSheet.create({
   dropdownText: { fontSize: FONTS.base, fontWeight: '500' },
   dropdownChevron: { fontSize: 10 },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
-  modalBox: { borderRadius: BORDER_RADIUS.lg, paddingVertical: SPACING.sm, minWidth: 200 },
-  modalItem: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg },
-  modalItemSelected: {},
+  modalBox: { borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, minWidth: 260, maxHeight: 400 },
+  modalTitle: { fontSize: FONTS.lg, fontWeight: '600', marginBottom: SPACING.md },
+  modalItem: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg, borderRadius: BORDER_RADIUS.sm },
+  modalItemSelected: { backgroundColor: COLORS.gray200 },
   modalItemText: { fontSize: FONTS.base },
-  modalItemTextSelected: { color: COLORS.primary, fontWeight: '600' },
   loader: { marginVertical: SPACING.xl },
   emptyState: {
     borderRadius: 12,
