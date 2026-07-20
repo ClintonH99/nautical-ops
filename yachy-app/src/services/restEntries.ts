@@ -321,6 +321,8 @@ export interface DayReviewEntry {
   userId: string;
   userName: string;
   status: 'missing' | 'draft' | 'pending_confirmation' | 'confirmed';
+  compliant?: boolean;
+  violations?: string[];
 }
 
 export interface DayReview {
@@ -348,32 +350,53 @@ export async function getMonthReview(vesselId: string, year: number, month: numb
     .select('id, name')
     .eq('vessel_id', vesselId);
 
-  const startStr = toDateStr(startDate);
+  // Fetch with 7 days of padding before the month starts, so the rolling
+  // 7-day compliance check has enough context for the first days shown.
+  const paddedStart = new Date(startDate);
+  paddedStart.setDate(paddedStart.getDate() - 7);
+  const startStr = toDateStr(paddedStart);
   const endStr = toDateStr(effectiveEnd);
 
   const { data: entries } = await supabase
     .from('rest_entries')
-    .select('id, user_id, date, status')
+    .select('id, user_id, date, status, rest_periods')
     .eq('vessel_id', vesselId)
     .gte('date', startStr)
     .lte('date', endStr);
 
-  const entryMap = new Map<string, { status: string }>();
-  (entries ?? []).forEach((e) => entryMap.set(`${e.date}|${e.user_id}`, { status: e.status }));
+  const entriesByUser = new Map<string, { date: string; rest_periods: RestPeriod[] }[]>();
+  (entries ?? []).forEach((e) => {
+    if (!entriesByUser.has(e.user_id)) entriesByUser.set(e.user_id, []);
+    entriesByUser.get(e.user_id)!.push({ date: e.date, rest_periods: e.rest_periods || [] });
+  });
 
+  const statusMap = new Map<string, string>();
+  (entries ?? []).forEach((e) => statusMap.set(`${e.date}|${e.user_id}`, e.status));
+
+  const monthStartStr = toDateStr(startDate);
   const days: DayReview[] = [];
   for (let d = new Date(startDate); d <= effectiveEnd; d.setDate(d.getDate() + 1)) {
     const dateStr = toDateStr(d);
     const dayEntries: DayReviewEntry[] = (crew ?? []).map((c) => {
-      const e = entryMap.get(`${dateStr}|${c.id}`);
-      return {
-        userId: c.id,
-        userName: c.name,
-        status: (e?.status as DayReviewEntry['status']) ?? 'missing',
-      };
+      const status = (statusMap.get(`${dateStr}|${c.id}`) as DayReviewEntry['status']) ?? 'missing';
+      let compliant: boolean | undefined;
+      let violations: string[] | undefined;
+      if (status !== 'missing') {
+        const history = entriesByUser.get(c.id) ?? [];
+        if (history.length > 0) {
+          const rolling = checkRollingCompliance(dateStr, history);
+          compliant = rolling.compliant;
+          violations = rolling.violations;
+        }
+      }
+      return { userId: c.id, userName: c.name, status, compliant, violations };
     });
-    const needsAttention = dayEntries.some((e) => e.status !== 'confirmed');
-    days.push({ date: dateStr, entries: dayEntries, needsAttention });
+    // Only count dates within the actual requested month for needsAttention/
+    // display — the padding days before it exist purely for rolling context.
+    if (dateStr >= monthStartStr) {
+      const needsAttention = dayEntries.some((e) => e.status !== 'confirmed' || e.compliant === false);
+      days.push({ date: dateStr, entries: dayEntries, needsAttention });
+    }
   }
 
   return days.reverse();

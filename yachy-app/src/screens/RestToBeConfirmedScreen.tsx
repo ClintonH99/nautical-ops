@@ -1,8 +1,10 @@
 /**
  * Rest to be Confirmed Screen
- * Captain-only review queue: shows every day this month grouped into
- * "Needs attention" (missing or pending crew) and "Completed", with a
- * History tab for past months.
+ * Captain-only review queue: shows every day this month grouped into three
+ * sections that flow toward completion - "Not Complete" (missing or still
+ * being filled in), "Complete" (submitted by crew, awaiting Captain
+ * confirmation), and "Confirmed" (signed off). History tab covers past
+ * months in the same layout.
  */
 
 import React, { useState, useCallback } from 'react';
@@ -18,14 +20,24 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { DayReview, getMonthReview, getPastMonths } from '../services/restEntries';
+import { DayReview, DayReviewEntry, getMonthReview, getPastMonths } from '../services/restEntries';
 
 const STATUS_LABEL: Record<string, string> = {
-  missing: 'missing',
-  draft: 'not submitted',
-  pending_confirmation: 'pending confirmation',
+  missing: 'not complete',
+  draft: 'not complete',
+  pending_confirmation: 'complete - awaiting confirmation',
   confirmed: 'confirmed',
 };
+
+type DayCategory = 'not_complete' | 'complete' | 'confirmed';
+
+function categorizeDay(entries: DayReviewEntry[]): DayCategory {
+  const hasIncomplete = entries.some((e) => e.status === 'missing' || e.status === 'draft');
+  if (hasIncomplete) return 'not_complete';
+  const hasPending = entries.some((e) => e.status === 'pending_confirmation');
+  if (hasPending) return 'complete';
+  return 'confirmed';
+}
 
 export const RestToBeConfirmedScreen = () => {
   const navigation = useNavigation<any>();
@@ -62,8 +74,9 @@ export const RestToBeConfirmedScreen = () => {
     }, [tab, loadCurrent])
   );
 
-  const needsAttention = days.filter((d) => d.needsAttention);
-  const completed = days.filter((d) => !d.needsAttention);
+  const notComplete = days.filter((d) => categorizeDay(d.entries) === 'not_complete');
+  const complete = days.filter((d) => categorizeDay(d.entries) === 'complete');
+  const confirmed = days.filter((d) => categorizeDay(d.entries) === 'confirmed');
 
   const openDay = (date: string, userId: string, userName: string) => {
     navigation.navigate('RestDayEntry', {
@@ -72,6 +85,27 @@ export const RestToBeConfirmedScreen = () => {
       targetUserName: userName,
       isManagerEditing: true,
     });
+  };
+
+  const renderSection = (title: string, color: string, list: DayReview[]) => {
+    if (list.length === 0) return null;
+    return (
+      <View style={{ marginBottom: SPACING.lg }}>
+        <Text style={[styles.sectionLabel, { color }]}>{title}</Text>
+        {list.map((day) => (
+          <View key={day.date} style={[styles.dayCard, { borderColor: color }]}>
+            <Text style={[styles.dayTitle, { color: themeColors.textPrimary, marginBottom: 4 }]}>{day.date}</Text>
+            {day.entries.map((e) => (
+              <TouchableOpacity key={e.userId} onPress={() => openDay(day.date, e.userId, e.userName)}>
+                <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.sm, marginTop: 2 }}>
+                  - {e.userName} - {STATUS_LABEL[e.status]}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ))}
+      </View>
+    );
   };
 
   return (
@@ -109,7 +143,7 @@ export const RestToBeConfirmedScreen = () => {
         <>
           {tab === 'history' && selectedMonth && (
             <TouchableOpacity onPress={() => setSelectedMonth(null)} style={{ marginBottom: SPACING.md }}>
-              <Text style={{ color: COLORS.primary }}>‹ Back to months</Text>
+              <Text style={{ color: COLORS.primary }}>Back to months</Text>
             </TouchableOpacity>
           )}
 
@@ -117,47 +151,9 @@ export const RestToBeConfirmedScreen = () => {
             <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.xl }} />
           ) : (
             <>
-              {needsAttention.length > 0 && (
-                <>
-                  <Text style={[styles.sectionLabel, { color: '#dc2626' }]}>Needs attention</Text>
-                  {needsAttention.map((day) => (
-                    <View key={day.date} style={[styles.dayCard, { borderColor: '#dc2626' }]}>
-                      <Text style={[styles.dayTitle, { color: themeColors.textPrimary }]}>{day.date}</Text>
-                      {day.entries
-                        .filter((e) => e.status !== 'confirmed')
-                        .map((e) => (
-                          <TouchableOpacity key={e.userId} onPress={() => openDay(day.date, e.userId, e.userName)}>
-                            <Text style={{ color: e.status === 'missing' ? '#dc2626' : '#d97706', fontSize: FONTS.sm, marginTop: 2 }}>
-                              {'\u2022'} {e.userName} — {STATUS_LABEL[e.status]}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                    </View>
-                  ))}
-                </>
-              )}
-
-              {completed.length > 0 && (
-                <>
-                  <Text style={[styles.sectionLabel, { color: themeColors.textSecondary, marginTop: SPACING.lg }]}>Completed</Text>
-                  {completed.map((day) => (
-                    <View key={day.date} style={[styles.dayCard, { borderColor: themeColors.textSecondary }]}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                        <Text style={[styles.dayTitle, { color: themeColors.textPrimary }]}>{day.date}</Text>
-                        <Text style={{ color: '#16a34a', fontSize: FONTS.sm }}>All confirmed</Text>
-                      </View>
-                      {day.entries.map((e) => (
-                        <TouchableOpacity key={e.userId} onPress={() => openDay(day.date, e.userId, e.userName)}>
-                          <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.sm, marginTop: 2 }}>
-                            {'•'} {e.userName}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  ))}
-                </>
-              )}
-
+              {renderSection('Not Complete', '#dc2626', notComplete)}
+              {renderSection('Complete', '#d97706', complete)}
+              {renderSection('Confirmed', '#16a34a', confirmed)}
               {days.length === 0 && (
                 <Text style={{ color: themeColors.textSecondary }}>No days to review yet.</Text>
               )}
