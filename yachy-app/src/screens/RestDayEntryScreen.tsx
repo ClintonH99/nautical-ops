@@ -1,10 +1,11 @@
 /**
  * Rest Day Entry Screen
  * Lets a crew member enter their rest, work, and lunch periods for a single
- * day, with a live STCW compliance preview before saving. When opened by
- * the Captain via the review queue (isManagerEditing), it edits on behalf
- * of the target crew member and is always unlocked, ending in "Confirm"
- * rather than "Save".
+ * day, with a live STCW compliance preview before saving. Manager access
+ * (Captain, or the assigned department signer) is determined by real
+ * permission - not by which screen the person navigated from - so editing
+ * works consistently whether reached via the crew's own calendar or the
+ * review queue.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -28,6 +29,7 @@ import {
   checkCompliance,
   getWeekEntries,
   confirmEntryForUser,
+  canManageRestFor,
 } from '../services/restEntries';
 
 function timeStringToDate(t: string | null): Date {
@@ -39,6 +41,10 @@ function timeStringToDate(t: string | null): Date {
     d.setHours(0, 0, 0, 0);
   }
   return d;
+}
+
+function formatDateDisplay(dateStr: string): string {
+  return dateStr.replace(/-/g, '/');
 }
 
 function dateToTimeString(d: Date): string {
@@ -54,10 +60,9 @@ type ActiveField =
 export const RestDayEntryScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
-  const { date, targetUserId, targetUserName, isManagerEditing } = route.params;
+  const { date, targetUserId: routeTargetUserId, targetUserName } = route.params;
 
-  const effectiveUserId = targetUserId ?? user?.id;
-  const isManager = !!isManagerEditing;
+  const effectiveUserId = routeTargetUserId ?? user?.id;
 
   const [restPeriods, setRestPeriods] = useState<RestPeriod[]>([{ start: '22:00', end: '08:00' }]);
   const [workStart, setWorkStart] = useState<string | null>('08:00');
@@ -67,9 +72,11 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   const [status, setStatus] = useState<'draft' | 'pending_confirmation' | 'confirmed'>('draft');
   const [activeField, setActiveField] = useState<ActiveField>(null);
   const [saving, setSaving] = useState(false);
+  const [isManager, setIsManager] = useState(false);
 
   const loadExisting = useCallback(async () => {
     if (!effectiveUserId) return;
+
     const rows = await getWeekEntries(effectiveUserId, date);
     const existing = rows.find((r) => r.date === date);
     if (existing) {
@@ -80,7 +87,15 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
       setLunchEnd(existing.lunch_end);
       setStatus(existing.status);
     }
-  }, [effectiveUserId, date]);
+
+    if (user?.id && user?.vesselId && user?.role) {
+      // canManageRestFor already returns true immediately for the Captain,
+      // regardless of whose entry it is — including their own. No special
+      // case needed here.
+      const canManage = await canManageRestFor(user.id, user.role, effectiveUserId, user.vesselId);
+      setIsManager(canManage);
+    }
+  }, [effectiveUserId, date, user?.id, user?.vesselId, user?.role]);
 
   useFocusEffect(useCallback(() => { loadExisting(); }, [loadExisting]));
 
@@ -182,21 +197,36 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>
-      <Text style={[styles.dateTitle, { color: themeColors.textPrimary }]}>{date}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Text style={[styles.dateTitle, { color: themeColors.textPrimary }]}>{formatDateDisplay(date)}</Text>
+        {status !== 'draft' && (
+          <Text style={{ color: status === 'confirmed' ? '#16a34a' : '#d97706', fontWeight: '700', fontSize: FONTS.base }}>
+            {status === 'confirmed' ? 'Confirmed' : 'Pending confirmation'}
+          </Text>
+        )}
+      </View>
+
       {isManager && targetUserName && (
-        <Text style={{ color: themeColors.textSecondary, marginBottom: SPACING.sm }}>Editing for {targetUserName}</Text>
+        <Text style={{ color: themeColors.textSecondary, marginTop: 4, marginBottom: SPACING.sm }}>Editing for {targetUserName}</Text>
       )}
-      {isLocked && (
-        <Text style={styles.lockedNote}>
-          {status === 'pending_confirmation' ? 'Pending confirmation — locked until reviewed' : 'Confirmed — locked'}
+
+      {status !== 'draft' && !isManager && (
+        <Text style={[styles.lockedNote, { color: themeColors.textSecondary }]}>
+          {status === 'pending_confirmation' ? 'Locked until reviewed' : 'Locked'}
         </Text>
+      )}
+
+      {status !== 'draft' && isManager && (
+        <View style={styles.editablePill}>
+          <Text style={styles.editablePillText}>You can still make changes</Text>
+        </View>
       )}
 
       <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>Hours of rest</Text>
       {restPeriods.map((p, i) => (
         <View key={i} style={styles.row}>
           {renderTimeChip('Start', p.start, () => openPicker({ type: 'rest', index: i, edge: 'start' }))}
-          <Text style={{ color: themeColors.textSecondary }}>→</Text>
+          <Text style={{ color: themeColors.textSecondary }}>{'->'}</Text>
           {renderTimeChip('End', p.end, () => openPicker({ type: 'rest', index: i, edge: 'end' }))}
           {!isLocked && restPeriods.length > 1 && (
             <TouchableOpacity onPress={() => removeRestPeriod(i)}>
@@ -214,14 +244,14 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
       <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>Time worked</Text>
       <View style={styles.row}>
         {renderTimeChip('Start', workStart, () => openPicker({ type: 'work', edge: 'start' }))}
-        <Text style={{ color: themeColors.textSecondary }}>→</Text>
+        <Text style={{ color: themeColors.textSecondary }}>{'->'}</Text>
         {renderTimeChip('End', workEnd, () => openPicker({ type: 'work', edge: 'end' }))}
       </View>
 
       <Text style={[styles.sectionLabel, { color: themeColors.textPrimary, marginTop: SPACING.lg }]}>Lunch break</Text>
       <View style={styles.row}>
         {renderTimeChip('Start', lunchStart, () => openPicker({ type: 'lunch', edge: 'start' }))}
-        <Text style={{ color: themeColors.textSecondary }}>→</Text>
+        <Text style={{ color: themeColors.textSecondary }}>{'->'}</Text>
         {renderTimeChip('End', lunchEnd, () => openPicker({ type: 'lunch', edge: 'end' }))}
       </View>
 
@@ -242,7 +272,7 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
 
       <View style={[styles.complianceBox, { backgroundColor: compliance.compliant ? 'rgba(22,163,74,0.08)' : 'rgba(220,38,38,0.08)' }]}>
         <Text style={{ color: compliance.compliant ? '#16a34a' : '#dc2626', fontWeight: '600' }}>
-          {compliance.totalRestHours}h rest {compliance.compliant ? '— compliant' : '— not compliant'}
+          {compliance.totalRestHours}h rest {compliance.compliant ? '- compliant' : '- not compliant'}
         </Text>
         {compliance.violations.map((v, i) => (
           <Text key={i} style={{ color: '#dc2626', fontSize: FONTS.sm, marginTop: 2 }}>{v}</Text>
@@ -268,7 +298,22 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   dateTitle: { fontSize: FONTS.xl, fontWeight: '700', marginBottom: SPACING.xs },
-  lockedNote: { color: '#d97706', marginBottom: SPACING.md, fontSize: FONTS.sm },
+  lockedNote: { marginBottom: SPACING.md, fontSize: FONTS.sm },
+  editablePill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    marginTop: 8,
+    marginBottom: SPACING.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  editablePillText: { color: '#000000', fontSize: FONTS.sm, fontWeight: '600' },
   sectionLabel: { fontSize: FONTS.base, fontWeight: '600', marginBottom: SPACING.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.md },
   chip: { paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md, borderRadius: BORDER_RADIUS.md },

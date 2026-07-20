@@ -6,7 +6,8 @@
  * select the authorized signer here for sign-off.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useLayoutEffect } from 'react';
+import { InfoModal } from '../components/InfoModal';
 import {
   View,
   Text,
@@ -43,6 +44,28 @@ function daysAgo(n: number): Date {
 }
 
 export const HoursOfRestScreen = ({ navigation }: any) => {
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <InfoModal
+          screenKey="hours_of_rest"
+          autoShow={false}
+          content={{
+            title: 'Hours of Rest',
+            description: 'Track your daily rest, work, and lunch hours to stay compliant with STCW/MLC regulations.',
+            features: [
+              'Tap any date on the calendar to log your hours of rest, time worked, and lunch break',
+              'Green dates are completed, red dates still need an entry',
+              'Once your week is filled in, submit it for your Captain or department signer to confirm',
+              'Confirmed entries can still be corrected later by the Captain if needed',
+              'Compliance is checked against real STCW rules: minimum 10 hours rest in any 24-hour period, minimum 77 hours in any 7-day period, and no more than a 14-hour gap between rest periods',
+            ],
+          }}
+        />
+      ),
+    });
+  }, [navigation]);
+
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const isCaptainOrMov = user?.role === 'CAPTAIN_MOV';
