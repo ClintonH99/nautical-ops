@@ -33,6 +33,10 @@ import {
   setItemChecked,
   DutyGroup,
   Department,
+  createDutyGroup,
+  deleteDutyGroup,
+  addDutyItem,
+  deleteDutyItem,
 } from '../services/watchDuties';
 
 const DEPT_LABEL: Record<Department, string> = {
@@ -71,6 +75,12 @@ export const WatchDutiesScreen = () => {
   const [dutyGroups, setDutyGroups] = useState<DutyGroup[]>([]);
   const [selectedDept, setSelectedDept] = useState<Department | 'All'>('All');
   const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [addGroupModalVisible, setAddGroupModalVisible] = useState(false);
+  const [newGroupTitle, setNewGroupTitle] = useState('');
+  const [newGroupDept, setNewGroupDept] = useState<Department>('BRIDGE');
+  const [addingItemGroupId, setAddingItemGroupId] = useState<string | null>(null);
+  const [newItemText, setNewItemText] = useState('');
+  const [savingGroup, setSavingGroup] = useState(false);
 
   const weekStart = getMonday(new Date());
   const weekDates = Array.from({ length: 7 }, (_, i) => {
@@ -117,6 +127,80 @@ export const WatchDutiesScreen = () => {
     } catch (e) {
       console.error('Toggle duty item error:', e);
     }
+  };
+
+  const handleCreateGroup = async () => {
+    if (!user?.vesselId || !newGroupTitle.trim()) return;
+    setSavingGroup(true);
+    try {
+      const id = await createDutyGroup(user.vesselId, newGroupTitle.trim(), newGroupDept);
+      setDutyGroups((prev) => [...prev, { id, title: newGroupTitle.trim(), department: newGroupDept, items: [] }]);
+      setNewGroupTitle('');
+      setAddGroupModalVisible(false);
+    } catch (e) {
+      Alert.alert('Error', 'Failed to create duty group.');
+    } finally {
+      setSavingGroup(false);
+    }
+  };
+
+  const handleDeleteGroup = (groupId: string, title: string) => {
+    Alert.alert('Delete group', `Delete "${title}" and all its items?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteDutyGroup(groupId);
+            setDutyGroups((prev) => prev.filter((g) => g.id !== groupId));
+          } catch (e) {
+            Alert.alert('Error', 'Failed to delete group.');
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleAddItem = async (groupId: string) => {
+    if (!newItemText.trim()) return;
+    const group = dutyGroups.find((g) => g.id === groupId);
+    const sortOrder = group ? group.items.length : 0;
+    try {
+      await addDutyItem(groupId, newItemText.trim(), sortOrder);
+      setDutyGroups((prev) =>
+        prev.map((g) =>
+          g.id === groupId
+            ? { ...g, items: [...g.items, { id: `temp-${Date.now()}`, label: newItemText.trim(), sortOrder, checked: false }] }
+            : g
+        )
+      );
+      setNewItemText('');
+      setAddingItemGroupId(null);
+      loadData();
+    } catch (e) {
+      Alert.alert('Error', 'Failed to add item.');
+    }
+  };
+
+  const handleDeleteItem = (groupId: string, itemId: string) => {
+    Alert.alert('Remove item', 'Remove this duty item?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteDutyItem(itemId);
+            setDutyGroups((prev) =>
+              prev.map((g) => (g.id === groupId ? { ...g, items: g.items.filter((i) => i.id !== itemId) } : g))
+            );
+          } catch (e) {
+            Alert.alert('Error', 'Failed to remove item.');
+          }
+        },
+      },
+    ]);
   };
 
   const handleSaveRules = async () => {
@@ -261,7 +345,54 @@ export const WatchDutiesScreen = () => {
         </Modal>
       )}
 
-      <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base, fontWeight: '600', marginBottom: SPACING.sm }}>Duties</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm }}>
+        <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base, fontWeight: '600' }}>Duties</Text>
+        {canManage && (
+          <TouchableOpacity onPress={() => { setNewGroupTitle(''); setNewGroupDept('BRIDGE'); setAddGroupModalVisible(true); }}>
+            <Text style={{ color: COLORS.primary, fontSize: FONTS.sm, fontWeight: '600' }}>+ Add group</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {addGroupModalVisible && (
+        <Modal visible transparent animationType="fade">
+          <KeyboardAvoidingView
+            style={styles.modalBackdrop}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
+          <Pressable style={{ flex: 1, width: '100%', justifyContent: 'center', alignItems: 'center' }} onPress={() => setAddGroupModalVisible(false)}>
+            <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
+              <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>New duty group</Text>
+              <TextInput
+                value={newGroupTitle}
+                onChangeText={setNewGroupTitle}
+                placeholder="e.g. Morning Duties"
+                placeholderTextColor={themeColors.textSecondary}
+                style={[styles.rulesInput, { color: themeColors.textPrimary, borderColor: themeColors.textSecondary, minHeight: 44, marginBottom: SPACING.md }]}
+              />
+              <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.sm, marginBottom: 8 }}>Department</Text>
+              {ALL_DEPARTMENTS.map((dept) => (
+                <TouchableOpacity
+                  key={dept}
+                  style={[styles.modalItem, newGroupDept === dept && styles.modalItemSelected]}
+                  onPress={() => setNewGroupDept(dept)}
+                >
+                  <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base }}>{DEPT_LABEL[dept]}</Text>
+                </TouchableOpacity>
+              ))}
+              <View style={{ flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.md }}>
+                <TouchableOpacity onPress={() => setAddGroupModalVisible(false)} style={styles.secondaryButton}>
+                  <Text style={{ color: themeColors.textPrimary }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleCreateGroup} disabled={savingGroup || !newGroupTitle.trim()} style={styles.primaryButton}>
+                  <Text style={{ color: '#fff', fontWeight: '600' }}>{savingGroup ? 'Creating...' : 'Create'}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Pressable>
+          </KeyboardAvoidingView>
+        </Modal>
+      )}
 
       {filteredGroups.length === 0 && (
         <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.sm }}>No duty groups yet.</Text>
@@ -271,30 +402,64 @@ export const WatchDutiesScreen = () => {
         <View key={group.id} style={[styles.card, { backgroundColor: themeColors.surface, marginBottom: SPACING.sm }]}>
           <View style={styles.cardHeaderRow}>
             <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base, fontWeight: '600' }}>{group.title}</Text>
-            <View style={{ backgroundColor: COLORS.primary + '20', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }}>
-              <Text style={{ color: COLORS.primary, fontSize: FONTS.xs }}>{DEPT_LABEL[group.department]}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={{ backgroundColor: COLORS.primary + '20', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }}>
+                <Text style={{ color: COLORS.primary, fontSize: FONTS.xs }}>{DEPT_LABEL[group.department]}</Text>
+              </View>
+              {canManage && (
+                <TouchableOpacity onPress={() => handleDeleteGroup(group.id, group.title)}>
+                  <Text style={{ color: '#dc2626', fontSize: FONTS.sm }}>Delete</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
           {group.items.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6 }}
-              onPress={() => handleToggleItem(item.id, item.checked)}
-            >
-              <Text style={{ fontSize: 16, color: item.checked ? '#16a34a' : themeColors.textSecondary }}>
-                {item.checked ? '\u2611' : '\u2610'}
-              </Text>
-              <Text
-                style={{
-                  color: item.checked ? themeColors.textSecondary : themeColors.textPrimary,
-                  fontSize: FONTS.sm,
-                  textDecorationLine: item.checked ? 'line-through' : 'none',
-                }}
+            <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6, flex: 1 }}
+                onPress={() => handleToggleItem(item.id, item.checked)}
               >
-                {item.label}
-              </Text>
-            </TouchableOpacity>
+                <Text style={{ fontSize: 16, color: item.checked ? '#16a34a' : themeColors.textSecondary }}>
+                  {item.checked ? '\u2611' : '\u2610'}
+                </Text>
+                <Text
+                  style={{
+                    color: item.checked ? themeColors.textSecondary : themeColors.textPrimary,
+                    fontSize: FONTS.sm,
+                    textDecorationLine: item.checked ? 'line-through' : 'none',
+                  }}
+                >
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+              {canManage && (
+                <TouchableOpacity onPress={() => handleDeleteItem(group.id, item.id)}>
+                  <Text style={{ color: '#dc2626', fontSize: FONTS.xs }}>Remove</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           ))}
+          {canManage && (
+            addingItemGroupId === group.id ? (
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 6, alignItems: 'center' }}>
+                <TextInput
+                  value={newItemText}
+                  onChangeText={setNewItemText}
+                  placeholder="New item"
+                  placeholderTextColor={themeColors.textSecondary}
+                  style={[styles.rulesInput, { flex: 1, minHeight: 36, color: themeColors.textPrimary, borderColor: themeColors.textSecondary, paddingVertical: 6 }]}
+                  autoFocus
+                />
+                <TouchableOpacity onPress={() => handleAddItem(group.id)}>
+                  <Text style={{ color: COLORS.primary, fontWeight: '600' }}>Add</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity onPress={() => { setAddingItemGroupId(group.id); setNewItemText(''); }} style={{ marginTop: 6 }}>
+                <Text style={{ color: COLORS.primary, fontSize: FONTS.sm }}>+ Add item</Text>
+              </TouchableOpacity>
+            )
+          )}
         </View>
       ))}
       </ScrollView>
