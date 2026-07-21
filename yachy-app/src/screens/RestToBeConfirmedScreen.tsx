@@ -5,6 +5,8 @@
  * A department filter narrows the crew shown - the Captain sees "All" by
  * default and can filter to one department, while a department-only
  * signer automatically sees just the department(s) they're assigned to.
+ * A single "Export to PDF" button opens a multi-select list (with Select
+ * All) to export the currently viewed month for any number of crew.
  */
 
 import React, { useState, useCallback } from 'react';
@@ -69,10 +71,13 @@ export const RestToBeConfirmedScreen = () => {
   const [selectedDept, setSelectedDept] = useState<Department | 'All'>(
     canSeeAll ? 'All' : filterOptions[0]
   );
-  const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [days, setDays] = useState<DayReview[]>([]);
   const [loading, setLoading] = useState(true);
-  const [exportingUserId, setExportingUserId] = useState<string | null>(null);
+
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [exportModalVisible, setExportModalVisible] = useState(false);
+  const [selectedExportIds, setSelectedExportIds] = useState<Set<string>>(new Set());
+  const [exporting, setExporting] = useState(false);
 
   const pastMonths = getPastMonths(12);
 
@@ -99,8 +104,6 @@ export const RestToBeConfirmedScreen = () => {
     }, [tab, loadCurrent])
   );
 
-  // Filter each day's entries down to the selected department, then drop
-  // any day left with no entries at all (nobody in that department that day).
   const filteredDays: DayReview[] = days
     .map((day) => ({
       ...day,
@@ -112,6 +115,11 @@ export const RestToBeConfirmedScreen = () => {
   const complete = filteredDays.filter((d) => categorizeDay(d.entries) === 'complete');
   const confirmed = filteredDays.filter((d) => categorizeDay(d.entries) === 'confirmed');
 
+  // Unique crew members currently visible (after department filter), for the export list
+  const uniqueCrew = Array.from(
+    new Map(filteredDays.flatMap((d) => d.entries).map((e) => [e.userId, e.userName])).entries()
+  ).map(([userId, userName]) => ({ userId, userName }));
+
   const openDay = (date: string, userId: string, userName: string) => {
     navigation.navigate('RestDayEntry', {
       date,
@@ -121,27 +129,46 @@ export const RestToBeConfirmedScreen = () => {
     });
   };
 
-  const handleExport = async (userId: string, userName: string) => {
-    setExportingUserId(userId);
+  const toggleExportSelection = (userId: string) => {
+    setSelectedExportIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedExportIds.size === uniqueCrew.length) {
+      setSelectedExportIds(new Set());
+    } else {
+      setSelectedExportIds(new Set(uniqueCrew.map((c) => c.userId)));
+    }
+  };
+
+  const handleExportSelected = async () => {
+    if (selectedExportIds.size === 0) return;
+    setExporting(true);
     try {
       const now = new Date();
       const { year, month } = tab === 'history' && selectedMonth
         ? selectedMonth
         : { year: now.getFullYear(), month: now.getMonth() + 1 };
 
-      const data = await getMonthDataForPdf(userId, year, month);
-      if (!data || data.days.length === 0) {
-        Alert.alert('No data', `No rest entries found for ${userName} this month.`);
-        return;
+      for (const userId of selectedExportIds) {
+        const crewMember = uniqueCrew.find((c) => c.userId === userId);
+        const data = await getMonthDataForPdf(userId, year, month);
+        if (!data || data.days.length === 0) continue;
+        const filename = `HoursOfRest_${(crewMember?.userName ?? 'crew').replace(/\s+/g, '_')}_${year}-${String(month).padStart(2, '0')}.pdf`;
+        await generateHoursOfRestPdf(data, filename);
       }
-
-      const filename = `HoursOfRest_${userName.replace(/\s+/g, '_')}_${year}-${String(month).padStart(2, '0')}.pdf`;
-      await generateHoursOfRestPdf(data, filename);
+      setExportModalVisible(false);
+      setSelectedExportIds(new Set());
     } catch (e) {
-      console.error('Export PDF error:', e);
-      Alert.alert('Error', 'Could not export PDF.');
+      console.error('Bulk export error:', e);
+      Alert.alert('Error', 'Could not export one or more PDFs.');
     } finally {
-      setExportingUserId(null);
+      setExporting(false);
     }
   };
 
@@ -154,18 +181,11 @@ export const RestToBeConfirmedScreen = () => {
           <View key={day.date} style={[styles.dayCard, { borderColor: color }]}>
             <Text style={[styles.dayTitle, { color: themeColors.textPrimary, marginBottom: 4 }]}>{day.date}</Text>
             {day.entries.map((e) => (
-              <View key={e.userId} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <TouchableOpacity onPress={() => openDay(day.date, e.userId, e.userName)} style={{ flex: 1 }}>
-                  <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.sm, marginTop: 2 }}>
-                    - {e.userName} - {STATUS_LABEL[e.status]}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleExport(e.userId, e.userName)} disabled={exportingUserId === e.userId}>
-                  <Text style={{ color: COLORS.primary, fontSize: FONTS.xs, marginLeft: SPACING.sm }}>
-                    {exportingUserId === e.userId ? 'Exporting...' : 'Export'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity key={e.userId} onPress={() => openDay(day.date, e.userId, e.userName)}>
+                <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.sm, marginTop: 2 }}>
+                  - {e.userName} - {STATUS_LABEL[e.status]}
+                </Text>
+              </TouchableOpacity>
             ))}
           </View>
         ))}
@@ -203,7 +223,7 @@ export const RestToBeConfirmedScreen = () => {
                 {selectedDept === 'All' ? 'All Departments' : DEPT_LABEL[selectedDept]}
               </Text>
               <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>
-                {filterModalVisible ? '▲' : '▼'}
+                {filterModalVisible ? '\u25b2' : '\u25bc'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -268,6 +288,15 @@ export const RestToBeConfirmedScreen = () => {
             <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.xl }} />
           ) : (
             <>
+              {uniqueCrew.length > 0 && (
+                <TouchableOpacity
+                  style={styles.reviewButton}
+                  onPress={() => { setSelectedExportIds(new Set()); setExportModalVisible(true); }}
+                >
+                  <Text style={styles.reviewButtonText}>Export to PDF</Text>
+                </TouchableOpacity>
+              )}
+
               {renderSection('Not Complete', '#dc2626', notComplete)}
               {renderSection('Complete', '#d97706', complete)}
               {renderSection('Confirmed', '#16a34a', confirmed)}
@@ -277,6 +306,49 @@ export const RestToBeConfirmedScreen = () => {
             </>
           )}
         </>
+      )}
+
+      {exportModalVisible && (
+        <Modal visible transparent animationType="fade">
+          <Pressable style={styles.modalBackdrop} onPress={() => !exporting && setExportModalVisible(false)}>
+            <View
+              style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+              onStartShouldSetResponder={() => true}
+            >
+              <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+                Select crew to export
+              </Text>
+
+              <TouchableOpacity style={styles.modalItem} onPress={toggleSelectAll}>
+                <Text style={[styles.modalItemText, { color: COLORS.primary, fontWeight: '600' }]}>
+                  {selectedExportIds.size === uniqueCrew.length ? 'Deselect all' : 'Select all'}
+                </Text>
+              </TouchableOpacity>
+
+              {uniqueCrew.map((c) => (
+                <TouchableOpacity
+                  key={c.userId}
+                  style={[styles.modalItem, selectedExportIds.has(c.userId) && styles.modalItemSelected]}
+                  onPress={() => toggleExportSelection(c.userId)}
+                >
+                  <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
+                    {selectedExportIds.has(c.userId) ? '\u2713 ' : ''}{c.userName}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+
+              <TouchableOpacity
+                style={[styles.reviewButton, { marginTop: SPACING.md, opacity: exporting || selectedExportIds.size === 0 ? 0.6 : 1 }]}
+                onPress={handleExportSelected}
+                disabled={exporting || selectedExportIds.size === 0}
+              >
+                <Text style={styles.reviewButtonText}>
+                  {exporting ? 'Exporting...' : `Export (${selectedExportIds.size})`}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Modal>
       )}
     </ScrollView>
   );
@@ -323,7 +395,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.md,
     minWidth: 260,
-    maxHeight: 400,
+    maxHeight: 500,
   },
   modalTitle: { fontSize: FONTS.lg, fontWeight: '600', marginBottom: SPACING.md },
   modalItem: {
@@ -339,4 +411,6 @@ const styles = StyleSheet.create({
   sectionLabel: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.sm },
   dayCard: { padding: SPACING.md, borderRadius: BORDER_RADIUS.md, borderWidth: 1, marginBottom: SPACING.sm },
   dayTitle: { fontSize: FONTS.base, fontWeight: '600' },
+  reviewButton: { backgroundColor: COLORS.primary, padding: SPACING.md, borderRadius: BORDER_RADIUS.md, alignItems: 'center', marginBottom: SPACING.lg },
+  reviewButtonText: { color: '#fff', fontWeight: '600' },
 });
