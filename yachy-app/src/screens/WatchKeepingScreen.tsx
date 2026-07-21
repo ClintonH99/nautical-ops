@@ -49,7 +49,7 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
-  const isHOD = user?.role === 'HOD';
+  const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
 
   const [rules, setRules] = useState<WatchKeepingRules | null>(null);
   const [loadingRules, setLoadingRules] = useState(true);

@@ -128,7 +128,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
   const [exportDateSelected, setExportDateSelected] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const vesselId = user?.vesselId ?? null;
-  const isHOD = user?.role === 'HOD';
+  const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
 
   const loadCrew = useCallback(async (): Promise<User[]> => {
     if (!vesselId) return [];
