@@ -136,8 +136,8 @@ export const HomeScreen = ({ navigation }: any) => {
 
   const vesselId = user?.vesselId ?? null;
   const hasVessel = !!vesselId;
-  const isCaptain = user?.role === 'HOD';
-  const isCaptainLike = isCaptain || (user?.position?.toLowerCase().includes('captain') ?? false);
+  const isCaptain = user?.role === 'CAPTAIN_MOV';
+  const isCaptainLike = isCaptain;
   const { colors: tripColors, load: loadColors } = useVesselTripColors(vesselId);
   const overrides = useDepartmentColorStore((s) => s.overrides);
   const typeColorMap = tripColors

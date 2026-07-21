@@ -13,6 +13,7 @@ export interface CreateVesselData {
 export interface Vessel {
   id: string;
   name: string;
+  imoNumber?: string;
   managementCompanyId?: string;
   inviteCode: string;
   inviteExpiry: string;
@@ -130,6 +131,7 @@ class VesselService {
       return {
         id: data.id,
         name: data.name,
+        imoNumber: data.imo_number,
         managementCompanyId: data.management_company_id,
         inviteCode: data.invite_code,
         inviteExpiry: data.invite_expiry,
@@ -225,6 +227,21 @@ class VesselService {
       throw error;
     }
   }
-}
 
+  async updateVesselImo(vesselId: string, imoNumber: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('vessels')
+        .update({
+          imo_number: imoNumber.trim(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', vesselId);
+      if (error) throw error;
+    } catch (error) {
+      console.error('Update vessel IMO error:', error);
+      throw error;
+    }
+  }
+}
 export default new VesselService();

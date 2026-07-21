@@ -221,7 +221,7 @@ const createWebLinkingConfig = (isAuthenticated: boolean) => {
 // CaptainWelcome (create vessel) is ONLY for captains who have no vessel yet.
 export const RootNavigator = () => {
   const { isAuthenticated, isLoading, setUser, setLoading, user } = useAuthStore();
-  const isCaptain = user?.position?.toLowerCase().includes('captain') ?? false;
+  const isCaptain = user?.role === 'CAPTAIN_MOV';
   const hasVessel = !!user?.vesselId;
   // Welcome: logged-out cold start only. Logged-in users skip Welcome (straight to MainTabs / CaptainWelcome).
   // Per ADMIN rule: Crew members never see CaptainWelcome - go straight to MainTabs
@@ -266,7 +266,7 @@ export const RootNavigator = () => {
 
         if (mounted && userData) {
           const isCaptain =
-            userData.role === 'HOD' || userData.position?.toLowerCase().includes('captain');
+            userData.role === 'CAPTAIN_MOV';
           if (isCaptain && !userData.vesselId) {
             const refetch = await authService.getUserProfile(session.user.id);
             if (mounted && refetch?.vesselId) userData = refetch;
@@ -309,7 +309,7 @@ export const RootNavigator = () => {
           setUser(null);
           return;
         }
-        const isCaptain = user.role === 'HOD' || user.position?.toLowerCase().includes('captain');
+        const isCaptain = user.role === 'CAPTAIN_MOV';
         if (isCaptain && !user.vesselId) {
           const refetch = await authService.getUserProfile(user.id);
           if (refetch?.vesselId) setUser(refetch);

@@ -527,7 +527,7 @@ class AuthService {
       if (!vessel) throw new Error('Invalid invite code');
       const { error } = await supabase
         .from('users')
-        .update({ vessel_id: vessel.id, updated_at: new Date().toISOString() })
+        .update({ vessel_id: vessel.id, vessel_joined_at: new Date().toISOString(), updated_at: new Date().toISOString() })
         .eq('id', userId);
       if (error) throw error;
       try {

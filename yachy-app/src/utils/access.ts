@@ -5,8 +5,7 @@
 import { User } from '../types';
 
 export function isMasterOfVessel(user: User | null | undefined): boolean {
-  const p = user?.position?.toLowerCase() ?? '';
-  return p.includes('captain') || p.includes('master');
+  return user?.role === 'CAPTAIN_MOV';
 }
 
 /** Department color settings: MOV (captain/master) and HOD only */

@@ -40,6 +40,9 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
   const [isRegeneratingCode, setIsRegeneratingCode] = useState(false);
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
   const [vesselName, setVesselName] = useState('');
+  const [imoNumber, setImoNumber] = useState('');
+  const [isEditingImo, setIsEditingImo] = useState(false);
+  const [isSavingImo, setIsSavingImo] = useState(false);
   const [crewCount, setCrewCount] = useState(0);
 
   const {
@@ -49,11 +52,11 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
   } = useSubscriptionStatus(user?.vesselId ?? null);
   const hasActiveSubscription = _hasActiveSubscription;
 
-  const isHOD = user?.role === 'HOD';
+  const isCaptain = user?.role === 'CAPTAIN_MOV';
 
   useEffect(() => {
-    if (!isHOD) {
-      Alert.alert('Access Denied', 'Only HODs can access vessel settings', [
+    if (!isCaptain) {
+      Alert.alert('Access Denied', 'Only the Captain can access vessel settings', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
       return;
@@ -82,6 +85,7 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
       if (vesselData) {
         setVessel(vesselData);
         setVesselName(vesselData.name);
+        setImoNumber(vesselData.imoNumber || '');
       }
       setCrewCount(crew?.length ?? 0);
     } catch (error) {
@@ -116,6 +120,27 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
   const handleCancelEditName = () => {
     setVesselName(vessel?.name || '');
     setIsEditingName(false);
+  };
+
+  const handleSaveImo = async () => {
+    if (!user?.vesselId) return;
+    setIsSavingImo(true);
+    try {
+      await vesselService.updateVesselImo(user.vesselId, imoNumber.trim());
+      const updatedVessel = await vesselService.getVessel(user.vesselId);
+      if (updatedVessel) setVessel(updatedVessel);
+      setIsEditingImo(false);
+    } catch (error) {
+      console.error('Save IMO error:', error);
+      Alert.alert('Error', 'Failed to update IMO number');
+    } finally {
+      setIsSavingImo(false);
+    }
+  };
+
+  const handleCancelEditImo = () => {
+    setImoNumber(vessel?.imoNumber || '');
+    setIsEditingImo(false);
   };
 
   const handleRegenerateCode = () => {
@@ -220,7 +245,7 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
       return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
-  if (!isHOD) return null;
+  if (!isCaptain) return null;
 
   if (isLoading) {
     return (
@@ -381,6 +406,67 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
             ) : (
               <Text style={[styles.vesselNameDisplay, { color: themeColors.textPrimary }]}>
                 {vessel.name}
+              </Text>
+            )}
+          </View>
+        </View>
+
+        {/* IMO Number Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+              IMO Number
+            </Text>
+            {!isEditingImo && (
+              <TouchableOpacity onPress={() => setIsEditingImo(true)}>
+                <Text
+                  style={[
+                    styles.editButton,
+                    { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                  ]}
+                >
+                  Edit
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
+            {isEditingImo ? (
+              <>
+                <TextInput
+                  style={[
+                    styles.input,
+                    { backgroundColor: themeColors.background, color: themeColors.textPrimary },
+                  ]}
+                  value={imoNumber}
+                  onChangeText={setImoNumber}
+                  placeholder="Enter IMO number"
+                  placeholderTextColor={COLORS.textTertiary}
+                  autoFocus
+                  keyboardType="number-pad"
+                />
+                <View style={styles.actions}>
+                  <Button
+                    title="Cancel"
+                    onPress={handleCancelEditImo}
+                    variant="outline"
+                    fullWidth
+                    style={styles.actionButton}
+                    disabled={isSavingImo}
+                  />
+                  <Button
+                    title={isSavingImo ? 'Saving...' : 'Save'}
+                    onPress={handleSaveImo}
+                    variant="primary"
+                    fullWidth
+                    style={styles.actionButton}
+                    disabled={isSavingImo}
+                  />
+                </View>
+              </>
+            ) : (
+              <Text style={[styles.vesselNameDisplay, { color: themeColors.textPrimary }]}>
+                {vessel.imoNumber || 'Not set'}
               </Text>
             )}
           </View>

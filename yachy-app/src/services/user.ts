@@ -128,6 +128,7 @@ class UserService {
         .from('users')
         .update({
           vessel_id: null,
+          vessel_joined_at: null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', userId);

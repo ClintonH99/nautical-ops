@@ -237,7 +237,7 @@ export const CrewManagementScreen = ({ navigation }: any) => {
               text: item.role === 'HOD' ? 'Demote to Crew' : 'Promote to HOD',
               onPress: () => handlePromoteToDemote(item),
             },
-            ...(isMOV && !item.position?.toLowerCase().includes('captain')
+            ...(isMOV && item.role !== 'CAPTAIN_MOV'
               ? [
                   {
                     text: 'Promote to Captain/MOV',
@@ -299,7 +299,7 @@ export const CrewManagementScreen = ({ navigation }: any) => {
               <View
                 style={[
                   styles.roleBadge,
-                  item.position?.toLowerCase().includes('captain')
+                  item.role === 'CAPTAIN_MOV'
                     ? styles.roleBadgeMOV
                     : item.role === 'HOD'
                       ? styles.roleBadgeHOD
@@ -307,7 +307,7 @@ export const CrewManagementScreen = ({ navigation }: any) => {
                 ]}
               >
                 <Text style={styles.roleText}>
-                  {item.position?.toLowerCase().includes('captain') ? 'MOV' : item.role}
+                  {item.role === 'CAPTAIN_MOV' ? 'MOV' : item.role}
                 </Text>
               </View>
               {item.contractType === 'temporary' && (

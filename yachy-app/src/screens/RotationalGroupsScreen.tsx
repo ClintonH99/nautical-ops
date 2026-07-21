@@ -42,7 +42,7 @@ export const RotationalGroupsScreen = ({ navigation }: any) => {
   const [renamingGroupId, setRenamingGroupId] = useState<string | null>(null);
   const nameInputRef = useRef<TextInput>(null);
 
-  const isMOV = currentUser?.position?.toLowerCase().includes('captain');
+  const isMOV = currentUser?.role === 'CAPTAIN_MOV';
   const canEdit = isMOV; // HOD read-only, MOV can edit
 
   useFocusEffect(

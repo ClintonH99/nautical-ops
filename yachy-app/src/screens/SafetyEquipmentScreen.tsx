@@ -115,7 +115,7 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
   const isHOD = user?.role === 'HOD';
-  const isMOV = user?.position?.toLowerCase().includes('captain') ?? false;
+  const isMOV = user?.role === 'CAPTAIN_MOV';
   const canManage = isHOD || isMOV;
   const [items, setItems] = useState<SafetyEquipment[]>([]);
   const [loading, setLoading] = useState(true);

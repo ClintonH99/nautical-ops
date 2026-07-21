@@ -496,3 +496,137 @@ export async function getManagedDepartments(
 
   return (data ?? []).map((d) => d.department as Department);
 }
+
+
+export interface PdfDayRow {
+  date: string;
+  hourMarks: boolean[]; // 24 booleans, true = working hour
+  restHoursToday: string; // "HH:MM"
+  restIn24h: string;
+  restIn7d: string;
+}
+
+export interface PdfMonthData {
+  seafarerName: string;
+  rank: string;
+  vesselName: string;
+  monthLabel: string;
+  days: PdfDayRow[];
+}
+
+function minutesToHHMM(totalMinutes: number): string {
+  const h = Math.floor(totalMinutes / 60);
+  const m = Math.round(totalMinutes % 60);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+// Builds 24 hourly work/rest marks for one day from work_start/work_end,
+// excluding the lunch period (lunch is neither work nor rest on the form,
+// left blank same as rest).
+function buildHourMarks(workStart: string | null, workEnd: string | null, lunchStart: string | null, lunchEnd: string | null): boolean[] {
+  const marks = new Array(24).fill(false);
+  if (!workStart || !workEnd) return marks;
+
+  const ws = timeToMinutes(workStart);
+  let we = timeToMinutes(workEnd);
+  if (we <= ws) we += 24 * 60;
+
+  let ls: number | null = null;
+  let le: number | null = null;
+  if (lunchStart && lunchEnd) {
+    ls = timeToMinutes(lunchStart);
+    le = timeToMinutes(lunchEnd);
+    if (le <= ls) le += 24 * 60;
+  }
+
+  for (let h = 0; h < 24; h++) {
+    const hourStart = h * 60;
+    const inWork = hourStart >= ws && hourStart < we;
+    const inLunch = ls !== null && le !== null && hourStart >= ls && hourStart < le;
+    marks[h] = inWork && !inLunch;
+  }
+  return marks;
+}
+
+// Assembles everything needed to render one crew member's month on the
+// Hours of Work and Rest PDF: header info, per-day hour marks, and the
+// real rolling 24h/7d compliance figures for each date.
+export async function getMonthDataForPdf(userId: string, year: number, month: number): Promise<PdfMonthData | null> {
+  const { data: user } = await supabase
+    .from('users')
+    .select('name, position, vessel_id, vessel_joined_at')
+    .eq('id', userId)
+    .single();
+
+  if (!user || !user.vessel_id) return null;
+
+  const { data: vessel } = await supabase
+    .from('vessels')
+    .select('name')
+    .eq('id', user.vessel_id)
+    .single();
+
+  const monthStart = new Date(year, month - 1, 1);
+  const joinedDate = user.vessel_joined_at ? new Date(user.vessel_joined_at) : monthStart;
+  const effectiveStart = joinedDate > monthStart ? joinedDate : monthStart;
+  const lastDayOfMonth = new Date(year, month, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const effectiveEnd = lastDayOfMonth < today ? lastDayOfMonth : today;
+
+  if (effectiveStart > effectiveEnd) {
+    return {
+      seafarerName: user.name,
+      rank: user.position ?? '',
+      vesselName: vessel?.name ?? '',
+      monthLabel: monthStart.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+      days: [],
+    };
+  }
+
+  // Fetch with 7 days of padding before the range so rolling 7-day checks
+  // have context for the first days shown.
+  const paddedStart = new Date(effectiveStart);
+  paddedStart.setDate(paddedStart.getDate() - 7);
+
+  const { data: entries } = await supabase
+    .from('rest_entries')
+    .select('date, rest_periods, work_start, work_end, lunch_start, lunch_end')
+    .eq('user_id', userId)
+    .gte('date', toDateStr(paddedStart))
+    .lte('date', toDateStr(effectiveEnd));
+
+  const entryMap = new Map((entries ?? []).map((e) => [e.date, e]));
+  const historyForRolling = (entries ?? []).map((e) => ({ date: e.date, rest_periods: e.rest_periods || [] }));
+
+  const days: PdfDayRow[] = [];
+  for (let d = new Date(effectiveStart); d <= effectiveEnd; d.setDate(d.getDate() + 1)) {
+    const dateStr = toDateStr(d);
+    const entry = entryMap.get(dateStr);
+
+    const restPeriods = entry?.rest_periods ?? [];
+    const restMinutesToday = restPeriods.reduce((sum: number, p: RestPeriod) => {
+      const start = timeToMinutes(p.start);
+      const end = timeToMinutes(p.end);
+      return sum + (end > start ? end - start : 24 * 60 - start + end);
+    }, 0);
+
+    const rolling = checkRollingCompliance(dateStr, historyForRolling);
+
+    days.push({
+      date: dateStr,
+      hourMarks: buildHourMarks(entry?.work_start ?? null, entry?.work_end ?? null, entry?.lunch_start ?? null, entry?.lunch_end ?? null),
+      restHoursToday: minutesToHHMM(restMinutesToday),
+      restIn24h: minutesToHHMM(rolling.minRestIn24h * 60),
+      restIn7d: minutesToHHMM(rolling.minRestIn7Days * 60),
+    });
+  }
+
+  return {
+    seafarerName: user.name,
+    rank: user.position ?? '',
+    vesselName: vessel?.name ?? '',
+    monthLabel: monthStart.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+    days,
+  };
+}

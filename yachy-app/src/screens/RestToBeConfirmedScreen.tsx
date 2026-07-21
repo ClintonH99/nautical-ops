@@ -17,12 +17,14 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
+  Alert,
 } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { DayReview, DayReviewEntry, Department, getMonthReview, getPastMonths } from '../services/restEntries';
+import { DayReview, DayReviewEntry, Department, getMonthReview, getPastMonths, getMonthDataForPdf } from '../services/restEntries';
+import { generateHoursOfRestPdf } from '../utils/hoursOfRestPdf';
 
 const STATUS_LABEL: Record<string, string> = {
   missing: 'not complete',
@@ -70,6 +72,7 @@ export const RestToBeConfirmedScreen = () => {
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [days, setDays] = useState<DayReview[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exportingUserId, setExportingUserId] = useState<string | null>(null);
 
   const pastMonths = getPastMonths(12);
 
@@ -118,6 +121,30 @@ export const RestToBeConfirmedScreen = () => {
     });
   };
 
+  const handleExport = async (userId: string, userName: string) => {
+    setExportingUserId(userId);
+    try {
+      const now = new Date();
+      const { year, month } = tab === 'history' && selectedMonth
+        ? selectedMonth
+        : { year: now.getFullYear(), month: now.getMonth() + 1 };
+
+      const data = await getMonthDataForPdf(userId, year, month);
+      if (!data || data.days.length === 0) {
+        Alert.alert('No data', `No rest entries found for ${userName} this month.`);
+        return;
+      }
+
+      const filename = `HoursOfRest_${userName.replace(/\s+/g, '_')}_${year}-${String(month).padStart(2, '0')}.pdf`;
+      await generateHoursOfRestPdf(data, filename);
+    } catch (e) {
+      console.error('Export PDF error:', e);
+      Alert.alert('Error', 'Could not export PDF.');
+    } finally {
+      setExportingUserId(null);
+    }
+  };
+
   const renderSection = (title: string, color: string, list: DayReview[]) => {
     if (list.length === 0) return null;
     return (
@@ -127,11 +154,18 @@ export const RestToBeConfirmedScreen = () => {
           <View key={day.date} style={[styles.dayCard, { borderColor: color }]}>
             <Text style={[styles.dayTitle, { color: themeColors.textPrimary, marginBottom: 4 }]}>{day.date}</Text>
             {day.entries.map((e) => (
-              <TouchableOpacity key={e.userId} onPress={() => openDay(day.date, e.userId, e.userName)}>
-                <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.sm, marginTop: 2 }}>
-                  - {e.userName} - {STATUS_LABEL[e.status]}
-                </Text>
-              </TouchableOpacity>
+              <View key={e.userId} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <TouchableOpacity onPress={() => openDay(day.date, e.userId, e.userName)} style={{ flex: 1 }}>
+                  <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.sm, marginTop: 2 }}>
+                    - {e.userName} - {STATUS_LABEL[e.status]}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleExport(e.userId, e.userName)} disabled={exportingUserId === e.userId}>
+                  <Text style={{ color: COLORS.primary, fontSize: FONTS.xs, marginLeft: SPACING.sm }}>
+                    {exportingUserId === e.userId ? 'Exporting...' : 'Export'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             ))}
           </View>
         ))}

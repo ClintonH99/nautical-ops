@@ -433,7 +433,7 @@ export const ProfileScreen = ({ navigation }: any) => {
               >
                 <View style={styles.roleBadge}>
                   <Text style={[styles.roleText, { textTransform: 'none' }]}>
-                    {user?.position?.toLowerCase().includes('captain')
+                    {user?.role === 'CAPTAIN_MOV'
                       ? 'MOV (Master of Vessel)'
                       : user?.role === 'HOD'
                         ? 'HOD (Head of Department)'

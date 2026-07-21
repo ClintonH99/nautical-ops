@@ -89,6 +89,7 @@ export const CreateVesselScreen = ({ navigation }: any) => {
         .update({
           vessel_id: vessel.id,
           role: 'CAPTAIN_MOV',
+          vessel_joined_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
         .eq('id', user.id);

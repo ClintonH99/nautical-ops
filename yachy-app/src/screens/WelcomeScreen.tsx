@@ -24,7 +24,7 @@ const WELCOME_DURATION_MS = 3000;
 
 export const WelcomeScreen = ({ navigation }: any) => {
   const { isAuthenticated, user } = useAuthStore();
-  const isCaptain = user?.position?.toLowerCase().includes('captain') ?? false;
+  const isCaptain = user?.role === 'CAPTAIN_MOV';
   const hasVessel = !!user?.vesselId;
 
   useEffect(() => {
