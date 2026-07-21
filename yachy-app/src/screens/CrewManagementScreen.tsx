@@ -13,6 +13,8 @@ import {
   Alert,
   Image,
   RefreshControl,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
@@ -28,6 +30,7 @@ import { User, Department } from '../types';
 import { getPlanTier } from '../constants/subscriptionPlans';
 import { LoadingSpinner } from '../components';
 import { canAccessVesselManagement, isMasterOfVessel } from '../utils/access';
+import { getWatchKeepers, addWatchKeeper, removeWatchKeeper, WatchKeeperEntry } from '../services/watchKeepers';
 
 export const CrewManagementScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -42,6 +45,8 @@ export const CrewManagementScreen = ({ navigation }: any) => {
 
   const canManageCrew = canAccessVesselManagement(currentUser);
   const isMOV = isMasterOfVessel(currentUser);
+  const [watchKeepers, setWatchKeepers] = useState<WatchKeeperEntry[]>([]);
+  const [watchKeeperPickerOpen, setWatchKeeperPickerOpen] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -61,6 +66,8 @@ export const CrewManagementScreen = ({ navigation }: any) => {
       const crewData = await userService.getVesselCrew(currentUser.vesselId);
       setCrew(crewData);
       setPhotoLoadFailedIds(new Set());
+      const watchKeeperData = await getWatchKeepers(currentUser.vesselId);
+      setWatchKeepers(watchKeeperData);
     } catch (error) {
       console.error('Load data error:', error);
       Alert.alert('Error', 'Failed to load crew members');
@@ -379,6 +386,72 @@ export const CrewManagementScreen = ({ navigation }: any) => {
           </Text>
           <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>Crew</Text>
         </View>
+      </View>
+
+      <View style={[styles.infoCard, { backgroundColor: themeColors.surface, marginBottom: SPACING.md }]}>
+        <Text style={[styles.infoText, { color: themeColors.textPrimary, fontWeight: '600', marginBottom: SPACING.xs }]}>
+          Designated Watch Keepers
+        </Text>
+        {watchKeepers.length === 0 ? (
+          <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.sm, marginBottom: SPACING.xs }}>
+            No watch keepers selected yet.
+          </Text>
+        ) : (
+          watchKeepers.map((wk) => (
+            <TouchableOpacity
+              key={wk.userId}
+              onPress={() => {
+                Alert.alert('Remove watch keeper', `Remove ${wk.userName} as a designated watch keeper?`, [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Remove',
+                    style: 'destructive',
+                    onPress: async () => {
+                      if (!currentUser?.vesselId) return;
+                      await removeWatchKeeper(currentUser.vesselId, wk.userId);
+                      setWatchKeepers((prev) => prev.filter((w) => w.userId !== wk.userId));
+                    },
+                  },
+                ]);
+              }}
+            >
+              <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm, marginBottom: 2 }}>
+                {'\u2022'} {wk.userName}
+              </Text>
+            </TouchableOpacity>
+          ))
+        )}
+        <TouchableOpacity
+          onPress={() => setWatchKeeperPickerOpen(true)}
+          style={{ marginTop: SPACING.xs }}
+        >
+          <Text style={{ color: COLORS.primary, fontSize: FONTS.sm, fontWeight: '600' }}>+ Add watch keeper</Text>
+        </TouchableOpacity>
+        {watchKeeperPickerOpen && (
+          <Modal visible transparent animationType="fade">
+            <Pressable style={styles.modalBackdrop} onPress={() => setWatchKeeperPickerOpen(false)}>
+              <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
+                <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Select watch keeper</Text>
+                {crew
+                  .filter((c) => !watchKeepers.some((wk) => wk.userId === c.id))
+                  .map((c) => (
+                    <TouchableOpacity
+                      key={c.id}
+                      style={styles.modalItem}
+                      onPress={async () => {
+                        if (!currentUser?.vesselId) return;
+                        await addWatchKeeper(currentUser.vesselId, c.id);
+                        setWatchKeepers((prev) => [...prev, { userId: c.id, userName: c.name }]);
+                        setWatchKeeperPickerOpen(false);
+                      }}
+                    >
+                      <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>{c.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+              </View>
+            </Pressable>
+          </Modal>
+        )}
       </View>
 
       <View style={[styles.infoCard, { backgroundColor: themeColors.surface }]}>
@@ -714,4 +787,21 @@ const styles = StyleSheet.create({
     fontSize: FONTS.base,
     textAlign: 'center',
   },
+  dropdown: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  dropdownText: { fontSize: FONTS.base, fontWeight: '500' },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
+  modalBox: { borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, minWidth: 260, maxHeight: 400 },
+  modalTitle: { fontSize: FONTS.lg, fontWeight: '600', marginBottom: SPACING.md },
+  modalItem: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg, borderRadius: BORDER_RADIUS.sm },
+  modalItemSelected: { backgroundColor: COLORS.gray200 },
+  modalItemText: { fontSize: FONTS.base },
 });
