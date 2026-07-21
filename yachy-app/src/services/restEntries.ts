@@ -510,7 +510,9 @@ export interface PdfMonthData {
   seafarerName: string;
   rank: string;
   vesselName: string;
+  vesselImoNumber: string;
   monthLabel: string;
+  isWatchKeeper: boolean;
   days: PdfDayRow[];
 }
 
@@ -562,7 +564,7 @@ export async function getMonthDataForPdf(userId: string, year: number, month: nu
 
   const { data: vessel } = await supabase
     .from('vessels')
-    .select('name')
+    .select('name, imo_number')
     .eq('id', user.vessel_id)
     .single();
 
@@ -574,12 +576,22 @@ export async function getMonthDataForPdf(userId: string, year: number, month: nu
   today.setHours(0, 0, 0, 0);
   const effectiveEnd = lastDayOfMonth < today ? lastDayOfMonth : today;
 
+  const { data: watchKeeperRow } = await supabase
+    .from('watch_keepers')
+    .select('user_id')
+    .eq('vessel_id', user.vessel_id)
+    .eq('user_id', userId)
+    .maybeSingle();
+  const isWatchKeeper = !!watchKeeperRow;
+
   if (effectiveStart > effectiveEnd) {
     return {
       seafarerName: user.name,
       rank: user.position ?? '',
       vesselName: vessel?.name ?? '',
+      vesselImoNumber: vessel?.imo_number ?? '',
       monthLabel: monthStart.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+      isWatchKeeper,
       days: [],
     };
   }
@@ -626,7 +638,9 @@ export async function getMonthDataForPdf(userId: string, year: number, month: nu
     seafarerName: user.name,
     rank: user.position ?? '',
     vesselName: vessel?.name ?? '',
+    vesselImoNumber: vessel?.imo_number ?? '',
     monthLabel: monthStart.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+    isWatchKeeper,
     days,
   };
 }

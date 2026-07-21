@@ -15,6 +15,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { useFocusEffect } from '@react-navigation/native';
@@ -27,10 +28,12 @@ import {
   getDepartmentSigners,
   setDepartmentSigner,
   getManagedDepartments,
+  getMonthDataForPdf,
   DEPARTMENTS,
   Department,
   DepartmentSigner,
 } from '../services/restEntries';
+import { generateHoursOfRestPdf } from '../utils/hoursOfRestPdf';
 import { supabase } from '../services/supabase';
 
 function toYYYYMMDD(d: Date): string {
@@ -78,6 +81,7 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
   const [crewList, setCrewList] = useState<{ id: string; name: string }[]>([]);
   const [openDeptPicker, setOpenDeptPicker] = useState<Department | null>(null);
   const [managedDepartments, setManagedDepartments] = useState<Department[] | 'ALL'>([]);
+  const [exporting, setExporting] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user?.id) return;
@@ -153,6 +157,26 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
 
   const handleDayPress = (day: { dateString: string }) => {
     navigation.navigate('RestDayEntry', { date: day.dateString });
+  };
+
+  const handleExportOwnMonth = async () => {
+    if (!user?.id) return;
+    setExporting(true);
+    try {
+      const now = new Date();
+      const data = await getMonthDataForPdf(user.id, now.getFullYear(), now.getMonth() + 1);
+      if (!data || data.days.length === 0) {
+        Alert.alert('No data', 'No rest entries found for this month yet.');
+        return;
+      }
+      const filename = `HoursOfRest_${data.seafarerName.replace(/\s+/g, '_')}_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}.pdf`;
+      await generateHoursOfRestPdf(data, filename);
+    } catch (e) {
+      console.error('Export PDF error:', e);
+      Alert.alert('Error', 'Could not export PDF.');
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -257,6 +281,14 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
               <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.xs }}>Not completed</Text>
             </View>
           </View>
+
+          <TouchableOpacity
+            style={[styles.reviewButton, { opacity: exporting ? 0.6 : 1, marginTop: SPACING.lg }]}
+            onPress={handleExportOwnMonth}
+            disabled={exporting}
+          >
+            <Text style={styles.reviewButtonText}>{exporting ? 'Exporting...' : 'Export to PDF'}</Text>
+          </TouchableOpacity>
         </>
       )}
     </ScrollView>

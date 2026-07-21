@@ -68,13 +68,13 @@ export async function generateHoursOfRestPdf(data: PdfMonthData, filename: strin
     '<h1>Hours of Work and Rest</h1>' +
     '<table class="info"><tr>' +
     '<td class="infolabel">Seafarer</td><td>' + escapeHtml(data.seafarerName) + '</td>' +
-    '<td class="infolabel">IMO</td><td>&nbsp;</td>' +
+    '<td class="infolabel">IMO</td><td>' + escapeHtml(data.vesselImoNumber || '-') + '</td>' +
     '</tr><tr>' +
     '<td class="infolabel">Rank</td><td>' + escapeHtml(data.rank) + '</td>' +
     '<td class="infolabel">Vessel</td><td>' + escapeHtml(data.vesselName) + '</td>' +
     '</tr><tr>' +
     '<td class="infolabel">Month</td><td>' + escapeHtml(data.monthLabel) + '</td>' +
-    '<td class="infolabel">Watchkeeper</td><td>Yes &#9633; &nbsp; No &#9633;</td>' +
+    '<td class="infolabel">Watchkeeper</td><td>' + (data.isWatchKeeper ? 'Yes' : 'No') + '</td>' +
     '</tr></table>' +
     '<table class="grid"><thead><tr>' +
     '<th>Date</th>' + hourHeaderCells +
