@@ -66,7 +66,7 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
   };
 
   const filteredJobs = jobs.filter((j) => visibleDepartments[j.department ?? 'INTERIOR']);
-  const isHOD = user?.role === 'HOD';
+  const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
 
   const loadJobs = useCallback(async () => {
     if (!vesselId) return;

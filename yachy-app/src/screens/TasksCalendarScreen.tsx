@@ -106,7 +106,7 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
   const [urgencyDropdownOpen, setUrgencyDropdownOpen] = useState(false);
 
   const vesselId = user?.vesselId ?? null;
-  const isHOD = user?.role === 'HOD'; // Used for yard jobs - tasks are editable by all crew
+  const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV'; // Used for yard jobs - tasks are editable by all crew
 
   const [visibleDepartments, setVisibleDepartments] = useState<Record<Department, boolean>>({
     BRIDGE: true,

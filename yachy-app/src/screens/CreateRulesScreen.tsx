@@ -26,7 +26,7 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
-  const isHOD = user?.role === 'HOD';
+  const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
   const ruleId = route.params?.ruleId as string | undefined;
   const isEdit = !!ruleId;
   const [loading, setLoading] = useState(isEdit);

@@ -106,7 +106,7 @@ export const MusterStationScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
-  const isHOD = user?.role === 'HOD';
+  const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
   const [items, setItems] = useState<MusterStation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

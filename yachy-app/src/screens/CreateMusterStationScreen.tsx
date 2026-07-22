@@ -63,7 +63,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
   const musterStationId = route.params?.musterStationId as string | undefined;
-  const isHOD = user?.role === 'HOD';
+  const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
   const isEdit = !!musterStationId;
 
   const [vesselName, setVesselName] = useState('');

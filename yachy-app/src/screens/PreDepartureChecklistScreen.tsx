@@ -53,7 +53,7 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
   const isCaptain = user?.role === 'CAPTAIN_MOV';
 
   const canEditChecklist = (checklist: PreDepartureChecklist) =>
-    checklist.department === null ? isCaptain : isHOD;
+    isCaptain || (checklist.department !== null && isHOD);
 
   const filteredChecklists = useMemo(() => {
     if (!departmentFilter) return checklists;
@@ -248,7 +248,7 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
             { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
           ]}
         >
-          {isHOD
+          {(isHOD || isCaptain)
             ? 'Add tasks for crew to complete before each departure. Read and do.'
             : 'Tasks to complete before departure. Read and do.'}
         </Text>

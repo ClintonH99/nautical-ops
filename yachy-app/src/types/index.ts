@@ -4,7 +4,7 @@
 
 // ===== USER & AUTH TYPES =====
 
-export type UserRole = 'HOD' | 'CREW' | 'MANAGEMENT';
+export type UserRole = 'HOD' | 'CREW' | 'MANAGEMENT' | 'CAPTAIN_MOV';
 
 export type ContractType = 'permanent' | 'temporary' | 'rotational';
 

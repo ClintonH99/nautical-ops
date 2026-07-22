@@ -87,7 +87,7 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
   const [step, setStep] = useState<'start' | 'end'>('start');
 
   const vesselId = user?.vesselId ?? null;
-  const isHOD = user?.role === 'HOD';
+  const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
   const isEdit = !!tripId;
   const { colors: tripColors, load: loadTripColors } = useVesselTripColors(vesselId);
   const typeColorMap = tripColors

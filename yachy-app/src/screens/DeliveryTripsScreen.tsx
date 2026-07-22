@@ -34,7 +34,7 @@ export const DeliveryTripsScreen = ({ navigation }: any) => {
   const [refreshing, setRefreshing] = useState(false);
 
   const vesselId = user?.vesselId ?? null;
-  const isHOD = user?.role === 'HOD';
+  const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
   const { colors: tripColors, load: loadColors } = useVesselTripColors(vesselId);
   const cardColor = tripColors?.delivery ?? DEFAULT_COLORS.delivery;
 

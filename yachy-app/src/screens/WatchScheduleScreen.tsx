@@ -36,7 +36,7 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
   const [deleting, setDeleting] = useState(false);
 
   const vesselId = user?.vesselId ?? null;
-  const isHOD = user?.role === 'HOD';
+  const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
 
   const loadPublished = useCallback(async () => {
     if (!vesselId) return;

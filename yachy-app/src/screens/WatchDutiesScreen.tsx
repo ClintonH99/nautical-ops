@@ -21,6 +21,9 @@ import {
   Pressable,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import userService from '../services/user';
+import { User } from '../types';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -37,6 +40,8 @@ import {
   deleteDutyGroup,
   addDutyItem,
   deleteDutyItem,
+  addWatchAssignment,
+  removeWatchAssignment,
 } from '../services/watchDuties';
 
 const DEPT_LABEL: Record<Department, string> = {
@@ -50,6 +55,17 @@ const ALL_DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INT
 
 function toDateStr(d: Date): string {
   return d.toISOString().slice(0, 10);
+}
+
+function timeStringToDate(t: string): Date {
+  const d = new Date();
+  const [h, m] = t.split(':').map(Number);
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+
+function dateToTimeString(d: Date): string {
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 function getMonday(d: Date): Date {
@@ -81,6 +97,15 @@ export const WatchDutiesScreen = () => {
   const [addingItemGroupId, setAddingItemGroupId] = useState<string | null>(null);
   const [newItemText, setNewItemText] = useState('');
   const [savingGroup, setSavingGroup] = useState(false);
+  const [crewList, setCrewList] = useState<User[]>([]);
+  const [assignModalVisible, setAssignModalVisible] = useState(false);
+  const [assignDate, setAssignDate] = useState<string | null>(null);
+  const [crewPickerVisible, setCrewPickerVisible] = useState(false);
+  const [selectedCrewId, setSelectedCrewId] = useState<string | null>(null);
+  const [assignStartTime, setAssignStartTime] = useState('18:00');
+  const [assignEndTime, setAssignEndTime] = useState('08:00');
+  const [activeTimeField, setActiveTimeField] = useState<'start' | 'end' | null>(null);
+  const [savingAssignment, setSavingAssignment] = useState(false);
 
   const weekStart = getMonday(new Date());
   const weekDates = Array.from({ length: 7 }, (_, i) => {
@@ -101,6 +126,11 @@ export const WatchDutiesScreen = () => {
       setRules(rulesData);
       setAssignments(assignmentData);
       setDutyGroups(dutyData);
+
+      if (canManage) {
+        const crewData = await userService.getVesselCrew(user.vesselId);
+        setCrewList(crewData);
+      }
     } catch (e) {
       console.error('Load Watch Duties error:', e);
     } finally {
@@ -127,6 +157,56 @@ export const WatchDutiesScreen = () => {
     } catch (e) {
       console.error('Toggle duty item error:', e);
     }
+  };
+
+  const openAssignModal = (dateStr: string) => {
+    if (!canManage) return;
+    setAssignDate(dateStr);
+    setSelectedCrewId(null);
+    setAssignStartTime('18:00');
+    setAssignEndTime('08:00');
+    setActiveTimeField(null);
+    setCrewPickerVisible(false);
+    setAssignModalVisible(true);
+  };
+
+  const closeAssignModal = () => {
+    setAssignModalVisible(false);
+    setActiveTimeField(null);
+    setCrewPickerVisible(false);
+  };
+
+  const handleAssignCrew = async () => {
+    if (!user?.vesselId || !assignDate || !selectedCrewId) return;
+    setSavingAssignment(true);
+    try {
+      await addWatchAssignment(user.vesselId, assignDate, selectedCrewId, assignStartTime, assignEndTime);
+      const updated = await getWeekAssignments(user.vesselId, toDateStr(weekStart));
+      setAssignments(updated);
+      setSelectedCrewId(null);
+    } catch (e) {
+      Alert.alert('Error', 'Failed to assign watch.');
+    } finally {
+      setSavingAssignment(false);
+    }
+  };
+
+  const handleRemoveAssignment = (assignmentId: string) => {
+    Alert.alert('Remove assignment', 'Remove this watch assignment?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await removeWatchAssignment(assignmentId);
+            setAssignments((prev) => prev.filter((a) => a.id !== assignmentId));
+          } catch (e) {
+            Alert.alert('Error', 'Failed to remove assignment.');
+          }
+        },
+      },
+    ]);
   };
 
   const handleCreateGroup = async () => {
@@ -238,15 +318,23 @@ export const WatchDutiesScreen = () => {
           const dateStr = toDateStr(d);
           const dayAssignments = assignments.filter((a) => a.date === dateStr);
           return (
-            <View
+            <TouchableOpacity
               key={dateStr}
+              disabled={!canManage}
+              onPress={() => openAssignModal(dateStr)}
               style={[styles.weekRow, i < weekDates.length - 1 && styles.weekRowBorder, { borderColor: themeColors.textSecondary + '30' }]}
             >
               <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.sm }}>
                 {d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
               </Text>
               {dayAssignments.length === 0 ? (
-                <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.sm, opacity: 0.6 }}>Not assigned</Text>
+                canManage ? (
+                  <View style={{ backgroundColor: COLORS.primary + '20', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}>
+                    <Text style={{ color: COLORS.primary, fontSize: FONTS.xs, fontWeight: '600' }}>{'\u2192'} Select a crew member</Text>
+                  </View>
+                ) : (
+                  <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.sm, opacity: 0.6 }}>Not assigned</Text>
+                )
               ) : (
                 <View style={{ alignItems: 'flex-end' }}>
                   {dayAssignments.map((a) => (
@@ -256,10 +344,126 @@ export const WatchDutiesScreen = () => {
                   ))}
                 </View>
               )}
-            </View>
+            </TouchableOpacity>
           );
         })}
       </View>
+
+
+      {assignModalVisible && assignDate && (
+        <Modal visible transparent animationType="fade">
+          <View style={styles.modalBackdrop}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={closeAssignModal} />
+            <View style={[styles.modalBox, { backgroundColor: themeColors.surface, maxHeight: activeTimeField ? '85%' : 400 }]}>
+              <ScrollView showsVerticalScrollIndicator={false} scrollEnabled={!activeTimeField}>
+
+              {crewPickerVisible ? (
+                <>
+                  <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Select crew</Text>
+                  {crewList.map((c) => (
+                    <TouchableOpacity
+                      key={c.id}
+                      style={[styles.modalItem, selectedCrewId === c.id && styles.modalItemSelected]}
+                      onPress={() => { setSelectedCrewId(c.id); setCrewPickerVisible(false); }}
+                    >
+                      <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base }}>{c.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                  <TouchableOpacity onPress={() => setCrewPickerVisible(false)} style={[styles.secondaryButton, { marginTop: SPACING.md }]}>
+                    <Text style={{ color: themeColors.textPrimary }}>Back</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+                    {new Date(assignDate + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
+                  </Text>
+
+                  {assignments.filter((a) => a.date === assignDate).length > 0 && (
+                    <View style={{ marginBottom: SPACING.md }}>
+                      {assignments.filter((a) => a.date === assignDate).map((a) => (
+                        <View key={a.id} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6 }}>
+                          <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>{a.userName} {'\u00b7'} {a.startTime}{'\u2013'}{a.endTime}</Text>
+                          <TouchableOpacity onPress={() => handleRemoveAssignment(a.id)}>
+                            <Text style={{ color: '#dc2626', fontSize: FONTS.sm }}>Remove</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.sm, marginBottom: 6 }}>Add crew member</Text>
+                  <TouchableOpacity
+                    style={[styles.dropdown, { backgroundColor: themeColors.background, marginBottom: SPACING.sm }]}
+                    onPress={() => setCrewPickerVisible(true)}
+                  >
+                    <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>
+                      {selectedCrewId ? crewList.find((c) => c.id === selectedCrewId)?.name ?? 'Select crew' : 'Select crew'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <View style={{ flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md }}>
+                    <TouchableOpacity
+                      style={[styles.dropdown, { backgroundColor: themeColors.background, flex: 1 }]}
+                      onPress={() => setActiveTimeField('start')}
+                    >
+                      <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>Start {assignStartTime}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.dropdown, { backgroundColor: themeColors.background, flex: 1 }]}
+                      onPress={() => setActiveTimeField('end')}
+                    >
+                      <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>End {assignEndTime}</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {activeTimeField && (
+                    <DateTimePicker
+                      value={timeStringToDate(activeTimeField === 'start' ? assignStartTime : assignEndTime)}
+                      mode="time"
+                      display="spinner"
+                      themeVariant={themeColors.isDark ? 'dark' : 'light'}
+                      onChange={(event, selectedDate) => {
+                        if (selectedDate) {
+                          const timeStr = dateToTimeString(selectedDate);
+                          if (activeTimeField === 'start') setAssignStartTime(timeStr);
+                          else setAssignEndTime(timeStr);
+                        }
+                        if (Platform.OS === 'android') setActiveTimeField(null);
+                      }}
+                    />
+                  )}
+                  {activeTimeField && Platform.OS === 'ios' && (
+                    <TouchableOpacity
+                      onPress={() => setActiveTimeField(null)}
+                      style={[styles.primaryButton, { marginBottom: SPACING.md }]}
+                    >
+                      <Text style={{ color: '#fff', fontWeight: '600' }}>Done</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {!activeTimeField && (
+                    <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
+                      <TouchableOpacity onPress={closeAssignModal} style={styles.secondaryButton}>
+                        <Text style={{ color: themeColors.textPrimary }}>Close</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={handleAssignCrew}
+                        disabled={savingAssignment || !selectedCrewId}
+                        style={[styles.primaryButton, { opacity: savingAssignment || !selectedCrewId ? 0.6 : 1 }]}
+                      >
+                        <Text style={{ color: '#fff', fontWeight: '600' }}>{savingAssignment ? 'Assigning...' : 'Assign'}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </>
+              )}
+            
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
 
       <View style={[styles.card, { backgroundColor: themeColors.surface, marginTop: SPACING.lg }]}>
         <View style={styles.cardHeaderRow}>

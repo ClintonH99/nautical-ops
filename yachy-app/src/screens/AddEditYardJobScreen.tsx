@@ -42,7 +42,7 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
   const [saving, setSaving] = useState(false);
 
   const vesselId = user?.vesselId ?? null;
-  const isHOD = user?.role === 'HOD';
+  const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
   const isEdit = !!jobId;
 
   useEffect(() => {
