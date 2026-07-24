@@ -48,6 +48,7 @@ import {
   WatchKeepingScreen,
   HoursOfRestScreen,
   WatchDutiesScreen,
+  SignatureSetupScreen,
   RestDayEntryScreen,
   RestToBeConfirmedScreen,
   WatchScheduleScreen,
@@ -820,6 +821,14 @@ export const RootNavigator = () => {
                 component={WatchDutiesScreen}
                 options={{
                   title: 'Watch Duties',
+                  headerShown: true,
+                }}
+              />
+              <Stack.Screen
+                name="SignatureSetup"
+                component={SignatureSetupScreen}
+                options={{
+                  title: 'E-Signature',
                   headerShown: true,
                 }}
               />

@@ -2,8 +2,7 @@
  * Hours of Rest Screen
  * Calendar view of a crew member's rest entries, with STCW compliance
  * checking (10h/24h minimum, max 2 rest periods, one >=6h). Past 30 days
- * are flagged completed (green) or not completed (red). Captains can also
- * select the authorized signer here for sign-off.
+ * are flagged completed (green) or not completed (red).
  */
 
 import React, { useState, useCallback, useLayoutEffect } from 'react';
@@ -25,13 +24,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import {
   RestEntry,
   checkRollingCompliance,
-  getDepartmentSigners,
-  setDepartmentSigner,
-  getManagedDepartments,
   getMonthDataForPdf,
-  DEPARTMENTS,
-  Department,
-  DepartmentSigner,
 } from '../services/restEntries';
 import { generateHoursOfRestPdf } from '../utils/hoursOfRestPdf';
 import { supabase } from '../services/supabase';
@@ -77,10 +70,6 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
   const [entries, setEntries] = useState<Record<string, RestEntry>>({});
   const [allEntriesForRolling, setAllEntriesForRolling] = useState<RestEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deptSigners, setDeptSigners] = useState<DepartmentSigner[]>([]);
-  const [crewList, setCrewList] = useState<{ id: string; name: string }[]>([]);
-  const [openDeptPicker, setOpenDeptPicker] = useState<Department | null>(null);
-  const [managedDepartments, setManagedDepartments] = useState<Department[] | 'ALL'>([]);
   const [exporting, setExporting] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -102,23 +91,6 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
       setEntries(byDate);
       setAllEntriesForRolling(rows ?? []);
 
-      if (user.vesselId) {
-        const signers = await getDepartmentSigners(user.vesselId);
-        setDeptSigners(signers);
-
-        if (isCaptainOrMov) {
-          const { data: crewRows } = await supabase
-            .from('users')
-            .select('id, name')
-            .eq('vessel_id', user.vesselId);
-          setCrewList(crewRows ?? []);
-        }
-
-        if (user.role) {
-          const managed = await getManagedDepartments(user.id, user.role, user.vesselId);
-          setManagedDepartments(managed);
-        }
-      }
     } catch (e) {
       console.error('Load rest entries error:', e);
     } finally {
@@ -190,61 +162,9 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
       </Text>
 
       {isCaptainOrMov && (
-        <View style={[styles.signerBox, { backgroundColor: themeColors.surface }]}>
-          <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.xs, marginBottom: 4 }}>
-            Visible to Captain only
-          </Text>
-          <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm, marginBottom: SPACING.sm }}>
-            Select authorized personnel for sign-off, by department
-          </Text>
-          {DEPARTMENTS.map((dept) => {
-            const current = deptSigners.find((d) => d.department === dept);
-            return (
-              <View key={dept} style={{ marginBottom: SPACING.sm }}>
-                <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.xs, marginBottom: 2 }}>
-                  {dept.charAt(0) + dept.slice(1).toLowerCase()}
-                </Text>
-                <TouchableOpacity
-                  style={[styles.signerSelect, { borderColor: themeColors.textSecondary }]}
-                  onPress={() => setOpenDeptPicker(openDeptPicker === dept ? null : dept)}
-                >
-                  <Text style={{ color: themeColors.textPrimary }}>
-                    {current ? current.signerName : 'Not set — tap to choose'}
-                  </Text>
-                </TouchableOpacity>
-                {openDeptPicker === dept && (
-                  <View style={styles.signerOptions}>
-                    {crewList.map((c) => (
-                      <TouchableOpacity
-                        key={c.id}
-                        style={styles.signerOption}
-                        onPress={async () => {
-                          if (!user?.vesselId) return;
-                          await setDepartmentSigner(user.vesselId, dept, c.id);
-                          setDeptSigners((prev) => [
-                            ...prev.filter((d) => d.department !== dept),
-                            { department: dept, signerUserId: c.id, signerName: c.name },
-                          ]);
-                          setOpenDeptPicker(null);
-                        }}
-                      >
-                        <Text style={{ color: themeColors.textPrimary, fontWeight: c.id === current?.signerUserId ? '700' : '400' }}>
-                          {c.name}{c.id === user?.id ? ' (me)' : ''}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </View>
-            );
-          })}
-        </View>
-      )}
-
-      {(managedDepartments === 'ALL' || managedDepartments.length > 0) && (
         <TouchableOpacity
           style={styles.reviewButton}
-          onPress={() => navigation.navigate('RestToBeConfirmed', { managedDepartments })}
+          onPress={() => navigation.navigate('RestToBeConfirmed')}
         >
           <Text style={styles.reviewButtonText}>Rest to be confirmed</Text>
         </TouchableOpacity>

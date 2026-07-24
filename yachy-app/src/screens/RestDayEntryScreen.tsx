@@ -31,6 +31,7 @@ import {
   confirmEntryForUser,
   canManageRestFor,
 } from '../services/restEntries';
+import { getSignatureForUser } from '../services/signatures';
 
 function timeStringToDate(t: string | null): Date {
   const d = new Date();
@@ -140,6 +141,18 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
 
   const handleSave = async () => {
     if (!user?.id || !user?.vesselId) return;
+    const signature = await getSignatureForUser(user.id);
+    if (!signature) {
+      Alert.alert(
+        'Set up your E-Signature',
+        'You need to set up your signature before submitting your Hours of Rest.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Set up now', onPress: () => navigation.navigate('SignatureSetup') },
+        ]
+      );
+      return;
+    }
     setSaving(true);
     try {
       const entry: RestEntry = {
@@ -164,6 +177,18 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
 
   const handleConfirm = async () => {
     if (!effectiveUserId || !user?.vesselId || !user?.id) return;
+    const signature = await getSignatureForUser(user.id);
+    if (!signature) {
+      Alert.alert(
+        'Set up your E-Signature',
+        'You need to set up your signature before confirming this entry.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Set up now', onPress: () => navigation.navigate('SignatureSetup') },
+        ]
+      );
+      return;
+    }
     setSaving(true);
     try {
       await confirmEntryForUser(

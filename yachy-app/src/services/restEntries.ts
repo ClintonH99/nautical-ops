@@ -6,6 +6,7 @@
  */
 
 import { supabase } from './supabase';
+import { getSignatureForUser, UserSignature } from './signatures';
 
 export interface RestPeriod {
   start: string; // "HH:MM"
@@ -514,6 +515,8 @@ export interface PdfMonthData {
   monthLabel: string;
   isWatchKeeper: boolean;
   days: PdfDayRow[];
+  seafarerSignature?: UserSignature | null;
+  masterSignature?: UserSignature | null;
 }
 
 function minutesToHHMM(totalMinutes: number): string {
@@ -603,7 +606,7 @@ export async function getMonthDataForPdf(userId: string, year: number, month: nu
 
   const { data: entries } = await supabase
     .from('rest_entries')
-    .select('date, rest_periods, work_start, work_end, lunch_start, lunch_end')
+    .select('date, rest_periods, work_start, work_end, lunch_start, lunch_end, status, confirmed_by')
     .eq('user_id', userId)
     .gte('date', toDateStr(paddedStart))
     .lte('date', toDateStr(effectiveEnd));
@@ -612,9 +615,13 @@ export async function getMonthDataForPdf(userId: string, year: number, month: nu
   const historyForRolling = (entries ?? []).map((e) => ({ date: e.date, rest_periods: e.rest_periods || [] }));
 
   const days: PdfDayRow[] = [];
+  let lastConfirmedBy: string | null = null;
   for (let d = new Date(effectiveStart); d <= effectiveEnd; d.setDate(d.getDate() + 1)) {
     const dateStr = toDateStr(d);
     const entry = entryMap.get(dateStr);
+    if (entry?.status === 'confirmed' && entry?.confirmed_by) {
+      lastConfirmedBy = entry.confirmed_by;
+    }
 
     const restPeriods = entry?.rest_periods ?? [];
     const restMinutesToday = restPeriods.reduce((sum: number, p: RestPeriod) => {
@@ -634,6 +641,9 @@ export async function getMonthDataForPdf(userId: string, year: number, month: nu
     });
   }
 
+  const seafarerSignature = await getSignatureForUser(userId);
+  const masterSignature = lastConfirmedBy ? await getSignatureForUser(lastConfirmedBy) : null;
+
   return {
     seafarerName: user.name,
     rank: user.position ?? '',
@@ -642,5 +652,7 @@ export async function getMonthDataForPdf(userId: string, year: number, month: nu
     monthLabel: monthStart.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
     isWatchKeeper,
     days,
+    seafarerSignature,
+    masterSignature,
   };
 }

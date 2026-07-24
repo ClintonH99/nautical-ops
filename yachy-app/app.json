@@ -43,6 +43,8 @@
     },
     "plugins": [
       "@react-native-community/datetimepicker",
+      "expo-font",
+      "expo-iap",
       "expo-notifications",
       "expo-web-browser",
       "expo-apple-authentication",

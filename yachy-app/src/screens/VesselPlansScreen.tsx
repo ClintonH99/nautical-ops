@@ -1,10 +1,25 @@
 /**
  * Vessel Plans Screen
- * Subscription plan selection — respects Day/Night theme.
+ * Subscription plan selection via Apple In-App Purchase, in compliance
+ * with App Store Review Guideline 3.1.2 (auto-renewing subscriptions):
+ * clear plan/price disclosure before purchase, explicit charge/renewal
+ * terms, a working Restore Purchases action, subscription management
+ * routed through the user's own Apple ID account (not a website we
+ * control), and EULA/Privacy Policy links at the point of purchase.
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking } from 'react-native';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  Platform,
+  ActivityIndicator,
+  Linking,
+} from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { usePostHog } from 'posthog-react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,7 +28,6 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus';
 import { Button } from '../components';
-import { openWebPricingWithMagicLink } from '../services/authLinkFlow';
 import {
   PLAN_TIERS,
   BILLING_PERIODS,
@@ -22,9 +36,21 @@ import {
   getPrice,
   getPlanTier,
   getBillingPeriod,
+  getAppleProductId,
+  isAvailableViaIAP,
 } from '../constants/subscriptionPlans';
 import type { PlanTierId, BillingPeriodId } from '../constants/subscriptionPlans';
 import { canAccessVesselManagement } from '../utils/access';
+import {
+  initIAP,
+  endIAP,
+  fetchIAPProducts,
+  purchaseSubscription,
+  restoreIAPPurchases,
+  setupIAPListeners,
+  verifyAndActivateIAPPurchase,
+  type IAPProduct,
+} from '../services/iap';
 
 export const VesselPlansScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -33,20 +59,83 @@ export const VesselPlansScreen = ({ navigation }: any) => {
   const [selectedPlanTier, setSelectedPlanTier] = useState<PlanTierId>('1_5');
   const [selectedBillingPeriod, setSelectedBillingPeriod] = useState<BillingPeriodId>('monthly');
   const [isProcessing, setIsProcessing] = useState(false);
-
-  useEffect(() => {
-    posthog.capture('vessel_plans_viewed', {
-      has_active_subscription: false,
-      vessel_id: user?.vesselId ?? null,
-    });
-  }, []);
+  const [_iapProducts, setIapProducts] = useState<IAPProduct[]>([]);
+  const [iapReady, setIapReady] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const cleanupListeners = useRef<(() => void) | null>(null);
+  const processingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     hasActiveSubscription,
     subscription,
     refetch: refetchSubscription,
   } = useSubscriptionStatus(user?.vesselId ?? null);
+
   const currentPlan = subscription ? getPlanTier(subscription.planTier) : null;
+  const planAvailableViaIAP = isAvailableViaIAP(selectedPlanTier, selectedBillingPeriod);
+
+  useEffect(() => {
+    posthog.capture('vessel_plans_viewed', {
+      has_active_subscription: false,
+      vessel_id: user?.vesselId ?? null,
+    });
+
+    if (Platform.OS !== 'ios') return;
+
+    let mounted = true;
+
+    const setup = async () => {
+      try {
+        const connected = await initIAP();
+        if (!connected || !mounted) return;
+        try {
+          const products = await fetchIAPProducts();
+          if (mounted) setIapProducts(products);
+        } catch (e) {
+          console.warn('[IAP] fetchIAPProducts error:', e);
+        }
+        if (!mounted) return;
+        cleanupListeners.current = setupIAPListeners(
+          async (purchase) => {
+            Alert.alert('DEBUG: Listener fired', `Product: ${purchase.productId}\nTransaction: ${purchase.transactionId}\nvesselId: ${user?.vesselId ?? 'MISSING'}`);
+            if (!user?.vesselId) {
+              Alert.alert('DEBUG: Stopped here', 'user.vesselId was missing at this point.');
+              return;
+            }
+            const result = await verifyAndActivateIAPPurchase(purchase, user.vesselId);
+            Alert.alert('DEBUG: Verify result', JSON.stringify(result));
+            if (result.success) {
+              await refetchSubscription();
+              Alert.alert('Success', 'Your subscription is now active. Welcome to Nautical Ops!');
+            } else {
+              Alert.alert('Purchase Error', result.error ?? 'Could not activate subscription. Please contact support.');
+            }
+            if (processingTimeout.current) clearTimeout(processingTimeout.current);
+            setIsProcessing(false);
+          },
+          (error) => {
+            Alert.alert('DEBUG: Error listener fired', JSON.stringify(error));
+            if (processingTimeout.current) clearTimeout(processingTimeout.current);
+            if ((error as any).code !== 'E_USER_CANCELLED') {
+              Alert.alert('Purchase Failed', 'Something went wrong. Please try again.');
+            }
+            setIsProcessing(false);
+          }
+        );
+        if (mounted) setIapReady(true);
+      } catch (e) {
+        console.warn('[IAP] setup error:', e);
+        if (mounted) setIapReady(true);
+      }
+    };
+    setup();
+
+    return () => {
+      mounted = false;
+      cleanupListeners.current?.();
+      endIAP();
+    };
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -58,31 +147,60 @@ export const VesselPlansScreen = ({ navigation }: any) => {
     }, [user, navigation, refetchSubscription])
   );
 
-  const handleActivateVesselPlan = async () => {
+  const handleApplePurchase = async () => {
+    if (!iapReady) {
+      Alert.alert('Store Unavailable', 'Please try again in a moment.');
+      return;
+    }
+    const productId = getAppleProductId(selectedPlanTier, selectedBillingPeriod);
+    if (!productId) {
+      Alert.alert('Unavailable', 'This plan is not available for purchase at this time.');
+      return;
+    }
+    Alert.alert('DEBUG: Requesting purchase', `productId: ${productId}`);
     setIsProcessing(true);
+    processingTimeout.current = setTimeout(() => {
+      setIsProcessing(false);
+      Alert.alert('Timed Out', 'The purchase request took too long. Please try again.');
+    }, 45000);
     try {
-      const result = await openWebPricingWithMagicLink();
-      if ('errorMessage' in result) {
-        Alert.alert('Unable to open pricing', result.errorMessage);
-        return;
+      const result = await purchaseSubscription(productId);
+      Alert.alert('DEBUG: requestPurchase resolved', `Raw result:\n${JSON.stringify(result, null, 2).slice(0, 600)}`);
+      const candidate: any = Array.isArray(result) ? result[0] : result;
+      if (candidate && candidate.transactionReceipt && user?.vesselId) {
+        if (processingTimeout.current) clearTimeout(processingTimeout.current);
+        const verifyResult = await verifyAndActivateIAPPurchase(candidate, user.vesselId);
+        Alert.alert('DEBUG: Verify result (direct path)', JSON.stringify(verifyResult));
+        if (verifyResult.success) {
+          await refetchSubscription();
+          Alert.alert('Success', 'Your subscription is now active. Welcome to Nautical Ops!');
+        } else {
+          Alert.alert('Purchase Error', verifyResult.error ?? 'Could not activate subscription. Please contact support.');
+        }
+        setIsProcessing(false);
+      } else {
+        Alert.alert('DEBUG: No usable purchase in result', 'Falling back to waiting on the purchase listener.');
       }
-      const cleanUrl = result.actionLink.trim();
-      console.log('[ActivatePlan] URL:', cleanUrl);
-      console.log('[ActivatePlan] Length:', cleanUrl.length);
-      if (!cleanUrl.startsWith('https://')) {
-        Alert.alert('Error', 'Invalid link generated. Please try again.');
-        return;
-      }
-      await Linking.openURL(cleanUrl);
-      await refetchSubscription();
-    } catch {
-      Alert.alert('Error', 'Failed to open pricing. Please try again.');
-    } finally {
+    } catch (err) {
+      Alert.alert('DEBUG: requestPurchase THREW', err instanceof Error ? `${err.name}: ${err.message}` : JSON.stringify(err));
+      if (processingTimeout.current) clearTimeout(processingTimeout.current);
       setIsProcessing(false);
     }
   };
 
-  // ─── Billing period row ────────────────────────────────────────────────────
+  const handleRestorePurchases = async () => {
+    setIsRestoring(true);
+    try {
+      await restoreIAPPurchases();
+      await refetchSubscription();
+      Alert.alert('Restore Complete', 'Your purchases have been restored.');
+    } catch {
+      Alert.alert('Restore Failed', 'Could not restore purchases. Please try again.');
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
   const renderBillingRow = (bp: (typeof BILLING_PERIODS)[number]) => {
     const isSelected = selectedBillingPeriod === bp.id;
     return (
@@ -104,12 +222,15 @@ export const VesselPlansScreen = ({ navigation }: any) => {
         activeOpacity={0.7}
       >
         <Text style={[styles.billingRowLabel, { color: themeColors.textPrimary }]}>{bp.label}</Text>
+        {bp.discountPercent > 0 && (
+          <View style={styles.discountPill}>
+            <Text style={styles.discountPillText}>{bp.discountPercent}% OFF</Text>
+          </View>
+        )}
         <View
           style={[
             styles.radioOuter,
-            {
-              borderColor: isSelected ? COLORS.primary : themeColors.textSecondary,
-            },
+            { borderColor: isSelected ? COLORS.primary : themeColors.textSecondary },
           ]}
         >
           {isSelected && <View style={styles.radioInner} />}
@@ -118,12 +239,12 @@ export const VesselPlansScreen = ({ navigation }: any) => {
     );
   };
 
-  // ─── Plan tier card ────────────────────────────────────────────────────────
   const renderPlanCard = (planId: PlanTierId) => {
     const plan = PLAN_TIERS.find((p) => p.id === planId);
     if (!plan) return null;
     const price = getPrice(planId, selectedBillingPeriod);
     const isSelected = selectedPlanTier === planId;
+    const available = isAvailableViaIAP(planId, selectedBillingPeriod);
     return (
       <TouchableOpacity
         key={planId}
@@ -141,29 +262,44 @@ export const VesselPlansScreen = ({ navigation }: any) => {
                 ? 'rgba(255,255,255,0.1)'
                 : COLORS.border,
             borderWidth: isSelected ? 2 : 1,
+            opacity: available ? 1 : 0.5,
           },
         ]}
-        onPress={() => setSelectedPlanTier(planId)}
+        onPress={() => {
+          if (!available) {
+            Alert.alert('Not Available', 'This plan is not available for the selected billing period.');
+            return;
+          }
+          setSelectedPlanTier(planId);
+        }}
         activeOpacity={0.7}
       >
-        {/* Line 1: crew range */}
         <Text style={[styles.planCrewRange, { color: themeColors.textSecondary }]}>
           {plan.label}
         </Text>
-
-        {/* Line 2: price left — title + radio right */}
         <View style={styles.planBottomRow}>
           <View>
-            <Text style={[styles.planPrice, { color: themeColors.textPrimary }]}>
-              {price.displayTotal}
-            </Text>
+            {available ? (
+              <>
+                <Text style={[styles.planPrice, { color: themeColors.textPrimary }]}>
+                  {price.displayMonthly}
+                </Text>
+                {price.savingsPercent > 0 && (
+                  <Text style={[styles.planTotal, { color: themeColors.textSecondary }]}>
+                    {price.displayTotal} total
+                  </Text>
+                )}
+              </>
+            ) : (
+              <Text style={[styles.planPrice, { color: themeColors.textSecondary, fontSize: FONTS.sm }]}>
+                Not available for this period
+              </Text>
+            )}
           </View>
           <View
             style={[
               styles.radioOuter,
-              {
-                borderColor: isSelected ? COLORS.primary : themeColors.textSecondary,
-              },
+              { borderColor: isSelected ? COLORS.primary : themeColors.textSecondary },
             ]}
           >
             {isSelected && <View style={styles.radioInner} />}
@@ -173,7 +309,6 @@ export const VesselPlansScreen = ({ navigation }: any) => {
     );
   };
 
-  // ─── Board card ────────────────────────────────────────────────────────────
   const renderBoard = (title: string, planIds: PlanTierId[]) => (
     <View
       key={title}
@@ -193,7 +328,6 @@ export const VesselPlansScreen = ({ navigation }: any) => {
     </View>
   );
 
-  // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -210,7 +344,6 @@ export const VesselPlansScreen = ({ navigation }: any) => {
           Select a billing period and crew tier for your vessel
         </Text>
 
-        {/* ── Active subscription view ── */}
         {hasActiveSubscription ? (
           <View
             style={[
@@ -226,10 +359,7 @@ export const VesselPlansScreen = ({ navigation }: any) => {
             </Text>
             <Text style={[styles.currentPlanValue, { color: themeColors.textPrimary }]}>
               {subscription
-                ? `${currentPlan?.label ?? subscription.planTier} · ${
-                    getBillingPeriod(subscription.billingPeriod)?.label ??
-                    subscription.billingPeriod
-                  }`
+                ? `${currentPlan?.label ?? subscription.planTier} · ${getBillingPeriod(subscription.billingPeriod)?.label ?? subscription.billingPeriod}`
                 : 'Active'}
             </Text>
             {subscription && (
@@ -244,7 +374,7 @@ export const VesselPlansScreen = ({ navigation }: any) => {
             )}
             <Button
               title="Manage Subscription"
-              onPress={() => Linking.openURL('https://nautical-ops.com/account')}
+              onPress={() => Linking.openURL('https://apps.apple.com/account/subscriptions')}
               variant="outline"
               fullWidth
               style={styles.manageButton}
@@ -252,72 +382,60 @@ export const VesselPlansScreen = ({ navigation }: any) => {
           </View>
         ) : (
           <>
-            {/* ── Payment policy warning ── */}
-            <View
-              style={[
-                styles.warningBanner,
-                {
-                  backgroundColor: themeColors.surface,
-                  borderColor: COLORS.warning,
-                },
-              ]}
-            >
-              <View style={styles.warningHeader}>
-                <Ionicons
-                  name="warning-outline"
-                  size={16}
-                  color={COLORS.warning}
-                  style={{ marginRight: SPACING.xs }}
-                />
-                <Text style={[styles.warningTitle, { color: COLORS.warning }]}>Payment Policy</Text>
-              </View>
-              <Text style={[styles.warningText, { color: themeColors.textSecondary }]}>
-                If payment is not made by the due date, access for all crew members will be
-                restricted until payment is completed. Access resumes immediately once payment is
-                made.
-              </Text>
-            </View>
-
-            {/* ── Billing period selector ── */}
             <Text style={[styles.sectionLabel, { color: themeColors.textSecondary }]}>
               BILLING PERIOD
             </Text>
-            <View style={styles.billingList}>{BILLING_PERIODS.map(renderBillingRow)}</View>
+            <View style={styles.billingList}>
+              {BILLING_PERIODS.map(renderBillingRow)}
+            </View>
 
-            {/* ── Plan boards ── */}
+            <Text style={[styles.sectionLabel, { color: themeColors.textSecondary }]}>
+              CREW SIZE
+            </Text>
             {renderBoard('Small to Medium Vessels', PLAN_BOARD_SMALL_MEDIUM)}
             {renderBoard('Medium to Large Vessels', PLAN_BOARD_MEDIUM_LARGE)}
 
-            {/* ── Activate plan (web pricing + magic link) ── */}
             <View style={styles.actions}>
               <Button
-                title="Activate Vessel Plan"
-                onPress={handleActivateVesselPlan}
+                title={isProcessing ? 'Processing...' : !iapReady ? 'Loading Plans...' : 'Subscribe Now'}
+                onPress={handleApplePurchase}
+                disabled={isProcessing || !iapReady || !planAvailableViaIAP}
+                loading={isProcessing}
                 variant="primary"
                 fullWidth
-                style={styles.actionButton}
-                disabled={isProcessing}
-                loading={isProcessing}
               />
-              <Text style={[styles.activateHint, { color: themeColors.textSecondary }]}>
-                Complete setup to invite crew and unlock all features.
-              </Text>
             </View>
 
-            {/* ── Cancellation note ── */}
-            <View
-              style={[
-                styles.cancellationNote,
-                {
-                  backgroundColor: themeColors.surface,
-                  borderColor: themeColors.isDark ? 'rgba(255,255,255,0.1)' : COLORS.border,
-                },
-              ]}
+            <TouchableOpacity
+              onPress={handleRestorePurchases}
+              disabled={isRestoring}
+              style={styles.restoreButton}
             >
-              <Text style={[styles.cancellationText, { color: themeColors.textSecondary }]}>
-                Subscriptions can be cancelled at any time. Access to the app will be restricted
-                upon cancellation.
-              </Text>
+              {isRestoring ? (
+                <ActivityIndicator size="small" color={COLORS.primary} />
+              ) : (
+                <Text style={[styles.restoreText, { color: COLORS.primary }]}>
+                  Restore Purchases
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            <Text style={[styles.cancellationText, { color: themeColors.textSecondary }]}>
+              Payment will be charged to your Apple ID account at confirmation of purchase. Your
+              subscription automatically renews unless auto-renew is turned off at least 24 hours
+              before the end of the current period. Your account will be charged for renewal
+              within 24 hours prior to the end of the current period, at the price of the selected
+              plan. You can manage your subscription and turn off auto-renewal at any time in your
+              Apple ID Account Settings.
+            </Text>
+            <View style={styles.legalLinksRow}>
+              <TouchableOpacity onPress={() => navigation.navigate('PrivacyPolicy')}>
+                <Text style={[styles.legalLinkText, { color: COLORS.primary }]}>Privacy Policy</Text>
+              </TouchableOpacity>
+              <Text style={[styles.legalLinkDivider, { color: themeColors.textSecondary }]}> · </Text>
+              <TouchableOpacity onPress={() => Linking.openURL('https://www.apple.com/legal/internet-services/itunes/dev/stdeula/')}>
+                <Text style={[styles.legalLinkText, { color: COLORS.primary }]}>Terms of Use (EULA)</Text>
+              </TouchableOpacity>
             </View>
           </>
         )}
@@ -328,6 +446,20 @@ export const VesselPlansScreen = ({ navigation }: any) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  legalLinksRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.lg,
+  },
+  legalLinkText: {
+    fontSize: FONTS.sm,
+    fontWeight: '500',
+  },
+  legalLinkDivider: {
+    fontSize: FONTS.sm,
+  },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: SPACING.xl,
@@ -353,8 +485,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: SPACING.xl,
   },
-
-  // Active plan card
   activeCard: {
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.xl,
@@ -378,37 +508,12 @@ const styles = StyleSheet.create({
   manageButton: {
     marginTop: SPACING.sm,
   },
-
-  // Payment warning banner
-  warningBanner: {
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.md,
-    borderWidth: 1.5,
-    marginBottom: SPACING.xl,
-  },
-  warningHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SPACING.xs,
-  },
-  warningTitle: {
-    fontSize: FONTS.sm,
-    fontWeight: '700',
-  },
-  warningText: {
-    fontSize: FONTS.sm,
-    lineHeight: 20,
-  },
-
-  // Section label
   sectionLabel: {
     fontSize: FONTS.xs,
     fontWeight: '700',
     letterSpacing: 0.8,
     marginBottom: SPACING.sm,
   },
-
-  // Billing period rows
   billingList: {
     gap: SPACING.sm,
     marginBottom: SPACING.xl,
@@ -437,8 +542,6 @@ const styles = StyleSheet.create({
     fontSize: FONTS.xs,
     fontWeight: '700',
   },
-
-  // Radio button
   radioOuter: {
     width: 20,
     height: 20,
@@ -453,8 +556,6 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: COLORS.primary,
   },
-
-  // Board card
   boardCard: {
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.lg,
@@ -474,8 +575,6 @@ const styles = StyleSheet.create({
   planCardList: {
     gap: SPACING.sm,
   },
-
-  // Plan tier cards
   planCard: {
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
@@ -500,33 +599,24 @@ const styles = StyleSheet.create({
     fontSize: FONTS.xs,
     marginTop: 2,
   },
-
-  // Action buttons
   actions: {
     marginBottom: SPACING.lg,
     gap: SPACING.sm,
   },
-  actionButton: {
-    marginBottom: SPACING.sm,
+  restoreButton: {
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+    marginBottom: SPACING.md,
   },
-  activateHint: {
+  restoreText: {
     fontSize: FONTS.sm,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginTop: SPACING.xs,
-    opacity: 0.85,
-  },
-
-  // Cancellation note
-  cancellationNote: {
-    padding: SPACING.lg,
-    borderRadius: BORDER_RADIUS.lg,
-    borderWidth: 1,
-    marginBottom: SPACING.lg,
+    fontWeight: '600',
   },
   cancellationText: {
-    fontSize: FONTS.sm,
+    fontSize: FONTS.xs,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 18,
+    marginBottom: SPACING.xl,
+    opacity: 0.7,
   },
 });

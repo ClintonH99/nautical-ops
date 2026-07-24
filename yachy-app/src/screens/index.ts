@@ -80,3 +80,4 @@ export { HoursOfRestScreen } from './HoursOfRestScreen';
 export { RestDayEntryScreen } from './RestDayEntryScreen';
 export { RestToBeConfirmedScreen } from './RestToBeConfirmedScreen';
 export { WatchDutiesScreen } from './WatchDutiesScreen';
+export { SignatureSetupScreen } from './SignatureSetupScreen';

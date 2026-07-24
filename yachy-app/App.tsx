@@ -8,10 +8,15 @@ import { useEffect } from 'react';
 import { Platform, View, Text, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as Sentry from '@sentry/react-native';
+import { useFonts } from 'expo-font';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { isSupabaseConfigured } from './src/services/supabase';
 
 function AppContent() {
+  const [fontsLoaded] = useFonts({
+    'AlexBrush-Regular': require('./assets/fonts/AlexBrush-Regular.ttf'),
+  });
+
   useEffect(() => {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       const style = document.createElement('style');
@@ -24,6 +29,10 @@ function AppContent() {
       };
     }
   }, []);
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   if (!isSupabaseConfigured()) {
     const configHint =

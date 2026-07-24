@@ -1,12 +1,11 @@
 /**
  * Rest to be Confirmed Screen
- * Review queue for the Captain and department signers: shows every day
- * this month grouped into "Not Complete", "Complete", and "Confirmed".
- * A department filter narrows the crew shown - the Captain sees "All" by
- * default and can filter to one department, while a department-only
- * signer automatically sees just the department(s) they're assigned to.
- * A single "Export to PDF" button opens a multi-select list (with Select
- * All) to export the currently viewed month for any number of crew.
+ * Captain-only review queue: shows every day this month grouped into
+ * "Not Complete", "Complete", and "Confirmed". A department filter lets
+ * the Captain narrow the crew shown to one department at a time,
+ * defaulting to All. A single "Export to PDF" button opens a
+ * multi-select list (with Select All) to export the currently viewed
+ * month for any number of crew.
  */
 
 import React, { useState, useCallback } from 'react';
@@ -21,12 +20,13 @@ import {
   Pressable,
   Alert,
 } from 'react-native';
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { DayReview, DayReviewEntry, Department, getMonthReview, getPastMonths, getMonthDataForPdf } from '../services/restEntries';
 import { generateHoursOfRestPdf } from '../utils/hoursOfRestPdf';
+import { canAccessVesselManagement } from '../utils/access';
 
 const STATUS_LABEL: Record<string, string> = {
   missing: 'not complete',
@@ -55,22 +55,14 @@ function categorizeDay(entries: DayReviewEntry[]): DayCategory {
 
 export const RestToBeConfirmedScreen = () => {
   const navigation = useNavigation<any>();
-  const route = useRoute<any>();
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
 
-  const managedDepartments: Department[] | 'ALL' = route.params?.managedDepartments ?? 'ALL';
-  const filterOptions: Department[] =
-    managedDepartments === 'ALL'
-      ? ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY']
-      : managedDepartments;
-  const canSeeAll = managedDepartments === 'ALL';
+  const filterOptions: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
   const [tab, setTab] = useState<'current' | 'history'>('current');
   const [selectedMonth, setSelectedMonth] = useState<{ year: number; month: number } | null>(null);
-  const [selectedDept, setSelectedDept] = useState<Department | 'All'>(
-    canSeeAll ? 'All' : filterOptions[0]
-  );
+  const [selectedDept, setSelectedDept] = useState<Department | 'All'>('All');
   const [days, setDays] = useState<DayReview[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -100,8 +92,12 @@ export const RestToBeConfirmedScreen = () => {
 
   useFocusEffect(
     useCallback(() => {
+      if (!canAccessVesselManagement(user)) {
+        navigation.goBack();
+        return;
+      }
       if (tab === 'current') loadCurrent();
-    }, [tab, loadCurrent])
+    }, [user, navigation, tab, loadCurrent])
   );
 
   const filteredDays: DayReview[] = days
@@ -210,25 +206,23 @@ export const RestToBeConfirmedScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {(canSeeAll || filterOptions.length > 1) && (
-        <View style={styles.filterBar}>
-          <View style={styles.filterBarContent}>
-            <Text style={[styles.filterLabel, { color: themeColors.textPrimary }]}>Department</Text>
-            <TouchableOpacity
-              style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
-              onPress={() => setFilterModalVisible(true)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
-                {selectedDept === 'All' ? 'All Departments' : DEPT_LABEL[selectedDept]}
-              </Text>
-              <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>
-                {filterModalVisible ? '\u25b2' : '\u25bc'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+      <View style={styles.filterBar}>
+        <View style={styles.filterBarContent}>
+          <Text style={[styles.filterLabel, { color: themeColors.textPrimary }]}>Department</Text>
+          <TouchableOpacity
+            style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
+            onPress={() => setFilterModalVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
+              {selectedDept === 'All' ? 'All Departments' : DEPT_LABEL[selectedDept]}
+            </Text>
+            <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>
+              {filterModalVisible ? '\u25b2' : '\u25bc'}
+            </Text>
+          </TouchableOpacity>
         </View>
-      )}
+      </View>
 
       {filterModalVisible && (
         <Modal visible transparent animationType="fade">
@@ -240,14 +234,12 @@ export const RestToBeConfirmedScreen = () => {
               <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
                 Filter by department
               </Text>
-              {canSeeAll && (
-                <TouchableOpacity
-                  style={[styles.modalItem, selectedDept === 'All' && styles.modalItemSelected]}
-                  onPress={() => { setSelectedDept('All'); setFilterModalVisible(false); }}
-                >
-                  <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>All Departments</Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity
+                style={[styles.modalItem, selectedDept === 'All' && styles.modalItemSelected]}
+                onPress={() => { setSelectedDept('All'); setFilterModalVisible(false); }}
+              >
+                <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>All Departments</Text>
+              </TouchableOpacity>
               {filterOptions.map((dept) => (
                 <TouchableOpacity
                   key={dept}
