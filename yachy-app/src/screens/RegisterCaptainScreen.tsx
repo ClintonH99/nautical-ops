@@ -101,6 +101,7 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
         name: formData.name,
         position: 'Captain (MOV)', // Master of Vessel - distinguishes hierarchy: Captain > HOD > Crew
         department: 'BRIDGE', // Default department for captains
+        role: 'CAPTAIN_MOV', // Explicit - without this, signUp() defaults to CREW for anyone with no vesselId yet
         // No invite code or vesselId - captain will create vessel after login
       });
 

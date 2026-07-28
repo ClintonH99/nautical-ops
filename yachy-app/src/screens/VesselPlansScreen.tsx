@@ -97,13 +97,8 @@ export const VesselPlansScreen = ({ navigation }: any) => {
         if (!mounted) return;
         cleanupListeners.current = setupIAPListeners(
           async (purchase) => {
-            Alert.alert('DEBUG: Listener fired', `Product: ${purchase.productId}\nTransaction: ${purchase.transactionId}\nvesselId: ${user?.vesselId ?? 'MISSING'}`);
-            if (!user?.vesselId) {
-              Alert.alert('DEBUG: Stopped here', 'user.vesselId was missing at this point.');
-              return;
-            }
+            if (!user?.vesselId) return;
             const result = await verifyAndActivateIAPPurchase(purchase, user.vesselId);
-            Alert.alert('DEBUG: Verify result', JSON.stringify(result));
             if (result.success) {
               await refetchSubscription();
               Alert.alert('Success', 'Your subscription is now active. Welcome to Nautical Ops!');
@@ -114,7 +109,6 @@ export const VesselPlansScreen = ({ navigation }: any) => {
             setIsProcessing(false);
           },
           (error) => {
-            Alert.alert('DEBUG: Error listener fired', JSON.stringify(error));
             if (processingTimeout.current) clearTimeout(processingTimeout.current);
             if ((error as any).code !== 'E_USER_CANCELLED') {
               Alert.alert('Purchase Failed', 'Something went wrong. Please try again.');
@@ -157,7 +151,6 @@ export const VesselPlansScreen = ({ navigation }: any) => {
       Alert.alert('Unavailable', 'This plan is not available for purchase at this time.');
       return;
     }
-    Alert.alert('DEBUG: Requesting purchase', `productId: ${productId}`);
     setIsProcessing(true);
     processingTimeout.current = setTimeout(() => {
       setIsProcessing(false);
@@ -165,12 +158,10 @@ export const VesselPlansScreen = ({ navigation }: any) => {
     }, 45000);
     try {
       const result = await purchaseSubscription(productId);
-      Alert.alert('DEBUG: requestPurchase resolved', `Raw result:\n${JSON.stringify(result, null, 2).slice(0, 600)}`);
       const candidate: any = Array.isArray(result) ? result[0] : result;
-      if (candidate && candidate.transactionReceipt && user?.vesselId) {
+      if (candidate && (candidate.transactionId || candidate.id) && user?.vesselId) {
         if (processingTimeout.current) clearTimeout(processingTimeout.current);
         const verifyResult = await verifyAndActivateIAPPurchase(candidate, user.vesselId);
-        Alert.alert('DEBUG: Verify result (direct path)', JSON.stringify(verifyResult));
         if (verifyResult.success) {
           await refetchSubscription();
           Alert.alert('Success', 'Your subscription is now active. Welcome to Nautical Ops!');
@@ -178,11 +169,10 @@ export const VesselPlansScreen = ({ navigation }: any) => {
           Alert.alert('Purchase Error', verifyResult.error ?? 'Could not activate subscription. Please contact support.');
         }
         setIsProcessing(false);
-      } else {
-        Alert.alert('DEBUG: No usable purchase in result', 'Falling back to waiting on the purchase listener.');
       }
+      // If no usable purchase in the result, fall through to let the
+      // purchase listener (set up in useEffect) or the timeout handle it.
     } catch (err) {
-      Alert.alert('DEBUG: requestPurchase THREW', err instanceof Error ? `${err.name}: ${err.message}` : JSON.stringify(err));
       if (processingTimeout.current) clearTimeout(processingTimeout.current);
       setIsProcessing(false);
     }

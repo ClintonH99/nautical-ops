@@ -26,6 +26,7 @@ export interface RegisterData extends LoginCredentials {
   contractType?: string;
   inviteCode?: string;
   vesselId?: string;
+  role?: string;
 }
 
 const PLAN_MAX_CREW: Record<string, number> = {
@@ -269,6 +270,7 @@ class AuthService {
     contractType,
     inviteCode,
     vesselId,
+    role: explicitRole,
   }: RegisterData) {
     try {
       if (__DEV__) {
@@ -297,7 +299,7 @@ class AuthService {
       }
       if (authData.user) {
         if (__DEV__) console.log('✅ Auth user created:', authData.user.id);
-        const role = vesselId ? 'HOD' : 'CREW';
+        const role = explicitRole ?? (vesselId ? 'HOD' : 'CREW');
         const userProfile: any = {
           id: authData.user.id,
           email,

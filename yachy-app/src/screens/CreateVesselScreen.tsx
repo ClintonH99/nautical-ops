@@ -20,23 +20,17 @@ import { Asset } from 'expo-asset';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Input } from '../components';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { useThemeColors } from '../hooks/useThemeColors';
 import vesselService from '../services/vessel';
 import { supabase } from '../services/supabase';
 import authService from '../services/auth';
 import { useAuthStore } from '../store';
 import { usePostHog } from 'posthog-react-native';
 
-const MARITIME = {
-  bgDark: '#0f172a',
-  textOnDark: '#f8fafc',
-  textMuted: '#94a3b8',
-  accent: '#0ea5e9',
-  gold: '#c9a227',
-  cardBg: 'rgba(255, 255, 255, 0.96)',
-  cardBorder: 'rgba(255, 255, 255, 0.4)',
-};
+const ACCENT_GOLD = '#c9a227';
 
 export const CreateVesselScreen = ({ navigation }: any) => {
+  const themeColors = useThemeColors();
   const isAuthenticated = useAuthStore((s) => !!s.user);
   const setUser = useAuthStore((state) => state.setUser);
   const setDeferUserUpdate = useAuthStore((state) => state.setDeferUserUpdate);
@@ -127,19 +121,24 @@ export const CreateVesselScreen = ({ navigation }: any) => {
 
   if (createdVessel) {
     return (
-      <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor={MARITIME.bgDark} />
+      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <StatusBar
+          barStyle={themeColors.isDark ? 'light-content' : 'dark-content'}
+          backgroundColor={themeColors.background}
+        />
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 }]}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.hero}>
-            <View style={styles.heroBadge}>
-              <Ionicons name="boat-outline" size={20} color={MARITIME.gold} />
-              <Text style={styles.heroBadgeText}>Nautical Ops</Text>
+            <View style={[styles.heroBadge, { backgroundColor: themeColors.surface }]}>
+              <Ionicons name="boat-outline" size={20} color={ACCENT_GOLD} />
+              <Text style={[styles.heroBadgeText, { color: themeColors.textPrimary }]}>Nautical Ops</Text>
             </View>
-            <Text style={styles.successTitle}>Vessel Created!</Text>
-            <Text style={styles.successSubtitle}>{createdVessel.name} is ready to go</Text>
+            <Text style={[styles.successTitle, { color: themeColors.textPrimary }]}>Vessel Created!</Text>
+            <Text style={[styles.successSubtitle, { color: themeColors.textSecondary }]}>
+              {createdVessel.name} is ready to go
+            </Text>
             <View style={styles.heroAccent} />
           </View>
 
@@ -152,33 +151,26 @@ export const CreateVesselScreen = ({ navigation }: any) => {
               },
             ]}
           >
-            <Text style={[styles.instructionsTitle, { color: MARITIME.textOnDark }]}>
+            <Text style={[styles.instructionsTitle, { color: themeColors.textPrimary }]}>
               Next Steps
             </Text>
-            <Text style={[styles.instructionText, { color: MARITIME.textOnDark }]}>
-              1. Go to Vessel Settings and select a plan
+            <Text style={[styles.instructionText, { color: themeColors.textSecondary }]}>
+              1. Open Settings and go to Vessel Plans to select a plan
             </Text>
-            <Text style={[styles.instructionText, { color: MARITIME.textOnDark }]}>
+            <Text style={[styles.instructionText, { color: themeColors.textSecondary }]}>
               2. Complete payment to unlock your invite code
             </Text>
-            <Text style={[styles.instructionText, { color: MARITIME.textOnDark }]}>
+            <Text style={[styles.instructionText, { color: themeColors.textSecondary }]}>
               3. Share the invite code with your crew members
             </Text>
           </View>
 
           <View style={styles.actions}>
             <Button
-              title="Go to Vessel Settings"
-              onPress={() => navigation.navigate('VesselSettings')}
-              fullWidth
-              variant="primary"
-              style={styles.actionButton}
-            />
-            <Button
-              title="Go to Home"
+              title="Continue to Dashboard"
               onPress={handleContinue}
               fullWidth
-              variant="outlineLight"
+              variant="outline"
               style={styles.actionButton}
             />
           </View>
@@ -197,8 +189,11 @@ export const CreateVesselScreen = ({ navigation }: any) => {
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={MARITIME.bgDark} />
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <StatusBar
+        barStyle={themeColors.isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={themeColors.background}
+      />
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -209,20 +204,30 @@ export const CreateVesselScreen = ({ navigation }: any) => {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.hero}>
-            <View style={styles.heroBadge}>
-              <Ionicons name="boat-outline" size={20} color={MARITIME.gold} />
-              <Text style={styles.heroBadgeText}>Nautical Ops</Text>
+            <View style={[styles.heroBadge, { backgroundColor: themeColors.surface }]}>
+              <Ionicons name="boat-outline" size={20} color={ACCENT_GOLD} />
+              <Text style={[styles.heroBadgeText, { color: themeColors.textPrimary }]}>Nautical Ops</Text>
             </View>
-            <Text style={styles.heroTitle}>Create your vessel</Text>
-            <Text style={styles.heroSubtitle}>
+            <Text style={[styles.heroTitle, { color: themeColors.textPrimary }]}>Create your vessel</Text>
+            <Text style={[styles.heroSubtitle, { color: themeColors.textSecondary }]}>
               Set up your yacht and get an invite code for your crew
             </Text>
             <View style={styles.heroAccent} />
           </View>
 
-          <View style={[styles.card, styles.cardTransparent]}>
-            <Text style={styles.cardTitle}>Create Vessel</Text>
-            <Text style={styles.cardSubtitle}>Enter your vessel name to get started</Text>
+          <View
+            style={[
+              styles.card,
+              {
+                backgroundColor: themeColors.surface,
+                borderColor: themeColors.isDark ? 'rgba(255,255,255,0.1)' : COLORS.border,
+              },
+            ]}
+          >
+            <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]}>Create Vessel</Text>
+            <Text style={[styles.cardSubtitle, { color: themeColors.textSecondary }]}>
+              Enter your vessel name to get started
+            </Text>
 
             <Input
               label="Vessel Name"
@@ -234,7 +239,6 @@ export const CreateVesselScreen = ({ navigation }: any) => {
               }}
               error={error}
               autoFocus
-              forceLight
             />
 
             <View
@@ -246,10 +250,10 @@ export const CreateVesselScreen = ({ navigation }: any) => {
                 },
               ]}
             >
-              <Text style={[styles.infoText, { color: MARITIME.textMuted }]}>
+              <Text style={[styles.infoText, { color: themeColors.textSecondary }]}>
                 ✓ Unique 8-character invite code
               </Text>
-              <Text style={[styles.infoText, { color: MARITIME.textMuted }]}>
+              <Text style={[styles.infoText, { color: themeColors.textSecondary }]}>
                 ✓ Share with unlimited crew
               </Text>
             </View>
@@ -267,7 +271,9 @@ export const CreateVesselScreen = ({ navigation }: any) => {
           {!isAuthenticated && (
             <>
               <View style={styles.footer}>
-                <Text style={styles.footerText}>Already have an invite code? </Text>
+                <Text style={[styles.footerText, { color: themeColors.textSecondary }]}>
+                  Already have an invite code?{' '}
+                </Text>
                 <Button
                   title="Register"
                   onPress={() => navigation.navigate('Register')}
@@ -294,7 +300,6 @@ export const CreateVesselScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: MARITIME.bgDark,
   },
   keyboardView: {
     flex: 1,
@@ -314,7 +319,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.xs,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     borderRadius: 9999,
@@ -323,19 +327,16 @@ const styles = StyleSheet.create({
   heroBadgeText: {
     fontSize: FONTS.sm,
     fontWeight: '600',
-    color: MARITIME.textOnDark,
     letterSpacing: 0.5,
   },
   heroTitle: {
     fontSize: 36,
     fontWeight: '800',
-    color: MARITIME.textOnDark,
     marginBottom: SPACING.sm,
     letterSpacing: -0.5,
   },
   heroSubtitle: {
     fontSize: FONTS.base,
-    color: MARITIME.textMuted,
     textAlign: 'center',
     lineHeight: 24,
     maxWidth: 300,
@@ -345,33 +346,22 @@ const styles = StyleSheet.create({
     width: 48,
     height: 4,
     borderRadius: 2,
-    backgroundColor: MARITIME.gold,
+    backgroundColor: ACCENT_GOLD,
     opacity: 0.9,
   },
   card: {
     borderRadius: BORDER_RADIUS.xl,
     padding: SPACING.xl,
     marginBottom: SPACING.xl,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
-    elevation: 8,
-  },
-  cardTransparent: {
-    backgroundColor: MARITIME.cardBg,
     borderWidth: 1,
-    borderColor: MARITIME.cardBorder,
   },
   cardTitle: {
     fontSize: FONTS.xl,
     fontWeight: '700',
-    color: COLORS.textPrimary,
     marginBottom: SPACING.xs,
   },
   cardSubtitle: {
     fontSize: FONTS.sm,
-    color: COLORS.textSecondary,
     marginBottom: SPACING.lg,
   },
   infoBox: {
@@ -396,7 +386,6 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: FONTS.sm,
-    color: MARITIME.textMuted,
   },
   footerSpacer: {
     height: 40,
@@ -408,32 +397,28 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: FONTS.sm,
-    color: MARITIME.accent,
+    color: COLORS.primary,
     textDecorationLine: 'underline',
   },
   successTitle: {
     fontSize: FONTS['2xl'],
     fontWeight: '700',
-    color: MARITIME.textOnDark,
     marginBottom: SPACING.sm,
     letterSpacing: -0.5,
     textAlign: 'center',
   },
   successSubtitle: {
     fontSize: FONTS.base,
-    color: MARITIME.textMuted,
     textAlign: 'center',
     marginBottom: SPACING.lg,
   },
   instructionsTitle: {
     fontSize: FONTS.lg,
     fontWeight: '600',
-    color: COLORS.textPrimary,
     marginBottom: SPACING.md,
   },
   instructionText: {
     fontSize: FONTS.base,
-    color: COLORS.textSecondary,
     marginBottom: SPACING.sm,
     paddingLeft: SPACING.sm,
   },

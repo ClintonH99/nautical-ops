@@ -141,7 +141,7 @@ class UserService {
   }
 
   /**
-   * Update user role (HOD only - promote/demote crew)
+   * Update user role (Captain/CAPTAIN_MOV only - promote/demote crew)
    */
   async updateUserRole(userId: string, role: UserRole): Promise<void> {
     try {

@@ -16,7 +16,7 @@ import {
   type PurchaseError,
 } from 'expo-iap';
 import { Platform } from 'react-native';
-import { getAllAppleProductIds, getPlanFromAppleProductId } from '../constants/subscriptionPlans';
+import { getAllAppleProductIds } from '../constants/subscriptionPlans';
 import { supabase } from './supabase';
 
 export type IAPProduct = Product;
@@ -65,10 +65,10 @@ export async function fetchIAPProducts(): Promise<IAPProduct[]> {
 
 /**
  * Purchase a subscription by Apple Product ID.
- * Returns whatever requestPurchase() resolves with - in testing, the
- * purchaseUpdatedListener event never fired even though the purchase
- * itself completed successfully, so the caller uses this return value
- * directly rather than relying solely on the listener.
+ * Returns whatever requestPurchase() resolves with - the
+ * purchaseUpdatedListener event was found to be unreliable in testing,
+ * so the caller uses this return value directly rather than relying
+ * solely on the listener.
  */
 export async function purchaseSubscription(productId: string): Promise<any> {
   try {
@@ -98,22 +98,21 @@ export async function restoreIAPPurchases(): Promise<void> {
 }
 
 /**
- * Verify a purchase receipt with our Supabase Edge Function
- * and update vessel_subscriptions on success.
- * Uses supabase.functions.invoke() - the same proven pattern used
- * elsewhere in this project (the old authLinkFlow.ts) - rather than
- * the previous .functions.url() call, which isn't a real method on
- * the installed supabase-js client and meant this request never
- * actually reached our edge function at all.
+ * Verify a purchase with our Supabase Edge Function, which calls
+ * Apple's App Store Server API directly using its own signed JWT
+ * (server-to-server auth) rather than trusting client-supplied receipt
+ * data - and update vessel_subscriptions on success. Only the
+ * transactionId is sent; the edge function derives the plan tier from
+ * Apple's own verified productId rather than trusting client input.
  */
 export async function verifyAndActivateIAPPurchase(
-  purchase: Purchase,
+  purchase: any,
   vesselId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const plan = getPlanFromAppleProductId(purchase.productId);
-    if (!plan) {
-      return { success: false, error: 'Unknown product ID' };
+    const transactionId = purchase?.transactionId ?? purchase?.id;
+    if (!transactionId) {
+      return { success: false, error: 'No transaction ID in purchase result' };
     }
 
     const { data: sessionData } = await supabase.auth.getSession();
@@ -122,18 +121,10 @@ export async function verifyAndActivateIAPPurchase(
       return { success: false, error: 'Not authenticated' };
     }
 
-    // Sandbox receipts always get rejected by Apple's production
-    // verify endpoint first, forcing a second round-trip to the
-    // sandbox endpoint - two full calls to Apple, so this gets a
-    // more generous timeout than a typical single API call.
     const invokePromise = supabase.functions.invoke('verify-apple-iap', {
       body: {
-        receiptData: purchase.transactionReceipt,
-        productId: purchase.productId,
-        transactionId: purchase.transactionId,
+        transactionId,
         vesselId,
-        planTierId: plan.planTierId,
-        billingPeriodId: plan.billingPeriodId,
       },
       headers: {
         Authorization: `Bearer ${token}`,
