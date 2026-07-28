@@ -10,36 +10,37 @@ import { Button } from '../components';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 
-const MARITIME = {
-  bgDark: '#0f172a',
-  textOnDark: '#f8fafc',
-  textMuted: '#94a3b8',
-  cardBg: 'rgba(255, 255, 255, 0.95)',
-  cardBorder: 'rgba(255, 255, 255, 0.4)',
-  accent: '#0ea5e9',
-};
+const ICON_ACCENT = '#0ea5e9';
 
 export const CaptainWelcomeScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
 
   return (
-    <View style={[styles.container, { backgroundColor: MARITIME.bgDark }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.icon}>🎉</Text>
-          <Text style={styles.title}>Account Created!</Text>
-          <Text style={styles.subtitle}>
-            You're all set as Captain (MOV). Create your vessel to get started and invite your crew.
+          <Text style={[styles.title, { color: themeColors.textPrimary }]}>Account Created!</Text>
+          <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+          You're all set as Captain (MOV). Create your vessel to get started and invite your crew.
           </Text>
         </View>
 
-        <View style={[styles.card, { backgroundColor: MARITIME.cardBg, borderColor: MARITIME.cardBorder }]}>
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: themeColors.surface,
+              borderColor: themeColors.isDark ? 'rgba(255,255,255,0.1)' : COLORS.border,
+            },
+          ]}
+        >
           <View style={styles.optionRow}>
             <View style={styles.optionIconWrap}>
-              <Ionicons name="boat-outline" size={28} color={MARITIME.accent} />
+              <Ionicons name="boat-outline" size={28} color={ICON_ACCENT} />
             </View>
             <View style={styles.optionText}>
-              <Text style={styles.optionTitle}>Create a Vessel</Text>
+              <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>Create a Vessel</Text>
               <Text style={[styles.optionDesc, { color: themeColors.textSecondary }]}>
                 Set up your yacht, get an invite code, and start managing operations
               </Text>
@@ -79,13 +80,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FONTS['2xl'],
     fontWeight: '700',
-    color: MARITIME.textOnDark,
     textAlign: 'center',
     marginBottom: SPACING.sm,
   },
   subtitle: {
     fontSize: FONTS.base,
-    color: MARITIME.textMuted,
     textAlign: 'center',
     lineHeight: 24,
     paddingHorizontal: SPACING.md,
@@ -115,7 +114,6 @@ const styles = StyleSheet.create({
   optionTitle: {
     fontSize: FONTS.lg,
     fontWeight: '600',
-    color: COLORS.textPrimary,
     marginBottom: SPACING.xs,
   },
   optionDesc: {

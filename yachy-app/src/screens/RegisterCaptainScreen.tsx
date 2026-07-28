@@ -18,20 +18,15 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Input, ConsentCheckbox } from '../components';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { useThemeColors } from '../hooks/useThemeColors';
 import authService from '../services/auth';
 import { useAuthStore } from '../store';
 
-const MARITIME = {
-  bgDark: '#0f172a',
-  textOnDark: '#f8fafc',
-  textMuted: '#94a3b8',
-  formCardBg: 'rgba(255, 255, 255, 0.95)',
-  formCardBorder: 'rgba(255, 255, 255, 0.4)',
-  infoBg: 'rgba(14, 165, 233, 0.12)',
-  infoBorder: 'rgba(14, 165, 233, 0.3)',
-};
+const INFO_BG = 'rgba(14, 165, 233, 0.12)';
+const INFO_BORDER = 'rgba(14, 165, 233, 0.3)';
 
 export const RegisterCaptainScreen = ({ navigation }: any) => {
+  const themeColors = useThemeColors();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -117,8 +112,11 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: MARITIME.bgDark }]}>
-      <StatusBar barStyle="light-content" backgroundColor={MARITIME.bgDark} />
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <StatusBar
+        barStyle={themeColors.isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={themeColors.background}
+      />
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -133,14 +131,16 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
             onPress={() => navigation.goBack()}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="chevron-back" size={28} color={MARITIME.textOnDark} />
+            <Ionicons name="chevron-back" size={28} color={themeColors.textPrimary} />
           </TouchableOpacity>
 
-          <Text style={styles.title}>Create Captain Account</Text>
-          <Text style={styles.subtitle}>Set up your account and create your vessel</Text>
+          <Text style={[styles.title, { color: themeColors.textPrimary }]}>Create Captain Account</Text>
+          <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+            Set up your account and create your vessel
+          </Text>
 
           <View style={styles.infoBanner}>
-            <Text style={styles.infoBannerText}>
+            <Text style={[styles.infoBannerText, { color: themeColors.textPrimary }]}>
               As Captain (Master of Vessel), you'll create your vessel and receive an invite code to
               share with your crew.
             </Text>
@@ -150,7 +150,10 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
             <View
               style={[
                 styles.formCard,
-                { backgroundColor: MARITIME.formCardBg, borderColor: MARITIME.formCardBorder },
+                {
+                  backgroundColor: themeColors.surface,
+                  borderColor: themeColors.isDark ? 'rgba(255,255,255,0.1)' : COLORS.border,
+                },
               ]}
             >
               <Input
@@ -159,7 +162,6 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
                 value={formData.name}
                 onChangeText={(value) => updateField('name', value)}
                 error={errors.name}
-                forceLight
               />
 
               <Input
@@ -171,7 +173,6 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
                 autoCapitalize="none"
                 autoCorrect={false}
                 error={errors.email}
-                forceLight
               />
 
               <Input
@@ -183,7 +184,6 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
                 showPasswordToggle
                 autoCapitalize="none"
                 error={errors.password}
-                forceLight
               />
 
               <Input
@@ -195,7 +195,6 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
                 showPasswordToggle
                 autoCapitalize="none"
                 error={errors.confirmPassword}
-                forceLight
               />
 
               <ConsentCheckbox
@@ -203,7 +202,7 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
                 onToggle={() => setAcceptedTerms((v) => !v)}
                 onPressTerms={() => navigation.navigate('TermsConditions')}
                 onPressPrivacy={() => navigation.navigate('PrivacyPolicy')}
-                textColor={COLORS.textPrimary}
+                textColor={themeColors.textPrimary}
                 error={errors.terms}
               />
 
@@ -217,7 +216,7 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
             </View>
 
             <View style={styles.footer}>
-              <Text style={styles.footerText}>Already have an account? </Text>
+              <Text style={[styles.footerText, { color: themeColors.textSecondary }]}>Already have an account? </Text>
               <TouchableOpacity onPress={() => navigation.navigate('Login')}>
                 <Text style={styles.footerLink}>Sign In</Text>
               </TouchableOpacity>
@@ -232,7 +231,6 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: MARITIME.bgDark,
   },
   keyboardView: {
     flex: 1,
@@ -252,7 +250,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FONTS['2xl'],
     fontWeight: '700',
-    color: MARITIME.textOnDark,
     textAlign: 'center',
     marginTop: 48,
     marginBottom: SPACING.xs,
@@ -260,21 +257,19 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: FONTS.sm,
-    color: MARITIME.textMuted,
     textAlign: 'center',
     marginBottom: SPACING.lg,
   },
   infoBanner: {
-    backgroundColor: MARITIME.infoBg,
+    backgroundColor: INFO_BG,
     borderWidth: 1,
-    borderColor: MARITIME.infoBorder,
+    borderColor: INFO_BORDER,
     padding: SPACING.lg,
     borderRadius: BORDER_RADIUS.lg,
     marginBottom: SPACING.xl,
   },
   infoBannerText: {
     fontSize: FONTS.sm,
-    color: MARITIME.textOnDark,
     fontWeight: '500',
     textAlign: 'center',
     lineHeight: 22,
@@ -319,12 +314,11 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: FONTS.sm,
-    color: MARITIME.textMuted,
   },
   footerLink: {
     fontSize: FONTS.sm,
     fontWeight: '600',
-    color: COLORS.secondary,
+    color: COLORS.primary,
   },
   error: {
     fontSize: FONTS.xs,

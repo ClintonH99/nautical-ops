@@ -16,26 +16,29 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../components';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
+import { useThemeColors } from '../hooks/useThemeColors';
 
-const MARITIME = {
-  bgDark: '#0f172a',
-  textOnDark: '#f8fafc',
-  textMuted: '#94a3b8',
-  accentGold: '#c9a227',
-  accentTeal: '#0d9488',
-  captainCard: 'rgba(201, 162, 39, 0.12)',
-  captainBorder: 'rgba(201, 162, 39, 0.4)',
-  crewCard: 'rgba(13, 148, 136, 0.12)',
-  crewBorder: 'rgba(13, 148, 136, 0.4)',
+const ROLE_COLORS = {
+  captainAccent: '#c9a227',
+  captainCardBg: 'rgba(201, 162, 39, 0.12)',
+  captainCardBorder: 'rgba(201, 162, 39, 0.4)',
+  crewAccent: '#0d9488',
+  crewCardBg: 'rgba(13, 148, 136, 0.12)',
+  crewCardBorder: 'rgba(13, 148, 136, 0.4)',
 };
 
 const CAPTAIN_BENEFITS = ['Master of Vessel (MOV)', 'Create & manage your vessel', 'Generate invite codes for crew', 'Full operations control'];
 const CREW_BENEFITS = ['Join with captain\'s invite code', 'Access tasks & maintenance logs', 'Stay connected onboard'];
 
 export const CreateAccountChoiceScreen = ({ navigation }: any) => {
+  const themeColors = useThemeColors();
+
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={MARITIME.bgDark} />
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <StatusBar
+        barStyle={themeColors.isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={themeColors.background}
+      />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -45,29 +48,29 @@ export const CreateAccountChoiceScreen = ({ navigation }: any) => {
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="chevron-back" size={28} color={MARITIME.textOnDark} />
+          <Ionicons name="chevron-back" size={28} color={themeColors.textPrimary} />
         </TouchableOpacity>
 
-        <Text style={styles.title}>Welcome aboard</Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.title, { color: themeColors.textPrimary }]}>Welcome aboard</Text>
+        <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
           Nautical Ops helps yacht crews manage trips, tasks, maintenance, and more. Choose your role to get started.
         </Text>
 
         <View style={styles.cardsContainer}>
-          <View style={[styles.optionCard, styles.captainCard]}>
-            <View style={[styles.iconBadge, { backgroundColor: MARITIME.captainBorder }]}>
-              <Ionicons name="boat-outline" size={28} color={MARITIME.accentGold} />
+          <View style={[styles.optionCard, { backgroundColor: ROLE_COLORS.captainCardBg, borderColor: ROLE_COLORS.captainCardBorder }]}>
+            <View style={[styles.iconBadge, { backgroundColor: ROLE_COLORS.captainCardBorder }]}>
+              <Ionicons name="boat-outline" size={28} color={ROLE_COLORS.captainAccent} />
             </View>
-            <Text style={styles.optionTitle}>Captain (MOV)</Text>
-            <Text style={styles.optionSubtitle}>Vessel owner or person in charge</Text>
-            <Text style={styles.optionDescription}>
+            <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>Captain (MOV)</Text>
+            <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>Vessel owner or person in charge</Text>
+            <Text style={[styles.optionDescription, { color: themeColors.textSecondary }]}>
               Set up your vessel, add your crew, and manage day‑to‑day operations from one place.
             </Text>
             <View style={styles.benefitsList}>
               {CAPTAIN_BENEFITS.map((item, i) => (
                 <View key={i} style={styles.benefitRow}>
-                  <Ionicons name="checkmark-circle" size={16} color={MARITIME.accentGold} style={styles.benefitIcon} />
-                  <Text style={styles.benefitText}>{item}</Text>
+                  <Ionicons name="checkmark-circle" size={16} color={ROLE_COLORS.captainAccent} style={styles.benefitIcon} />
+                  <Text style={[styles.benefitText, { color: themeColors.textPrimary }]}>{item}</Text>
                 </View>
               ))}
             </View>
@@ -80,20 +83,20 @@ export const CreateAccountChoiceScreen = ({ navigation }: any) => {
             />
           </View>
 
-          <View style={[styles.optionCard, styles.crewCard]}>
-            <View style={[styles.iconBadge, { backgroundColor: MARITIME.crewBorder }]}>
-              <Ionicons name="people-outline" size={28} color={MARITIME.accentTeal} />
+          <View style={[styles.optionCard, { backgroundColor: ROLE_COLORS.crewCardBg, borderColor: ROLE_COLORS.crewCardBorder }]}>
+            <View style={[styles.iconBadge, { backgroundColor: ROLE_COLORS.crewCardBorder }]}>
+              <Ionicons name="people-outline" size={28} color={ROLE_COLORS.crewAccent} />
             </View>
-            <Text style={styles.optionTitle}>Crew member</Text>
-            <Text style={styles.optionSubtitle}>Joining an existing vessel</Text>
-            <Text style={styles.optionDescription}>
+            <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>Crew member</Text>
+            <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>Joining an existing vessel</Text>
+            <Text style={[styles.optionDescription, { color: themeColors.textSecondary }]}>
               Connect to your vessel using the invite code from your captain. Access your duties and stay in sync.
             </Text>
             <View style={styles.benefitsList}>
               {CREW_BENEFITS.map((item, i) => (
                 <View key={i} style={styles.benefitRow}>
-                  <Ionicons name="checkmark-circle" size={16} color={MARITIME.accentTeal} style={styles.benefitIcon} />
-                  <Text style={styles.benefitText}>{item}</Text>
+                  <Ionicons name="checkmark-circle" size={16} color={ROLE_COLORS.crewAccent} style={styles.benefitIcon} />
+                  <Text style={[styles.benefitText, { color: themeColors.textPrimary }]}>{item}</Text>
                 </View>
               ))}
             </View>
@@ -107,7 +110,7 @@ export const CreateAccountChoiceScreen = ({ navigation }: any) => {
           </View>
         </View>
 
-        <Text style={styles.footerHint}>
+        <Text style={[styles.footerHint, { color: themeColors.textSecondary }]}>
           Not sure? Captains (MOV) create vessels and invite others. Crew join with a code.
         </Text>
       </ScrollView>
@@ -118,7 +121,6 @@ export const CreateAccountChoiceScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: MARITIME.bgDark,
   },
   scrollContent: {
     flexGrow: 1,
@@ -135,7 +137,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FONTS['2xl'],
     fontWeight: '700',
-    color: MARITIME.textOnDark,
     textAlign: 'center',
     marginTop: SPACING.lg,
     marginBottom: SPACING.sm,
@@ -143,7 +144,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: FONTS.base,
-    color: MARITIME.textMuted,
     textAlign: 'center',
     marginBottom: SPACING.xl,
     lineHeight: 24,
@@ -161,14 +161,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...(Platform.OS === 'ios' ? SHADOWS.md : { elevation: 6 }),
   },
-  captainCard: {
-    backgroundColor: MARITIME.captainCard,
-    borderColor: MARITIME.captainBorder,
-  },
-  crewCard: {
-    backgroundColor: MARITIME.crewCard,
-    borderColor: MARITIME.crewBorder,
-  },
   iconBadge: {
     width: 56,
     height: 56,
@@ -180,21 +172,18 @@ const styles = StyleSheet.create({
   optionTitle: {
     fontSize: FONTS.xl,
     fontWeight: '700',
-    color: MARITIME.textOnDark,
     marginBottom: 2,
     textAlign: 'center',
     letterSpacing: -0.2,
   },
   optionSubtitle: {
     fontSize: FONTS.xs,
-    color: MARITIME.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: SPACING.sm,
   },
   optionDescription: {
     fontSize: FONTS.sm,
-    color: MARITIME.textMuted,
     marginBottom: SPACING.md,
     textAlign: 'center',
     lineHeight: 20,
@@ -213,7 +202,6 @@ const styles = StyleSheet.create({
   },
   benefitText: {
     fontSize: FONTS.sm,
-    color: MARITIME.textOnDark,
     flex: 1,
   },
   optionButton: {
@@ -221,7 +209,6 @@ const styles = StyleSheet.create({
   },
   footerHint: {
     fontSize: FONTS.xs,
-    color: MARITIME.textMuted,
     textAlign: 'center',
     fontStyle: 'italic',
     lineHeight: 18,
