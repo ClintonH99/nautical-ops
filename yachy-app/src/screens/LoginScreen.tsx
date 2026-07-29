@@ -17,21 +17,15 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Input } from '../components';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { useThemeColors } from '../hooks/useThemeColors';
 import authService from '../services/auth';
 import { useAuthStore } from '../store';
 import { usePostHog } from 'posthog-react-native';
 
-const MARITIME = {
-  bgDark: '#0f172a',
-  bgMid: '#1e293b',
-  accent: '#0ea5e9',
-  accentMuted: 'rgba(14, 165, 233, 0.25)',
-  gold: '#c9a227',
-  textOnDark: '#f8fafc',
-  textMuted: '#94a3b8',
-};
+const ACCENT_GOLD = '#c9a227';
 
 export const LoginScreen = ({ navigation }: any) => {
+  const themeColors = useThemeColors();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -112,8 +106,11 @@ export const LoginScreen = ({ navigation }: any) => {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={MARITIME.bgDark} />
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <StatusBar
+        barStyle={themeColors.isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={themeColors.background}
+      />
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -125,21 +122,31 @@ export const LoginScreen = ({ navigation }: any) => {
         >
           {/* Hero */}
           <View style={styles.hero}>
-            <View style={styles.heroBadge}>
-              <Ionicons name="boat-outline" size={20} color={MARITIME.gold} />
-              <Text style={styles.heroBadgeText}>Nautical Ops</Text>
+            <View style={[styles.heroBadge, { backgroundColor: themeColors.surface }]}>
+              <Ionicons name="boat-outline" size={20} color={ACCENT_GOLD} />
+              <Text style={[styles.heroBadgeText, { color: themeColors.textPrimary }]}>Nautical Ops</Text>
             </View>
-            <Text style={styles.heroTitle}>Welcome back</Text>
-            <Text style={styles.heroSubtitle}>
+            <Text style={[styles.heroTitle, { color: themeColors.textPrimary }]}>Welcome back</Text>
+            <Text style={[styles.heroSubtitle, { color: themeColors.textSecondary }]}>
               Sign in to access your vessel, tasks, and crew—all in one place.
             </Text>
             <View style={styles.heroAccent} />
           </View>
 
           {/* Sign-in card */}
-          <View style={[styles.card, styles.cardTransparent]}>
-            <Text style={styles.cardTitle}>Sign in</Text>
-            <Text style={styles.cardSubtitle}>Enter your credentials to get started</Text>
+          <View
+            style={[
+              styles.card,
+              {
+                backgroundColor: themeColors.surface,
+                borderColor: themeColors.isDark ? 'rgba(255,255,255,0.1)' : COLORS.border,
+              },
+            ]}
+          >
+            <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]}>Sign in</Text>
+            <Text style={[styles.cardSubtitle, { color: themeColors.textSecondary }]}>
+              Enter your credentials to get started
+            </Text>
 
             <Input
               label="Email"
@@ -150,7 +157,6 @@ export const LoginScreen = ({ navigation }: any) => {
               autoCapitalize="none"
               autoCorrect={false}
               error={errors.email}
-              forceLight
             />
 
             <Input
@@ -162,7 +168,6 @@ export const LoginScreen = ({ navigation }: any) => {
               showPasswordToggle
               autoCapitalize="none"
               error={errors.password}
-              forceLight
             />
 
             <Button
@@ -180,25 +185,35 @@ export const LoginScreen = ({ navigation }: any) => {
           {/* Create account */}
           <View style={styles.createSection}>
             <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>New here?</Text>
-              <View style={styles.dividerLine} />
+              <View
+                style={[
+                  styles.dividerLine,
+                  { backgroundColor: themeColors.isDark ? 'rgba(255,255,255,0.12)' : COLORS.border },
+                ]}
+              />
+              <Text style={[styles.dividerText, { color: themeColors.textSecondary }]}>New here?</Text>
+              <View
+                style={[
+                  styles.dividerLine,
+                  { backgroundColor: themeColors.isDark ? 'rgba(255,255,255,0.12)' : COLORS.border },
+                ]}
+              />
             </View>
-            <Text style={styles.createAccountPrompt}>
+            <Text style={[styles.createAccountPrompt, { color: themeColors.textSecondary }]}>
               Create a Captain or Crew Account and Join the Fleet.
             </Text>
             <Button
               title="Create New Account"
               onPress={() => navigation.navigate('CreateAccountChoice')}
-              variant="outlineLight"
+              variant="outline"
               fullWidth
               style={styles.createAccountButton}
             />
           </View>
 
           <View style={styles.footer}>
-            <Ionicons name="shield-checkmark-outline" size={14} color={MARITIME.textMuted} />
-            <Text style={styles.footerText}> An App for Crew from Crew.</Text>
+            <Ionicons name="shield-checkmark-outline" size={14} color={themeColors.textSecondary} />
+            <Text style={[styles.footerText, { color: themeColors.textSecondary }]}> An App for Crew from Crew.</Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -209,7 +224,6 @@ export const LoginScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: MARITIME.bgDark,
   },
   keyboardView: {
     flex: 1,
@@ -229,7 +243,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.xs,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     borderRadius: 9999,
@@ -238,19 +251,16 @@ const styles = StyleSheet.create({
   heroBadgeText: {
     fontSize: FONTS.sm,
     fontWeight: '600',
-    color: MARITIME.textOnDark,
     letterSpacing: 0.5,
   },
   heroTitle: {
     fontSize: 36,
     fontWeight: '800',
-    color: MARITIME.textOnDark,
     marginBottom: SPACING.sm,
     letterSpacing: -0.5,
   },
   heroSubtitle: {
     fontSize: FONTS.base,
-    color: MARITIME.textMuted,
     textAlign: 'center',
     lineHeight: 24,
     maxWidth: 300,
@@ -260,33 +270,22 @@ const styles = StyleSheet.create({
     width: 48,
     height: 4,
     borderRadius: 2,
-    backgroundColor: MARITIME.gold,
+    backgroundColor: ACCENT_GOLD,
     opacity: 0.9,
   },
   card: {
     borderRadius: BORDER_RADIUS.xl,
     padding: SPACING.xl,
     marginBottom: SPACING.xl,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
-    elevation: 8,
-  },
-  cardTransparent: {
-    backgroundColor: 'rgba(255, 255, 255, 0.96)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
   },
   cardTitle: {
     fontSize: FONTS.xl,
     fontWeight: '700',
-    color: COLORS.textPrimary,
     marginBottom: SPACING.xs,
   },
   cardSubtitle: {
     fontSize: FONTS.sm,
-    color: COLORS.textSecondary,
     marginBottom: SPACING.lg,
   },
   signInButton: {
@@ -309,17 +308,14 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
   },
   dividerText: {
     fontSize: FONTS.sm,
-    color: MARITIME.textMuted,
     marginHorizontal: SPACING.md,
     fontWeight: '600',
   },
   createAccountPrompt: {
     fontSize: FONTS.sm,
-    color: MARITIME.textMuted,
     textAlign: 'center',
     marginBottom: SPACING.md,
     lineHeight: 20,
@@ -333,6 +329,5 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: FONTS.xs,
-    color: MARITIME.textMuted,
   },
 });
