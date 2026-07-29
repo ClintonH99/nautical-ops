@@ -77,7 +77,7 @@ export const SettingsScreen = ({ navigation }: any) => {
         {
           icon: '👤',
           label: 'My Profile',
-          description: 'Edit your personal information',
+          description: 'Edit your personal information, join another vessel here',
           onPress: () => navigation.navigate('Settings'),
           disabled: false,
         },

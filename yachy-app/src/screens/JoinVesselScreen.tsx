@@ -65,7 +65,21 @@ export const JoinVesselScreen = ({ navigation }: any) => {
         msg.includes('vessel not found') ||
         msg.includes('cannot coerce') ||
         msg.includes('expired');
-      if (!isInviteCodeError) console.error('Join vessel error:', error);
+      const isSoleCaptainError = msg.includes('only captain');
+      if (!isInviteCodeError && !isSoleCaptainError) console.error('Join vessel error:', error);
+
+      if (isSoleCaptainError) {
+        Alert.alert(
+          "You're the only Captain",
+          'Promote another crew member to Captain/MOV in Crew Management before joining a new vessel.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Go to Crew Management', onPress: () => navigation.navigate('CrewManagement') },
+          ]
+        );
+        return;
+      }
+
       Alert.alert(
         'Invalid Invite Code',
         isInviteCodeError
@@ -93,6 +107,18 @@ export const JoinVesselScreen = ({ navigation }: any) => {
             </Text>
           </View>
 
+          {user?.vesselId && (
+            <View
+              style={[
+                styles.infoCard,
+                { backgroundColor: 'rgba(220,38,38,0.08)', borderColor: 'rgba(220,38,38,0.3)', borderWidth: 1 },
+              ]}
+            >
+              <Text style={[styles.infoText, { color: themeColors.textPrimary, fontWeight: '600' }]}>
+                Joining a new vessel will remove you from your current vessel immediately.
+              </Text>
+            </View>
+          )}
           {/* Info Card */}
           <View style={[styles.infoCard, { backgroundColor: themeColors.surface }]}>
             <Text style={styles.infoTitle}>How to get an invite code:</Text>

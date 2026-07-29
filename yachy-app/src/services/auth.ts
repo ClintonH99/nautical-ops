@@ -525,11 +525,39 @@ class AuthService {
 
   async joinVessel(userId: string, inviteCode: string) {
     try {
+      const { data: currentUserRow, error: currentUserError } = await supabase
+        .from('users')
+        .select('role, vessel_id')
+        .eq('id', userId)
+        .single();
+      if (currentUserError) throw currentUserError;
+
+      // A Captain/MOV can only leave a vessel if at least one other Captain/MOV
+      // remains there - never leave a vessel with zero people able to manage it.
+      if (currentUserRow?.role === 'CAPTAIN_MOV' && currentUserRow?.vessel_id) {
+        const { count, error: countError } = await supabase
+          .from('users')
+          .select('*', { count: 'exact', head: true })
+          .eq('vessel_id', currentUserRow.vessel_id)
+          .eq('role', 'CAPTAIN_MOV');
+        if (countError) throw countError;
+        if ((count ?? 0) <= 1) {
+          throw new Error(
+            'You are the only Captain/MOV on your current vessel. Promote another crew member to Captain/MOV in Crew Management before joining a new vessel.'
+          );
+        }
+      }
+
       const vessel = await this.validateInviteCode(inviteCode);
       if (!vessel) throw new Error('Invalid invite code');
       const { error } = await supabase
         .from('users')
-        .update({ vessel_id: vessel.id, vessel_joined_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .update({
+          vessel_id: vessel.id,
+          role: 'CREW',
+          vessel_joined_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', userId);
       if (error) throw error;
       try {
@@ -547,7 +575,8 @@ class AuthService {
         msg.includes('cannot coerce') ||
         msg.includes('expired') ||
         msg.includes('crew limit');
-      if (!isInviteCodeError && __DEV__) console.error('Join vessel error:', error);
+      const isSoleCaptainError = msg.includes('only captain');
+      if (!isInviteCodeError && !isSoleCaptainError && __DEV__) console.error('Join vessel error:', error);
       throw error;
     }
   }

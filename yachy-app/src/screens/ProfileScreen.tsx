@@ -500,6 +500,32 @@ export const ProfileScreen = ({ navigation }: any) => {
             </TouchableOpacity>
           </View>
         </View>
+        {/* Join Vessel */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
+            Join Vessel
+          </Text>
+          <View style={[styles.settingsCard, { backgroundColor: themeColors.surface }]}>
+            <TouchableOpacity
+              style={[styles.settingsItem, styles.settingsItemLast]}
+              onPress={() => navigation.navigate('JoinVessel')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.settingsItemLeft}>
+                <Text style={styles.settingsIcon}>{'\u2693'}</Text>
+                <View style={styles.settingsTextContainer}>
+                  <Text style={[styles.settingsLabel, { color: themeColors.textPrimary }]}>
+                    Join a different vessel
+                  </Text>
+                  <Text style={[styles.settingsDescription, { color: themeColors.textSecondary }]}>
+                    Switch vessels using a new invite code
+                  </Text>
+                </View>
+              </View>
+              <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>{'\u203A'}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
         {/* Settings Sections */}
         {settingsSections.map((section, sectionIndex) => (
           <View key={sectionIndex} style={styles.section}>

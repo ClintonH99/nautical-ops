@@ -198,7 +198,7 @@ export const CrewManagementScreen = ({ navigation }: any) => {
           text: 'Promote to Captain',
           onPress: async () => {
             try {
-              await userService.updateUserRole(crewMember.id, 'HOD');
+              await userService.updateUserRole(crewMember.id, 'CAPTAIN_MOV');
               await userService.updatePosition(crewMember.id, 'Captain');
               Alert.alert('Success', `${crewMember.name} is now a Captain/MOV.`);
               loadCrew();
