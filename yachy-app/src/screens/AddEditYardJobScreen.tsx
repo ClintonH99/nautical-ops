@@ -28,6 +28,7 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const jobId = route.params?.jobId as string | undefined;
+  const tripId = route.params?.tripId as string | undefined;
 
   const [jobTitle, setJobTitle] = useState('');
   const [jobDescription, setJobDescription] = useState('');
@@ -137,6 +138,7 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
       } else {
         await yardJobsService.create({
           vesselId,
+          tripId: tripId ?? null,
           jobTitle: trimmed,
           jobDescription: jobDescription.trim() || undefined,
           department,

@@ -1,6 +1,8 @@
 /**
  * Yard Period Jobs Screen
- * List of yard period jobs with Create New Job button
+ * Flat, view-only list of every yard period job for the vessel (populated
+ * via Excel import). Not tied to a specific period - periods are pure
+ * calendar bookings. No in-app job creation.
  */
 
 import React, { useState, useCallback } from 'react';
@@ -24,7 +26,7 @@ import yardJobsService from '../services/yardJobs';
 import { YardPeriodJob, Department } from '../types';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
-import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner } from '../components';
+import { ButtonTagCard, ButtonTagRow, LoadingSpinner } from '../components';
 import { getTaskUrgencyColor } from '../utils/taskUrgency';
 
 export const YardPeriodJobsScreen = ({ navigation }: any) => {
@@ -95,10 +97,6 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
-  const onAdd = () => {
-    navigation.navigate('AddEditYardJob', {});
-  };
-
   const onEdit = (job: YardPeriodJob) => {
     if (!isHOD) return;
     navigation.navigate('AddEditYardJob', { jobId: job.id });
@@ -151,7 +149,7 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
       : '';
 
     const dateVal = item.doneByDate
-      ? `${formatDate(item.doneByDate)}${isComplete ? ' ✓' : ''}`
+      ? `${formatDate(item.doneByDate)}${isComplete ? ' \u2713' : ''}`
       : item.createdAt
         ? formatDate(item.createdAt)
         : '';
@@ -206,28 +204,8 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
         .map((d) => d.charAt(0) + d.slice(1).toLowerCase())
         .join(', ');
 
-  const CalendarHeader = () => (
+  const ListHeader = () => (
     <>
-      <TouchableOpacity
-        style={[styles.calendarCard, { backgroundColor: themeColors.surface }]}
-        onPress={() => navigation.navigate('TasksCalendar')}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.calendarCardIcon}>📅</Text>
-        <View style={styles.calendarCardContent}>
-          <Text style={[styles.calendarCardTitle, { color: themeColors.textPrimary }]}>
-            Yard Period Calendar
-          </Text>
-          <Text
-            style={[
-              styles.calendarCardHint,
-              { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-            ]}
-          >
-            Calendar view with department & urgency filters
-          </Text>
-        </View>
-      </TouchableOpacity>
       <View style={styles.filterBar}>
         <View style={styles.filterBarContent}>
           <Text style={[styles.filterLabel, { color: themeColors.textPrimary }]}>Department</Text>
@@ -240,7 +218,7 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
               {departmentDisplayText}
             </Text>
             <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>
-              {departmentDropdownOpen ? '▲' : '▼'}
+              {departmentDropdownOpen ? '\u25b2' : '\u25bc'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -296,16 +274,6 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
           </Pressable>
         </Modal>
       )}
-      {isHOD && (
-        <View style={styles.addRow}>
-          <Button
-            title="Create New Job"
-            onPress={onAdd}
-            variant="primary"
-            style={styles.addButton}
-          />
-        </View>
-      )}
     </>
   );
 
@@ -325,20 +293,12 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
             />
           }
         >
-          <CalendarHeader />
+          <ListHeader />
           <View style={styles.empty}>
-            <Text style={styles.emptyEmoji}>🔧</Text>
+            <Text style={styles.emptyEmoji}>{'\ud83d\udd27'}</Text>
             <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
               No yard period jobs yet
             </Text>
-            {isHOD && (
-              <Button
-                title="Create first job"
-                onPress={onAdd}
-                variant="primary"
-                style={styles.emptyBtn}
-              />
-            )}
           </View>
         </ScrollView>
       ) : (
@@ -346,7 +306,7 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
           data={filteredJobs}
           keyExtractor={(j) => j.id}
           renderItem={renderItem}
-          ListHeaderComponent={<CalendarHeader />}
+          ListHeaderComponent={<ListHeader />}
           ListEmptyComponent={
             jobs.length > 0 ? (
               <View style={styles.emptyFilter}>
@@ -387,60 +347,17 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.lg,
-  },
-  message: {
-    fontSize: FONTS.base,
-    textAlign: 'center',
-  },
-  calendarCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
-    marginHorizontal: SPACING.lg,
-    marginTop: SPACING.lg,
-    marginBottom: SPACING.sm,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  calendarCardIcon: {
-    fontSize: 36,
-    marginRight: SPACING.lg,
-  },
-  calendarCardContent: {
-    flex: 1,
-  },
-  calendarCardTitle: {
-    fontSize: FONTS.xl,
-    fontWeight: '600',
-  },
-  calendarCardHint: {
-    fontSize: FONTS.sm,
-    marginTop: 2,
-  },
+  container: { flex: 1 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
+  message: { fontSize: FONTS.base, textAlign: 'center' },
   filterBar: {
     paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.sm,
+    paddingTop: SPACING.lg,
     paddingBottom: SPACING.xs,
     marginBottom: SPACING.lg,
   },
   filterBarContent: { flex: 1 },
-  filterLabel: {
-    fontSize: FONTS.sm,
-    fontWeight: '600',
-    marginBottom: SPACING.sm,
-  },
+  filterLabel: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.sm },
   dropdown: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -451,13 +368,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  dropdownText: {
-    fontSize: FONTS.base,
-    fontWeight: '500',
-  },
-  dropdownChevron: {
-    fontSize: 10,
-  },
+  dropdownText: { fontSize: FONTS.base, fontWeight: '500' },
+  dropdownChevron: { fontSize: 10 },
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
@@ -465,55 +377,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: SPACING.lg,
   },
-  modalBox: {
-    borderRadius: BORDER_RADIUS.lg,
-    paddingVertical: SPACING.sm,
-    minWidth: 200,
-  },
-  modalItem: {
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-  },
-  modalItemSelected: {
-    backgroundColor: COLORS.primaryLight + '20',
-  },
-  modalItemText: {
-    fontSize: FONTS.base,
-  },
-  modalItemTextAll: {
-    fontWeight: '600',
-  },
-  addRow: {
-    padding: SPACING.lg,
-    paddingBottom: SPACING.sm,
-  },
-  addButton: {},
-  emptyWrapper: {
-    flexGrow: 1,
-    paddingBottom: SIZES.bottomScrollPadding,
-  },
-  loader: {
-    marginTop: SPACING.xl,
-  },
-  list: {
-    padding: SPACING.lg,
-    paddingTop: SPACING.sm,
-    paddingBottom: SIZES.bottomScrollPadding,
-  },
-  listFlex: {
-    flexGrow: 1,
-  },
-  emptyFilter: {
-    padding: SPACING.xl,
-    alignItems: 'center',
-  },
-  emptyFilterText: {
-    fontSize: FONTS.base,
-  },
-  emptyFilterHint: {
-    fontSize: FONTS.sm,
-    marginTop: SPACING.xs,
-  },
+  modalBox: { borderRadius: BORDER_RADIUS.lg, paddingVertical: SPACING.sm, minWidth: 200 },
+  modalItem: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg },
+  modalItemSelected: { backgroundColor: COLORS.primaryLight + '20' },
+  modalItemText: { fontSize: FONTS.base },
+  modalItemTextAll: { fontWeight: '600' },
+  emptyWrapper: { flexGrow: 1, paddingBottom: SIZES.bottomScrollPadding },
+  list: { padding: SPACING.lg, paddingTop: SPACING.sm, paddingBottom: SIZES.bottomScrollPadding },
+  listFlex: { flexGrow: 1 },
+  emptyFilter: { padding: SPACING.xl, alignItems: 'center' },
+  emptyFilterText: { fontSize: FONTS.base },
+  emptyFilterHint: { fontSize: FONTS.sm, marginTop: SPACING.xs },
   completeBtn: {
     marginTop: SPACING.sm,
     alignSelf: 'flex-start',
@@ -522,24 +396,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primaryLight,
     borderRadius: BORDER_RADIUS.sm,
   },
-  completeBtnText: {
-    fontSize: FONTS.sm,
-    color: COLORS.white,
-    fontWeight: '600',
-  },
-  empty: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.xl,
-  },
-  emptyEmoji: {
-    fontSize: 48,
-    marginBottom: SPACING.md,
-  },
-  emptyText: {
-    fontSize: FONTS.lg,
-    marginBottom: SPACING.lg,
-  },
-  emptyBtn: {},
+  completeBtnText: { fontSize: FONTS.sm, color: COLORS.white, fontWeight: '600' },
+  empty: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.xl },
+  emptyEmoji: { fontSize: 48, marginBottom: SPACING.md },
+  emptyText: { fontSize: FONTS.lg, marginBottom: SPACING.lg },
 });

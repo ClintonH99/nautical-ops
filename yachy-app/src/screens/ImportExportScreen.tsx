@@ -19,6 +19,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import vesselTasksService from '../services/vesselTasks';
 import maintenanceLogsService from '../services/maintenanceLogs';
 import yardJobsService from '../services/yardJobs';
+import tripsService from '../services/trips';
 import {
   downloadTemplate,
   parseTasksFile,
@@ -158,25 +159,27 @@ export const ImportExportScreen = ({ navigation }: any) => {
         let imported = 0;
         for (const row of success) {
           try {
-            await yardJobsService.create({
+            if (!vesselId) throw new Error('No vessel selected.');
+            await tripsService.createTrip({
               vesselId,
-              jobTitle: row.jobTitle,
-              jobDescription: row.jobDescription,
+              type: 'YARD_PERIOD',
+              title: row.jobTitle,
+              startDate: row.startDate,
+              endDate: row.endDate,
+              notes: row.jobDescription,
               department: (row.department || user?.department || 'INTERIOR') as 'BRIDGE' | 'ENGINEERING' | 'EXTERIOR' | 'INTERIOR' | 'GALLEY',
-              priority: (row.priority || 'GREEN') as 'GREEN' | 'YELLOW' | 'RED',
               yardLocation: row.yardLocation,
               contractorCompanyName: row.contractorCompanyName,
               contactDetails: row.contactDetails,
-              doneByDate: row.doneByDate || undefined,
             });
             imported++;
           } catch (e) {
-            console.error('Import yard job error:', e);
+            console.error('Import yard period error:', e);
             errors.push({ row: imported + 1, message: (e as Error).message });
           }
         }
         const errMsg = errors.length > 0 ? `\n\n${errors.length} row(s) had errors.` : '';
-        Alert.alert('Import complete', `Imported ${imported} yard period job(s).${errMsg}`);
+        Alert.alert('Import complete', `Imported ${imported} yard period(s).${errMsg}`);
       } else if (type === 'inventory') {
         const { success, errors } = await parseInventoryFile(uri);
         if (success.length === 0 && errors.length > 0) {

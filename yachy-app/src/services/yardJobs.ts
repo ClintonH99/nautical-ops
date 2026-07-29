@@ -7,6 +7,7 @@ import { YardPeriodJob, Department, YardJobPriority } from '../types';
 
 export interface CreateYardJobData {
   vesselId: string;
+  tripId?: string | null;
   jobTitle: string;
   jobDescription?: string;
   department: Department;
@@ -49,6 +50,22 @@ class YardJobsService {
     }
   }
 
+  async getByTrip(tripId: string): Promise<YardPeriodJob[]> {
+    try {
+      const { data, error } = await supabase
+        .from('yard_period_jobs')
+        .select('*')
+        .eq('trip_id', tripId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return (data || []).map(this.mapRowToJob);
+    } catch (error) {
+      console.error('Get yard jobs by trip error:', error);
+      return [];
+    }
+  }
+
   async create(input: CreateYardJobData): Promise<YardPeriodJob> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -57,6 +74,7 @@ class YardJobsService {
         .insert([
           {
             vessel_id: input.vesselId,
+            trip_id: input.tripId ?? null,
             job_title: input.jobTitle.trim(),
             job_description: input.jobDescription?.trim() || null,
             department: input.department,
@@ -159,6 +177,7 @@ class YardJobsService {
     return {
       id: row.id as string,
       vesselId: row.vessel_id as string,
+      tripId: (row.trip_id as string) ?? null,
       jobTitle: row.job_title as string,
       jobDescription: (row.job_description as string) ?? '',
       department: (row.department as Department) ?? 'INTERIOR',

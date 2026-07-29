@@ -79,6 +79,9 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [department, setDepartment] = useState<Department | null>(null);
+  const [yardLocation, setYardLocation] = useState('');
+  const [contractorCompanyName, setContractorCompanyName] = useState('');
+  const [contactDetails, setContactDetails] = useState('');
   const [startDate, setStartDate] = useState<string | null>(null);
   const [endDate, setEndDate] = useState<string | null>(null);
   const [departmentModalVisible, setDepartmentModalVisible] = useState(false);
@@ -120,6 +123,9 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
           setDepartment(trip.department ?? null);
           setStartDate(trip.startDate);
           setEndDate(trip.endDate);
+          setYardLocation(trip.yardLocation ?? '');
+          setContractorCompanyName(trip.contractorCompanyName ?? '');
+          setContactDetails(trip.contactDetails ?? '');
         }
       } catch (e) {
         console.error('Load trip error:', e);
@@ -196,6 +202,9 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
           endDate,
           notes: notes.trim() || undefined,
           department: type === 'YARD_PERIOD' ? (department ?? null) : undefined,
+          yardLocation: type === 'YARD_PERIOD' ? (yardLocation.trim() || null) : undefined,
+          contractorCompanyName: type === 'YARD_PERIOD' ? (contractorCompanyName.trim() || null) : undefined,
+          contactDetails: type === 'YARD_PERIOD' ? (contactDetails.trim() || null) : undefined,
         });
         Alert.alert('Updated', 'Trip updated.', [
           { text: 'OK', onPress: () => navigation.goBack() },
@@ -209,6 +218,9 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
           endDate,
           notes: notes.trim() || undefined,
           department: type === 'YARD_PERIOD' ? (department ?? null) : undefined,
+          yardLocation: type === 'YARD_PERIOD' ? (yardLocation.trim() || null) : undefined,
+          contractorCompanyName: type === 'YARD_PERIOD' ? (contractorCompanyName.trim() || null) : undefined,
+          contactDetails: type === 'YARD_PERIOD' ? (contactDetails.trim() || null) : undefined,
         });
         posthog.capture('trip_created', {
           trip_type: type,
@@ -331,6 +343,24 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
                 </Pressable>
               </Modal>
             )}
+            <Input
+              label="Yard location"
+              value={yardLocation}
+              onChangeText={setYardLocation}
+              placeholder="e.g. Marina XYZ"
+            />
+            <Input
+              label="Contractor company name"
+              value={contractorCompanyName}
+              onChangeText={setContractorCompanyName}
+              placeholder="e.g. ABC Marine"
+            />
+            <Input
+              label="Contact details"
+              value={contactDetails}
+              onChangeText={setContactDetails}
+              placeholder="Phone or email"
+            />
           </>
         )}
         <Text style={[styles.label, { color: themeColors.textPrimary }]}>Select dates</Text>

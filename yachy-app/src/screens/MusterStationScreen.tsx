@@ -247,14 +247,16 @@ export const MusterStationScreen = ({ navigation }: any) => {
           No published muster stations yet.{isHOD ? ' Create one below.' : ''}
         </Text>
       )}
-      <View style={styles.createSection}>
-        <Button
-          title="Create"
-          onPress={() => navigation.navigate('CreateMusterStation')}
-          variant="primary"
-          fullWidth
-        />
-      </View>
+      {isHOD && (
+        <View style={styles.createSection}>
+          <Button
+            title="Create"
+            onPress={() => navigation.navigate('CreateMusterStation')}
+            variant="primary"
+            fullWidth
+          />
+        </View>
+      )}
     </ScrollView>
   );
 };

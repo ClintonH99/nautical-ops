@@ -58,11 +58,11 @@ const YARD_HEADERS = [
   'Job Title',
   'Job Description',
   'Department (BRIDGE/ENGINEERING/EXTERIOR/INTERIOR/GALLEY)',
-  'Priority (GREEN/YELLOW/RED)',
   'Yard Location',
   'Contractor Company Name',
   'Contact Details',
-  'Done By Date (YYYY-MM-DD)',
+  'Start Date (YYYY-MM-DD)',
+  'End Date (YYYY-MM-DD)',
 ];
 
 // --- INVENTORY TEMPLATE ---
@@ -154,11 +154,11 @@ function createYardWorkbook(): XLSX.WorkBook {
       'Hull Paint',
       'Full hull repaint',
       'EXTERIOR',
-      'GREEN',
       'Marina XYZ',
       'ABC Marine',
       'contact@abc.com',
-      '2025-12-31',
+      '2026-03-01',
+      '2026-03-15',
     ]),
     'Yard Period Jobs'
   );
@@ -254,11 +254,11 @@ export interface ParsedYardJob {
   jobTitle: string;
   jobDescription?: string;
   department?: string;
-  priority?: string;
   yardLocation?: string;
   contractorCompanyName?: string;
   contactDetails?: string;
-  doneByDate?: string | null;
+  startDate: string;
+  endDate: string;
 }
 
 export interface ParseResult<T> {
@@ -316,18 +316,20 @@ export function parseYardFile(uri: string): Promise<ParseResult<ParsedYardJob>> 
     const jobTitle = (headerMap['Job Title'] ?? '').trim();
     if (!jobTitle) throw new Error('Job Title is required.');
     const deptRaw = (headerMap['Department (BRIDGE/ENGINEERING/EXTERIOR/INTERIOR/GALLEY)'] ?? headerMap['Department'] ?? '').trim().toUpperCase();
-    const priorityRaw = (headerMap['Priority (GREEN/YELLOW/RED)'] ?? headerMap['Priority'] ?? '').trim().toUpperCase();
     const department = deptRaw && VALID_DEPARTMENTS.includes(deptRaw as (typeof VALID_DEPARTMENTS)[number]) ? deptRaw : undefined;
-    const priority = ['GREEN', 'YELLOW', 'RED'].includes(priorityRaw) ? priorityRaw : undefined;
+    const startDate = normalizeDateForImport(headerMap['Start Date (YYYY-MM-DD)'] ?? headerMap['Start Date'] ?? '');
+    const endDate = normalizeDateForImport(headerMap['End Date (YYYY-MM-DD)'] ?? headerMap['End Date'] ?? '');
+    if (!startDate) throw new Error('Start Date is required.');
+    if (!endDate) throw new Error('End Date is required.');
     return {
       jobTitle,
       jobDescription: (headerMap['Job Description'] ?? '').trim() || undefined,
       department,
-      priority,
       yardLocation: (headerMap['Yard Location'] ?? '').trim() || undefined,
       contractorCompanyName: (headerMap['Contractor Company Name'] ?? '').trim() || undefined,
       contactDetails: (headerMap['Contact Details'] ?? '').trim() || undefined,
-      doneByDate: normalizeDateForImport(headerMap['Done By Date (YYYY-MM-DD)'] ?? headerMap['Done By Date'] ?? ''),
+      startDate,
+      endDate,
     };
   });
 }

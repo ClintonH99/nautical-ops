@@ -426,6 +426,7 @@ const styles = StyleSheet.create({
   },
   unitSelector: {
     flexDirection: 'row',
+    width: 120,
     height: SIZES.inputHeight,
     borderWidth: 1,
     borderColor: COLORS.border,

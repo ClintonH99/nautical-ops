@@ -198,6 +198,9 @@ export interface Trip {
   startDate: string;
   endDate: string;
   department?: Department | null;
+  yardLocation?: string | null;
+  contractorCompanyName?: string | null;
+  contactDetails?: string | null;
   itinerary?: Itinerary[];
   preferences?: TripPreference[];
   specialRequests?: string;
@@ -252,6 +255,7 @@ export type YardJobPriority = 'GREEN' | 'YELLOW' | 'RED';
 export interface YardPeriodJob {
   id: string;
   vesselId: string;
+  tripId?: string | null;
   jobTitle: string;
   jobDescription: string;
   department: Department;

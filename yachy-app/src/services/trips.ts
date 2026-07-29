@@ -1,6 +1,6 @@
 /**
  * Trips Service
- * Handles Guest Trips and Boss Trips for a vessel
+ * Handles Guest Trips, Boss Trips, Deliveries, and Yard Periods for a vessel
  */
 
 import { supabase } from './supabase';
@@ -14,6 +14,9 @@ export interface CreateTripData {
   endDate: string;
   notes?: string;
   department?: Department | null;
+  yardLocation?: string | null;
+  contractorCompanyName?: string | null;
+  contactDetails?: string | null;
 }
 
 export interface UpdateTripData {
@@ -22,12 +25,12 @@ export interface UpdateTripData {
   endDate?: string;
   notes?: string;
   department?: Department | null;
+  yardLocation?: string | null;
+  contractorCompanyName?: string | null;
+  contactDetails?: string | null;
 }
 
 class TripsService {
-  /**
-   * Get all trips for a vessel (both Guest and Boss)
-   */
   async getTripsByVessel(vesselId: string): Promise<Trip[]> {
     try {
       const { data, error } = await supabase
@@ -44,9 +47,6 @@ class TripsService {
     }
   }
 
-  /**
-   * Get trips for a vessel by type (GUEST or BOSS)
-   */
   async getTripsByVesselAndType(vesselId: string, type: TripType): Promise<Trip[]> {
     try {
       const { data, error } = await supabase
@@ -64,9 +64,6 @@ class TripsService {
     }
   }
 
-  /**
-   * Get trips in a date range (for calendar marked dates)
-   */
   async getTripsInRange(vesselId: string, start: string, end: string): Promise<Trip[]> {
     try {
       const { data, error } = await supabase
@@ -85,9 +82,6 @@ class TripsService {
     }
   }
 
-  /**
-   * Create a new trip (HOD only in UI)
-   */
   async createTrip(input: CreateTripData): Promise<Trip> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -102,6 +96,9 @@ class TripsService {
             end_date: input.endDate,
             notes: input.notes?.trim() || null,
             department: input.department ?? null,
+            yard_location: input.yardLocation?.trim() || null,
+            contractor_company_name: input.contractorCompanyName?.trim() || null,
+            contact_details: input.contactDetails?.trim() || null,
             created_by: user?.id ?? null,
             updated_at: new Date().toISOString(),
           },
@@ -117,9 +114,6 @@ class TripsService {
     }
   }
 
-  /**
-   * Update an existing trip
-   */
   async updateTrip(tripId: string, input: UpdateTripData): Promise<void> {
     try {
       const payload: Record<string, unknown> = {
@@ -130,6 +124,9 @@ class TripsService {
       if (input.endDate !== undefined) payload.end_date = input.endDate;
       if (input.notes !== undefined) payload.notes = input.notes?.trim() || null;
       if (input.department !== undefined) payload.department = input.department ?? null;
+      if (input.yardLocation !== undefined) payload.yard_location = input.yardLocation?.trim() || null;
+      if (input.contractorCompanyName !== undefined) payload.contractor_company_name = input.contractorCompanyName?.trim() || null;
+      if (input.contactDetails !== undefined) payload.contact_details = input.contactDetails?.trim() || null;
 
       const { error } = await supabase
         .from('trips')
@@ -143,9 +140,6 @@ class TripsService {
     }
   }
 
-  /**
-   * Delete a trip
-   */
   async deleteTrip(tripId: string): Promise<void> {
     try {
       const { error } = await supabase.from('trips').delete().eq('id', tripId);
@@ -156,9 +150,6 @@ class TripsService {
     }
   }
 
-  /**
-   * Get a single trip by ID
-   */
   async getTripById(tripId: string): Promise<Trip | null> {
     try {
       const { data, error } = await supabase
@@ -184,6 +175,9 @@ class TripsService {
       startDate: row.start_date,
       endDate: row.end_date,
       department: row.department ?? undefined,
+      yardLocation: row.yard_location ?? undefined,
+      contractorCompanyName: row.contractor_company_name ?? undefined,
+      contactDetails: row.contact_details ?? undefined,
       notes: row.notes ?? '',
       createdBy: row.created_by ?? undefined,
       createdAt: row.created_at,
