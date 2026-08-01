@@ -64,7 +64,7 @@ export async function generateHoursOfRestPdf(data: PdfMonthData, filename: strin
         hourCells +
         '<td class="numcell">' +
         day.restHoursToday +
-        '</td><td class="comment"></td><td class="numcell office">' +
+        '</td><td class="comment">' + (day.comment || '') + '</td><td class="numcell office">' +
         day.restIn24h +
         '</td><td class="numcell office">' +
         day.restIn7d +

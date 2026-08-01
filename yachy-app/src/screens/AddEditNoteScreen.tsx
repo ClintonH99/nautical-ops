@@ -53,7 +53,7 @@ export const AddEditNoteScreen = ({ navigation, route }: any) => {
       return;
     }
     const vesselId = user?.vesselId;
-    if (!vesselId) {
+    if (!vesselId || !user?.id) {
       Alert.alert('Error', 'No vessel found.');
       return;
     }
@@ -64,6 +64,7 @@ export const AddEditNoteScreen = ({ navigation, route }: any) => {
       } else {
         await notesService.createNote(
           vesselId,
+          user.id,
           title.trim(),
           content.trim(),
           user?.name ?? 'Crew'

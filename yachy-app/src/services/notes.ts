@@ -1,13 +1,14 @@
 /**
  * Notes Service
- * CRUD operations for vessel notes (Notepad feature)
+ * CRUD operations for personal notes (Notepad feature) - private to each
+ * user, not shared across the vessel.
  */
-
 import { supabase } from './supabase';
 
 export interface Note {
   id: string;
   vessel_id: string;
+  user_id: string;
   title: string;
   content: string;
   created_by_name: string;
@@ -16,11 +17,11 @@ export interface Note {
 }
 
 const notesService = {
-  async getNotesByVessel(vesselId: string): Promise<Note[]> {
+  async getMyNotes(userId: string): Promise<Note[]> {
     const { data, error } = await supabase
       .from('notes')
       .select('*')
-      .eq('vessel_id', vesselId)
+      .eq('user_id', userId)
       .order('updated_at', { ascending: false });
     if (error) throw error;
     return data ?? [];
@@ -38,6 +39,7 @@ const notesService = {
 
   async createNote(
     vesselId: string,
+    userId: string,
     title: string,
     content: string,
     createdByName: string
@@ -46,6 +48,7 @@ const notesService = {
       .from('notes')
       .insert({
         vessel_id: vesselId,
+        user_id: userId,
         title,
         content,
         created_by_name: createdByName,

@@ -19,11 +19,11 @@ export const NotepadScreen = ({ navigation }: any) => {
           autoShow={false}
           content={{
             title: 'Notepad',
-            description: 'Shared vessel notes for the whole crew.',
+            description: 'Your own private notes - only you can see them.',
             features: [
-              'Create and edit notes visible to all crew',
-              'Keep handover information in one place',
-              'Notes sync across every crew member\'s device',
+              'Create and edit personal notes',
+              'Notes sync across your own devices',
+              'Not visible to any other crew member',
               'Edit or remove notes as things change',
             ],
           }}
@@ -38,18 +38,20 @@ export const NotepadScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(false);
   const vesselId = user?.vesselId ?? null;
 
+  const userId = user?.id ?? null;
+
   const loadNotes = useCallback(async () => {
-    if (!vesselId) return;
+    if (!userId) return;
     setLoading(true);
     try {
-      const data = await notesService.getNotesByVessel(vesselId);
+      const data = await notesService.getMyNotes(userId);
       setNotes(data);
     } catch (e) {
       console.error('Load notes error:', e);
     } finally {
       setLoading(false);
     }
-  }, [vesselId]);
+  }, [userId]);
 
   useFocusEffect(useCallback(() => { loadNotes(); }, [loadNotes]));
 
@@ -91,7 +93,7 @@ export const NotepadScreen = ({ navigation }: any) => {
       <View style={styles.headerRow}>
         <View>
           <Text style={[styles.title, { color: themeColors.textPrimary }]}>Notepad</Text>
-          <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>Visible to all crew</Text>
+          <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>Only visible to you</Text>
         </View>
         <TouchableOpacity
           style={[styles.newBtn, { backgroundColor: COLORS.primary }]}
@@ -131,7 +133,7 @@ export const NotepadScreen = ({ navigation }: any) => {
                   <Text style={[styles.cardPreview, { color: themeColors.textSecondary }]} numberOfLines={2}>{note.content}</Text>
                 ) : null}
                 <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>
-                  {note.created_by_name} · {formatDate(note.updated_at)}
+                  {formatDate(note.updated_at)}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={themeColors.textSecondary} />

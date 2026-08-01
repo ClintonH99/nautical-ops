@@ -23,6 +23,7 @@ import safetyEquipmentService from '../services/safetyEquipment';
 import { Button, LoadingSpinner } from '../components';
 import { generateSafetyEquipmentPdf } from '../utils/safetyEquipmentPdf';
 import type { SafetyEquipment, SafetyEquipmentData } from '../services/safetyEquipment';
+import { normalizeSafetyItem } from '../services/safetyEquipment';
 
 const CATEGORY_LABELS: Record<string, string> = {
   fireExtinguishers: 'Fire extinguishers',
@@ -56,7 +57,8 @@ function SafetyEquipmentPreview({
   Object.entries(data || {}).forEach(([key, val]) => {
     if (key === 'vesselName' || key === 'customLabels') return;
     const arr = Array.isArray(val) ? val.filter(Boolean) : [];
-    if (arr.length) items.push({ key, label: getLabel(key, data), locations: arr.join(', ') });
+    const locations = arr.map((raw) => normalizeSafetyItem(raw as any).location).filter(Boolean);
+    if (locations.length) items.push({ key, label: getLabel(key, data), locations: locations.join(', ') });
   });
 
   return (

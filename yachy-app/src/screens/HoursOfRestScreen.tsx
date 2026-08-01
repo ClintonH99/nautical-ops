@@ -5,7 +5,7 @@
  * are flagged completed (green) or not completed (red).
  */
 
-import React, { useState, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useCallback, useEffect, useLayoutEffect } from 'react';
 import { InfoModal } from '../components/InfoModal';
 import {
   View,
@@ -71,20 +71,28 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
   const [allEntriesForRolling, setAllEntriesForRolling] = useState<RestEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [viewedMonth, setViewedMonth] = useState(new Date());
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
     try {
-      // Fetch extra trailing history (37 days back) so the rolling 7-day
-      // window calculation has enough context even for the earliest day
-      // shown in the 30-day view.
-      const since = toYYYYMMDD(daysAgo(37));
+      // Fetch the currently viewed month, padded 7 days before so the
+      // rolling 7-day compliance window has context for the first day
+      // shown.
+      const firstOfMonth = new Date(viewedMonth.getFullYear(), viewedMonth.getMonth(), 1);
+      const lastOfMonth = new Date(viewedMonth.getFullYear(), viewedMonth.getMonth() + 1, 0);
+      const paddedStart = new Date(firstOfMonth);
+      paddedStart.setDate(paddedStart.getDate() - 7);
+      const since = toYYYYMMDD(paddedStart);
+      const until = toYYYYMMDD(lastOfMonth);
       const { data: rows } = await supabase
         .from('rest_entries')
         .select('*')
         .eq('user_id', user.id)
-        .gte('date', since);
+        .gte('date', since)
+        .lte('date', until);
 
       const byDate: Record<string, RestEntry> = {};
       (rows ?? []).forEach((r) => { byDate[r.date] = r; });
@@ -95,10 +103,12 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
       console.error('Load rest entries error:', e);
     } finally {
       setLoading(false);
+      setHasLoadedOnce(true);
     }
-  }, [user?.id, user?.vesselId, isCaptainOrMov]);
+  }, [user?.id, user?.vesselId, isCaptainOrMov, viewedMonth]);
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
+  useEffect(() => { loadData(); }, [loadData]);
 
   // Build calendar bar markers (matching the Home screen's calendar style)
   // for the past 30 days: green bar if completed, red bar if a day in the
@@ -110,7 +120,14 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
   // missing) — it's a "what still needs filling in" tracker, not a
   // compliance indicator. Actual STCW violations surface in the review
   // queue and the exported PDF, not here.
-  for (let i = 0; i < 30; i++) {
+  const firstOfViewedMonth = new Date(viewedMonth.getFullYear(), viewedMonth.getMonth(), 1);
+  const lastOfViewedMonth = new Date(viewedMonth.getFullYear(), viewedMonth.getMonth() + 1, 0);
+  const todayForMarking = new Date();
+  todayForMarking.setHours(0, 0, 0, 0);
+  const lastDayToMark = lastOfViewedMonth < todayForMarking ? lastOfViewedMonth : todayForMarking;
+  const daysAgoAtMonthStart = Math.round((todayForMarking.getTime() - firstOfViewedMonth.getTime()) / 86400000);
+  const daysAgoAtLastDayToMark = Math.round((todayForMarking.getTime() - lastDayToMark.getTime()) / 86400000);
+  for (let i = daysAgoAtLastDayToMark; i <= daysAgoAtMonthStart; i++) {
     const d = daysAgo(i);
     const dateStr = toYYYYMMDD(d);
     const hasEntry = !!entries[dateStr];
@@ -135,13 +152,12 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
     if (!user?.id) return;
     setExporting(true);
     try {
-      const now = new Date();
-      const data = await getMonthDataForPdf(user.id, now.getFullYear(), now.getMonth() + 1);
+      const data = await getMonthDataForPdf(user.id, viewedMonth.getFullYear(), viewedMonth.getMonth() + 1);
       if (!data || data.days.length === 0) {
         Alert.alert('No data', 'No rest entries found for this month yet.');
         return;
       }
-      const filename = `HoursOfRest_${data.seafarerName.replace(/\s+/g, '_')}_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}.pdf`;
+      const filename = `HoursOfRest_${data.seafarerName.replace(/\s+/g, '_')}_${viewedMonth.getFullYear()}-${String(viewedMonth.getMonth() + 1).padStart(2, '0')}.pdf`;
       await generateHoursOfRestPdf(data, filename);
     } catch (e) {
       console.error('Export PDF error:', e);
@@ -170,7 +186,7 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
         </TouchableOpacity>
       )}
 
-      {loading ? (
+      {loading && !hasLoadedOnce ? (
         <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.xl }} />
       ) : (
         <>
@@ -180,6 +196,7 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
             markedDates={markedDates}
             markingType="multi-period"
             onDayPress={handleDayPress}
+            onMonthChange={(m: { year: number; month: number }) => setViewedMonth(new Date(m.year, m.month - 1, 1))}
             theme={{
               backgroundColor: 'transparent',
               calendarBackground: 'transparent',

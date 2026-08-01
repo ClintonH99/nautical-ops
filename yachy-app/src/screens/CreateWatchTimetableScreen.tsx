@@ -124,8 +124,6 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
     durationHours: number;
   }> | null>(null);
   const [calculatedWatchHours, setCalculatedWatchHours] = useState<number | null>(null);
-  const [exportDateModalOpen, setExportDateModalOpen] = useState(false);
-  const [exportDateSelected, setExportDateSelected] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const vesselId = user?.vesselId ?? null;
   const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
@@ -160,7 +158,6 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
         setStartLocation(timetable.startLocation || '');
         setDestination(timetable.destination || '');
         setNotes(timetable.notes || '');
-        setExportDateSelected(timetable.forDate);
 
         // Convert slots back to the format needed for display
         const crewMap = new Map(crewList.map((c) => [c.id, c]));
@@ -286,7 +283,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
       durationHours: s.durationHours,
     }));
 
-  const handleExport = async (forDate: string) => {
+  const handleExport = async () => {
     if (!vesselId || !timetableSlots) return;
     setExporting(true);
     try {
@@ -297,7 +294,6 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
         startLocation: startLocation || undefined,
         destination: destination || undefined,
         notes: notes || undefined,
-        forDate,
         slots: slotsToExportFormat(timetableSlots),
         createdBy: user?.id,
       };
@@ -311,8 +307,6 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
         Alert.alert('Exported', 'Timetable is now in Watch Schedule.');
       }
 
-      setExportDateModalOpen(false);
-      setExportDateSelected(null);
       setTimetableSlots(null);
       setCalculatedWatchHours(null);
       setEditingTimetableId(null);
@@ -675,10 +669,13 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
             <View style={styles.timetableActions}>
               <TouchableOpacity
                 style={styles.timetableExportBtn}
-                onPress={() => setExportDateModalOpen(true)}
+                onPress={() => handleExport()}
+                disabled={exporting}
               >
                 <Text style={styles.timetableExportText}>
-                  {editingTimetableId ? 'Update' : 'Export'}
+                  {exporting
+                    ? editingTimetableId ? 'Updating...' : 'Exporting...'
+                    : editingTimetableId ? 'Update' : 'Export'}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -699,96 +696,6 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
               </TouchableOpacity>
             </View>
 
-            {/* Export date picker overlay – inside same modal so it appears on top */}
-            {exportDateModalOpen && (
-              <Pressable
-                style={styles.exportOverlay}
-                onPress={() => {
-                  setExportDateModalOpen(false);
-                  setExportDateSelected(null);
-                }}
-              >
-                <View
-                  style={[styles.exportModalBox, { backgroundColor: themeColors.surface }]}
-                  onStartShouldSetResponder={() => true}
-                >
-                  <Text style={[styles.exportModalTitle, { color: themeColors.textPrimary }]}>
-                    {editingTimetableId ? 'Update Watch Schedule' : 'Export to Watch Schedule'}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.exportModalHint,
-                      { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                    ]}
-                  >
-                    Select the date for this timetable, then tap{' '}
-                    {editingTimetableId ? 'Update' : 'Export'}
-                  </Text>
-                  <Calendar
-                    current={exportDateSelected || new Date().toISOString().slice(0, 10)}
-                    minDate={new Date().toISOString().slice(0, 10)}
-                    markedDates={
-                      exportDateSelected
-                        ? {
-                            [exportDateSelected]: {
-                              selected: true,
-                              selectedColor: COLORS.primary,
-                              selectedTextColor: COLORS.white,
-                            },
-                          }
-                        : {}
-                    }
-                    onDayPress={({ dateString }) => setExportDateSelected(dateString)}
-                    theme={{
-                      backgroundColor: themeColors.surface,
-                      calendarBackground: themeColors.surface,
-                      selectedDayBackgroundColor: COLORS.primary,
-                      selectedDayTextColor: COLORS.white,
-                      todayTextColor: themeColors.isDark ? COLORS.white : COLORS.black,
-                      dayTextColor: themeColors.isDark ? COLORS.white : COLORS.black,
-                      textDisabledColor: themeColors.isDark ? COLORS.white : COLORS.black,
-                      textSectionTitleColor: themeColors.isDark ? COLORS.white : COLORS.black,
-                      arrowColor: themeColors.isDark ? COLORS.white : COLORS.black,
-                      monthTextColor: themeColors.isDark ? COLORS.white : COLORS.black,
-                    }}
-                    hideExtraDays
-                    hideArrows={false}
-                  />
-                  <TouchableOpacity
-                    style={[
-                      styles.exportConfirmBtn,
-                      !exportDateSelected && styles.exportConfirmBtnDisabled,
-                    ]}
-                    onPress={() => exportDateSelected && handleExport(exportDateSelected)}
-                    disabled={!exportDateSelected || exporting}
-                  >
-                    <Text style={[styles.exportConfirmText, { color: themeColors.textPrimary }]}>
-                      {exporting
-                        ? editingTimetableId
-                          ? 'Updating...'
-                          : 'Exporting...'
-                        : `${editingTimetableId ? 'Update' : 'Export'} for ${exportDateSelected ? formatLocalDateString(exportDateSelected, { month: 'short', day: 'numeric' }) : '...'}`}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.exportModalCancel}
-                    onPress={() => {
-                      setExportDateModalOpen(false);
-                      setExportDateSelected(null);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.exportModalCancelText,
-                        { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                      ]}
-                    >
-                      Cancel
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </Pressable>
-            )}
           </View>
         </Modal>
       )}
@@ -835,9 +742,9 @@ const styles = StyleSheet.create({
   crewList: { maxHeight: 280 },
   timeList: { maxHeight: 280 },
   modalItem: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg },
-  modalItemSelected: { backgroundColor: COLORS.primaryLight },
+  modalItemSelected: { backgroundColor: COLORS.primaryLight + '20' },
   modalItemText: { fontSize: FONTS.base },
-  modalItemTextSelected: { color: COLORS.white, fontWeight: '600' },
+  modalItemTextSelected: { fontWeight: '600' },
   modalItemSubtext: { fontSize: FONTS.sm, marginTop: 2 },
   emptyCrew: { fontSize: FONTS.base, padding: SPACING.lg, textAlign: 'center' },
   actions: { marginTop: SPACING.xl },

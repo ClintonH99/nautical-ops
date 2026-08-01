@@ -16,6 +16,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  TextInput,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
@@ -68,6 +69,7 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   const [restPeriods, setRestPeriods] = useState<RestPeriod[]>([{ start: '22:00', end: '08:00' }]);
   const [workStart, setWorkStart] = useState<string | null>('08:00');
   const [workEnd, setWorkEnd] = useState<string | null>('17:00');
+  const [comment, setComment] = useState('');
   const [lunchStart, setLunchStart] = useState<string | null>('12:00');
   const [lunchEnd, setLunchEnd] = useState<string | null>('13:00');
   const [status, setStatus] = useState<'draft' | 'pending_confirmation' | 'confirmed'>('draft');
@@ -86,6 +88,7 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
       setWorkEnd(existing.work_end);
       setLunchStart(existing.lunch_start);
       setLunchEnd(existing.lunch_end);
+      setComment(existing.comment ?? '');
       setStatus(existing.status);
     }
 
@@ -164,6 +167,7 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
         work_end: workEnd,
         lunch_start: lunchStart,
         lunch_end: lunchEnd,
+        comment: comment.trim() || null,
         status: 'draft',
       };
       await saveEntry(entry);
@@ -200,7 +204,8 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
         workEnd,
         lunchStart,
         lunchEnd,
-        user.id
+        user.id,
+        comment.trim() || null
       );
       navigation.goBack();
     } catch (e) {
@@ -266,6 +271,22 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
         </TouchableOpacity>
       )}
 
+      <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>Comment (optional)</Text>
+      <TextInput
+        value={comment}
+        onChangeText={setComment}
+        editable={!isLocked}
+        maxLength={40}
+        placeholder="Short note for the PDF, e.g. Sick day"
+        placeholderTextColor={themeColors.textSecondary}
+        style={[
+          styles.commentInput,
+          { color: themeColors.textPrimary, backgroundColor: themeColors.surface, borderColor: themeColors.isDark ? 'rgba(255,255,255,0.1)' : COLORS.border },
+        ]}
+      />
+      <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.xs, marginTop: -SPACING.sm, marginBottom: SPACING.lg }}>
+        {comment.length}/40
+      </Text>
       <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>Time worked</Text>
       <View style={styles.row}>
         {renderTimeChip('Start', workStart, () => openPicker({ type: 'work', edge: 'start' }))}
@@ -345,4 +366,5 @@ const styles = StyleSheet.create({
   complianceBox: { padding: SPACING.md, borderRadius: BORDER_RADIUS.md, marginVertical: SPACING.lg },
   saveButton: { backgroundColor: COLORS.primary, padding: SPACING.md, borderRadius: BORDER_RADIUS.md, alignItems: 'center' },
   saveButtonText: { color: '#fff', fontWeight: '600' },
+  commentInput: { borderWidth: 1, borderRadius: BORDER_RADIUS.md, padding: SPACING.md, fontSize: FONTS.base, marginBottom: SPACING.xs },
 });

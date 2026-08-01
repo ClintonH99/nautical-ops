@@ -1,11 +1,10 @@
 /**
  * PDF export for Safety Equipment
  */
-
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import { SafetyEquipmentData } from '../services/safetyEquipment';
+import { SafetyEquipmentData, SafetyItem, normalizeSafetyItem } from '../services/safetyEquipment';
 
 const LABELS: Record<string, string> = {
   fireExtinguishers: 'Fire extinguishers',
@@ -36,6 +35,12 @@ function getLabel(key: string, data: SafetyEquipmentData): string {
   return data.customLabels?.[key] ?? key.replace(/^custom_/, '').replace(/_/g, ' ');
 }
 
+function dateCell(value: string | null, isNA: boolean): string {
+  const text = isNA ? 'N/A' : value || 'Not set';
+  const cls = isNA || !value ? ' class="muted"' : '';
+  return `<td${cls}>${escapeHtml(text)}</td>`;
+}
+
 export async function generateSafetyEquipmentPdf(
   data: SafetyEquipmentData,
   title: string,
@@ -46,17 +51,19 @@ export async function generateSafetyEquipmentPdf(
     (k) => k !== 'vesselName' && k !== 'customLabels' && Array.isArray(data[k])
   );
   for (const key of categoryKeys) {
-    const arr = data[key] as string[];
-    if (Array.isArray(arr) && arr.length) {
-      const locs = arr
-        .filter(Boolean)
-        .map((l) => escapeHtml(String(l)))
-        .join(', ');
-      const label = getLabel(key, data);
-      rows.push(`<tr><td><strong>${escapeHtml(label)}</strong></td><td>${locs}</td></tr>`);
-    }
+    const rawArr = data[key] as (string | SafetyItem)[];
+    if (!Array.isArray(rawArr) || !rawArr.length) continue;
+    const label = getLabel(key, data);
+    const items = rawArr.map(normalizeSafetyItem).filter((it) => it.location);
+    items.forEach((item) => {
+      rows.push(
+        `<tr><td><strong>${escapeHtml(label)}</strong></td><td>${escapeHtml(item.location)}</td>` +
+        dateCell(item.lastChecked, item.lastCheckedNA) +
+        dateCell(item.expiryDate, item.expiryDateNA) +
+        `</tr>`
+      );
+    });
   }
-
   const html = `
     <!DOCTYPE html>
     <html>
@@ -71,19 +78,19 @@ export async function generateSafetyEquipmentPdf(
         th, td { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; text-align: left; }
         thead tr { background: #1E3A8A; color: #fff; }
         tr:nth-child(even) td { background: #f9fafb; }
+        .muted { color: #888; font-style: italic; }
       </style>
     </head>
     <body>
       <h1>${escapeHtml(title || 'Safety Equipment')}</h1>
       <p class="subtitle">${escapeHtml(String(data.vesselName || ''))} · Generated ${new Date().toISOString().slice(0, 10)}</p>
       <table>
-        <thead><tr><th>Equipment</th><th>Locations</th></tr></thead>
-        <tbody>${rows.join('') || '<tr><td colspan="2">No equipment listed</td></tr>'}</tbody>
+        <thead><tr><th>Equipment</th><th>Location</th><th>Last checked</th><th>Expiry / replace by</th></tr></thead>
+        <tbody>${rows.join('') || '<tr><td colspan="4">No equipment listed</td></tr>'}</tbody>
       </table>
     </body>
     </html>
   `;
-
   const { uri } = await Print.printToFileAsync({ html });
   const newUri = `${FileSystem.cacheDirectory}${filename}`;
   await FileSystem.moveAsync({ from: uri, to: newUri });

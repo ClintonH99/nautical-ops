@@ -21,10 +21,31 @@ export type SafetyEquipmentCategories = {
   epirbs: string[];
 };
 
+export interface SafetyItem {
+  location: string;
+  lastChecked: string | null;
+  lastCheckedNA: boolean;
+  expiryDate: string | null;
+  expiryDateNA: boolean;
+}
+
+export function normalizeSafetyItem(raw: string | SafetyItem): SafetyItem {
+  if (typeof raw === 'string') {
+    return { location: raw, lastChecked: null, lastCheckedNA: false, expiryDate: null, expiryDateNA: false };
+  }
+  return {
+    location: raw.location ?? '',
+    lastChecked: raw.lastChecked ?? null,
+    lastCheckedNA: raw.lastCheckedNA ?? false,
+    expiryDate: raw.expiryDate ?? null,
+    expiryDateNA: raw.expiryDateNA ?? false,
+  };
+}
+
 export interface SafetyEquipmentData {
   vesselName?: string;
   customLabels?: Record<string, string>;
-  [key: string]: string[] | string | Record<string, string> | undefined;
+  [key: string]: (string | SafetyItem)[] | string | Record<string, string> | undefined;
 }
 
 export interface SafetyEquipment {

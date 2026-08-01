@@ -23,6 +23,7 @@ export interface RestEntry {
   work_end: string | null;
   lunch_start: string | null;
   lunch_end: string | null;
+  comment?: string | null;
   status: 'draft' | 'pending_confirmation' | 'confirmed';
   confirmed_by?: string | null;
   confirmed_at?: string | null;
@@ -427,7 +428,8 @@ export async function confirmEntryForUser(
   workEnd: string | null,
   lunchStart: string | null,
   lunchEnd: string | null,
-  confirmedByUserId: string
+  confirmedByUserId: string,
+  comment?: string | null
 ): Promise<void> {
   const entry: RestEntry = {
     user_id: targetUserId,
@@ -438,6 +440,7 @@ export async function confirmEntryForUser(
     work_end: workEnd,
     lunch_start: lunchStart,
     lunch_end: lunchEnd,
+    comment: comment ?? null,
     status: 'confirmed',
     confirmed_by: confirmedByUserId,
     confirmed_at: new Date().toISOString(),
@@ -505,6 +508,7 @@ export interface PdfDayRow {
   restHoursToday: string; // "HH:MM"
   restIn24h: string;
   restIn7d: string;
+  comment: string;
 }
 
 export interface PdfMonthData {
@@ -559,7 +563,7 @@ function buildHourMarks(workStart: string | null, workEnd: string | null, lunchS
 export async function getMonthDataForPdf(userId: string, year: number, month: number): Promise<PdfMonthData | null> {
   const { data: user } = await supabase
     .from('users')
-    .select('name, position, vessel_id, vessel_joined_at')
+    .select('name, position, vessel_id')
     .eq('id', userId)
     .single();
 
@@ -572,8 +576,11 @@ export async function getMonthDataForPdf(userId: string, year: number, month: nu
     .single();
 
   const monthStart = new Date(year, month - 1, 1);
-  const joinedDate = user.vessel_joined_at ? new Date(user.vessel_joined_at) : monthStart;
-  const effectiveStart = joinedDate > monthStart ? joinedDate : monthStart;
+  // Hours of Rest compliance follows the seafarer, not the vessel - always
+  // show the full month's history regardless of when they joined the
+  // current vessel. vessel_joined_at also updates on vessel switches,
+  // which should never hide earlier real rest entries.
+  const effectiveStart = monthStart;
   const lastDayOfMonth = new Date(year, month, 0);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -606,7 +613,7 @@ export async function getMonthDataForPdf(userId: string, year: number, month: nu
 
   const { data: entries } = await supabase
     .from('rest_entries')
-    .select('date, rest_periods, work_start, work_end, lunch_start, lunch_end, status, confirmed_by')
+    .select('date, rest_periods, work_start, work_end, lunch_start, lunch_end, status, confirmed_by, comment')
     .eq('user_id', userId)
     .gte('date', toDateStr(paddedStart))
     .lte('date', toDateStr(effectiveEnd));
@@ -638,6 +645,7 @@ export async function getMonthDataForPdf(userId: string, year: number, month: nu
       restHoursToday: minutesToHHMM(restMinutesToday),
       restIn24h: minutesToHHMM(rolling.minRestIn24h * 60),
       restIn7d: minutesToHHMM(rolling.minRestIn7Days * 60),
+      comment: entry?.comment ?? '',
     });
   }
 

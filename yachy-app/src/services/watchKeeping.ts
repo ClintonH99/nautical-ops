@@ -22,7 +22,7 @@ export interface PublishedWatchTimetable {
   startLocation?: string;
   destination?: string;
   notes?: string;
-  forDate: string;
+  forDate: string | null;
   slots: TimetableSlot[];
   createdBy?: string;
   createdAt: string;
@@ -35,7 +35,7 @@ export interface PublishTimetableData {
   startLocation?: string;
   destination?: string;
   notes?: string;
-  forDate: string;
+  forDate?: string;
   slots: TimetableSlot[];
   createdBy?: string;
 }
@@ -143,7 +143,7 @@ class WatchKeepingService {
           start_location: input.startLocation?.trim() || null,
           destination: input.destination?.trim() || null,
           notes: input.notes?.trim() || null,
-          for_date: input.forDate,
+          for_date: input.forDate || null,
           slots: input.slots,
           created_by: input.createdBy || null,
         },
@@ -164,7 +164,7 @@ class WatchKeepingService {
         start_location: input.startLocation?.trim() || null,
         destination: input.destination?.trim() || null,
         notes: input.notes?.trim() || null,
-        for_date: input.forDate,
+        for_date: input.forDate || null,
         slots: input.slots,
       })
       .eq('id', id)

@@ -69,10 +69,16 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
     }, [vesselId, loadPublished, route?.params?.timetableId, navigation])
   );
 
+  // New timetables no longer require choosing a date (Captain shares the
+  // schedule separately, e.g. via WhatsApp) - fall back to when it was
+  // actually published for any timetable with no chosen date.
+  const scheduleDateStr = (t: { forDate: string | null; createdAt: string }): string =>
+    t.forDate || t.createdAt.slice(0, 10);
+
   const handleDelete = async (timetable: PublishedWatchTimetable) => {
     Alert.alert(
       'Delete Watch Schedule',
-      `Are you sure you want to delete the schedule for ${formatLocalDateString(timetable.forDate, { month: 'short', day: 'numeric' })}?`,
+      `Are you sure you want to delete the schedule for ${formatLocalDateString(scheduleDateStr(timetable), { month: 'short', day: 'numeric' })}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -107,7 +113,7 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
   const exportWatchSchedulePdf = async (t: PublishedWatchTimetable) => {
     setExportingPdf(true);
     try {
-      const dateStr = formatLocalDateString(t.forDate, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+      const dateStr = formatLocalDateString(scheduleDateStr(t), { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
       const headerMeta = `
           <h1>Watch Schedule</h1>
           <p class="subtitle">${dateStr}</p>
@@ -172,7 +178,7 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
         <body>${pageBlocks.join('')}</body>
         </html>`;
       const { uri } = await Print.printToFileAsync({ html });
-      const filename = `Watch_Schedule_${t.forDate}.pdf`;
+      const filename = `Watch_Schedule_${scheduleDateStr(t)}.pdf`;
       const newUri = `${FileSystem.cacheDirectory}${filename}`;
       await FileSystem.moveAsync({ from: uri, to: newUri });
       await Sharing.shareAsync(newUri, {
@@ -220,18 +226,36 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
             <View style={styles.cardHeader}>
               <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>{t.watchTitle}</Text>
               {isHOD && (
-                <TouchableOpacity
-                  onPress={() => handleDelete(t)}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  disabled={deleting}
-                >
-                  <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-                </TouchableOpacity>
+                <View style={styles.cardHeaderActions}>
+                  <TouchableOpacity
+                    onPress={() => handleEdit(t)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text style={{ color: COLORS.primary, fontSize: FONTS.sm, fontWeight: '600' }}>Edit</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleDelete(t)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    disabled={deleting}
+                  >
+                    <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
-            <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>{formatLocalDateString(t.forDate, { weekday: 'short', month: 'short', day: 'numeric' })}</Text>
+            <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>{formatLocalDateString(scheduleDateStr(t), { weekday: 'short', month: 'short', day: 'numeric' })}</Text>
             {t.startLocation ? <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>From: {t.startLocation}</Text> : null}
             {t.destination ? <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>To: {t.destination}</Text> : null}
+            <TouchableOpacity
+              style={styles.cardExportBtn}
+              onPress={(e) => {
+                e.stopPropagation();
+                exportWatchSchedulePdf(t);
+              }}
+            >
+              <Ionicons name="download-outline" size={16} color={COLORS.primary} />
+              <Text style={[styles.cardExportText, { color: COLORS.primary }]}>Export to PDF</Text>
+            </TouchableOpacity>
             <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>Start: {t.startTime}</Text>
           </TouchableOpacity>
         ))
@@ -247,7 +271,7 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
             <View style={[styles.viewHeader, { backgroundColor: themeColors.surface }]}>
               <Text style={[styles.viewTitle, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Watch Schedule</Text>
               <Text style={[styles.viewDate, { color: themeColors.textSecondary }]}>
-                {formatLocalDateString(viewingSchedule.forDate, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                {formatLocalDateString(scheduleDateStr(viewingSchedule), { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
               </Text>
             </View>
             <View style={styles.viewContent}>
@@ -313,8 +337,11 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.xs },
+  cardHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
   cardTitle: { fontSize: FONTS.lg, fontWeight: '600', flex: 1 },
   cardMeta: { fontSize: FONTS.sm, marginTop: SPACING.xs },
+  cardExportBtn: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, marginTop: SPACING.sm, alignSelf: 'flex-start' },
+  cardExportText: { fontSize: FONTS.sm, fontWeight: '600' },
   viewModal: { flex: 1 },
   viewModalContent: { paddingBottom: SIZES.bottomScrollPadding },
   viewHeader: { padding: SPACING.lg, borderBottomWidth: 1, borderBottomColor: COLORS.border },
