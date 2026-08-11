@@ -93,7 +93,7 @@ class ShoppingListsService {
     if (updates.items !== undefined) {
       payload.items = updates.items
         .filter((item) => item.text.trim().length > 0)
-        .map((item) => ({ text: item.text.trim(), checked: item.checked }));
+        .map((item) => ({ text: item.text.trim(), amount: item.amount?.trim(), checked: item.checked }));
     }
 
     const { data, error } = await supabase
