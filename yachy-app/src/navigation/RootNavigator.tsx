@@ -58,6 +58,8 @@ import {
   AddEditShoppingListScreen,
   InventoryScreen,
   AddEditInventoryItemScreen,
+  UniformsScreen,
+  AddEditUniformScreen,
   DepartmentColorSettingsScreen,
   ThemeSettingsScreen,
   NotificationSettingsScreen,
@@ -910,6 +912,22 @@ export const RootNavigator = () => {
                 component={AddEditInventoryItemScreen}
                 options={({ route }: any) => ({
                   title: route.params?.itemId ? 'Edit' : 'Create',
+                  headerShown: true,
+                })}
+              />
+              <Stack.Screen
+                name="Uniforms"
+                component={UniformsScreen}
+                options={{
+                  title: 'Uniforms',
+                  headerShown: true,
+                }}
+              />
+              <Stack.Screen
+                name="AddEditUniform"
+                component={AddEditUniformScreen}
+                options={({ route }: any) => ({
+                  title: route.params?.uniformId ? 'Edit' : 'Create',
                   headerShown: true,
                 })}
               />

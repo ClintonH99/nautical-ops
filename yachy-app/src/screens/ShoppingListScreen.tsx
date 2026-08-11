@@ -62,7 +62,7 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
 
   const selectAllDepartments = () => setVisibleDepartments(allDeptsVisible);
 
-  const masterList = lists.find((l) => (l.listType ?? 'general') === 'trip' && l.isMaster);
+  const masterLists = lists.filter((l) => (l.listType ?? 'general') === 'trip' && l.isMaster);
   const listsForType = lists.filter((l) => (l.listType ?? 'general') === listType && !l.isMaster);
   const filteredLists = listsForType.filter((l) => visibleDepartments[l.department ?? 'INTERIOR']);
 
@@ -70,15 +70,7 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
     if (!vesselId) return;
     setLoading(true);
     try {
-      let data = await shoppingListsService.getByVessel(vesselId);
-      if (listType === 'trip') {
-        const master = await shoppingListsService.getOrCreateMasterTripList(vesselId, user?.id);
-        if (!data.some((l) => l.id === master.id)) {
-          data = [master, ...data];
-        } else {
-          data = data.map((l) => (l.id === master.id ? { ...l, isMaster: true } : l));
-        }
-      }
+      const data = await shoppingListsService.getByVessel(vesselId);
       setLists(data);
     } catch (e) {
       console.error('Load shopping lists error:', e);
@@ -132,7 +124,6 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
   };
 
   const onDelete = (list: ShoppingList) => {
-    if (list.isMaster) return;
     Alert.alert('Delete list', `Delete "${list.title}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -167,63 +158,84 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
     );
   }
 
+  const handleAddMasterList = () => {
+    navigation.navigate('AddEditShoppingList', { listType: 'trip', asMasterList: true });
+  };
+
   const renderMasterBoard = () => {
-    if (listType !== 'trip' || !masterList) return null;
+    if (listType !== 'trip') return null;
     return (
       <View style={styles.masterBoard}>
-        <View style={styles.masterBoardHeader}>
-          <Text style={[styles.masterBoardTitle, { color: themeColors.textPrimary }]}>Every Trip</Text>
-          <Text style={[styles.masterBoardSubtitle, { color: themeColors.textSecondary }]}>Items you need before every trip</Text>
-          <TouchableOpacity
-            onPress={() => resetMasterChecks(masterList)}
-            style={styles.resetBtn}
-            disabled={!masterList.items.some((i) => i.checked)}
-          >
-            <Text
-              style={[
-                styles.resetBtnText,
-                !masterList.items.some((i) => i.checked) && styles.resetBtnDisabled,
-              ]}
-            >
-              Reset checks for next trip
-            </Text>
-          </TouchableOpacity>
-        </View>
-        <View style={[styles.masterCard, { backgroundColor: themeColors.surface }]}>
-          <View style={styles.bulletList}>
-            {masterList.items.length === 0 ? (
-              <Text style={[styles.bulletPlaceholder, { color: COLORS.textTertiary }]}>No items yet. Tap "Edit items" below to add items.</Text>
-            ) : (
-              masterList.items.map((item, idx) => (
-                <View key={idx} style={styles.bulletRow}>
-                  <TouchableOpacity
-                    onPress={() => toggleItemChecked(masterList, idx)}
-                    style={[styles.checkbox, item.checked && styles.checkboxChecked]}
-                    activeOpacity={0.7}
-                  >
-                    {item.checked ? (
-                      <Text style={styles.checkboxTick}>✓</Text>
-                    ) : null}
-                  </TouchableOpacity>
-                  <Text
-                    style={[styles.bulletText, { color: themeColors.textPrimary }, item.checked && styles.bulletTextChecked]}
-                    numberOfLines={2}
-                  >
-                    {item.text}
-                  </Text>
-                </View>
-              ))
-            )}
+        {masterLists.map((masterList) => (
+          <View key={masterList.id} style={{ marginBottom: SPACING.lg }}>
+            <View style={styles.masterBoardHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <TouchableOpacity onPress={() => navigation.navigate('AddEditShoppingList', { listId: masterList.id })}>
+                  <Text style={[styles.masterBoardTitle, { color: themeColors.textPrimary }]}>{masterList.title}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => onDelete(masterList)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
+                </TouchableOpacity>
+              </View>
+              <Text style={[styles.masterBoardSubtitle, { color: themeColors.textSecondary }]}>Items you need before every trip</Text>
+              <TouchableOpacity
+                onPress={() => resetMasterChecks(masterList)}
+                style={styles.resetBtn}
+                disabled={!masterList.items.some((i) => i.checked)}
+           >
+                <Text
+                  style={[
+                    styles.resetBtnText,
+                    !masterList.items.some((i) => i.checked) && styles.resetBtnDisabled,
+                  ]}
+                >
+                  Reset checks for next trip
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={[styles.masterCard, { backgroundColor: themeColors.surface }]}>
+              <View style={styles.bulletList}>
+                {masterList.items.length === 0 ? (
+                  <Text style={[styles.bulletPlaceholder, { color: COLORS.textTertiary }]}>No items yet. Tap "Edit items" below to add items.</Text>
+                ) : (
+                  masterList.items.map((item, idx) => (
+                    <View key={idx} style={styles.bulletRow}>
+                      <TouchableOpacity
+                        onPress={() => toggleItemChecked(masterList, idx)}
+                        style={[styles.checkbox, item.checked && styles.checkboxChecked]}
+                        activeOpacity={0.7}
+                      >
+                        {item.checked ? (
+                          <Text style={styles.checkboxTick}>✓</Text>
+                        ) : null}
+                      </TouchableOpacity>
+                      <Text
+                        style={[styles.bulletText, { color: themeColors.textPrimary }, item.checked && styles.bulletTextChecked]}
+                        numberOfLines={2}
+                      >
+                        {item.amount ? `${item.amount} × ${item.text}` : item.text}
+                      </Text>
+                    </View>
+                  ))
+                )}
+              </View>
+              <Button
+                title="Edit items"
+                onPress={() => navigation.navigate('AddEditShoppingList', { listId: masterList.id })}
+                variant="text"
+                size="small"
+                style={styles.editBtnMaster}
+                textStyle={{ color: themeColors.isDark ? COLORS.white : COLORS.primary }}
+              />
+            </View>
           </View>
-          <Button
-            title="Edit items"
-            onPress={() => navigation.navigate('AddEditShoppingList', { listId: masterList.id })}
-            variant="text"
-            size="small"
-            style={styles.editBtnMaster}
-            textStyle={{ color: themeColors.isDark ? COLORS.white : COLORS.primary }}
-          />
-        </View>
+        ))}
+        <Button
+          title="+ Personalized List"
+          onPress={handleAddMasterList}
+          variant={themeColors.isDark ? 'outlineLight' : 'outline'}
+          fullWidth
+        />
       </View>
     );
   };
@@ -351,7 +363,7 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
                       ]}
                       numberOfLines={2}
                     >
-                      {item.text}
+                      {item.amount ? `${item.amount} × ${item.text}` : item.text}
                     </Text>
                   </View>
                 ))

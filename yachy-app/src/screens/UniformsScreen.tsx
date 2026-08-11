@@ -1,9 +1,9 @@
 /**
- * Inventory Screen
- * Create button, department filter, list of inventory items. Export mode: select items → Export to PDF.
+ * Uniforms Screen
+ * Create button, department filter, list of uniform labels. Export mode:
+ * select labels → Export to PDF.
  */
-
-import React, { useState, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -20,39 +20,18 @@ import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
-import inventoryService, { InventoryItem } from '../services/inventory';
+import uniformsService, { Uniform } from '../services/uniforms';
 import { Department } from '../types';
-import { exportInventoryToPdf } from '../utils/inventoryPdf';
+import { exportUniformsToPdf } from '../utils/uniformsPdf';
 import { Button, Input, ButtonTagCard, ButtonTagRow } from '../components';
-import { InfoModal } from '../components/InfoModal';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
-export const InventoryScreen = ({ navigation }: any) => {
+export const UniformsScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <InfoModal
-          screenKey="inventory"
-          autoShow={false}
-          content={{
-            title: 'Inventory',
-            description: 'Track stock and supplies across departments.',
-            features: [
-              'Create inventory items with quantities and locations',
-              'Filter items by department',
-              'Search across titles, descriptions, and locations',
-              'Select items and export to PDF',
-            ],
-          }}
-        />
-      ),
-    });
-  }, [navigation]);
   const { user } = useAuthStore();
   const overrides = useDepartmentColorStore((s) => s.overrides);
-  const [items, setItems] = useState<InventoryItem[]>([]);
+  const [uniforms, setUniforms] = useState<Uniform[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [visibleDepartments, setVisibleDepartments] = useState<Record<Department, boolean>>({
@@ -70,21 +49,19 @@ export const InventoryScreen = ({ navigation }: any) => {
 
   const vesselId = user?.vesselId ?? null;
 
-  const matchesSearch = (item: InventoryItem) => {
+  const matchesSearch = (u: Uniform) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase().trim();
-    if ((item.title ?? '').toLowerCase().includes(q)) return true;
-    if ((item.description ?? '').toLowerCase().includes(q)) return true;
-    if ((item.location ?? '').toLowerCase().includes(q)) return true;
-    for (const row of item.items ?? []) {
-      if ((row.item ?? '').toLowerCase().includes(q)) return true;
-      if ((row.amount ?? '').toLowerCase().includes(q)) return true;
+    if ((u.label ?? '').toLowerCase().includes(q)) return true;
+    for (const e of u.entries ?? []) {
+      if ((e.size ?? '').toLowerCase().includes(q)) return true;
+      if ((e.color ?? '').toLowerCase().includes(q)) return true;
     }
     return false;
   };
 
-  const filteredItems = (items ?? [])
-    .filter((item) => visibleDepartments[item.department ?? 'INTERIOR'])
+  const filteredUniforms = (uniforms ?? [])
+    .filter((u) => visibleDepartments[u.department ?? 'INTERIOR'])
     .filter(matchesSearch);
 
   const toggleSelect = (id: string) => {
@@ -96,16 +73,16 @@ export const InventoryScreen = ({ navigation }: any) => {
     });
   };
 
-  const selectedItems = filteredItems.filter((item) => selectedIds.has(item.id));
+  const selectedUniforms = filteredUniforms.filter((u) => selectedIds.has(u.id));
 
   const handleExportPdf = async () => {
-    if (selectedItems.length === 0) {
-      Alert.alert('No selection', 'Select at least one inventory item to export.');
+    if (selectedUniforms.length === 0) {
+      Alert.alert('No selection', 'Select at least one label to export.');
       return;
     }
     setExporting(true);
     try {
-      await exportInventoryToPdf(selectedItems);
+      await exportUniformsToPdf(selectedUniforms);
       setExportMode(false);
       setSelectedIds(new Set());
     } catch (e) {
@@ -127,73 +104,57 @@ export const InventoryScreen = ({ navigation }: any) => {
   };
 
   const selectAllDepartments = () => {
-    setVisibleDepartments({
-      BRIDGE: true,
-      ENGINEERING: true,
-      EXTERIOR: true,
-      INTERIOR: true,
-      GALLEY: true,
-    });
+    setVisibleDepartments({ BRIDGE: true, ENGINEERING: true, EXTERIOR: true, INTERIOR: true, GALLEY: true });
   };
 
-  const handleDelete = (item: InventoryItem) => {
-    Alert.alert(
-      'Remove item',
-      `Remove "${item.title}" from inventory?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await inventoryService.delete(item.id);
-              setItems((prev) => prev.filter((i) => i.id !== item.id));
-            } catch (e) {
-              console.error('Delete inventory item error:', e);
-              Alert.alert('Error', 'Could not remove item.');
-            }
-          },
+  const handleDelete = (u: Uniform) => {
+    Alert.alert('Remove label', `Remove "${u.label}" and all its entries?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await uniformsService.delete(u.id);
+            setUniforms((prev) => prev.filter((i) => i.id !== u.id));
+          } catch (e) {
+            console.error('Delete uniform error:', e);
+            Alert.alert('Error', 'Could not remove label.');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
-  const loadItems = useCallback(async () => {
+  const loadUniforms = useCallback(async () => {
     if (!vesselId) return;
     setLoading(true);
     try {
-      const data = await inventoryService.getByVessel(vesselId);
-      setItems(data);
+      const data = await uniformsService.getByVessel(vesselId);
+      setUniforms(data);
     } catch (e) {
-      console.error('Load inventory items error:', e);
+      console.error('Load uniforms error:', e);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, [vesselId]);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadItems();
-    }, [loadItems])
-  );
+  useFocusEffect(useCallback(() => { loadUniforms(); }, [loadUniforms]));
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadItems();
+    loadUniforms();
   };
 
   const departmentDisplayText = DEPARTMENTS.every((d) => visibleDepartments[d])
     ? 'All departments'
-    : DEPARTMENTS.filter((d) => visibleDepartments[d])
-        .map((d) => d.charAt(0) + d.slice(1).toLowerCase())
-        .join(', ');
+    : DEPARTMENTS.filter((d) => visibleDepartments[d]).map((d) => d.charAt(0) + d.slice(1).toLowerCase()).join(', ');
 
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to use Inventory.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to use Uniforms.</Text>
       </View>
     );
   }
@@ -203,20 +164,14 @@ export const InventoryScreen = ({ navigation }: any) => {
       style={[styles.container, { backgroundColor: themeColors.background }]}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          colors={[COLORS.primary]}
-        />
-      }
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
     >
       <View style={styles.searchRow}>
         <Input
           variant="search"
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholder="Search by item, title, location…"
+          placeholder="Search by label, size, color…"
           style={styles.searchInput}
           returnKeyType="search"
         />
@@ -224,16 +179,9 @@ export const InventoryScreen = ({ navigation }: any) => {
       <View style={styles.createRow}>
         <Button
           title="Create"
-          onPress={() => navigation.navigate('AddEditInventoryItem')}
+          onPress={() => navigation.navigate('AddEditUniform')}
           variant="primary"
           fullWidth
-        />
-        <Button
-          title="Uniforms"
-          onPress={() => navigation.navigate('Uniforms')}
-          variant={themeColors.isDark ? 'outlineLight' : 'outline'}
-          fullWidth
-          style={styles.exportBtn}
         />
         <Button
           title={exportMode ? 'Cancel' : 'Export to PDF'}
@@ -252,13 +200,11 @@ export const InventoryScreen = ({ navigation }: any) => {
       </View>
       {exportMode && (
         <View style={styles.exportBar}>
-          <Text style={[styles.exportHint, { color: themeColors.textSecondary }]}>
-            Tap items to select, then export.
-          </Text>
+          <Text style={[styles.exportHint, { color: themeColors.textSecondary }]}>Tap labels to select, then export.</Text>
           <Button
-            title={exporting ? 'Exporting…' : `Export to PDF (${selectedItems.length})`}
+            title={exporting ? 'Exporting…' : `Export to PDF (${selectedUniforms.length})`}
             onPress={handleExportPdf}
-            disabled={exporting || selectedItems.length === 0}
+            disabled={exporting || selectedUniforms.length === 0}
             variant="primary"
             fullWidth
           />
@@ -278,32 +224,20 @@ export const InventoryScreen = ({ navigation }: any) => {
         <Modal visible transparent animationType="fade">
           <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentDropdownOpen(false)}>
             <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
-              <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
-                Filter by department
-              </Text>
+              <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Filter by department</Text>
               <TouchableOpacity
                 style={[styles.modalItem, DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
-                onPress={() => {
-                  selectAllDepartments();
-                  setDepartmentDropdownOpen(false);
-                }}
+                onPress={() => { selectAllDepartments(); setDepartmentDropdownOpen(false); }}
               >
-                <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                  All Departments
-                </Text>
+                <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>All Departments</Text>
               </TouchableOpacity>
               {DEPARTMENTS.map((dept) => (
                 <TouchableOpacity
                   key={dept}
                   style={[styles.modalItem, visibleDepartments[dept] && !DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
-                  onPress={() => {
-                    selectDepartment(dept);
-                    setDepartmentDropdownOpen(false);
-                  }}
+                  onPress={() => { selectDepartment(dept); setDepartmentDropdownOpen(false); }}
                 >
-                  <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                    {dept.charAt(0) + dept.slice(1).toLowerCase()}
-                  </Text>
+                  <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>{dept.charAt(0) + dept.slice(1).toLowerCase()}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -313,42 +247,29 @@ export const InventoryScreen = ({ navigation }: any) => {
 
       {loading ? (
         <ActivityIndicator size="small" color={COLORS.primary} style={styles.loader} />
-      ) : filteredItems.length === 0 ? (
+      ) : filteredUniforms.length === 0 ? (
         <Text style={[styles.empty, { color: themeColors.textSecondary }]}>
-          {items.length === 0
-            ? 'No inventory items yet. Tap Create to add one.'
-            : 'No items match your search or department filter.'}
+          {uniforms.length === 0 ? 'No uniform labels yet. Tap Create to add one.' : 'No labels match your search or department filter.'}
         </Text>
       ) : (
-        filteredItems.map((item) => {
-          const selected = selectedIds.has(item.id);
-          const dateStr = item.createdAt
-            ? new Date(item.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })
-            : '';
+        filteredUniforms.map((u) => {
+          const selected = selectedIds.has(u.id);
           return (
             <ButtonTagCard
-              key={item.id}
-              headerTitle={item.title ?? ''}
+              key={u.id}
+              headerTitle={u.label ?? ''}
               showCheckbox={exportMode}
               checked={selected}
-              onToggleSelect={() => toggleSelect(item.id)}
+              onToggleSelect={() => toggleSelect(u.id)}
               selected={exportMode && selected}
-              onEdit={() => navigation.navigate('AddEditInventoryItem', { itemId: item.id })}
-              onDelete={() => handleDelete(item)}
-              onPress={!exportMode ? () => navigation.navigate('AddEditInventoryItem', { itemId: item.id }) : undefined}
+              onEdit={() => navigation.navigate('AddEditUniform', { uniformId: u.id })}
+              onDelete={() => handleDelete(u)}
+              onPress={!exportMode ? () => navigation.navigate('AddEditUniform', { uniformId: u.id }) : undefined}
             >
-              {dateStr ? <ButtonTagRow label="Date" value={dateStr} /> : null}
-              <View style={[styles.deptBadge, { backgroundColor: getDepartmentColor(item.department, overrides) }]}>
-                <Text style={styles.deptBadgeText}>
-                  {(item.department ?? 'INTERIOR').charAt(0) + (item.department ?? 'INTERIOR').slice(1).toLowerCase()}
-                </Text>
+              <View style={[styles.deptBadge, { backgroundColor: getDepartmentColor(u.department, overrides) }]}>
+                <Text style={styles.deptBadgeText}>{(u.department ?? 'INTERIOR').charAt(0) + (u.department ?? 'INTERIOR').slice(1).toLowerCase()}</Text>
               </View>
-              <ButtonTagRow label="Location" value={item.location ?? ''} />
-              <ButtonTagRow label="Description" value={item.description ?? ''} />
-              <ButtonTagRow
-                label="Items"
-                value={`${item.items?.length ?? 0} ${(item.items?.length ?? 0) === 1 ? 'row' : 'rows'} (Amount · Item)`}
-              />
+              <ButtonTagRow label="Entries" value={`${u.entries?.length ?? 0} ${(u.entries?.length ?? 0) === 1 ? 'entry' : 'entries'}`} />
             </ButtonTagCard>
           );
         })
@@ -370,15 +291,9 @@ const styles = StyleSheet.create({
   exportHint: { fontSize: FONTS.sm, marginBottom: SPACING.sm },
   filterLabel: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs },
   dropdown: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: SPACING.lg,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg, borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.lg,
   },
   dropdownText: { fontSize: FONTS.base, fontWeight: '500' },
   dropdownChevron: { fontSize: 10 },
@@ -391,15 +306,8 @@ const styles = StyleSheet.create({
   loader: { marginVertical: SPACING.xl },
   empty: { fontSize: FONTS.base, paddingVertical: SPACING.xl },
   deptBadge: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 4,
-    borderRadius: BORDER_RADIUS.sm,
-    marginTop: SPACING.xs,
-    marginBottom: SPACING.sm,
-    alignSelf: 'flex-start',
+    paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: BORDER_RADIUS.sm,
+    marginTop: SPACING.xs, marginBottom: SPACING.sm, alignSelf: 'flex-start',
   },
   deptBadgeText: { fontSize: FONTS.xs, fontWeight: '600', color: COLORS.white },
-  cardMeta: { fontSize: FONTS.sm, marginTop: 2 },
-  cardDesc: { fontSize: FONTS.sm, marginTop: 2 },
-  cardRows: { fontSize: FONTS.xs, marginTop: 4 },
 });

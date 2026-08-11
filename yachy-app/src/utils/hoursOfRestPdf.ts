@@ -106,7 +106,6 @@ export async function generateHoursOfRestPdf(data: PdfMonthData, filename: strin
     '<td class="infolabel">Vessel</td><td>' + escapeHtml(data.vesselName) + '</td>' +
     '</tr><tr>' +
     '<td class="infolabel">Month</td><td>' + escapeHtml(data.monthLabel) + '</td>' +
-    '<td class="infolabel">Watchkeeper</td><td>' + (data.isWatchKeeper ? 'Yes' : 'No') + '</td>' +
     '</tr></table>' +
     '<table class="grid"><thead><tr>' +
     '<th>Date</th>' + hourHeaderCells +

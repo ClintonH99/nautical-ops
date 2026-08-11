@@ -23,7 +23,7 @@ const CATEGORIES = [
     listType: 'general' as const,
   },
   {
-    icon: '✈️',
+    icon: '🛥️',
     label: 'Trip Shopping',
     listType: 'trip' as const,
   },

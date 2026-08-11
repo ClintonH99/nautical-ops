@@ -8,6 +8,7 @@ import { Department } from '../types';
 
 export interface ShoppingListItem {
   text: string;
+  amount?: string;
   checked: boolean;
 }
 
@@ -65,7 +66,7 @@ class ShoppingListsService {
   async create(input: CreateShoppingListInput): Promise<ShoppingList> {
     const items = input.items
       .filter((item) => item.text.trim().length > 0)
-      .map((item) => ({ text: item.text.trim(), checked: item.checked }));
+      .map((item) => ({ text: item.text.trim(), amount: item.amount?.trim(), checked: item.checked }));
     const { data, error } = await supabase
       .from('shopping_lists')
       .insert([
@@ -111,19 +112,9 @@ class ShoppingListsService {
     if (error) throw error;
   }
 
-  async getOrCreateMasterTripList(vesselId: string, createdBy?: string): Promise<ShoppingList> {
+  async getMasterTripLists(vesselId: string): Promise<ShoppingList[]> {
     const existing = await this.getByVessel(vesselId);
-    const master = existing.find((l) => l.listType === 'trip' && l.isMaster);
-    if (master) return master;
-    return this.create({
-      vesselId,
-      department: 'INTERIOR',
-      listType: 'trip',
-      title: 'Standard Trip Items',
-      items: [{ text: '', checked: false }],
-      createdBy,
-      isMaster: true,
-    });
+    return existing.filter((l) => l.listType === 'trip' && l.isMaster);
   }
 
   private mapRow(row: Record<string, unknown>): ShoppingList {

@@ -49,6 +49,8 @@ export { ShoppingListScreen } from './ShoppingListScreen';
 export { AddEditShoppingListScreen } from './AddEditShoppingListScreen';
 export { InventoryScreen } from './InventoryScreen';
 export { AddEditInventoryItemScreen } from './AddEditInventoryItemScreen';
+export { UniformsScreen } from './UniformsScreen';
+export { AddEditUniformScreen } from './AddEditUniformScreen';
 export { DepartmentColorSettingsScreen } from './DepartmentColorSettingsScreen';
 export { ThemeSettingsScreen } from './ThemeSettingsScreen';
 export { NotificationSettingsScreen } from './NotificationSettingsScreen';

@@ -3,7 +3,7 @@
  * Title, department (on create), bullet-point list of items
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -38,6 +38,7 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
   const listId = route?.params?.listId as string | undefined;
   const presetTitle = route?.params?.presetTitle as string | undefined;
   const listType = (route?.params?.listType as ShoppingListType) ?? 'general';
+  const asMasterList = !!route?.params?.asMasterList;
   const isEdit = !!listId;
 
   const [title, setTitle] = useState(presetTitle ?? '');
@@ -88,15 +89,21 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
     }
   }, [isEdit, presetTitle]);
 
-  const addItem = () => setItems((prev) => [...prev, { text: '', checked: false }]);
+  const itemInputRefs = useRef<Array<any>>([]);
+
+  const addItem = () => {
+    const newIndex = items.length;
+    setItems((prev) => [...prev, { text: '', checked: false }]);
+    setTimeout(() => itemInputRefs.current[newIndex]?.focus(), 50);
+  };
   const removeItem = (index: number) => {
     if (items.length <= 1) return;
     setItems((prev) => prev.filter((_, i) => i !== index));
   };
-  const setItemAt = (index: number, value: string) => {
+  const setItemAt = (index: number, field: 'text' | 'amount', value: string) => {
     setItems((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], text: value };
+      next[index] = { ...next[index], [field]: value };
       return next;
     });
   };
@@ -123,6 +130,7 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
           title: trimmedTitle,
           items: trimmedItems,
           createdBy: user?.id,
+          isMaster: asMasterList,
         });
         Alert.alert('Created', 'Shopping list added.');
       }
@@ -190,7 +198,7 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
           placeholder="e.g. Galley weekly shop"
           autoCapitalize="words"
         />
-        {!isEdit && (
+        {!isEdit && !asMasterList && (
           <View style={styles.deptSection}>
             <Text style={[styles.deptLabel, { color: themeColors.textPrimary }]}>Department</Text>
             <TouchableOpacity
@@ -251,13 +259,30 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
           <View key={index} style={styles.itemRow}>
             <TextInput
               style={[
+                styles.amountInput,
+                { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+              ]}
+              value={item.amount ?? ''}
+              onChangeText={(v) => setItemAt(index, 'amount', v)}
+              placeholder="#"
+              placeholderTextColor={COLORS.textTertiary}
+              returnKeyType="next"
+              onSubmitEditing={() => itemInputRefs.current[index]?.focus()}
+            />
+            <TextInput
+              ref={(el) => { itemInputRefs.current[index] = el; }}
+              style={[
                 styles.itemInput,
                 { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
               ]}
               value={item.text}
-              onChangeText={(v) => setItemAt(index, v)}
+              onChangeText={(v) => setItemAt(index, 'text', v)}
               placeholder="Item"
               placeholderTextColor={COLORS.textTertiary}
+              returnKeyType="done"
+              onSubmitEditing={() => {
+                if (index === items.length - 1) addItem();
+              }}
             />
             <TouchableOpacity
               onPress={() => removeItem(index)}
@@ -270,9 +295,6 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
             </TouchableOpacity>
           </View>
         ))}
-        <TouchableOpacity onPress={addItem} style={styles.addItemBtn}>
-          <Text style={styles.addItemBtnText}>+ Add item</Text>
-        </TouchableOpacity>
 
         <View style={styles.actions}>
           <Button
@@ -329,6 +351,16 @@ const styles = StyleSheet.create({
   deptSection: { marginBottom: SPACING.lg },
   deptLabel: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs },
   itemRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm },
+  amountInput: {
+    width: 62,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    fontSize: FONTS.base,
+    marginRight: SPACING.sm,
+  },
   itemInput: {
     flex: 1,
     borderWidth: 1,
@@ -338,8 +370,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     fontSize: FONTS.base,
   },
-  addItemBtn: { paddingVertical: SPACING.sm, paddingHorizontal: SPACING.sm, marginTop: SPACING.xs },
-  addItemBtnText: { fontSize: FONTS.sm, fontWeight: '600', color: COLORS.primary },
   removeBtn: { paddingVertical: SPACING.sm, paddingHorizontal: SPACING.sm, marginLeft: SPACING.xs },
   removeBtnText: { fontSize: FONTS.sm, color: COLORS.danger },
   removeBtnDisabled: { color: COLORS.textTertiary },

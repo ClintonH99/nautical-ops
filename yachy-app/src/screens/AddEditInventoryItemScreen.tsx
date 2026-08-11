@@ -3,7 +3,7 @@
  * Department selector, Title, Location, Description, Amount | Item table
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -78,7 +78,13 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
     }, [loadItem])
   );
 
-  const addRow = () => setRows((prev) => [...prev, { ...defaultRow }]);
+  const amountInputRefs = useRef<Array<any>>([]);
+
+  const addRow = () => {
+    const newIndex = rows.length;
+    setRows((prev) => [...prev, { ...defaultRow }]);
+    setTimeout(() => amountInputRefs.current[newIndex]?.focus(), 50);
+  };
   const removeRow = (index: number) => {
     if (rows.length <= 1) return;
     setRows((prev) => prev.filter((_, i) => i !== index));
@@ -261,22 +267,10 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
           Amount & Item
         </Text>
         <View style={[styles.table, { backgroundColor: themeColors.surface }]}>
-          <View style={[styles.tableHeader, { backgroundColor: themeColors.surfaceAlt }]}>
-            <Text
-              style={[styles.tableHeaderCell, styles.amountCol, { color: themeColors.textPrimary }]}
-            >
-              Amount
-            </Text>
-            <Text
-              style={[styles.tableHeaderCell, styles.itemCol, { color: themeColors.textPrimary }]}
-            >
-              Item
-            </Text>
-            <View style={styles.actionsCol} />
-          </View>
           {rows.map((row, index) => (
             <View key={index} style={styles.tableRow}>
               <TextInput
+                ref={(el) => { amountInputRefs.current[index] = el; }}
                 style={[
                   styles.tableInput,
                   styles.amountCol,
@@ -284,8 +278,9 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
                 ]}
                 value={row.amount}
                 onChangeText={(v) => setRowAt(index, 'amount', v)}
-                placeholder="Amount"
+                placeholder="#"
                 placeholderTextColor={COLORS.gray400}
+                returnKeyType="next"
               />
               <TextInput
                 style={[
@@ -297,6 +292,10 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
                 onChangeText={(v) => setRowAt(index, 'item', v)}
                 placeholder="Item"
                 placeholderTextColor={COLORS.gray400}
+                returnKeyType="done"
+                onSubmitEditing={() => {
+                  if (index === rows.length - 1) addRow();
+                }}
               />
               <TouchableOpacity
                 onPress={() => removeRow(index)}
@@ -310,9 +309,6 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
             </View>
           ))}
         </View>
-        <TouchableOpacity onPress={addRow} style={styles.addRowBtn}>
-          <Text style={styles.addRowBtnText}>+ Add New</Text>
-        </TouchableOpacity>
 
         <View style={styles.actions}>
           <Button
@@ -438,14 +434,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  amountCol: { width: 90, minWidth: 90, flex: 0 },
+  amountCol: { width: 48, minWidth: 48, flex: 0 },
   itemCol: { flex: 1, marginLeft: SPACING.sm },
   actionsCol: { width: 70, minWidth: 70 },
   removeBtn: { paddingVertical: SPACING.xs, paddingHorizontal: SPACING.sm, marginLeft: SPACING.sm },
   removeBtnText: { fontSize: FONTS.xs, fontFamily: FONTS.medium, color: COLORS.primary },
   removeBtnDisabled: { color: COLORS.gray400 },
-  addRowBtn: { marginTop: SPACING.md, paddingVertical: SPACING.sm, alignItems: 'center' },
-  addRowBtnText: { fontSize: FONTS.base, fontFamily: FONTS.medium, color: COLORS.primary },
   actions: { marginTop: SPACING.xl },
   deleteBtn: { marginTop: SPACING.md },
 });
