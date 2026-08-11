@@ -81,8 +81,8 @@ export const SettingsScreen = ({ navigation }: any) => {
                 }
                 return;
               }
-              await authService.signOut();
               logout();
+              await authService.signOut();
             } catch {
               Alert.alert('Error', 'Could not delete account. Please contact support@nautical-ops.com');
             }
