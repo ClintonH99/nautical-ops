@@ -31,7 +31,6 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
   const { user } = useAuthStore();
   const [publishedTimetables, setPublishedTimetables] = useState<PublishedWatchTimetable[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewingSchedule, setViewingSchedule] = useState<PublishedWatchTimetable | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -61,7 +60,7 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
         if (timetableId && data && data.length > 0) {
           const timetable = data.find((t) => t.id === timetableId);
           if (timetable) {
-            setViewingSchedule(timetable);
+            navigation.navigate('WatchScheduleDetail', { schedule: timetable });
             navigation.setParams({ timetableId: undefined });
           }
         }
@@ -88,7 +87,6 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
             setDeleting(true);
             try {
               await watchKeepingService.delete(timetable.id);
-              setViewingSchedule(null);
               loadPublished();
               Alert.alert('Deleted', 'Watch Schedule has been deleted.');
             } catch (e) {
@@ -104,7 +102,6 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
   };
 
   const handleEdit = (timetable: PublishedWatchTimetable) => {
-    setViewingSchedule(null);
     navigation.navigate('CreateWatchTimetable', { timetableId: timetable.id });
   };
 
@@ -220,7 +217,7 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
           <TouchableOpacity
             key={t.id}
             style={[styles.card, { backgroundColor: themeColors.surface }]}
-            onPress={() => setViewingSchedule(t)}
+            onPress={() => navigation.navigate('WatchScheduleDetail', { schedule: t })}
             activeOpacity={0.8}
           >
             <View style={styles.cardHeader}>
@@ -261,66 +258,6 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
         ))
       )}
 
-      {viewingSchedule && (
-        <Modal visible animationType="slide">
-          <ScrollView
-            style={[styles.viewModal, { backgroundColor: themeColors.background }]}
-            contentContainerStyle={styles.viewModalContent}
-            showsVerticalScrollIndicator
-          >
-            <View style={[styles.viewHeader, { backgroundColor: themeColors.surface }]}>
-              <Text style={[styles.viewTitle, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Watch Schedule</Text>
-              <Text style={[styles.viewDate, { color: themeColors.textSecondary }]}>
-                {formatLocalDateString(scheduleDateStr(viewingSchedule), { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-              </Text>
-            </View>
-            <View style={styles.viewContent}>
-              {viewingSchedule.startLocation ? <Text style={[styles.viewMeta, { color: themeColors.textSecondary }]}>From: {viewingSchedule.startLocation}</Text> : null}
-              {viewingSchedule.destination ? <Text style={[styles.viewMeta, { color: themeColors.textSecondary }]}>To: {viewingSchedule.destination}</Text> : null}
-              <Text style={[styles.viewMeta, { color: themeColors.textSecondary }]}>Start: {viewingSchedule.startTime}</Text>
-              <View style={styles.slots}>
-                {viewingSchedule.slots.map((slot, idx) => (
-                  <View key={idx} style={[styles.slotRow, { backgroundColor: themeColors.surface }]}>
-                    <Text style={[styles.slotCrew, { color: themeColors.textPrimary }]}>{slot.crewName}</Text>
-                    {slot.crewPosition ? <Text style={[styles.slotRole, { color: themeColors.textSecondary }]}>{slot.crewPosition}</Text> : null}
-                    <Text style={styles.slotTime}>{slot.startTimeStr} – {slot.endTimeStr}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-            <View style={styles.viewActions}>
-              <TouchableOpacity
-                style={styles.exportBtn}
-                onPress={() => exportWatchSchedulePdf(viewingSchedule)}
-                disabled={exportingPdf}
-              >
-                <Text style={styles.exportBtnText}>{exportingPdf ? 'Exporting...' : 'Export to PDF'}</Text>
-              </TouchableOpacity>
-              {isHOD && (
-                <>
-                  <TouchableOpacity
-                    style={styles.editBtn}
-                    onPress={() => handleEdit(viewingSchedule)}
-                    disabled={deleting}
-                  >
-                    <Text style={styles.editBtnText}>Edit</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.deleteBtn}
-                    onPress={() => handleDelete(viewingSchedule)}
-                    disabled={deleting}
-                  >
-                    <Text style={styles.deleteBtnText}>{deleting ? 'Deleting...' : 'Delete'}</Text>
-                  </TouchableOpacity>
-                </>
-              )}
-              <TouchableOpacity style={styles.closeBtn} onPress={() => setViewingSchedule(null)}>
-                <Text style={[styles.closeBtnText, { color: themeColors.textSecondary }]}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        </Modal>
-      )}
     </ScrollView>
   );
 };

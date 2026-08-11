@@ -181,9 +181,7 @@ export const FuelLogScreen = ({ navigation }: any) => {
         </>
       )}
 
-      {loading ? (
-        <LoadingSpinner />
-      ) : (
+      {loading ? null : (
         <ScrollView
           contentContainerStyle={[
             styles.listContent,

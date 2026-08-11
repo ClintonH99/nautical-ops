@@ -5,7 +5,7 @@
  * (built in a later pass).
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -20,8 +20,9 @@ import {
   Modal,
   Pressable,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { InfoModal } from '../components/InfoModal';
 import userService from '../services/user';
 import { User } from '../types';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
@@ -78,6 +79,29 @@ function getMonday(d: Date): Date {
 }
 
 export const WatchDutiesScreen = () => {
+  const navigation = useNavigation<any>();
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <InfoModal
+          screenKey="watch_duties"
+          autoShow={false}
+          content={{
+            title: 'Watch Duties',
+            description: 'Rules, the week-ahead watch schedule, and department duty checklists.',
+            features: [
+              'View Watch Duty Rules - Captain/HOD can edit, everyone can view and export',
+              'See the week-ahead watch assignment schedule',
+              'Check off duty checklist items by department',
+              'Stay on top of who is covering what, and when',
+            ],
+          }}
+        />
+      ),
+    });
+  }, [navigation]);
+
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const canManage = user?.role === 'CAPTAIN_MOV' || user?.role === 'HOD';

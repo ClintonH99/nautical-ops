@@ -179,9 +179,7 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
         </>
       )}
 
-      {loading ? (
-        <LoadingSpinner />
-      ) : (
+      {loading ? null : (
         <ScrollView
           contentContainerStyle={[
             styles.listContent,

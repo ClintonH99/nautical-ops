@@ -86,6 +86,7 @@ import {
   CreateRulesScreen,
 } from '../screens';
 import { CreateVesselScreen, CaptainWelcomeScreen } from '../screens';
+import { WatchScheduleDetailScreen } from '../screens/WatchScheduleDetailScreen';
 import { MainTabsNavigator } from './MainTabsNavigator';
 import { useAuthStore, useDepartmentColorStore, useThemeStore, BACKGROUND_THEMES } from '../store';
 import authService from '../services/auth';
@@ -851,6 +852,14 @@ export const RootNavigator = () => {
               <Stack.Screen
                 name="WatchSchedule"
                 component={WatchScheduleScreen}
+                options={{
+                  title: 'Watch Schedule',
+                  headerShown: true,
+                }}
+              />
+              <Stack.Screen
+                name="WatchScheduleDetail"
+                component={WatchScheduleDetailScreen}
                 options={{
                   title: 'Watch Schedule',
                   headerShown: true,
