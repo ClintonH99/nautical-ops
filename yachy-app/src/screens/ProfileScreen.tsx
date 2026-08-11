@@ -19,12 +19,96 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES, SHADOWS } from '../constants/theme';
 import { useAuthStore, useThemeStore, BACKGROUND_THEMES } from '../store';
+import { supabase } from '../services/supabase';
+import authService from '../services/auth';
 import { Button, LoadingSpinner } from '../components';
 import userService from '../services/user';
 import { Department } from '../types';
 
 export const ProfileScreen = ({ navigation }: any) => {
   const { user, setUser } = useAuthStore();
+  const isCaptain = user?.role === 'CAPTAIN_MOV';
+
+  const refreshUser = async () => {
+    if (!user?.id) return;
+    const fresh = await authService.getUserProfile(user.id);
+    if (fresh) setUser(fresh);
+  };
+
+  const callVesselFunction = async (fnName: string) => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+    if (!accessToken) {
+      Alert.alert('Error', 'Could not verify your session. Please try again.');
+      return null;
+    }
+    const { data, error } = await supabase.functions.invoke(fnName, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (error || data?.error) {
+      const msg = data?.error || 'Something went wrong. Please contact support@nautical-ops.com';
+      if (msg.includes('only Captain/MOV')) {
+        Alert.alert("You're the only Captain", msg, [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Go to Crew Management', onPress: () => navigation.navigate('CrewManagement') },
+        ]);
+      } else {
+        Alert.alert('Error', msg);
+      }
+      return null;
+    }
+    return data;
+  };
+
+  const handleLeaveVessel = () => {
+    Alert.alert(
+      'Leave Vessel',
+      "You'll move to your own private account. The vessel and crew continue without you. This cannot be undone.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Leave Vessel',
+          style: 'destructive',
+          onPress: async () => {
+            const result = await callVesselFunction('leave-vessel');
+            if (result?.success) {
+              await refreshUser();
+              Alert.alert('Done', "You've left the vessel and now have your own account.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteVessel = () => {
+    Alert.alert(
+      'Delete Vessel',
+      "This cancels the subscription and moves every crew member (including you) onto their own private account. This cannot be undone. If you subscribed through the iOS app, you'll also need to cancel it separately in your Apple ID Settings - Apple doesn't allow this to be done from within the app.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Vessel',
+          style: 'destructive',
+          onPress: async () => {
+            const result = await callVesselFunction('delete-vessel');
+            if (result?.success) {
+              await refreshUser();
+              if (result.needsManualAppleCancellation) {
+                Alert.alert(
+                  'Vessel Deleted',
+                  "One more step: since you subscribed through the iOS app, go to your Apple ID Settings and cancel the subscription there too, or you'll keep being charged."
+                );
+              } else {
+                Alert.alert('Done', 'The vessel has been deleted.');
+              }
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const backgroundTheme = useThemeStore((s) => s.backgroundTheme);
   const themeColors = BACKGROUND_THEMES[backgroundTheme];
   const [isEditing, setIsEditing] = useState(false);
@@ -507,7 +591,7 @@ export const ProfileScreen = ({ navigation }: any) => {
           </Text>
           <View style={[styles.settingsCard, { backgroundColor: themeColors.surface }]}>
             <TouchableOpacity
-              style={[styles.settingsItem, styles.settingsItemLast]}
+              style={[styles.settingsItem, isCaptain ? undefined : styles.settingsItemLast]}
               onPress={() => navigation.navigate('JoinVessel')}
               activeOpacity={0.7}
             >
@@ -524,6 +608,46 @@ export const ProfileScreen = ({ navigation }: any) => {
               </View>
               <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>{'\u203A'}</Text>
             </TouchableOpacity>
+            {!!user?.vesselId && (
+              <TouchableOpacity
+                style={styles.settingsItem}
+                onPress={handleLeaveVessel}
+                activeOpacity={0.7}
+              >
+                <View style={styles.settingsItemLeft}>
+                  <Text style={styles.settingsIcon}>{'\u26F5'}</Text>
+                  <View style={styles.settingsTextContainer}>
+                    <Text style={[styles.settingsLabel, { color: themeColors.textPrimary }]}>
+                      Leave Vessel
+                    </Text>
+                    <Text style={[styles.settingsDescription, { color: themeColors.textSecondary }]}>
+                      Step away - the vessel and crew continue without you
+                    </Text>
+                  </View>
+                </View>
+                <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>{'\u203A'}</Text>
+              </TouchableOpacity>
+            )}
+            {isCaptain && (
+              <TouchableOpacity
+                style={[styles.settingsItem, styles.settingsItemLast]}
+                onPress={handleDeleteVessel}
+                activeOpacity={0.7}
+              >
+                <View style={styles.settingsItemLeft}>
+                  <Text style={styles.settingsIcon}>{'\u26A0\uFE0F'}</Text>
+                  <View style={styles.settingsTextContainer}>
+                    <Text style={[styles.settingsLabel, { color: COLORS.danger }]}>
+                      Delete Vessel
+                    </Text>
+                    <Text style={[styles.settingsDescription, { color: themeColors.textSecondary }]}>
+                      Cancel the subscription and remove all crew
+                    </Text>
+                  </View>
+                </View>
+                <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>{'\u203A'}</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
         {/* Settings Sections */}

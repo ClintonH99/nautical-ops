@@ -18,6 +18,7 @@ import {
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore, useThemeStore, BACKGROUND_THEMES } from '../store';
+import { supabase } from '../services/supabase';
 import { Button } from '../components';
 import authService from '../services/auth';
 import userService from '../services/user';
@@ -59,6 +60,27 @@ export const SettingsScreen = ({ navigation }: any) => {
           style: 'destructive',
           onPress: async () => {
             try {
+              const { data: sessionData } = await supabase.auth.getSession();
+              const accessToken = sessionData?.session?.access_token;
+              if (!accessToken) {
+                Alert.alert('Error', 'Could not verify your session. Please try again.');
+                return;
+              }
+              const { data, error } = await supabase.functions.invoke('delete-account', {
+                headers: { Authorization: `Bearer ${accessToken}` },
+              });
+              if (error || data?.error) {
+                const msg = data?.error || 'Could not delete account. Please contact support@nautical-ops.com';
+                if (msg.includes('only Captain/MOV')) {
+                  Alert.alert('You\'re the only Captain', msg, [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Go to Crew Management', onPress: () => navigation.navigate('CrewManagement') },
+                  ]);
+                } else {
+                  Alert.alert('Error', msg);
+                }
+                return;
+              }
               await authService.signOut();
               logout();
             } catch {
