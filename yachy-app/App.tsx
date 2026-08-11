@@ -6,6 +6,7 @@
 import './src/lib/sentry';
 import { useEffect } from 'react';
 import { Platform, View, Text, StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import * as Sentry from '@sentry/react-native';
 import { useFonts } from 'expo-font';
@@ -49,10 +50,10 @@ function AppContent() {
   }
 
   return (
-    <>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <RootNavigator />
       <StatusBar style="auto" />
-    </>
+    </GestureHandlerRootView>
   );
 }
 
