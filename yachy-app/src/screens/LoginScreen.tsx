@@ -70,7 +70,7 @@ export const LoginScreen = ({ navigation }: any) => {
 
       if (user) {
         // TODO: Re-enable subscription check once payment flow is set up
-        // const isCaptain = user.role === 'HOD' || user.position?.toLowerCase().includes('captain');
+        // const isCaptain = user.role === 'CAPTAIN_MOV';
         // if (!isCaptain && user.vesselId) {
         //   const subscription = await getVesselSubscription(user.vesselId);
         //   if (subscription?.status !== 'active') {

@@ -9,20 +9,17 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, StatusBar, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FONTS, SPACING } from '../constants/theme';
+import { useThemeColors } from '../hooks/useThemeColors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 import { useAuthStore } from '../store';
 
-const MARITIME = {
-  bgDark: '#0f172a',
-  textOnDark: '#f8fafc',
-  textMuted: '#94a3b8',
-  gold: '#c9a227',
-};
+const ACCENT_GOLD = '#c9a227';
 
 const WELCOME_DURATION_MS = 3000;
 
 export const WelcomeScreen = ({ navigation }: any) => {
+  const themeColors = useThemeColors();
   const { isAuthenticated, user } = useAuthStore();
   const isCaptain = user?.role === 'CAPTAIN_MOV';
   const hasVessel = !!user?.vesselId;
@@ -44,23 +41,29 @@ export const WelcomeScreen = ({ navigation }: any) => {
   }, [navigation, isAuthenticated, user, isCaptain, hasVessel]);
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={MARITIME.bgDark} />
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <StatusBar
+        barStyle={themeColors.isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={themeColors.background}
+      />
       <View style={styles.hero}>
-        <View style={styles.heroBadge}>
-          <Ionicons name="boat-outline" size={20} color={MARITIME.gold} />
-          <Text style={styles.heroBadgeText}>Nautical Ops</Text>
+        <View style={[styles.heroBadge, { backgroundColor: themeColors.surface }]}>
+          <Ionicons name="boat-outline" size={20} color={ACCENT_GOLD} />
+          <Text style={[styles.heroBadgeText, { color: themeColors.textPrimary }]}>Nautical Ops</Text>
         </View>
-        <Text style={styles.heroTitle}>Welcome to</Text>
+        <Text style={[styles.heroTitle, { color: themeColors.textPrimary }]}>Welcome to</Text>
         <Text
           style={[
             styles.heroNauticalOps,
+            { color: themeColors.textPrimary },
             { fontSize: Math.floor((SCREEN_WIDTH - SPACING.xl * 2) / 6) },
           ]}
         >
           Nautical Ops
         </Text>
-        <Text style={styles.heroSubtitle}>An App for Crew from Crew.</Text>
+        <Text style={[styles.heroSubtitle, { color: themeColors.textSecondary }]}>
+          An App for Crew from Crew.
+        </Text>
         <View style={styles.heroAccent} />
       </View>
     </View>
@@ -70,7 +73,6 @@ export const WelcomeScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: MARITIME.bgDark,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -82,7 +84,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.xs,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     borderRadius: 9999,
@@ -91,27 +92,23 @@ const styles = StyleSheet.create({
   heroBadgeText: {
     fontSize: FONTS.sm,
     fontWeight: '600',
-    color: MARITIME.textOnDark,
     letterSpacing: 0.5,
   },
   heroTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: MARITIME.textOnDark,
     marginBottom: SPACING.xs,
     letterSpacing: -0.5,
     textAlign: 'center',
   },
   heroNauticalOps: {
     fontWeight: '800',
-    color: MARITIME.textOnDark,
     marginBottom: SPACING.sm,
     letterSpacing: -0.5,
     textAlign: 'center',
   },
   heroSubtitle: {
     fontSize: FONTS.base,
-    color: MARITIME.textMuted,
     textAlign: 'center',
     lineHeight: 24,
     maxWidth: 300,
@@ -121,7 +118,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 4,
     borderRadius: 2,
-    backgroundColor: MARITIME.gold,
+    backgroundColor: ACCENT_GOLD,
     opacity: 0.9,
   },
 });
