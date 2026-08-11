@@ -102,12 +102,8 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
       valid = false;
     }
 
-    // Invite code is REQUIRED for crew members
-    if (!formData.inviteCode.trim()) {
-      newErrors.inviteCode = 'Invite code is required';
-      valid = false;
-    }
-
+    // Invite code is now optional - a crew member can create a bare account
+    // and use Join Vessel later once they have a real code from a paying vessel.
     if (!acceptedTerms) {
       newErrors.terms = 'You must agree to the Terms & Conditions and Privacy Policy';
       valid = false;

@@ -17,6 +17,13 @@ if (DSN && !__DEV__) {
     tracesSampleRate: 0.2,
     // Only enable in production
     enabled: !__DEV__,
+    // Structured logs via Sentry.logger.*
+    enableLogs: true,
+    // Session Replay - masks text/images by default, consistent with the
+    // no-PII stance above
+    replaysOnErrorSampleRate: 1.0,
+    replaysSessionSampleRate: 0.1,
+    integrations: [Sentry.mobileReplayIntegration()],
   });
 }
 

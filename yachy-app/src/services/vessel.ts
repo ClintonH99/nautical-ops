@@ -8,6 +8,7 @@ import { supabase } from './supabase';
 export interface CreateVesselData {
   name: string;
   managementCompanyId?: string;
+  isSolo?: boolean;
 }
 
 export interface Vessel {
@@ -76,7 +77,7 @@ class VesselService {
   /**
    * Create a new vessel
    */
-  async createVessel({ name, managementCompanyId }: CreateVesselData): Promise<Vessel> {
+  async createVessel({ name, managementCompanyId, isSolo }: CreateVesselData): Promise<Vessel> {
     try {
       // Generate unique invite code
       const inviteCode = await this.generateUniqueInviteCode();
@@ -90,6 +91,7 @@ class VesselService {
         management_company_id: managementCompanyId || null,
         invite_code: inviteCode,
         invite_expiry: inviteExpiry.toISOString(),
+        is_solo: isSolo ?? false,
       };
 
       const { data, error } = await supabase

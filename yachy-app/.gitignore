@@ -49,3 +49,5 @@ google-service-account.json
 /android
 .vercel
 add-trials.mjs
+
+.env.local

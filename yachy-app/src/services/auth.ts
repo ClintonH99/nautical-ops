@@ -318,6 +318,13 @@ class AuthService {
         } else if (validatedVessel) {
           userProfile.vessel_id = validatedVessel.id;
           joinedViaInviteCode = true;
+        } else if (role === 'CREW') {
+          // No invite code provided - give this crew member their own
+          // private vessel automatically, same createVessel() a Captain
+          // uses, just auto-named rather than asked for a name. They can
+          // move to a real vessel later via Join Vessel with a real code.
+          const soloVessel = await vesselService.createVessel({ name: 'Crew Account', isSolo: true });
+          userProfile.vessel_id = soloVessel.id;
         }
         if (__DEV__)
           console.log('💾 Creating user profile with vessel_id:', userProfile.vessel_id || 'null');
@@ -498,6 +505,10 @@ class AuthService {
         .eq('vessel_id', data.id)
         .in('status', ['active', 'trialing'])
         .maybeSingle();
+
+      if (!subscription) {
+        throw new Error('This vessel does not have an active subscription. Ask the Captain to subscribe before crew can join.');
+      }
 
       if (subscription) {
         const maxCrew = PLAN_MAX_CREW[subscription.plan_tier] ?? Infinity;

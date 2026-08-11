@@ -55,6 +55,14 @@
         {
           "photosPermission": "Allow Nautical Ops to access your photos for profile and vessel images."
         }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "nautical-ops-mobile",
+          "organization": "nautical-ops"
+        }
       ]
     ],
     "extra": {
