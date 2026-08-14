@@ -118,7 +118,11 @@ class AuthService {
       });
       if (sessionError) throw sessionError;
       if (!sessionData.user) return { user: null, session: null };
-      const userData = await this.ensureOAuthUserProfile(sessionData.user);
+      const userData = await this.ensureOAuthUserProfile(sessionData.user, null, true);
+      if (!userData) {
+        await supabase.auth.signOut();
+        throw new Error('NO_ACCOUNT');
+      }
       return { user: userData, session: sessionData.session };
     } catch (error: any) {
       if (__DEV__) console.error('Google sign in error:', error);
@@ -163,7 +167,11 @@ class AuthService {
         });
         if (sessionError) throw sessionError;
         if (!sessionData.user) return { user: null, session: null };
-        const userData = await this.ensureOAuthUserProfile(sessionData.user);
+        const userData = await this.ensureOAuthUserProfile(sessionData.user, null, true);
+        if (!userData) {
+          await supabase.auth.signOut();
+          throw new Error('NO_ACCOUNT');
+        }
         return { user: userData, session: sessionData.session };
       } catch (error: any) {
         if (__DEV__) console.error('Apple sign in (web) error:', error);
@@ -204,7 +212,11 @@ class AuthService {
           await supabase.auth.updateUser({ data: { full_name: fullName } });
         }
       }
-      const userData = await this.ensureOAuthUserProfile(data.user, credential.fullName);
+      const userData = await this.ensureOAuthUserProfile(data.user, credential.fullName, true);
+      if (!userData) {
+        await supabase.auth.signOut();
+        throw new Error('NO_ACCOUNT');
+      }
       return { user: userData, session: data.session };
     } catch (error: any) {
       if (error?.code === 'ERR_REQUEST_CANCELED') return { user: null, session: null };
@@ -219,10 +231,15 @@ class AuthService {
       givenName?: string | null;
       middleName?: string | null;
       familyName?: string | null;
-    } | null
+    } | null,
+    existingOnly = false
   ): Promise<User | null> {
-    let profile = await this.getUserProfile(authUser.id);
+    const profile = await this.getUserProfile(authUser.id);
     if (profile) return profile;
+    // Social sign-in is a faster way back in for people who already
+    // registered - it must not mint an account with no role, department
+    // or vessel. Callers pass existingOnly to enforce that.
+    if (existingOnly) return null;
     const name = appleFullName
       ? [appleFullName.givenName, appleFullName.middleName, appleFullName.familyName]
           .filter((s): s is string => s != null && s !== '')

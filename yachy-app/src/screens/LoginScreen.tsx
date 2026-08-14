@@ -29,6 +29,7 @@ export const LoginScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({ email: '', password: '' });
@@ -59,6 +60,32 @@ export const LoginScreen = ({ navigation }: any) => {
 
     setErrors(newErrors);
     return valid;
+  };
+
+  const handleSocialSignIn = async (provider: 'google' | 'apple') => {
+    if (socialLoading) return;
+    setSocialLoading(provider);
+    setLoginError('');
+    try {
+      const { user } =
+        provider === 'google'
+          ? await authService.signInWithGoogle()
+          : await authService.signInWithApple();
+      // A cancelled sign-in returns no user and is not an error.
+      if (user) setUser(user);
+    } catch (e: any) {
+      if (e?.message === 'NO_ACCOUNT') {
+        const msg = 'No account found for that sign-in. Please create an account first.';
+        setLoginError(msg);
+        if (Platform.OS !== 'web') Alert.alert('No account found', msg);
+      } else {
+        const msg = e?.message || 'Could not sign in. Please try again.';
+        setLoginError(msg);
+        if (Platform.OS !== 'web') Alert.alert('Sign in failed', msg);
+      }
+    } finally {
+      setSocialLoading(null);
+    }
   };
 
   const handleLogin = async () => {
@@ -191,6 +218,33 @@ export const LoginScreen = ({ navigation }: any) => {
             </TouchableOpacity>
           </View>
 
+          {/* Social sign-in - returning users only */}
+          <View style={styles.socialSection}>
+            <Text style={[styles.socialHint, { color: themeColors.textSecondary }]}>
+              Already have an account?
+            </Text>
+            <Button
+              title="Continue with Google"
+              onPress={() => handleSocialSignIn('google')}
+              variant={themeColors.isDark ? 'outlineLight' : 'outline'}
+              fullWidth
+              loading={socialLoading === 'google'}
+              disabled={!!socialLoading}
+              style={styles.socialButton}
+            />
+            {Platform.OS !== 'android' && (
+              <Button
+                title="Continue with Apple"
+                onPress={() => handleSocialSignIn('apple')}
+                variant={themeColors.isDark ? 'outlineLight' : 'outline'}
+                fullWidth
+                loading={socialLoading === 'apple'}
+                disabled={!!socialLoading}
+                style={styles.socialButton}
+              />
+            )}
+          </View>
+
           {/* Create account */}
           <View style={styles.createSection}>
             <View style={styles.divider}>
@@ -300,6 +354,9 @@ const styles = StyleSheet.create({
   signInButton: {
     marginTop: SPACING.md,
   },
+  socialSection: { marginTop: 20 },
+  socialHint: { fontSize: 13, textAlign: 'center', marginBottom: 10 },
+  socialButton: { marginBottom: 10 },
   forgotBtn: { marginTop: 14, alignItems: 'center', paddingVertical: 6 },
   forgotText: { fontSize: 14, fontWeight: '600' },
   loginError: {
