@@ -44,6 +44,12 @@
       "expo-web-browser",
       "expo-apple-authentication",
       [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.85474399891-q9i3vgnhc07n8nuqafcfj4a8om40a5nl"
+        }
+      ],
+      [
         "expo-camera",
         {
           "cameraPermission": "Allow Nautical Ops to access your camera",

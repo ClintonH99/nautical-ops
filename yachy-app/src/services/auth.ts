@@ -29,6 +29,11 @@ export interface RegisterData extends LoginCredentials {
   role?: string;
 }
 
+const GOOGLE_WEB_CLIENT_ID =
+  '85474399891-g61250m3f56fas70duo2flsvr7ud6dm3.apps.googleusercontent.com';
+const GOOGLE_IOS_CLIENT_ID =
+  '85474399891-q9i3vgnhc07n8nuqafcfj4a8om40a5nl.apps.googleusercontent.com';
+
 const PLAN_MAX_CREW: Record<string, number> = {
   '1_5': 5,
   '6_10': 10,
@@ -80,6 +85,46 @@ class AuthService {
   }
 
   async signInWithGoogle(): Promise<{ user: User | null; session: any }> {
+    // Native Google Sign-In on iOS/Android: the device returns an ID token
+    // directly, so there is no browser hop, no callback URL and no iOS
+    // "wants to use ... to sign in" system prompt. Web keeps the OAuth flow.
+    if (Platform.OS !== 'web') {
+      try {
+        const { GoogleSignin } = require('@react-native-google-signin/google-signin');
+        GoogleSignin.configure({
+          webClientId: GOOGLE_WEB_CLIENT_ID,
+          iosClientId: GOOGLE_IOS_CLIENT_ID,
+        });
+        await GoogleSignin.hasPlayServices();
+        const result = await GoogleSignin.signIn();
+        const idToken = result?.data?.idToken ?? result?.idToken;
+        if (!idToken) return { user: null, session: null };
+        const { data, error } = await supabase.auth.signInWithIdToken({
+          provider: 'google',
+          token: idToken,
+        });
+        if (error) throw error;
+        if (!data.user) return { user: null, session: null };
+        const userData = await this.ensureOAuthUserProfile(data.user, null, true);
+        if (!userData) {
+          await supabase.auth.signOut();
+          throw new Error('NO_ACCOUNT');
+        }
+        return { user: userData, session: data.session };
+      } catch (error: any) {
+        // Cancelling is not an error worth surfacing.
+        if (
+          error?.code === 'SIGN_IN_CANCELLED' ||
+          error?.code === '-5' ||
+          error?.code === 12501
+        ) {
+          return { user: null, session: null };
+        }
+        if (__DEV__) console.error('Google sign in error:', error);
+        throw error;
+      }
+    }
+
     try {
       WebBrowser.maybeCompleteAuthSession();
       const redirectTo = makeRedirectUri({ scheme: 'nauticalops', preferLocalhost: false });
