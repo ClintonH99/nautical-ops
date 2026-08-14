@@ -57,6 +57,7 @@ import {
   ShoppingListScreen,
   AddEditShoppingListScreen,
   InventoryScreen,
+  ForgotPasswordScreen,
   AddEditInventoryItemScreen,
   UniformsScreen,
   AddEditUniformScreen,
@@ -310,6 +311,10 @@ export const RootNavigator = () => {
 
     const { data: authListener } = authService.onAuthStateChange(async (user) => {
       try {
+        // Password reset verifies an OTP, which signs the user in mid-flow.
+        // Without this guard the stack remounts and ForgotPasswordScreen is
+        // destroyed before the new password is ever set.
+        if (useAuthStore.getState().deferUserUpdate) return;
         if (!user) {
           setUser(null);
           return;
@@ -465,6 +470,11 @@ export const RootNavigator = () => {
                 options={{ headerShown: false }}
               />
               <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+              <Stack.Screen
+                name="ForgotPassword"
+                component={ForgotPasswordScreen}
+                options={{ title: 'Reset Password', headerShown: true }}
+              />
               <Stack.Screen
                 name="CreateAccountChoice"
                 component={CreateAccountChoiceScreen}

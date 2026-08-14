@@ -13,6 +13,7 @@ import {
   ScrollView,
   Alert,
   StatusBar,
+  TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Input } from '../components';
@@ -180,6 +181,14 @@ export const LoginScreen = ({ navigation }: any) => {
             />
 
             {loginError ? <Text style={styles.loginError}>{loginError}</Text> : null}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ForgotPassword')}
+              style={styles.forgotBtn}
+            >
+              <Text style={[styles.forgotText, { color: themeColors.textSecondary }]}>
+                Forgot password?
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {/* Create account */}
@@ -291,6 +300,8 @@ const styles = StyleSheet.create({
   signInButton: {
     marginTop: SPACING.md,
   },
+  forgotBtn: { marginTop: 14, alignItems: 'center', paddingVertical: 6 },
+  forgotText: { fontSize: 14, fontWeight: '600' },
   loginError: {
     marginTop: SPACING.md,
     fontSize: FONTS.sm,

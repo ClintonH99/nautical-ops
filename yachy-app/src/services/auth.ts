@@ -390,6 +390,35 @@ class AuthService {
     }
   }
 
+  /**
+   * Step 1 of password reset: emails a 6-digit recovery code.
+   * Relies on the Supabase "Reset Password" template outputting
+   * {{ .Token }} rather than a confirmation link.
+   */
+  async sendPasswordResetCode(email: string): Promise<void> {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase());
+    if (error) throw error;
+  }
+
+  /**
+   * Step 2: verifies the code. On success Supabase signs the user in,
+   * which is what makes updatePassword() below possible.
+   */
+  async verifyPasswordResetCode(email: string, token: string): Promise<void> {
+    const { error } = await supabase.auth.verifyOtp({
+      email: email.trim().toLowerCase(),
+      token: token.trim(),
+      type: 'recovery',
+    });
+    if (error) throw error;
+  }
+
+  /** Step 3: sets the new password. Only valid once step 2 has succeeded. */
+  async updatePassword(newPassword: string): Promise<void> {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+  }
+
   async signOut() {
     try {
       const { error } = await supabase.auth.signOut();
