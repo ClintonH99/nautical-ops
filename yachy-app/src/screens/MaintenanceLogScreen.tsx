@@ -17,6 +17,7 @@ import {
   Modal,
   FlatList,
   Pressable,
+  Dimensions,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,6 +34,7 @@ import { Button, LoadingSpinner } from '../components';
 
 const COLUMN_WIDTH = 110;
 const DATE_WIDTH = 88;
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const ACTIONS_WIDTH = 90;
 const CHECKBOX_WIDTH = 44;
 
@@ -238,6 +240,8 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
     navigation.navigate('AddEditMaintenanceLog', {});
   };
 
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   const onEdit = (log: MaintenanceLog) => {
     navigation.navigate('AddEditMaintenanceLog', { logId: log.id });
   };
@@ -420,68 +424,6 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
         />
       </View>
 
-      {logs.length > 0 && !loading && (
-        <View style={styles.filterBarWrap}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterBarContent}
-          >
-            {FILTER_KEYS.map(({ key, label }) => {
-              const value = filters[key];
-              const display = value || 'All';
-              return (
-                <TouchableOpacity
-                  key={key}
-                  style={[
-                    styles.filterChip,
-                    { backgroundColor: themeColors.surface },
-                    value ? styles.filterChipActive : null,
-                  ]}
-                  onPress={() => setFilterDropdownKey(key)}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[styles.filterChipLabel, { color: themeColors.textSecondary }]}
-                    numberOfLines={1}
-                  >
-                    {label}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.filterChipValue,
-                      { color: themeColors.textPrimary },
-                      value ? styles.filterChipValueActive : null,
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {display}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-          {(FILTER_KEYS as readonly { key: FilterKey }[]).some(({ key }) => filters[key]) && (
-            <TouchableOpacity
-              onPress={() =>
-                setFilters({
-                  equipment: '',
-                  location: '',
-                  serialNumber: '',
-                  hoursOfService: '',
-                  hoursAtNextService: '',
-                  whatServiceDone: '',
-                  serviceDoneBy: '',
-                  date: '',
-                })
-              }
-              style={styles.clearFiltersWrap}
-            >
-              <Text style={styles.clearFiltersLink}>Clear filters</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
 
       {filterDropdownKey && (
         <Modal visible transparent animationType="fade">
@@ -560,12 +502,6 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
           }
           showsVerticalScrollIndicator
         >
-          <ScrollView
-            horizontal
-            style={styles.tableScroll}
-            contentContainerStyle={styles.tableContent}
-            showsHorizontalScrollIndicator
-          >
             <View style={styles.table}>
               <View style={[styles.row, styles.headerRow]}>
                 <View
@@ -585,24 +521,10 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
                     themeColors={themeColors}
                   />
                 </View>
-                <Text style={[styles.cell, styles.headerCell, { width: COLUMN_WIDTH }]}>
+                <Text style={[styles.cell, styles.headerCell, styles.equipmentCell]}>
                   Equipment
                 </Text>
-                <Text style={[styles.cell, styles.headerCell, { width: 72 }]}>Location</Text>
-                <Text style={[styles.cell, styles.headerCell, { width: COLUMN_WIDTH }]}>
-                  Serial #
-                </Text>
-                <Text style={[styles.cell, styles.headerCell, { width: 70 }]}>Hrs</Text>
-                <Text style={[styles.cell, styles.headerCell, { width: 70 }]}>Hrs next</Text>
-                <Text style={[styles.cell, styles.headerCell, { width: COLUMN_WIDTH }]}>
-                  Service done
-                </Text>
-                <Text style={[styles.cell, styles.headerCell, { width: COLUMN_WIDTH }]}>Notes</Text>
-                <Text style={[styles.cell, styles.headerCell, { width: COLUMN_WIDTH }]}>
-                  Done by
-                </Text>
                 <Text style={[styles.cell, styles.headerCell, { width: DATE_WIDTH }]}>Date</Text>
-                <View style={[styles.cellView, styles.headerCellView, { width: ACTIONS_WIDTH }]} />
               </View>
               {filteredLogs.length === 0 ? (
                 <View style={styles.filterEmptyRow}>
@@ -612,7 +534,12 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
                 </View>
               ) : (
                 filteredLogs.map((log) => (
-                  <View key={log.id} style={styles.row}>
+                  <View key={log.id}>
+                  <TouchableOpacity
+                    style={styles.row}
+                    activeOpacity={0.7}
+                    onPress={() => setExpandedId(expandedId === log.id ? null : log.id)}
+                  >
                     <View style={[styles.cell, styles.checkboxCell, { width: CHECKBOX_WIDTH }]}>
                       <Checkbox
                         checked={selectedIds.has(log.id)}
@@ -621,52 +548,10 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
                       />
                     </View>
                     <Text
-                      style={[styles.cell, { width: COLUMN_WIDTH, color: themeColors.textPrimary }]}
+                      style={[styles.cell, styles.equipmentCell, { color: themeColors.textPrimary }]}
                       numberOfLines={2}
                     >
                       {log.equipment}
-                    </Text>
-                    <Text
-                      style={[styles.cell, { width: 72, color: themeColors.textPrimary }]}
-                      numberOfLines={1}
-                    >
-                      {log.portStarboardNa || '—'}
-                    </Text>
-                    <Text
-                      style={[styles.cell, { width: COLUMN_WIDTH, color: themeColors.textPrimary }]}
-                      numberOfLines={1}
-                    >
-                      {log.serialNumber || '—'}
-                    </Text>
-                    <Text
-                      style={[styles.cell, { width: 70, color: themeColors.textPrimary }]}
-                      numberOfLines={1}
-                    >
-                      {log.hoursOfService || '—'}
-                    </Text>
-                    <Text
-                      style={[styles.cell, { width: 70, color: themeColors.textPrimary }]}
-                      numberOfLines={1}
-                    >
-                      {log.hoursAtNextService || '—'}
-                    </Text>
-                    <Text
-                      style={[styles.cell, { width: COLUMN_WIDTH, color: themeColors.textPrimary }]}
-                      numberOfLines={2}
-                    >
-                      {log.whatServiceDone || '—'}
-                    </Text>
-                    <Text
-                      style={[styles.cell, { width: COLUMN_WIDTH, color: themeColors.textPrimary }]}
-                      numberOfLines={2}
-                    >
-                      {log.notes || '—'}
-                    </Text>
-                    <Text
-                      style={[styles.cell, { width: COLUMN_WIDTH, color: themeColors.textPrimary }]}
-                      numberOfLines={1}
-                    >
-                      {log.serviceDoneBy || '—'}
                     </Text>
                     <Text
                       style={[
@@ -678,32 +563,69 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
                     >
                       {formatDate(log.createdAt)}
                     </Text>
-                    <View style={[styles.cell, styles.actionsCell, { width: ACTIONS_WIDTH }]}>
-                      <TouchableOpacity
-                        onPress={() => onDelete(log)}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() => onEdit(log)}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        <Text
-                          style={[
-                            styles.editBtn,
-                            { color: themeColors.isDark ? COLORS.white : COLORS.primary },
-                          ]}
-                        >
-                          Edit
+                  </TouchableOpacity>
+                  {expandedId === log.id && (
+                    <View style={[styles.previewPanel, { backgroundColor: themeColors.surface }]}>
+                      <View style={styles.previewHeader}>
+                        <Text style={[styles.previewTitle, { color: themeColors.textPrimary }]}>
+                          {log.equipment}
                         </Text>
-                      </TouchableOpacity>
+                        <Text style={[styles.previewSubtitle, { color: themeColors.textSecondary }]}>
+                          {[log.portStarboardNa, log.serialNumber, formatDate(log.createdAt)]
+                            .filter(Boolean)
+                            .join('  \u00b7  ')}
+                        </Text>
+                      </View>
+                      <View style={styles.previewRow}>
+                        <View style={styles.previewHalf}>
+                          <Text style={[styles.previewLabel, { color: themeColors.textSecondary }]}>HOURS OF SERVICE</Text>
+                          <Text style={[styles.previewValue, { color: themeColors.textPrimary }]}>{log.hoursOfService || '\u2014'}</Text>
+                        </View>
+                        <View style={styles.previewHalf}>
+                          <Text style={[styles.previewLabel, { color: themeColors.textSecondary }]}>HOURS AT NEXT SERVICE</Text>
+                          <Text style={[styles.previewValue, { color: themeColors.textPrimary }]}>{log.hoursAtNextService || '\u2014'}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.previewBlock}>
+                        <Text style={[styles.previewLabel, { color: themeColors.textSecondary }]}>WHAT SERVICE WAS DONE</Text>
+                        <Text style={[styles.previewValue, { color: themeColors.textPrimary }]}>{log.whatServiceDone || '\u2014'}</Text>
+                      </View>
+                      <View style={styles.previewBlock}>
+                        <Text style={[styles.previewLabel, { color: themeColors.textSecondary }]}>NOTES</Text>
+                        <Text style={[styles.previewValue, { color: themeColors.textPrimary }]}>{log.notes || '\u2014'}</Text>
+                      </View>
+                      <View style={styles.previewRow}>
+                        <View style={styles.previewHalf}>
+                          <Text style={[styles.previewLabel, { color: themeColors.textSecondary }]}>SERVICE DONE BY</Text>
+                          <Text style={[styles.previewValue, { color: themeColors.textPrimary }]}>{log.serviceDoneBy || '\u2014'}</Text>
+                        </View>
+                        <View style={styles.previewHalf}>
+                          <Text style={[styles.previewLabel, { color: themeColors.textSecondary }]}>DATE</Text>
+                          <Text style={[styles.previewValue, { color: themeColors.textPrimary }]}>{formatDate(log.createdAt)}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.previewActions}>
+                        <TouchableOpacity
+                          style={[styles.previewActionBtn, { borderColor: COLORS.primary }]}
+                          onPress={() => onEdit(log)}
+                        >
+                          <Ionicons name="create-outline" size={18} color={COLORS.primary} />
+                          <Text style={[styles.previewActionText, { color: COLORS.primary }]}>Edit</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.previewActionBtn, { borderColor: COLORS.danger }]}
+                          onPress={() => onDelete(log)}
+                        >
+                          <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
+                          <Text style={[styles.previewActionText, { color: COLORS.danger }]}>Delete</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
+                  )}
                   </View>
                 ))
               )}
             </View>
-          </ScrollView>
         </ScrollView>
       )}
     </View>
@@ -869,11 +791,11 @@ const styles = StyleSheet.create({
     flexGrow: 0,
   },
   tableContent: {
-    paddingHorizontal: SPACING.lg,
     paddingBottom: SPACING.lg,
   },
   table: {
-    minWidth: CHECKBOX_WIDTH + 2 * COLUMN_WIDTH * 3 + 70 * 2 + DATE_WIDTH + ACTIONS_WIDTH,
+    width: '100%',
+    paddingBottom: SPACING.lg,
   },
   row: {
     flexDirection: 'row',
@@ -888,7 +810,7 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.primary,
   },
   cell: {
-    paddingHorizontal: SPACING.sm,
+    paddingHorizontal: SPACING.xs,
     paddingVertical: SPACING.xs,
     fontSize: FONTS.sm,
   },
@@ -903,9 +825,45 @@ const styles = StyleSheet.create({
   },
   headerCellView: {},
   dateCell: {},
+  equipmentCell: { flex: 1 },
+  previewHeader: {
+    paddingBottom: SPACING.md,
+    marginBottom: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  previewTitle: { fontSize: FONTS.lg, fontWeight: '700', lineHeight: 24 },
+  previewSubtitle: { fontSize: FONTS.xs, marginTop: 2 },
+  previewActions: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    marginTop: SPACING.xs,
+  },
+  previewActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: SPACING.sm,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  previewActionText: { fontSize: FONTS.sm, fontWeight: '600' },
+  previewPanel: {
+    alignSelf: 'stretch',
+    padding: SPACING.lg,
+    borderBottomWidth: 2,
+    borderBottomColor: COLORS.primary,
+  },
+  previewRow: { flexDirection: 'row', gap: SPACING.lg, marginBottom: SPACING.md },
+  previewHalf: { flex: 1 },
+  previewBlock: { marginBottom: SPACING.md },
+  previewLabel: { fontSize: 10.5, fontWeight: '600', letterSpacing: 0.3, marginBottom: 3 },
+  previewValue: { fontSize: FONTS.base, lineHeight: 21 },
   actionsCell: {
     flexDirection: 'row',
-    gap: SPACING.xs,
+    gap: SPACING.lg,
     justifyContent: 'flex-start',
   },
   checkbox: {
