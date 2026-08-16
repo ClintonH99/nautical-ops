@@ -24,15 +24,29 @@ interface AuthState {
   logout: () => void;
 }
 
+const CACHED_USER_STORAGE_KEY = 'nautical_ops_cached_user';
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
   deferUserUpdate: false,
-  setUser: (user) => set({ user, isAuthenticated: !!user }),
+  setUser: (user) => {
+    // Cache the profile so a returning user can be rendered instantly on the
+    // next cold start, without waiting on a network round-trip.
+    if (user) {
+      AsyncStorage.setItem(CACHED_USER_STORAGE_KEY, JSON.stringify(user)).catch(() => {});
+    } else {
+      AsyncStorage.removeItem(CACHED_USER_STORAGE_KEY).catch(() => {});
+    }
+    set({ user, isAuthenticated: !!user });
+  },
   setLoading: (loading) => set({ isLoading: loading }),
   setDeferUserUpdate: (defer) => set({ deferUserUpdate: defer }),
-  logout: () => set({ user: null, isAuthenticated: false, deferUserUpdate: false }),
+  logout: () => {
+    AsyncStorage.removeItem(CACHED_USER_STORAGE_KEY).catch(() => {});
+    set({ user: null, isAuthenticated: false, deferUserUpdate: false });
+  },
 }));
 
 // ===== APP STORE (General app state) =====

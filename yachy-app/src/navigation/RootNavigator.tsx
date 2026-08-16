@@ -5,6 +5,7 @@
 
 import React, { useEffect } from 'react';
 import { NavigationContainer, DefaultTheme, getStateFromPath } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View, StyleSheet, Platform, AppState } from 'react-native';
 import { PostHogProvider } from 'posthog-react-native';
@@ -259,7 +260,27 @@ export const RootNavigator = () => {
           return;
         }
 
-        let userData = await authService.getUserProfileWithRetry(session.user.id);
+        // Returning user: render from the cached profile immediately and let
+        // the network refresh happen behind them. This is what keeps cold
+        // start off the critical path.
+        let renderedFromCache = false;
+        try {
+          const cached = await AsyncStorage.getItem('nautical_ops_cached_user');
+          if (cached && mounted) {
+            const parsed = JSON.parse(cached);
+            if (parsed?.id === session.user.id) {
+              setUser(parsed);
+              setLoading(false);
+              renderedFromCache = true;
+            }
+          }
+        } catch {
+          /* cache is best-effort */
+        }
+
+        let userData = renderedFromCache
+          ? await authService.getUserProfile(session.user.id)
+          : await authService.getUserProfileWithRetry(session.user.id);
 
         if (mounted && !userData && Platform.OS === 'web') {
           try {

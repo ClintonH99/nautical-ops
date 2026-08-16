@@ -31,9 +31,8 @@ function AppContent() {
     }
   }, []);
 
-  if (!fontsLoaded) {
-    return null;
-  }
+  // The signature font is decorative - don't hold the whole app on it.
+  // Anything using it falls back until it loads a moment later.
 
   if (!isSupabaseConfigured()) {
     const configHint =
