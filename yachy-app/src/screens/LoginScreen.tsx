@@ -242,37 +242,6 @@ export const LoginScreen = ({ navigation }: any) => {
             </TouchableOpacity>
           </View>
 
-          {/* Social sign-in - returning users only */}
-          <View style={styles.socialSection}>
-            <Text style={[styles.socialHint, { color: themeColors.textSecondary }]}>
-              Already have an account?
-            </Text>
-            <TouchableOpacity
-              onPress={() => handleSocialSignIn('google')}
-              disabled={!!socialLoading}
-              activeOpacity={0.8}
-              style={[styles.googleButton, !!socialLoading && styles.socialDisabled]}
-            >
-              <GoogleG />
-              <Text style={styles.googleButtonText}>
-                {socialLoading === 'google' ? 'Signing in\u2026' : 'Sign in with Google'}
-              </Text>
-            </TouchableOpacity>
-            {Platform.OS === 'ios' && (
-              <AppleAuthentication.AppleAuthenticationButton
-                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                buttonStyle={
-                  themeColors.isDark
-                    ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
-                    : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
-                }
-                cornerRadius={8}
-                style={styles.appleButton}
-                onPress={() => handleSocialSignIn('apple')}
-              />
-            )}
-          </View>
-
           {/* Create account */}
           <View style={styles.createSection}>
             <View style={styles.divider}>
