@@ -769,7 +769,7 @@ export const RootNavigator = () => {
                 name="YardPeriodJobs"
                 component={YardPeriodJobsScreen}
                 options={{
-                  title: 'Yard Period',
+                  title: 'Shipyard List',
                   headerShown: true,
                 }}
               />

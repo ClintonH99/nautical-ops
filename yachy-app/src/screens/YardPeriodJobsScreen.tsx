@@ -26,7 +26,7 @@ import yardJobsService from '../services/yardJobs';
 import { YardPeriodJob, Department } from '../types';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
-import { ButtonTagCard, ButtonTagRow, LoadingSpinner } from '../components';
+import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner } from '../components';
 import { getTaskUrgencyColor } from '../utils/taskUrgency';
 
 export const YardPeriodJobsScreen = ({ navigation }: any) => {
@@ -97,13 +97,15 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
+  const onCreate = () => {
+    navigation.navigate('AddEditYardJob');
+  };
+
   const onEdit = (job: YardPeriodJob) => {
-    if (!isHOD) return;
     navigation.navigate('AddEditYardJob', { jobId: job.id });
   };
 
   const onDelete = (job: YardPeriodJob) => {
-    if (!isHOD) return;
     Alert.alert('Delete job', `Delete "${job.jobTitle}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -157,9 +159,9 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
       <ButtonTagCard
         headerTitle={item.jobTitle ?? ''}
         accentColor={borderColor}
-        onEdit={isHOD ? () => onEdit(item) : undefined}
-        onDelete={isHOD ? () => onDelete(item) : undefined}
-        onPress={isHOD ? () => onEdit(item) : undefined}
+        onEdit={() => onEdit(item)}
+        onDelete={() => onDelete(item)}
+        onPress={() => onEdit(item)}
         footer={
           isComplete && item.completedByName ? `Completed by ${item.completedByName}` : undefined
         }
@@ -206,6 +208,9 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
 
   const ListHeader = () => (
     <>
+      <View style={styles.createRow}>
+        <Button title="Create" onPress={onCreate} variant="primary" fullWidth />
+      </View>
       <View style={styles.filterBar}>
         <View style={styles.filterBarContent}>
           <Text style={[styles.filterLabel, { color: themeColors.textPrimary }]}>Department</Text>
@@ -279,9 +284,7 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      {loading ? (
-        <LoadingSpinner />
-      ) : jobs.length === 0 ? (
+      {loading ? null : jobs.length === 0 ? (
         <ScrollView
           style={[styles.container, { backgroundColor: themeColors.background }]}
           contentContainerStyle={styles.emptyWrapper}
@@ -350,6 +353,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
+  createRow: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.md },
   filterBar: {
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.lg,

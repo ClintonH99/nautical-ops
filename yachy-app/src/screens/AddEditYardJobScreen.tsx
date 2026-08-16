@@ -32,6 +32,9 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
 
   const [jobTitle, setJobTitle] = useState('');
   const [jobDescription, setJobDescription] = useState('');
+  const [defectDetails, setDefectDetails] = useState('');
+  const [defectLocation, setDefectLocation] = useState('');
+  const [equipmentSerial, setEquipmentSerial] = useState('');
   const [department, setDepartment] = useState<Department>(user?.department ?? 'INTERIOR');
   const [departmentDropdownOpen, setDepartmentDropdownOpen] = useState(false);
   const [priority, setPriority] = useState<YardJobPriority>('GREEN');
@@ -60,6 +63,9 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
         if (job) {
           setJobTitle(job.jobTitle);
           setJobDescription(job.jobDescription ?? '');
+          setDefectDetails(job.defectDetails ?? '');
+          setDefectLocation(job.defectLocation ?? '');
+          setEquipmentSerial(job.equipmentSerial ?? '');
           setDepartment(job.department ?? user?.department ?? 'INTERIOR');
           setPriority(job.priority ?? 'GREEN');
           setYardLocation(job.yardLocation ?? '');
@@ -114,10 +120,6 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
       Alert.alert('Error', 'You must be in a vessel to create jobs.');
       return;
     }
-    if (!isHOD) {
-      Alert.alert('Access denied', 'Only HODs can create or edit jobs.');
-      return;
-    }
 
     setSaving(true);
     try {
@@ -125,6 +127,9 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
         await yardJobsService.update(jobId, {
           jobTitle: trimmed,
           jobDescription: jobDescription.trim() || undefined,
+          defectDetails: defectDetails.trim() || undefined,
+          defectLocation: defectLocation.trim() || undefined,
+          equipmentSerial: equipmentSerial.trim() || undefined,
           department,
           priority,
           yardLocation: yardLocation.trim() || undefined,
@@ -141,6 +146,9 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
           tripId: tripId ?? null,
           jobTitle: trimmed,
           jobDescription: jobDescription.trim() || undefined,
+          defectDetails: defectDetails.trim() || undefined,
+          defectLocation: defectLocation.trim() || undefined,
+          equipmentSerial: equipmentSerial.trim() || undefined,
           department,
           priority,
           yardLocation: yardLocation.trim() || undefined,
@@ -158,15 +166,6 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
     }
   };
 
-  if (!isHOD) {
-    return (
-      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
-          Only HODs can add or edit jobs.
-        </Text>
-      </View>
-    );
-  }
 
   if (!vesselId) {
     return (
@@ -197,21 +196,6 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="always"
       >
-        <Input
-          label="Job title"
-          value={jobTitle}
-          onChangeText={setJobTitle}
-          placeholder="e.g. Engine service"
-          autoCapitalize="words"
-        />
-        <Input
-          label="Job description"
-          value={jobDescription}
-          onChangeText={setJobDescription}
-          placeholder="Details of the work required..."
-          multiline
-          numberOfLines={3}
-        />
         <Text style={[styles.label, { color: themeColors.textPrimary }]}>Department</Text>
         <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
           Which department is this job for?
@@ -226,6 +210,41 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
           </Text>
           <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>▼</Text>
         </TouchableOpacity>
+        <Input
+          label="Title"
+          value={jobTitle}
+          onChangeText={setJobTitle}
+          placeholder="e.g. Starboard passerelle motor"
+          autoCapitalize="sentences"
+        />
+        <Input
+          label="Defect / damage / improvements needed"
+          value={defectDetails}
+          onChangeText={setDefectDetails}
+          placeholder="What is wrong, or what needs improving?"
+          multiline
+          numberOfLines={3}
+        />
+        <Input
+          label="Job description"
+          value={jobDescription}
+          onChangeText={setJobDescription}
+          placeholder="Details of the work required..."
+          multiline
+          numberOfLines={3}
+        />
+        <Input
+          label="Location of defect / damage"
+          value={defectLocation}
+          onChangeText={setDefectLocation}
+          placeholder="e.g. Starboard side, mid-deck"
+        />
+        <Input
+          label="Equipment or serial number of part (optional)"
+          value={equipmentSerial}
+          onChangeText={setEquipmentSerial}
+          placeholder="e.g. BESENZONI PA284 / SN 44219"
+        />
         {departmentDropdownOpen && (
           <Modal visible transparent animationType="fade">
             <Pressable

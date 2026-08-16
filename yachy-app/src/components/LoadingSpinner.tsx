@@ -23,6 +23,12 @@ type Props = {
 };
 
 export const LoadingSpinner = ({ size = 'large', color = COLORS.primary, style }: Props) => {
+  // Deliberately renders nothing: the animation was distracting and screens
+  // read better going straight from blank to content. Kept as a component so
+  // the ~36 call sites stay untouched and it can be reinstated in one place.
+  return null;
+
+  // eslint-disable-next-line no-unreachable
   const dim = size === 'large' ? 80 : 40;
 
   if (!LottieView) {

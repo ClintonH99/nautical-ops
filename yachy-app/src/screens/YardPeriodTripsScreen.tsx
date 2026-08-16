@@ -205,11 +205,7 @@ export const YardPeriodTripsScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      {loading && trips.length === 0 ? (
-        <View style={styles.empty}>
-          <LoadingSpinner />
-        </View>
-      ) : trips.length === 0 ? (
+      {loading && trips.length === 0 ? null : trips.length === 0 ? (
         <FlatList
           ListHeaderComponent={<ListHeader />}
           data={[]}

@@ -258,6 +258,9 @@ export interface YardPeriodJob {
   tripId?: string | null;
   jobTitle: string;
   jobDescription: string;
+  defectDetails: string;
+  defectLocation: string;
+  equipmentSerial: string;
   department: Department;
   priority: YardJobPriority;
   yardLocation: string;

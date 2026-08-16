@@ -24,9 +24,10 @@ import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../st
 import { useThemeColors } from '../hooks/useThemeColors';
 import vesselService from '../services/vessel';
 import tripsService from '../services/trips';
+import yardJobsService from '../services/yardJobs';
 import { useVesselTripColors, getTripTypeColorMap } from '../hooks/useVesselTripColors';
 import { DEFAULT_COLORS } from '../services/tripColors';
-import type { Trip, TripType, Department } from '../types';
+import type { Trip, TripType, Department, YardPeriodJob } from '../types';
 import { parseLocalDate, toYYYYMMDD } from '../utils';
 
 const { width } = Dimensions.get('window');
@@ -78,26 +79,40 @@ function getMarkedDatesFromTrips(trips: Trip[], typeColorMap: Record<string, str
 function getMarkedDatesFromYardPeriodTrips(
   trips: Trip[],
   defaultColor: string,
-  getDeptColor: (dept: string) => string
+  getDeptColor: (dept: string) => string,
+  yardJobs: YardPeriodJob[] = []
 ): MarkedDates {
-  const yardTrips = trips.filter((t) => t.type === 'YARD_PERIOD');
   const marked: MarkedDates = {};
-  yardTrips.forEach((trip) => {
-    const color = trip.department ? getDeptColor(trip.department) : defaultColor;
-    const startKey = trip.startDate.slice(0, 10);
-    const endKey = trip.endDate.slice(0, 10);
-    const start = parseLocalDate(trip.startDate);
-    const end = parseLocalDate(trip.endDate);
-    for (let d = new Date(start.getTime()); d <= end; d.setDate(d.getDate() + 1)) {
-      const key = toYYYYMMDD(d);
-      if (!(marked as any)[key]) (marked as any)[key] = { periods: [] };
-      (marked as any)[key].periods.push({
-        startingDay: true,
-        endingDay: true,
-        color,
-      });
-    }
+  // Track which colours are already on a given day so several jobs from the
+  // same department collapse into a single line rather than stacking.
+  const seen: Record<string, Set<string>> = {};
+
+  const addMark = (key: string, color: string) => {
+    if (!seen[key]) seen[key] = new Set();
+    if (seen[key].has(color)) return;
+    seen[key].add(color);
+    if (!(marked as any)[key]) (marked as any)[key] = { periods: [] };
+    (marked as any)[key].periods.push({ startingDay: true, endingDay: true, color });
+  };
+
+  trips
+    .filter((t) => t.type === 'YARD_PERIOD')
+    .forEach((trip) => {
+      const color = trip.department ? getDeptColor(trip.department) : defaultColor;
+      const start = parseLocalDate(trip.startDate);
+      const end = parseLocalDate(trip.endDate);
+      for (let d = new Date(start.getTime()); d <= end; d.setDate(d.getDate() + 1)) {
+        addMark(toYYYYMMDD(d), color);
+      }
+    });
+
+  // Shipyard List jobs with a done-by date also show on this calendar.
+  yardJobs.forEach((job) => {
+    if (!job.doneByDate) return;
+    const color = job.department ? getDeptColor(job.department) : defaultColor;
+    addMark(job.doneByDate.slice(0, 10), color);
   });
+
   return marked;
 }
 
@@ -106,6 +121,7 @@ const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIO
 /** Home categories: Tasks, Shopping, Inventory in a row; Vessel & Crew Safety as log button below */
 const HOME_CATEGORIES = [
   { key: 'tasks', label: 'Tasks', icon: '📝', nav: 'Tasks' as const },
+  { key: 'shipyard', label: 'Shipyard List', icon: '🛠️', nav: 'YardPeriodJobs' as const },
   { key: 'shopping', label: 'Shopping', icon: '🛒', nav: 'ShoppingListCategory' as const },
   { key: 'inventory', label: 'Inventory', icon: '📦', nav: 'Inventory' as const },
   { key: 'notepad', label: 'Notepad', icon: '🗒️', nav: 'Notepad' as const },
@@ -130,6 +146,7 @@ export const HomeScreen = ({ navigation }: any) => {
   const [loadingVessel, setLoadingVessel] = useState(false);
   const [bannerLoadFailed, setBannerLoadFailed] = useState(false);
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [yardJobs, setYardJobs] = useState<YardPeriodJob[]>([]);
   const [tripsLoading, setTripsLoading] = useState(true);
   const [calendarMode, setCalendarMode] = useState<'trips' | 'yardPeriod'>('trips');
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
@@ -150,15 +167,21 @@ export const HomeScreen = ({ navigation }: any) => {
   const markedDatesYardPeriod = getMarkedDatesFromYardPeriodTrips(
     trips,
     yardPeriodColor,
-    getDeptColor
+    getDeptColor,
+    yardJobs
   );
   const markedDates = calendarMode === 'trips' ? markedDatesTrips : markedDatesYardPeriod;
 
   const loadTrips = useCallback(async () => {
     if (!vesselId) return;
     try {
-      const [data] = await Promise.all([tripsService.getTripsByVessel(vesselId), loadColors()]);
+      const [data, jobs] = await Promise.all([
+        tripsService.getTripsByVessel(vesselId),
+        yardJobsService.getByVessel(vesselId),
+        loadColors(),
+      ]);
       setTrips(data);
+      setYardJobs(jobs);
     } catch (e) {
       console.error('Load trips error:', e);
     } finally {

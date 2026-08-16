@@ -10,6 +10,9 @@ export interface CreateYardJobData {
   tripId?: string | null;
   jobTitle: string;
   jobDescription?: string;
+  defectDetails?: string;
+  defectLocation?: string;
+  equipmentSerial?: string;
   department: Department;
   priority: YardJobPriority;
   yardLocation?: string;
@@ -21,6 +24,9 @@ export interface CreateYardJobData {
 export interface UpdateYardJobData {
   jobTitle?: string;
   jobDescription?: string;
+  defectDetails?: string;
+  defectLocation?: string;
+  equipmentSerial?: string;
   department?: Department;
   priority?: YardJobPriority;
   yardLocation?: string;
@@ -77,6 +83,9 @@ class YardJobsService {
             trip_id: input.tripId ?? null,
             job_title: input.jobTitle.trim(),
             job_description: input.jobDescription?.trim() || null,
+            defect_details: input.defectDetails?.trim() || null,
+            defect_location: input.defectLocation?.trim() || null,
+            equipment_serial: input.equipmentSerial?.trim() || null,
             department: input.department,
             priority: input.priority,
             yard_location: input.yardLocation?.trim() || null,
@@ -106,6 +115,9 @@ class YardJobsService {
       };
       if (input.jobTitle !== undefined) payload.job_title = input.jobTitle.trim();
       if (input.jobDescription !== undefined) payload.job_description = input.jobDescription?.trim() || null;
+      if (input.defectDetails !== undefined) payload.defect_details = input.defectDetails?.trim() || null;
+      if (input.defectLocation !== undefined) payload.defect_location = input.defectLocation?.trim() || null;
+      if (input.equipmentSerial !== undefined) payload.equipment_serial = input.equipmentSerial?.trim() || null;
       if (input.department !== undefined) payload.department = input.department;
       if (input.priority !== undefined) payload.priority = input.priority;
       if (input.yardLocation !== undefined) payload.yard_location = input.yardLocation?.trim() || null;
@@ -180,6 +192,9 @@ class YardJobsService {
       tripId: (row.trip_id as string) ?? null,
       jobTitle: row.job_title as string,
       jobDescription: (row.job_description as string) ?? '',
+      defectDetails: (row.defect_details as string) ?? '',
+      defectLocation: (row.defect_location as string) ?? '',
+      equipmentSerial: (row.equipment_serial as string) ?? '',
       department: (row.department as Department) ?? 'INTERIOR',
       priority: (row.priority as YardJobPriority) ?? 'GREEN',
       yardLocation: (row.yard_location as string) ?? '',
