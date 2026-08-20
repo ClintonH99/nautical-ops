@@ -61,7 +61,7 @@ AND policyname = 'Users can view crew in their vessel';
 ```bash
 # Stop the Expo server (Ctrl+C)
 # Then restart:
-cd "/Users/clintonhandford/Desktop/Yachy App/yachy-app"
+cd ~/Desktop/nautical-ops/yachy-app
 npm start
 ```
 

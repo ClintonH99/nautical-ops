@@ -58,7 +58,7 @@ USING (
 
 After running the SQL, restart your Expo app:
 ```bash
-cd "/Users/clintonhandford/Desktop/Yachy App/yachy-app"
+cd ~/Desktop/nautical-ops/yachy-app
 npm start
 ```
 
