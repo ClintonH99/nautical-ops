@@ -6,6 +6,7 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '../constants/theme';
 import { User } from '../types';
+import { posthog } from '../config/posthog';
 
 const DEPARTMENT_COLOR_STORAGE_KEY = 'nautical_ops_department_color_overrides';
 const BACKGROUND_THEME_STORAGE_KEY = 'nautical_ops_background_theme';
@@ -45,6 +46,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   setDeferUserUpdate: (defer) => set({ deferUserUpdate: defer }),
   logout: () => {
     AsyncStorage.removeItem(CACHED_USER_STORAGE_KEY).catch(() => {});
+    // Clear the analytics identity too, or the next person to log in on a
+    // shared device is recorded as the person who just logged out.
+    posthog.reset();
     set({ user: null, isAuthenticated: false, deferUserUpdate: false });
   },
 }));
