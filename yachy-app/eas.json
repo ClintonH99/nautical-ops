@@ -22,7 +22,10 @@
       },
       "channel": "preview",
       "env": {
-        "APP_ENV": "preview"
+        "APP_ENV": "preview",
+        "POSTHOG_PROJECT_TOKEN": "phc_BUXQeT4sFTHh7AEAU4B8zR9ZnrH83XLGvZLNKxNwDfHq",
+        "POSTHOG_HOST": "https://us.i.posthog.com",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://b42388fe9179330e9b7c420e70c32553@o4510977060634624.ingest.us.sentry.io/4511892508442624"
       }
     },
     "production": {
@@ -35,7 +38,10 @@
       },
       "channel": "production",
       "env": {
-        "APP_ENV": "production"
+        "APP_ENV": "production",
+        "POSTHOG_PROJECT_TOKEN": "phc_BUXQeT4sFTHh7AEAU4B8zR9ZnrH83XLGvZLNKxNwDfHq",
+        "POSTHOG_HOST": "https://us.i.posthog.com",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://b42388fe9179330e9b7c420e70c32553@o4510977060634624.ingest.us.sentry.io/4511892508442624"
       }
     }
   },
