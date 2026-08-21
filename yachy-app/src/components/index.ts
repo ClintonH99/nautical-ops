@@ -15,3 +15,4 @@ export { InfoModal } from './InfoModal';
 export type { ScreenInfoContent } from './InfoModal';
 export { PillButton } from './PillButton';
 export { ExportBar } from './ExportBar';
+export { Checkbox } from './Checkbox';

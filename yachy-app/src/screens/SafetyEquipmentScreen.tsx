@@ -19,8 +19,8 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import safetyEquipmentService from '../services/safetyEquipment';
-import { Button, LoadingSpinner, PageHeader } from '../components';
-import { generateSafetyEquipmentPdf } from '../utils/safetyEquipmentPdf';
+import { Button, LoadingSpinner, PageHeader, ExportButton, ExportBar, Checkbox } from '../components';
+import { generateSafetyEquipmentListPdf } from '../utils/safetyEquipmentPdf';
 import type { SafetyEquipment, SafetyEquipmentData } from '../services/safetyEquipment';
 import { normalizeSafetyItem } from '../services/safetyEquipment';
 
@@ -113,7 +113,9 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
   const [items, setItems] = useState<SafetyEquipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [exportingId, setExportingId] = useState<string | null>(null);
+  const [exportMode, setExportMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [exportingList, setExportingList] = useState(false);
 
   const load = useCallback(async () => {
     if (!vesselId) return;
@@ -133,15 +135,34 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
     }, [load])
   );
 
-  const onDownloadPdf = async (item: SafetyEquipment) => {
-    setExportingId(item.id);
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectedPlans = items.filter((i) => selectedIds.has(i.id));
+
+  const onExportSelected = async () => {
+    if (selectedPlans.length === 0) {
+      Alert.alert('Nothing selected', 'Tap the plans you want to include, then export.');
+      return;
+    }
+    setExportingList(true);
     try {
-      const fn = (item.title || 'Safety_Equipment').replace(/[^a-z0-9]/gi, '_') + '.pdf';
-      await generateSafetyEquipmentPdf(item.data, item.title, fn);
-    } catch (e) {
-      Alert.alert('Error', 'Could not export PDF');
+      await generateSafetyEquipmentListPdf(
+        selectedPlans.map((p) => ({ title: p.title, data: p.data })),
+        String(selectedPlans[0]?.data?.vesselName ?? '')
+      );
+      setExportMode(false);
+      setSelectedIds(new Set());
+    } catch (e: any) {
+      Alert.alert('Export failed', e?.message ?? 'Could not create the PDF. Please try again.');
     } finally {
-      setExportingId(null);
+      setExportingList(false);
     }
   };
 
@@ -186,7 +207,28 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.pageWrap}>
-      <PageHeader title="Safety Equipment" info={SAFETY_EQUIPMENT_INFO} infoScreenKey="safety_equipment" />
+      <PageHeader
+        title="Safety Equipment"
+        info={SAFETY_EQUIPMENT_INFO}
+        infoScreenKey="safety_equipment"
+        actions={
+          <ExportButton
+            active={exportMode}
+            onPress={() => {
+              if (exportMode) setSelectedIds(new Set());
+              setExportMode(!exportMode);
+            }}
+          />
+        }
+      />
+      {exportMode && (
+        <ExportBar
+          count={selectedPlans.length}
+          onConfirm={onExportSelected}
+          exporting={exportingList}
+          hint="Tap plans to select"
+        />
+      )}
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={styles.content}
@@ -205,10 +247,17 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
           <TouchableOpacity
             key={item.id}
             style={[styles.card, { backgroundColor: themeColors.surface }]}
-            onPress={() => onEdit(item)}
-            activeOpacity={canManage ? 0.8 : 1}
+            onPress={() => (exportMode ? toggleSelect(item.id) : onEdit(item))}
+            activeOpacity={canManage || exportMode ? 0.8 : 1}
           >
             <View style={styles.cardHeader}>
+              {exportMode && (
+                <Checkbox
+                  checked={selectedIds.has(item.id)}
+                  onPress={() => toggleSelect(item.id)}
+                  surface={themeColors.surface}
+                />
+              )}
               <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
                 {item.title}
               </Text>
@@ -230,24 +279,6 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
               )}
             </View>
             <SafetyEquipmentPreview data={item.data} themeColors={themeColors} />
-            <TouchableOpacity
-              style={styles.downloadBtn}
-              onPress={() => onDownloadPdf(item)}
-              disabled={!!exportingId}
-            >
-              {exportingId === item.id ? (
-                <ActivityIndicator size="small" color={COLORS.primary} />
-              ) : (
-                <Text
-                  style={[
-                    styles.downloadBtnText,
-                    { color: themeColors.isDark ? COLORS.white : COLORS.primary },
-                  ]}
-                >
-                  Export to PDF
-                </Text>
-              )}
-            </TouchableOpacity>
           </TouchableOpacity>
         ))}
         {items.length === 0 && (
@@ -311,8 +342,6 @@ const styles = StyleSheet.create({
   previewLabel: { fontWeight: '600' },
   previewMore: { fontSize: FONTS.xs, marginTop: 2 },
   previewEmpty: { fontSize: FONTS.sm, fontStyle: 'italic', marginTop: SPACING.sm },
-  downloadBtn: { alignSelf: 'flex-start', paddingVertical: SPACING.xs },
-  downloadBtnText: { fontSize: FONTS.base, color: COLORS.primary, fontWeight: '600' },
   emptyText: { fontSize: FONTS.base, marginBottom: SPACING.xl, textAlign: 'center' },
   createSection: { marginTop: SPACING.lg },
   crewNote: { fontSize: FONTS.sm, textAlign: 'center', marginTop: SPACING.md, fontStyle: 'italic' },
