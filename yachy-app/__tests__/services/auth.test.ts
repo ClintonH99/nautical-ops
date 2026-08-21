@@ -68,6 +68,7 @@ describe('AuthService', () => {
       mockFrom.mockReturnValue({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
+        in: jest.fn().mockReturnThis(),
         maybeSingle: jest.fn().mockResolvedValue({ data: vessel, error: null }),
       });
 
