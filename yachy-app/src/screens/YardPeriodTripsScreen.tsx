@@ -65,7 +65,8 @@ export const YardPeriodTripsScreen = ({ navigation }: any) => {
   const [refreshing, setRefreshing] = useState(false);
 
   const vesselId = user?.vesselId ?? null;
-  const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
+  // Yard periods are open to any crew member on the vessel.
+  const canManageTrips = !!user;
   const { colors: tripColors, load: loadColors } = useVesselTripColors(vesselId);
   const cardColor = tripColors?.yardPeriod ?? DEFAULT_COLORS.yardPeriod;
 
@@ -129,12 +130,12 @@ export const YardPeriodTripsScreen = ({ navigation }: any) => {
   };
 
   const onEdit = (trip: Trip) => {
-    if (!isHOD) return;
+    if (!canManageTrips) return;
     navigation.navigate('AddEditTrip', { type: TRIP_TYPE, tripId: trip.id });
   };
 
   const onDelete = (trip: Trip) => {
-    if (!isHOD) return;
+    if (!canManageTrips) return;
     Alert.alert('Delete trip', `Delete "${trip.title}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -160,9 +161,9 @@ export const YardPeriodTripsScreen = ({ navigation }: any) => {
       <ButtonTagCard
         headerTitle={item.title ?? ''}
         accentColor={item.department ? getDepartmentColor(item.department, overrides) : cardColor}
-        onEdit={isHOD ? () => onEdit(item) : undefined}
-        onDelete={isHOD ? () => onDelete(item) : undefined}
-        onPress={isHOD ? () => onEdit(item) : undefined}
+        onEdit={canManageTrips ? () => onEdit(item) : undefined}
+        onDelete={canManageTrips ? () => onDelete(item) : undefined}
+        onPress={canManageTrips ? () => onEdit(item) : undefined}
       >
         <ButtonTagRow
           label="Date"
@@ -190,7 +191,7 @@ export const YardPeriodTripsScreen = ({ navigation }: any) => {
 
   const ListHeader = () => (
     <>
-      {isHOD && (
+      {canManageTrips && (
         <View style={styles.addRow}>
           <Button
             title="Add Yard Period"

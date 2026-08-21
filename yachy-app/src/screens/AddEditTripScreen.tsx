@@ -90,7 +90,6 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
   const [step, setStep] = useState<'start' | 'end'>('start');
 
   const vesselId = user?.vesselId ?? null;
-  const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
   const isEdit = !!tripId;
   const { colors: tripColors, load: loadTripColors } = useVesselTripColors(vesselId);
   const typeColorMap = tripColors
@@ -188,10 +187,6 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
       Alert.alert('Error', 'You must be in a vessel to create trips.');
       return;
     }
-    if (!isHOD) {
-      Alert.alert('Access denied', 'Only HODs can create or edit trips.');
-      return;
-    }
 
     setSaving(true);
     try {
@@ -237,16 +232,6 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
       setSaving(false);
     }
   };
-
-  if (!isHOD) {
-    return (
-      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
-          Only HODs can add or edit trips.
-        </Text>
-      </View>
-    );
-  }
 
   if (!vesselId) {
     return (

@@ -34,7 +34,10 @@ export const GuestTripsScreen = ({ navigation }: any) => {
   const [refreshing, setRefreshing] = useState(false);
 
   const vesselId = user?.vesselId ?? null;
-  const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
+  // Trip colours stay restricted to HOD and Captain.
+  const canEditTripColors = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
+  // Trips themselves are open to any crew member on the vessel.
+  const canManageTrips = !!user;
   const { colors: tripColors, load: loadColors } = useVesselTripColors(vesselId);
   const cardColor = tripColors?.guest ?? DEFAULT_COLORS.guest;
 
@@ -61,7 +64,7 @@ export const GuestTripsScreen = ({ navigation }: any) => {
   );
 
   useEffect(() => {
-    if (!isHOD) return;
+    if (!canEditTripColors) return;
     navigation.setOptions({
       headerRight: () => (
         <TouchableOpacity
@@ -85,7 +88,7 @@ export const GuestTripsScreen = ({ navigation }: any) => {
         </TouchableOpacity>
       ),
     });
-  }, [navigation, isHOD, themeColors]);
+  }, [navigation, canEditTripColors, themeColors]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -99,12 +102,12 @@ export const GuestTripsScreen = ({ navigation }: any) => {
   };
 
   const onEdit = (trip: Trip) => {
-    if (!isHOD) return;
+    if (!canManageTrips) return;
     navigation.navigate('AddEditTrip', { type: TRIP_TYPE, tripId: trip.id });
   };
 
   const onDelete = (trip: Trip) => {
-    if (!isHOD) return;
+    if (!canManageTrips) return;
     Alert.alert('Delete trip', `Delete "${trip.title}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -126,9 +129,9 @@ export const GuestTripsScreen = ({ navigation }: any) => {
     <ButtonTagCard
       headerTitle={item.title ?? ''}
       accentColor={cardColor}
-      onEdit={isHOD ? () => onEdit(item) : undefined}
-      onDelete={isHOD ? () => onDelete(item) : undefined}
-      onPress={isHOD ? () => onEdit(item) : undefined}
+      onEdit={canManageTrips ? () => onEdit(item) : undefined}
+      onDelete={canManageTrips ? () => onDelete(item) : undefined}
+      onPress={canManageTrips ? () => onEdit(item) : undefined}
     >
       <ButtonTagRow
         label="Date"
@@ -150,7 +153,7 @@ export const GuestTripsScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      {isHOD && (
+      {canManageTrips && (
         <View style={styles.addRow}>
           <Button
             title="Add Guest Trip"
@@ -168,7 +171,7 @@ export const GuestTripsScreen = ({ navigation }: any) => {
           <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
             No guest trips yet
           </Text>
-          {isHOD && (
+          {canManageTrips && (
             <Button
               title="Add first trip"
               onPress={onAdd}
