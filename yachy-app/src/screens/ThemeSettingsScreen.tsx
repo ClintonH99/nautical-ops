@@ -15,6 +15,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeStore, BACKGROUND_THEMES, BackgroundThemeId } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { PageHeader } from '../components';
 
 const THEMES: { id: BackgroundThemeId; label: string; description: string }[] = [
   { id: 'day', label: 'Day', description: 'Light mode — clean and bright' },
@@ -34,48 +35,52 @@ export const ThemeSettingsScreen = () => {
   if (!loaded) return null;
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <Text style={[styles.title, { color: themeColors.textPrimary }]}>Appearance</Text>
-      <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-        Background theme: Day or Night Mode
-      </Text>
+    <View style={styles.pageWrap}>
+      <PageHeader title="Appearance" />
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={[styles.title, { color: themeColors.textPrimary }]}>Appearance</Text>
+        <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+          Background theme: Day or Night Mode
+        </Text>
 
-      <View style={[styles.section, { backgroundColor: themeColors.surface }]}>
-        {THEMES.map((theme, index) => {
-          const isSelected = backgroundTheme === theme.id;
-          const colors = BACKGROUND_THEMES[theme.id];
-          const isLast = index === THEMES.length - 1;
+        <View style={[styles.section, { backgroundColor: themeColors.surface }]}>
+          {THEMES.map((theme, index) => {
+            const isSelected = backgroundTheme === theme.id;
+            const colors = BACKGROUND_THEMES[theme.id];
+            const isLast = index === THEMES.length - 1;
 
-          return (
-            <TouchableOpacity
-              key={theme.id}
-              style={[styles.row, isLast && styles.rowLast, { borderBottomColor: themeColors.surfaceAlt }]}
-              onPress={() => setBackgroundTheme(theme.id)}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.preview, { backgroundColor: colors.background }]}>
-                <View style={[styles.previewDot, { backgroundColor: colors.surface }]} />
-              </View>
-              <View style={styles.rowText}>
-                <Text style={[styles.rowLabel, { color: themeColors.textPrimary }]}>{theme.label}</Text>
-                <Text style={[styles.rowDesc, { color: themeColors.textSecondary }]}>{theme.description}</Text>
-              </View>
-              <View style={[styles.radio, isSelected && styles.radioSelected]}>
-                {isSelected && <View style={styles.radioDot} />}
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    </ScrollView>
+            return (
+              <TouchableOpacity
+                key={theme.id}
+                style={[styles.row, isLast && styles.rowLast, { borderBottomColor: themeColors.surfaceAlt }]}
+                onPress={() => setBackgroundTheme(theme.id)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.preview, { backgroundColor: colors.background }]}>
+                  <View style={[styles.previewDot, { backgroundColor: colors.surface }]} />
+                </View>
+                <View style={styles.rowText}>
+                  <Text style={[styles.rowLabel, { color: themeColors.textPrimary }]}>{theme.label}</Text>
+                  <Text style={[styles.rowDesc, { color: themeColors.textSecondary }]}>{theme.description}</Text>
+                </View>
+                <View style={[styles.radio, isSelected && styles.radioSelected]}>
+                  {isSelected && <View style={styles.radioDot} />}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: { flex: 1 },
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   title: {

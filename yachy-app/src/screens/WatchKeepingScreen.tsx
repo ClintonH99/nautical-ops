@@ -4,7 +4,6 @@
  */
 
 import React, { useState, useCallback, useLayoutEffect } from 'react';
-import { InfoModal } from '../components/InfoModal';
 import {
   View,
   Text,
@@ -23,16 +22,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { PageHeader } from '../components';
 import watchKeepingService, { WatchKeepingRules } from '../services/watchKeeping';
 
-export const WatchKeepingScreen = ({ navigation }: any) => {
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <InfoModal
-          screenKey="watch_keeping"
-          autoShow={false}
-          content={{
+
+const WATCH_KEEPING_INFO = {
             title: 'Watch Keeping',
             description: 'Manage watch schedules and timetables.',
             features: [
@@ -41,11 +35,9 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
               'Keep bridge coverage organized',
               'Adjust schedules as needed',
             ],
-          }}
-        />
-      ),
-    });
-  }, [navigation]);
+          };
+
+export const WatchKeepingScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
@@ -109,137 +101,141 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-      contentContainerStyle={styles.content}
-    >
-      {/* Watch Keeping Rules board — matches Muster Station design */}
-      <View style={[styles.rulesBoard, { backgroundColor: themeColors.surface }]}>
-        <View style={styles.rulesBoardInner}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
-              Watch Keeping Rules
-            </Text>
-            {isHOD && (
-              <TouchableOpacity onPress={openEditModal} style={styles.editRulesBtn}>
-                <Text
-                  style={[
-                    styles.editRulesBtnText,
-                    { color: themeColors.isDark ? COLORS.white : COLORS.primary },
-                  ]}
-                >
-                  Edit
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          {loadingRules ? (
-            <ActivityIndicator size="small" color={COLORS.primary} style={styles.rulesLoader} />
-          ) : (
-            <View style={styles.featureList}>
-              {rules?.content ? (
-                <Text style={[styles.rulesBody, { color: themeColors.textPrimary }]}>
-                  {rules.content}
-                </Text>
-              ) : (
-                <Text style={[styles.rulesPlaceholder, { color: themeColors.textSecondary }]}>
-                  {isHOD
-                    ? 'No rules set. Tap Edit to add Watch Keeping rules.'
-                    : 'No rules set for this vessel.'}
-                </Text>
-              )}
-            </View>
-          )}
-        </View>
-      </View>
-
-      <TouchableOpacity
-        style={[styles.card, { backgroundColor: themeColors.surface }]}
-        onPress={() => navigation.navigate('WatchSchedule')}
-        activeOpacity={0.8}
+    <View style={styles.pageWrap}>
+      <PageHeader title="Watch Keeping" info={WATCH_KEEPING_INFO} infoScreenKey="watch_keeping" />
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={styles.content}
       >
-        <Text style={styles.cardIcon}>📋</Text>
-        <View style={styles.cardLabelWrap}>
-          <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>Watch Schedule</Text>
-          <Text style={[styles.cardHint, { color: themeColors.textSecondary }]}>
-            View published watch timetables
-          </Text>
-        </View>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.card, { backgroundColor: themeColors.surface }]}
-        onPress={() => navigation.navigate('CreateWatchTimetable')}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.cardIcon}>➕</Text>
-        <View style={styles.cardLabelWrap}>
-          <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>Create</Text>
-          <Text style={[styles.cardHint, { color: themeColors.textSecondary }]}>
-            Create and publish a new watch timetable
-          </Text>
-        </View>
-      </TouchableOpacity>
-
-      {/* Edit Rules Modal (HOD only) */}
-      {editModalOpen && (
-        <Modal visible transparent animationType="fade">
-          <KeyboardAvoidingView
-            style={styles.modalBackdrop}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            keyboardVerticalOffset={60}
-          >
-            <Pressable style={StyleSheet.absoluteFill} onPress={() => setEditModalOpen(false)} />
-            <View
-              style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
-              onStartShouldSetResponder={() => true}
-            >
-              <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
-                Edit Watch Keeping Rules
+        {/* Watch Keeping Rules board — matches Muster Station design */}
+        <View style={[styles.rulesBoard, { backgroundColor: themeColors.surface }]}>
+          <View style={styles.rulesBoardInner}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+                Watch Keeping Rules
               </Text>
-              <TextInput
-                style={[
-                  styles.rulesInput,
-                  {
-                    backgroundColor: themeColors.surfaceAlt,
-                    color: themeColors.textPrimary,
-                    borderColor: themeColors.isDark ? themeColors.surfaceAlt : COLORS.border,
-                  },
-                ]}
-                value={editContent}
-                onChangeText={setEditContent}
-                placeholder="Enter rules and guidelines for watch keeping..."
-                placeholderTextColor={themeColors.textSecondary}
-                multiline
-                numberOfLines={8}
-                textAlignVertical="top"
-              />
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={styles.modalCancelBtn}
-                  onPress={() => setEditModalOpen(false)}
-                >
-                  <Text style={[styles.modalCancelText, { color: themeColors.textSecondary }]}>
-                    Cancel
+              {isHOD && (
+                <TouchableOpacity onPress={openEditModal} style={styles.editRulesBtn}>
+                  <Text
+                    style={[
+                      styles.editRulesBtnText,
+                      { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                    ]}
+                  >
+                    Edit
                   </Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.modalSaveBtn}
-                  onPress={handleSaveRules}
-                  disabled={saving}
-                >
-                  <Text style={styles.modalSaveText}>{saving ? 'Saving...' : 'Save'}</Text>
-                </TouchableOpacity>
-              </View>
+              )}
             </View>
-          </KeyboardAvoidingView>
-        </Modal>
-      )}
-    </ScrollView>
+            {loadingRules ? (
+              <ActivityIndicator size="small" color={COLORS.primary} style={styles.rulesLoader} />
+            ) : (
+              <View style={styles.featureList}>
+                {rules?.content ? (
+                  <Text style={[styles.rulesBody, { color: themeColors.textPrimary }]}>
+                    {rules.content}
+                  </Text>
+                ) : (
+                  <Text style={[styles.rulesPlaceholder, { color: themeColors.textSecondary }]}>
+                    {isHOD
+                      ? 'No rules set. Tap Edit to add Watch Keeping rules.'
+                      : 'No rules set for this vessel.'}
+                  </Text>
+                )}
+              </View>
+            )}
+          </View>
+        </View>
+
+        <TouchableOpacity
+          style={[styles.card, { backgroundColor: themeColors.surface }]}
+          onPress={() => navigation.navigate('WatchSchedule')}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.cardIcon}>📋</Text>
+          <View style={styles.cardLabelWrap}>
+            <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>Watch Schedule</Text>
+            <Text style={[styles.cardHint, { color: themeColors.textSecondary }]}>
+              View published watch timetables
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.card, { backgroundColor: themeColors.surface }]}
+          onPress={() => navigation.navigate('CreateWatchTimetable')}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.cardIcon}>➕</Text>
+          <View style={styles.cardLabelWrap}>
+            <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>Create</Text>
+            <Text style={[styles.cardHint, { color: themeColors.textSecondary }]}>
+              Create and publish a new watch timetable
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Edit Rules Modal (HOD only) */}
+        {editModalOpen && (
+          <Modal visible transparent animationType="fade">
+            <KeyboardAvoidingView
+              style={styles.modalBackdrop}
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              keyboardVerticalOffset={60}
+            >
+              <Pressable style={StyleSheet.absoluteFill} onPress={() => setEditModalOpen(false)} />
+              <View
+                style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+                onStartShouldSetResponder={() => true}
+              >
+                <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+                  Edit Watch Keeping Rules
+                </Text>
+                <TextInput
+                  style={[
+                    styles.rulesInput,
+                    {
+                      backgroundColor: themeColors.surfaceAlt,
+                      color: themeColors.textPrimary,
+                      borderColor: themeColors.isDark ? themeColors.surfaceAlt : COLORS.border,
+                    },
+                  ]}
+                  value={editContent}
+                  onChangeText={setEditContent}
+                  placeholder="Enter rules and guidelines for watch keeping..."
+                  placeholderTextColor={themeColors.textSecondary}
+                  multiline
+                  numberOfLines={8}
+                  textAlignVertical="top"
+                />
+                <View style={styles.modalActions}>
+                  <TouchableOpacity
+                    style={styles.modalCancelBtn}
+                    onPress={() => setEditModalOpen(false)}
+                  >
+                    <Text style={[styles.modalCancelText, { color: themeColors.textSecondary }]}>
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.modalSaveBtn}
+                    onPress={handleSaveRules}
+                    disabled={saving}
+                  >
+                    <Text style={styles.modalSaveText}>{saving ? 'Saving...' : 'Save'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </KeyboardAvoidingView>
+          </Modal>
+        )}
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: {
     flex: 1,
   },

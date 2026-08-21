@@ -22,12 +22,12 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { InfoModal } from '../components/InfoModal';
 import userService from '../services/user';
 import { User } from '../types';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { PageHeader } from '../components';
 import {
   getRules,
   saveRules,
@@ -78,16 +78,8 @@ function getMonday(d: Date): Date {
   return date;
 }
 
-export const WatchDutiesScreen = () => {
-  const navigation = useNavigation<any>();
 
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <InfoModal
-          screenKey="watch_duties"
-          autoShow={false}
-          content={{
+const WATCH_DUTIES_INFO = {
             title: 'Watch Duties',
             description: 'Rules, the week-ahead watch schedule, and department duty checklists.',
             features: [
@@ -96,11 +88,11 @@ export const WatchDutiesScreen = () => {
               'Check off duty checklist items by department',
               'Stay on top of who is covering what, and when',
             ],
-          }}
-        />
-      ),
-    });
-  }, [navigation]);
+          };
+
+export const WatchDutiesScreen = () => {
+  const navigation = useNavigation<any>();
+
 
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
@@ -335,6 +327,7 @@ export const WatchDutiesScreen = () => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={100}
     >
+      <PageHeader title="Watch Duties" info={WATCH_DUTIES_INFO} infoScreenKey="watch_duties" />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>This week</Text>
       <View style={[styles.card, { backgroundColor: themeColors.surface }]}>

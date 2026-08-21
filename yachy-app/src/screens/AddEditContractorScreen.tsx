@@ -22,7 +22,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import contractorsService, { ContractorContact } from '../services/contractors';
 import { Department } from '../types';
-import { Input, Button, LoadingSpinner } from '../components';
+import { Input, Button, LoadingSpinner, PageHeader } from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -183,6 +183,7 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={100}
     >
+      <PageHeader title={isEdit ? 'Edit Contractor' : 'New Contractor'} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}

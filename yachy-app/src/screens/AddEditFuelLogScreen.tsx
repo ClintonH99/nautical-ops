@@ -19,7 +19,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import fuelLogsService from '../services/fuelLogs';
-import { Input, Button, LoadingSpinner } from '../components';
+import { Input, Button, LoadingSpinner, PageHeader } from '../components';
 
 function formatDate(d: Date): string {
   const yyyy = d.getFullYear();
@@ -173,6 +173,7 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={100}
     >
+      <PageHeader title="New Fuel Log Entry" />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}

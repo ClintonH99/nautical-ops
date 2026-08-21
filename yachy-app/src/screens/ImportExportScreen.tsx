@@ -4,7 +4,6 @@
  */
 
 import React, { useState, useLayoutEffect } from 'react';
-import { InfoModal } from '../components/InfoModal';
 import {
   View,
   Text,
@@ -28,17 +27,11 @@ import {
   parseInventoryFile,
   TemplateType,
 } from '../services/excelTemplates';
-import { Button } from '../components';
+import { Button, PageHeader } from '../components';
 import inventoryService from '../services/inventory';
 
-export const ImportExportScreen = ({ navigation }: any) => {
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <InfoModal
-          screenKey="import_export"
-          autoShow={false}
-          content={{
+
+const IMPORT_EXPORT_INFO = {
             title: 'Import / Export',
             description: 'Move vessel data in and out of the app.',
             features: [
@@ -47,11 +40,9 @@ export const ImportExportScreen = ({ navigation }: any) => {
               'Keep records portable between devices',
               'Transfer information when handing over',
             ],
-          }}
-        />
-      ),
-    });
-  }, [navigation]);
+          };
+
+export const ImportExportScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const [downloading, setDownloading] = useState<TemplateType | null>(null);
@@ -277,64 +268,68 @@ export const ImportExportScreen = ({ navigation }: any) => {
   );
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <View style={styles.content}>
-        <Text style={[styles.intro, { color: themeColors.textSecondary }]}>
-          Download a template, fill it with your data in Excel or Google Sheets, then import it here.
-        </Text>
-
-        <TemplateSection
-          type="tasks"
-          title="Tasks"
-          icon="📋"
-          description="Daily, Weekly, and Monthly tasks. Columns: Category, Title, Notes, Done By Date, Recurring."
-        />
-        <TemplateSection
-          type="maintenance"
-          title="Maintenance Log"
-          icon="📝"
-          description="Equipment maintenance records. Columns: Equipment, Location, Serial #, Hours, Service details."
-        />
-        <TemplateSection
-          type="yard"
-          title="Yard Period"
-          icon="🔧"
-          description="Yard period jobs. Columns: Job Title, Description, Yard Location, Contractor, Contact."
-        />
-
-        <View style={[styles.section, { backgroundColor: themeColors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>📦 Inventory</Text>
-          <Text style={[styles.sectionDesc, { color: themeColors.textSecondary }]}>
-            Download a template, fill it with your inventory items, then import it here. You can also export all current inventory to PDF.
+    <View style={styles.pageWrap}>
+      <PageHeader title="Import / Export" info={IMPORT_EXPORT_INFO} infoScreenKey="import_export" />
+      <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <View style={styles.content}>
+          <Text style={[styles.intro, { color: themeColors.textSecondary }]}>
+            Download a template, fill it with your data in Excel or Google Sheets, then import it here.
           </Text>
-          {!vesselId && (
-            <Text style={[styles.vesselNote, { color: themeColors.textSecondary }]}>Join a vessel to import or export inventory.</Text>
-          )}
-          <View style={styles.actions}>
-            <Button
-              title={downloading === 'inventory' ? 'Creating…' : 'Download Template'}
-              onPress={() => handleDownload('inventory')}
-              variant={themeColors.isDark ? 'outlineLight' : 'outline'}
-              disabled={!!downloading}
-              loading={downloading === 'inventory'}
-              style={styles.btn}
-            />
-            <Button
-              title={importing === 'inventory' ? 'Importing…' : 'Import from File'}
-              onPress={() => handleImport('inventory')}
-              variant="primary"
-              disabled={!!importing || !vesselId}
-              loading={importing === 'inventory'}
-              style={styles.btn}
-            />
+
+          <TemplateSection
+            type="tasks"
+            title="Tasks"
+            icon="📋"
+            description="Daily, Weekly, and Monthly tasks. Columns: Category, Title, Notes, Done By Date, Recurring."
+          />
+          <TemplateSection
+            type="maintenance"
+            title="Maintenance Log"
+            icon="📝"
+            description="Equipment maintenance records. Columns: Equipment, Location, Serial #, Hours, Service details."
+          />
+          <TemplateSection
+            type="yard"
+            title="Yard Period"
+            icon="🔧"
+            description="Yard period jobs. Columns: Job Title, Description, Yard Location, Contractor, Contact."
+          />
+
+          <View style={[styles.section, { backgroundColor: themeColors.surface }]}>
+            <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>📦 Inventory</Text>
+            <Text style={[styles.sectionDesc, { color: themeColors.textSecondary }]}>
+              Download a template, fill it with your inventory items, then import it here. You can also export all current inventory to PDF.
+            </Text>
+            {!vesselId && (
+              <Text style={[styles.vesselNote, { color: themeColors.textSecondary }]}>Join a vessel to import or export inventory.</Text>
+            )}
+            <View style={styles.actions}>
+              <Button
+                title={downloading === 'inventory' ? 'Creating…' : 'Download Template'}
+                onPress={() => handleDownload('inventory')}
+                variant={themeColors.isDark ? 'outlineLight' : 'outline'}
+                disabled={!!downloading}
+                loading={downloading === 'inventory'}
+                style={styles.btn}
+              />
+              <Button
+                title={importing === 'inventory' ? 'Importing…' : 'Import from File'}
+                onPress={() => handleImport('inventory')}
+                variant="primary"
+                disabled={!!importing || !vesselId}
+                loading={importing === 'inventory'}
+                style={styles.btn}
+              />
+            </View>
           </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: {
     flex: 1,
   },

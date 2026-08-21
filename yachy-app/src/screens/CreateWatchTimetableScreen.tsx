@@ -25,7 +25,7 @@ import userService from '../services/user';
 import watchKeepingService, { TimetableSlot } from '../services/watchKeeping';
 import { User } from '../types';
 import { formatLocalDateString } from '../utils';
-import { Input, Button, LoadingSpinner } from '../components';
+import { Input, Button, LoadingSpinner, PageHeader } from '../components';
 
 function parseTimeToHour(str: string): number {
   const cleaned = str.trim().replace(/\s/g, '');
@@ -358,6 +358,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={100}
     >
+      <PageHeader title="Create" />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}

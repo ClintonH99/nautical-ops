@@ -23,7 +23,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import vesselTasksService from '../services/vesselTasks';
 import { VesselTask, TaskCategory, Department } from '../types';
-import { LoadingSpinner } from '../components';
+import { LoadingSpinner, PageHeader } from '../components';
 
 const CLEANUP_STORAGE_KEY = 'yachy_tasks_last_cleanup_month';
 
@@ -189,6 +189,7 @@ export const CompletedTasksScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <PageHeader title="Completed Tasks" />
       {loading ? (
         <LoadingSpinner />
       ) : tasks.length === 0 ? (

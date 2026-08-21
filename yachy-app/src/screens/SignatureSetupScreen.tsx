@@ -25,6 +25,7 @@ import SignatureCanvas, { SignatureViewRef } from 'react-native-signature-canvas
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { PageHeader } from '../components';
 import { getSignatureForUser, saveSignature, UserSignature } from '../services/signatures';
 
 const HIDE_FOOTER_STYLE = `
@@ -144,6 +145,7 @@ export const SignatureSetupScreen = () => {
       style={[styles.container, { backgroundColor: themeColors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <PageHeader title="E-Signature" />
       <View style={{ padding: SPACING.lg, flex: 1 }}>
         <View style={[styles.tabRow, { backgroundColor: themeColors.surface }]}>
           <TouchableOpacity

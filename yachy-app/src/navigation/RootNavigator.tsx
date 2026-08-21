@@ -246,36 +246,41 @@ export const RootNavigator = () => {
     let mounted = true;
     const BOOTSTRAP_MAX_MS = 12000;
 
-    const runBootstrap = async () => {
+    // Phase 1 - local reads only. Nothing here touches the network, so it
+    // finishes in milliseconds and the app is on screen before any request
+    // is made. This is what makes a cold start feel instant.
+    const renderFromCache = async (): Promise<boolean> => {
+      await loadTheme().catch(() => {
+        /* theme load is non-critical */
+      });
       try {
-        const [, session] = await Promise.all([
-          loadTheme().catch(() => {
-            /* theme load is non-critical */
-          }),
-          authService.getSession(),
-        ]);
+        const cached = await AsyncStorage.getItem('nautical_ops_cached_user');
+        if (cached && mounted) {
+          const parsed = JSON.parse(cached);
+          if (parsed?.id) {
+            setUser(parsed);
+            setLoading(false);
+            return true;
+          }
+        }
+      } catch {
+        /* cache is best-effort */
+      }
+      return false;
+    };
+
+    // Phase 2 - the session check and profile refresh, run behind the UI the
+    // user is already looking at. If it turns out the session is dead, the
+    // user is corrected out of the app from here.
+    const runBootstrap = async (renderedFromCache: boolean) => {
+      try {
+        const session = await authService.getSession();
         if (!mounted) return;
 
         if (!session?.user) {
+          // Rendered from cache but the session is gone - sign them back out.
+          if (renderedFromCache) setUser(null);
           return;
-        }
-
-        // Returning user: render from the cached profile immediately and let
-        // the network refresh happen behind them. This is what keeps cold
-        // start off the critical path.
-        let renderedFromCache = false;
-        try {
-          const cached = await AsyncStorage.getItem('nautical_ops_cached_user');
-          if (cached && mounted) {
-            const parsed = JSON.parse(cached);
-            if (parsed?.id === session.user.id) {
-              setUser(parsed);
-              setLoading(false);
-              renderedFromCache = true;
-            }
-          }
-        } catch {
-          /* cache is best-effort */
         }
 
         let userData = renderedFromCache
@@ -320,12 +325,15 @@ export const RootNavigator = () => {
     };
 
     void (async () => {
+      const renderedFromCache = await renderFromCache();
       try {
         await Promise.race([
-          runBootstrap(),
+          runBootstrap(renderedFromCache),
           new Promise<void>((resolve) => setTimeout(() => resolve(), BOOTSTRAP_MAX_MS)),
         ]);
       } finally {
+        // Only matters on a first launch with no cache. For a returning user
+        // loading was already cleared before the network was touched.
         if (mounted) setLoading(false);
       }
     })();
@@ -478,7 +486,6 @@ export const RootNavigator = () => {
               fontWeight: 'bold',
             },
             headerBackTitle: 'Back',
-            headerRightContainerStyle: { backgroundColor: 'transparent', paddingRight: 16 },
             contentStyle: { backgroundColor: themeColors.background },
           }}
         >
@@ -494,7 +501,7 @@ export const RootNavigator = () => {
               <Stack.Screen
                 name="ForgotPassword"
                 component={ForgotPasswordScreen}
-                options={{ title: 'Reset Password', headerShown: true }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="CreateAccountChoice"
@@ -524,17 +531,17 @@ export const RootNavigator = () => {
               <Stack.Screen
                 name="TermsConditions"
                 component={TermsConditionsScreen}
-                options={{ title: 'Terms & Conditions', headerShown: true }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="PrivacyPolicy"
                 component={PrivacyPolicyScreen}
-                options={{ title: 'Privacy Policy', headerShown: true }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="RefundPolicy"
                 component={RefundPolicyScreen}
-                options={{ title: 'Refund Policy', headerShown: true }}
+                options={{ headerShown: false }}
               />
             </>
           ) : (
@@ -558,8 +565,7 @@ export const RootNavigator = () => {
                 name="JoinVessel"
                 component={JoinVesselScreen}
                 options={{
-                  title: 'Join Vessel',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
@@ -570,15 +576,12 @@ export const RootNavigator = () => {
               <Stack.Screen
                 name="FAQHelp"
                 component={FAQScreen}
-                options={{ title: 'FAQ & Help', headerShown: true }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="Settings"
                 component={ProfileScreen}
-                options={{
-                  title: 'Settings & Profile',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="VesselPlans"
@@ -591,367 +594,284 @@ export const RootNavigator = () => {
               <Stack.Screen
                 name="VesselSettings"
                 component={VesselSettingsScreen}
-                options={{
-                  title: 'Vessel Settings',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="CrewManagement"
                 component={CrewManagementScreen}
                 options={{
-                  title: 'Crew Management',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="RotationalGroups"
                 component={RotationalGroupsScreen}
                 options={{
-                  title: 'Rotational Groups',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="UpcomingTrips"
                 component={UpcomingTripsScreen}
-                options={{
-                  title: 'Upcoming Trips',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="GuestTrips"
                 component={GuestTripsScreen}
-                options={{
-                  title: 'Guest Trips',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="BossTrips"
                 component={BossTripsScreen}
-                options={{
-                  title: 'Boss Trips',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="AddEditTrip"
                 component={AddEditTripScreen}
                 options={{
-                  title: 'Trip',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="VesselCrewSafety"
                 component={VesselCrewSafetyScreen}
-                options={{
-                  title: 'Vessel & Crew Safety',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="MusterStation"
                 component={MusterStationScreen}
-                options={{ title: 'Muster Station & Duties', headerShown: true }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="CreateMusterStation"
                 component={CreateMusterStationScreen}
-                options={{ title: 'Create Muster Station', headerShown: true }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="SafetyEquipment"
                 component={SafetyEquipmentScreen}
-                options={{ title: 'Safety Equipment', headerShown: true }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="CreateSafetyEquipment"
                 component={CreateSafetyEquipmentScreen}
-                options={{ title: 'Create Safety Equipment', headerShown: true }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="Rules"
                 component={RulesScreen}
-                options={{ title: 'Rules On-Board', headerShown: true }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="CreateRules"
                 component={CreateRulesScreen}
-                options={{ title: 'Create Rules', headerShown: true }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="PreDepartureChecklist"
                 component={PreDepartureChecklistScreen}
                 options={{
-                  title: 'Pre-Departure Checklist',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="AddEditPreDepartureChecklist"
                 component={AddEditPreDepartureChecklistScreen}
                 options={{
-                  title: 'Pre-Departure Checklist',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="ViewPreDepartureChecklist"
                 component={ViewPreDepartureChecklistScreen}
-                options={{
-                  title: 'View Checklist',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="DeliveryTrips"
                 component={DeliveryTripsScreen}
-                options={{
-                  title: 'Delivery',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="YardPeriodTrips"
                 component={YardPeriodTripsScreen}
                 options={{
-                  title: 'Yard Period',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="TripColorSettings"
                 component={TripColorSettingsScreen}
-                options={{
-                  title: 'Trip colors',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="Tasks"
                 component={TasksScreen}
-                options={{
-                  title: 'Tasks',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="TasksList"
                 component={TasksListScreen}
                 options={{
-                  title: 'Tasks',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="AddEditTask"
                 component={AddEditTaskScreen}
                 options={{
-                  title: 'Task',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="OverdueTasks"
                 component={OverdueTasksScreen}
                 options={{
-                  title: 'Overdue Tasks',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="UpcomingTasks"
                 component={UpcomingTasksScreen}
                 options={{
-                  title: 'Upcoming Tasks',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="CompletedTasks"
                 component={CompletedTasksScreen}
                 options={{
-                  title: 'Completed Tasks',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="TasksCalendar"
                 component={TasksCalendarScreen}
-                options={{
-                  title: 'Yard Period Calendar',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="YardPeriodJobs"
                 component={YardPeriodJobsScreen}
                 options={{
-                  title: 'Shipyard List',
-                  headerShown: true,
+                  // Back button, title and export live in the screen body.
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="AddEditYardJob"
                 component={AddEditYardJobScreen}
                 options={{
-                  title: 'Job',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="MaintenanceHome"
                 component={MaintenanceHomeScreen}
-                options={{
-                  title: 'Maintenance',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="MaintenanceLog"
                 component={MaintenanceLogScreen}
-                options={{
-                  title: 'Maintenance Log',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="AddEditMaintenanceLog"
                 component={AddEditMaintenanceLogScreen}
                 options={{
-                  title: 'Log',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="ImportExport"
                 component={ImportExportScreen}
-                options={{
-                  title: 'Import / Export',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="WatchKeeping"
                 component={WatchKeepingScreen}
-                options={{
-                  title: 'Watch Keeping',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="HoursOfRest"
                 component={HoursOfRestScreen}
-                options={{
-                  title: 'Hours of Rest',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="WatchDuties"
                 component={WatchDutiesScreen}
-                options={{
-                  title: 'Watch Duties',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="SignatureSetup"
                 component={SignatureSetupScreen}
                 options={{
-                  title: 'E-Signature',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="RestDayEntry"
                 component={RestDayEntryScreen}
-                options={{
-                  title: 'Rest Entry',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="RestToBeConfirmed"
                 component={RestToBeConfirmedScreen}
-                options={{
-                  title: 'Rest to be Confirmed',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="WatchSchedule"
                 component={WatchScheduleScreen}
-                options={{
-                  title: 'Watch Schedule',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="WatchScheduleDetail"
                 component={WatchScheduleDetailScreen}
-                options={{
-                  title: 'Watch Schedule',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="CreateWatchTimetable"
                 component={CreateWatchTimetableScreen}
                 options={{
-                  title: 'Create',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="ShoppingListCategory"
                 component={ShoppingListCategoryScreen}
                 options={{
-                  title: 'Shopping List',
-                  headerShown: true,
+                  // Back button and title both live in the screen body.
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="ShoppingList"
                 component={ShoppingListScreen}
-                options={({ route }: any) => ({
-                  title: route.params?.listType === 'trip' ? 'Trip Shopping' : 'General Shopping',
-                  headerShown: true,
-                })}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="AddEditShoppingList"
                 component={AddEditShoppingListScreen}
                 options={{
-                  title: 'Shopping List',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="Inventory"
                 component={InventoryScreen}
-                options={{
-                  title: 'Inventory',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="AddEditInventoryItem"
                 component={AddEditInventoryItemScreen}
                 options={({ route }: any) => ({
                   title: route.params?.itemId ? 'Edit' : 'Create',
-                  headerShown: true,
+                  headerShown: false,
                 })}
               />
               <Stack.Screen
                 name="Uniforms"
                 component={UniformsScreen}
                 options={{
-                  title: 'Uniforms',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
@@ -959,146 +879,112 @@ export const RootNavigator = () => {
                 component={AddEditUniformScreen}
                 options={({ route }: any) => ({
                   title: route.params?.uniformId ? 'Edit' : 'Create',
-                  headerShown: true,
+                  headerShown: false,
                 })}
               />
               <Stack.Screen
                 name="DepartmentColorSettings"
                 component={DepartmentColorSettingsScreen}
                 options={{
-                  title: 'Department colors',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="ThemeSettings"
                 component={ThemeSettingsScreen}
-                options={{
-                  title: 'Appearance',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="NotificationSettings"
                 component={NotificationSettingsScreen}
-                options={{
-                  title: 'Notifications',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="TermsConditions"
                 component={TermsConditionsScreen}
-                options={{
-                  title: 'Terms & Conditions',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="PrivacyPolicy"
                 component={PrivacyPolicyScreen}
-                options={{
-                  title: 'Privacy Policy',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="RefundPolicy"
                 component={RefundPolicyScreen}
-                options={{
-                  title: 'Refund Policy',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="VesselLogs"
                 component={VesselLogsScreen}
-                options={{
-                  title: 'Vessel Logs',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="GeneralWasteLog"
                 component={GeneralWasteLogScreen}
                 options={{
-                  title: 'General Waste Log',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="AddEditGeneralWasteLog"
                 component={AddEditGeneralWasteLogScreen}
                 options={{
-                  title: 'New Waste Log Entry',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="FuelLog"
                 component={FuelLogScreen}
                 options={{
-                  title: 'Fuel Log',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="AddEditFuelLog"
                 component={AddEditFuelLogScreen}
                 options={{
-                  title: 'New Fuel Log Entry',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="PumpOutLog"
                 component={PumpOutLogScreen}
                 options={{
-                  title: 'Pump Out Log',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="AddEditPumpOutLog"
                 component={AddEditPumpOutLogScreen}
                 options={{
-                  title: 'New Pump Out Entry',
-                  headerShown: true,
+                  headerShown: false,
                 }}
               />
               <Stack.Screen
                 name="ContractorDatabase"
                 component={ContractorDatabaseScreen}
-                options={{
-                  title: 'Contractor Database',
-                  headerShown: true,
-                }}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="FutureUpdates"
               component={FutureUpdatesScreen}
-              options={{ title: 'Future Updates', headerShown: true }}
+              options={{ headerShown: false }}
             />
             <Stack.Screen
               name="Notepad"
               component={NotepadScreen}
-              options={{ title: 'Notepad', headerShown: true }}
+              options={{ headerShown: false }}
             />
             <Stack.Screen
               name="AddEditNote"
               component={AddEditNoteScreen}
-              options={({ route }: any) => ({
-                title: route.params?.noteId ? 'Edit Note' : 'New Note',
-                headerShown: true,
-              })}
+              options={{ headerShown: false }}
             />
             <Stack.Screen
               name="AddEditContractor"
                 component={AddEditContractorScreen}
-                options={({ route }: any) => ({
-                  title: route.params?.contractorId ? 'Edit Contractor' : 'New Contractor',
-                  headerShown: true,
-                })}
+                options={{ headerShown: false }}
               />
             </>
           )}

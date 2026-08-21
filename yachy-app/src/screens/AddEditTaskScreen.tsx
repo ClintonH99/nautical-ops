@@ -23,7 +23,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import vesselTasksService from '../services/vesselTasks';
 import { usePostHog } from 'posthog-react-native';
 import { TaskCategory, TaskRecurring, Department } from '../types';
-import { Input, Button, LoadingSpinner } from '../components';
+import { Input, Button, LoadingSpinner, PageHeader } from '../components';
 
 const CATEGORY_LABELS: Record<TaskCategory, string> = {
   DAILY: 'Daily',
@@ -200,6 +200,7 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={100}
     >
+      <PageHeader title="Task" />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}

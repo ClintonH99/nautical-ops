@@ -16,6 +16,7 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { PageHeader } from '../components';
 import { useDepartmentColorStore, getDepartmentColor, useAuthStore } from '../store';
 import { Department } from '../types';
 import { canAccessDepartmentColorSettings } from '../utils/access';
@@ -59,93 +60,97 @@ export const DepartmentColorSettingsScreen = () => {
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <Text style={[styles.title, { color: themeColors.textPrimary }]}>Department colors</Text>
-      <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-        Choose a color for each department, or No color for neutral.
-      </Text>
+    <View style={styles.pageWrap}>
+      <PageHeader title="Department colors" />
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={[styles.title, { color: themeColors.textPrimary }]}>Department colors</Text>
+        <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+          Choose a color for each department, or No color for neutral.
+        </Text>
 
-      <View style={[styles.section, { backgroundColor: themeColors.surface }]}>
-        {DEPARTMENTS.map((dept, index) => {
-          const effectiveColor = getDepartmentColor(dept, overrides);
-          const isNoColor = overrides[dept] === null;
-          const isLast = index === DEPARTMENTS.length - 1;
-          return (
-            <TouchableOpacity
-              key={dept}
-              style={[styles.row, isLast && styles.rowLast]}
-              onPress={() => setPickingDepartment(dept)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.rowLabel, { color: themeColors.textPrimary }]}>
-                {DEPARTMENT_LABELS[dept]}
-              </Text>
-              <View style={styles.rowRight}>
-                {isNoColor ? (
-                  <Text style={[styles.noColorLabel, { color: themeColors.textSecondary }]}>
-                    No color
-                  </Text>
-                ) : (
-                  <View style={[styles.swatch, { backgroundColor: effectiveColor }]} />
-                )}
-                <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>›</Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      <Modal visible={!!pickingDepartment} transparent animationType="fade">
-        <Pressable style={styles.modalBackdrop} onPress={() => setPickingDepartment(null)}>
-          <View
-            style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
-            onStartShouldSetResponder={() => true}
-          >
-            {pickingDepartment && (
-              <>
-                <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
-                  {DEPARTMENT_LABELS[pickingDepartment]}
+        <View style={[styles.section, { backgroundColor: themeColors.surface }]}>
+          {DEPARTMENTS.map((dept, index) => {
+            const effectiveColor = getDepartmentColor(dept, overrides);
+            const isNoColor = overrides[dept] === null;
+            const isLast = index === DEPARTMENTS.length - 1;
+            return (
+              <TouchableOpacity
+                key={dept}
+                style={[styles.row, isLast && styles.rowLast]}
+                onPress={() => setPickingDepartment(dept)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.rowLabel, { color: themeColors.textPrimary }]}>
+                  {DEPARTMENT_LABELS[dept]}
                 </Text>
-                <TouchableOpacity
-                  style={styles.modalOption}
-                  onPress={() => handleSelectColor(pickingDepartment, null)}
-                >
-                  <View style={[styles.swatch, styles.swatchNoColor]} />
-                  <Text style={[styles.modalOptionText, { color: themeColors.textPrimary }]}>
-                    No color
-                  </Text>
-                </TouchableOpacity>
-                <View style={styles.swatchRow}>
-                  {COLOR_SWATCHES.map((hex) => (
-                    <TouchableOpacity
-                      key={hex}
-                      style={[styles.swatch, styles.swatchSmall, { backgroundColor: hex }]}
-                      onPress={() => handleSelectColor(pickingDepartment, hex)}
-                    />
-                  ))}
+                <View style={styles.rowRight}>
+                  {isNoColor ? (
+                    <Text style={[styles.noColorLabel, { color: themeColors.textSecondary }]}>
+                      No color
+                    </Text>
+                  ) : (
+                    <View style={[styles.swatch, { backgroundColor: effectiveColor }]} />
+                  )}
+                  <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>›</Text>
                 </View>
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={() => setPickingDepartment(null)}
-                >
-                  <Text style={[styles.cancelButtonText, { color: themeColors.textSecondary }]}>
-                    Cancel
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <Modal visible={!!pickingDepartment} transparent animationType="fade">
+          <Pressable style={styles.modalBackdrop} onPress={() => setPickingDepartment(null)}>
+            <View
+              style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+              onStartShouldSetResponder={() => true}
+            >
+              {pickingDepartment && (
+                <>
+                  <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+                    {DEPARTMENT_LABELS[pickingDepartment]}
                   </Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
-        </Pressable>
-      </Modal>
-    </ScrollView>
+                  <TouchableOpacity
+                    style={styles.modalOption}
+                    onPress={() => handleSelectColor(pickingDepartment, null)}
+                  >
+                    <View style={[styles.swatch, styles.swatchNoColor]} />
+                    <Text style={[styles.modalOptionText, { color: themeColors.textPrimary }]}>
+                      No color
+                    </Text>
+                  </TouchableOpacity>
+                  <View style={styles.swatchRow}>
+                    {COLOR_SWATCHES.map((hex) => (
+                      <TouchableOpacity
+                        key={hex}
+                        style={[styles.swatch, styles.swatchSmall, { backgroundColor: hex }]}
+                        onPress={() => handleSelectColor(pickingDepartment, hex)}
+                      />
+                    ))}
+                  </View>
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={() => setPickingDepartment(null)}
+                  >
+                    <Text style={[styles.cancelButtonText, { color: themeColors.textSecondary }]}>
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          </Pressable>
+        </Modal>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: { flex: 1 },
 
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },

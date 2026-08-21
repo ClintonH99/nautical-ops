@@ -3,7 +3,6 @@
  */
 
 import React, { useState, useCallback, useLayoutEffect } from 'react';
-import { InfoModal } from '../components/InfoModal';
 import {
   View,
   Text,
@@ -23,7 +22,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import contractorsService, { Contractor } from '../services/contractors';
 import { Department } from '../types';
-import { Button, Input } from '../components';
+import { Button, Input, PageHeader } from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -48,14 +47,8 @@ const SEARCH_FILTER_OPTIONS: { value: SearchFilter; label: string }[] = [
   { value: 'email', label: 'Email' },
 ];
 
-export const ContractorDatabaseScreen = ({ navigation }: any) => {
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <InfoModal
-          screenKey="contractor_database"
-          autoShow={false}
-          content={{
+
+const CONTRACTOR_DATABASE_INFO = {
             title: 'Contractor Database',
             description: 'Keep contractor and supplier contacts on file.',
             features: [
@@ -64,11 +57,9 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
               'Keep records for recurring services',
               'Update entries as contacts change',
             ],
-          }}
-        />
-      ),
-    });
-  }, [navigation]);
+          };
+
+export const ContractorDatabaseScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const overrides = useDepartmentColorStore((s) => s.overrides);
@@ -176,204 +167,208 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
-      }
-    >
-      <View style={styles.searchSection}>
-        <View style={styles.searchFilterRow}>
-          <Text style={[styles.searchFilterLabel, { color: themeColors.textPrimary }]}>Search by</Text>
-          <TouchableOpacity
-            style={[styles.searchFilterDropdown, { backgroundColor: themeColors.surface }]}
-            onPress={() => setSearchFilterOpen(!searchFilterOpen)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.searchFilterText, { color: themeColors.textPrimary }]}>
-              {SEARCH_FILTER_OPTIONS.find((o) => o.value === searchFilter)?.label ?? 'All'}
-            </Text>
-            <Text style={[styles.searchFilterChevron, { color: themeColors.textSecondary }]}>{searchFilterOpen ? '▲' : '▼'}</Text>
-          </TouchableOpacity>
-          {searchFilterOpen && (
-            <Modal visible transparent animationType="fade">
-              <Pressable style={styles.modalBackdrop} onPress={() => setSearchFilterOpen(false)}>
-                <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
-                  <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Search by</Text>
-                  {SEARCH_FILTER_OPTIONS.map((opt) => (
-                    <TouchableOpacity
-                      key={opt.value}
-                      style={[styles.modalItem, searchFilter === opt.value && styles.modalItemSelected]}
-                      onPress={() => {
-                        setSearchFilter(opt.value);
-                        setSearchFilterOpen(false);
-                      }}
-                    >
-                      <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>{opt.label}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </Pressable>
-            </Modal>
-          )}
+    <View style={styles.pageWrap}>
+      <PageHeader title="Contractor Database" info={CONTRACTOR_DATABASE_INFO} infoScreenKey="contractor_database" />
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
+        }
+      >
+        <View style={styles.searchSection}>
+          <View style={styles.searchFilterRow}>
+            <Text style={[styles.searchFilterLabel, { color: themeColors.textPrimary }]}>Search by</Text>
+            <TouchableOpacity
+              style={[styles.searchFilterDropdown, { backgroundColor: themeColors.surface }]}
+              onPress={() => setSearchFilterOpen(!searchFilterOpen)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.searchFilterText, { color: themeColors.textPrimary }]}>
+                {SEARCH_FILTER_OPTIONS.find((o) => o.value === searchFilter)?.label ?? 'All'}
+              </Text>
+              <Text style={[styles.searchFilterChevron, { color: themeColors.textSecondary }]}>{searchFilterOpen ? '▲' : '▼'}</Text>
+            </TouchableOpacity>
+            {searchFilterOpen && (
+              <Modal visible transparent animationType="fade">
+                <Pressable style={styles.modalBackdrop} onPress={() => setSearchFilterOpen(false)}>
+                  <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
+                    <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Search by</Text>
+                    {SEARCH_FILTER_OPTIONS.map((opt) => (
+                      <TouchableOpacity
+                        key={opt.value}
+                        style={[styles.modalItem, searchFilter === opt.value && styles.modalItemSelected]}
+                        onPress={() => {
+                          setSearchFilter(opt.value);
+                          setSearchFilterOpen(false);
+                        }}
+                      >
+                        <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>{opt.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </Pressable>
+              </Modal>
+            )}
+          </View>
+          <Input
+            value={searchKeyword}
+            onChangeText={setSearchKeyword}
+            placeholder={
+              searchFilter === 'all'
+                ? 'Search for Contractor by name or job type'
+                : `Search by ${SEARCH_FILTER_OPTIONS.find((o) => o.value === searchFilter)?.label.toLowerCase()}…`
+            }
+            style={[styles.searchInput, { backgroundColor: themeColors.surface }]}
+            returnKeyType="search"
+          />
         </View>
-        <Input
-          value={searchKeyword}
-          onChangeText={setSearchKeyword}
-          placeholder={
-            searchFilter === 'all'
-              ? 'Search for Contractor by name or job type'
-              : `Search by ${SEARCH_FILTER_OPTIONS.find((o) => o.value === searchFilter)?.label.toLowerCase()}…`
-          }
-          style={[styles.searchInput, { backgroundColor: themeColors.surface }]}
-          returnKeyType="search"
-        />
-      </View>
-      <View style={styles.actionRow}>
-        <Button
-          title="Create Contractor"
-          onPress={() => navigation.navigate('AddEditContractor', {})}
-          variant="primary"
-          fullWidth
-        />
-      </View>
+        <View style={styles.actionRow}>
+          <Button
+            title="Create Contractor"
+            onPress={() => navigation.navigate('AddEditContractor', {})}
+            variant="primary"
+            fullWidth
+          />
+        </View>
 
-      {contractors.length > 0 && !loading && (
-        <>
-          <Text style={[styles.filterLabel, { color: themeColors.textPrimary }]}>Department</Text>
-          <TouchableOpacity
-            style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
-            onPress={() => setDepartmentDropdownOpen(!departmentDropdownOpen)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>{departmentDisplayText}</Text>
-            <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>{departmentDropdownOpen ? '▲' : '▼'}</Text>
-          </TouchableOpacity>
-          {departmentDropdownOpen && (
-            <Modal visible transparent animationType="fade">
-              <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentDropdownOpen(false)}>
-                <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
-                  <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Filter by department</Text>
-                  <TouchableOpacity
-                    style={[styles.modalItem, DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
-                    onPress={() => {
-                      setVisibleDepartments(allDeptsVisible);
-                      setDepartmentDropdownOpen(false);
-                    }}
-                  >
-                    <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>All Departments</Text>
-                  </TouchableOpacity>
-                  {DEPARTMENTS.map((dept) => (
+        {contractors.length > 0 && !loading && (
+          <>
+            <Text style={[styles.filterLabel, { color: themeColors.textPrimary }]}>Department</Text>
+            <TouchableOpacity
+              style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
+              onPress={() => setDepartmentDropdownOpen(!departmentDropdownOpen)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>{departmentDisplayText}</Text>
+              <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>{departmentDropdownOpen ? '▲' : '▼'}</Text>
+            </TouchableOpacity>
+            {departmentDropdownOpen && (
+              <Modal visible transparent animationType="fade">
+                <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentDropdownOpen(false)}>
+                  <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
+                    <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Filter by department</Text>
                     <TouchableOpacity
-                      key={dept}
-                      style={[styles.modalItem, visibleDepartments[dept] && !DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
+                      style={[styles.modalItem, DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
                       onPress={() => {
-                        setVisibleDepartments({
-                          BRIDGE: dept === 'BRIDGE',
-                          ENGINEERING: dept === 'ENGINEERING',
-                          EXTERIOR: dept === 'EXTERIOR',
-                          INTERIOR: dept === 'INTERIOR',
-                          GALLEY: dept === 'GALLEY',
-                        });
+                        setVisibleDepartments(allDeptsVisible);
                         setDepartmentDropdownOpen(false);
                       }}
                     >
-                      <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                        {dept.charAt(0) + dept.slice(1).toLowerCase()}
-                      </Text>
+                      <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>All Departments</Text>
                     </TouchableOpacity>
+                    {DEPARTMENTS.map((dept) => (
+                      <TouchableOpacity
+                        key={dept}
+                        style={[styles.modalItem, visibleDepartments[dept] && !DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
+                        onPress={() => {
+                          setVisibleDepartments({
+                            BRIDGE: dept === 'BRIDGE',
+                            ENGINEERING: dept === 'ENGINEERING',
+                            EXTERIOR: dept === 'EXTERIOR',
+                            INTERIOR: dept === 'INTERIOR',
+                            GALLEY: dept === 'GALLEY',
+                          });
+                          setDepartmentDropdownOpen(false);
+                        }}
+                      >
+                        <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
+                          {dept.charAt(0) + dept.slice(1).toLowerCase()}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </Pressable>
+              </Modal>
+            )}
+          </>
+        )}
+
+        {loading ? (
+          <ActivityIndicator size="small" color={COLORS.primary} style={styles.loader} />
+        ) : filteredContractors.length === 0 ? (
+          <View style={[styles.emptyState, { backgroundColor: themeColors.surface }]}>
+            <Text style={styles.emptyIcon}>👷</Text>
+            <Text style={[styles.emptyTitle, { color: themeColors.textPrimary }]}>No contractors yet</Text>
+            <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
+              {contractors.length === 0
+                ? 'Tap "Create Contractor" to add your first contractor.'
+                : 'No contractors match your search or department filter.'}
+            </Text>
+          </View>
+        ) : (
+          filteredContractors.map((contractor) => (
+            <View key={contractor.id} style={[styles.card, { backgroundColor: themeColors.surface }]}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('AddEditContractor', { contractorId: contractor.id })}
+                activeOpacity={0.8}
+              >
+                <View style={styles.cardTitleBar}>
+                  <Text style={styles.cardTitleBarText} numberOfLines={1}>
+                    {contractor.companyName}
+                  </Text>
+                </View>
+                <View style={styles.cardHeader}>
+                  <View
+                    style={[
+                      styles.deptBadge,
+                      { backgroundColor: getDepartmentColor(contractor.department ?? 'INTERIOR', overrides) },
+                    ]}
+                  >
+                    <Text style={styles.deptBadgeText}>
+                      {(contractor.department ?? 'INTERIOR').charAt(0) +
+                        (contractor.department ?? 'INTERIOR').slice(1).toLowerCase()}
+                    </Text>
+                  </View>
+                  <View style={styles.cardActions}>
+                    <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); onDelete(contractor); }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => navigation.navigate('AddEditContractor', { contractorId: contractor.id })} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <Text style={[styles.editBtn, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Edit</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableOpacity>
+              {contractor.knownFor ? (
+                <View style={styles.cardRow}>
+                  <Text style={[styles.cardLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Know For</Text>
+                  <Text style={[styles.cardValue, { color: themeColors.textPrimary }]}>{contractor.knownFor}</Text>
+                </View>
+              ) : null}
+              {contractor.companyAddress ? (
+                <View style={styles.cardRow}>
+                  <Text style={[styles.cardLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Address</Text>
+                  <Text style={[styles.cardValue, { color: themeColors.textPrimary }]}>{contractor.companyAddress}</Text>
+                </View>
+              ) : null}
+              {contractor.description ? (
+                <View style={styles.cardRow}>
+                  <Text style={[styles.cardLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Description</Text>
+                  <Text style={[styles.cardValue, { color: themeColors.textPrimary }]} numberOfLines={2}>{contractor.description}</Text>
+                </View>
+              ) : null}
+              {contractor.contacts.length > 0 && (
+                <View style={styles.cardRow}>
+                  <Text style={[styles.cardLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Contact(s)</Text>
+                  {contractor.contacts.map((c, i) => (
+                    <Text key={i} style={[styles.cardValue, { color: themeColors.textPrimary }]}>
+                      {[c.name, c.mobile, c.email].filter(Boolean).join(' · ')}
+                    </Text>
                   ))}
                 </View>
-              </Pressable>
-            </Modal>
-          )}
-        </>
-      )}
-
-      {loading ? (
-        <ActivityIndicator size="small" color={COLORS.primary} style={styles.loader} />
-      ) : filteredContractors.length === 0 ? (
-        <View style={[styles.emptyState, { backgroundColor: themeColors.surface }]}>
-          <Text style={styles.emptyIcon}>👷</Text>
-          <Text style={[styles.emptyTitle, { color: themeColors.textPrimary }]}>No contractors yet</Text>
-          <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
-            {contractors.length === 0
-              ? 'Tap "Create Contractor" to add your first contractor.'
-              : 'No contractors match your search or department filter.'}
-          </Text>
-        </View>
-      ) : (
-        filteredContractors.map((contractor) => (
-          <View key={contractor.id} style={[styles.card, { backgroundColor: themeColors.surface }]}>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('AddEditContractor', { contractorId: contractor.id })}
-              activeOpacity={0.8}
-            >
-              <View style={styles.cardTitleBar}>
-                <Text style={styles.cardTitleBarText} numberOfLines={1}>
-                  {contractor.companyName}
-                </Text>
-              </View>
-              <View style={styles.cardHeader}>
-                <View
-                  style={[
-                    styles.deptBadge,
-                    { backgroundColor: getDepartmentColor(contractor.department ?? 'INTERIOR', overrides) },
-                  ]}
-                >
-                  <Text style={styles.deptBadgeText}>
-                    {(contractor.department ?? 'INTERIOR').charAt(0) +
-                      (contractor.department ?? 'INTERIOR').slice(1).toLowerCase()}
-                  </Text>
-                </View>
-                <View style={styles.cardActions}>
-                  <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); onDelete(contractor); }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => navigation.navigate('AddEditContractor', { contractorId: contractor.id })} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <Text style={[styles.editBtn, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Edit</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </TouchableOpacity>
-            {contractor.knownFor ? (
-              <View style={styles.cardRow}>
-                <Text style={[styles.cardLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Know For</Text>
-                <Text style={[styles.cardValue, { color: themeColors.textPrimary }]}>{contractor.knownFor}</Text>
-              </View>
-            ) : null}
-            {contractor.companyAddress ? (
-              <View style={styles.cardRow}>
-                <Text style={[styles.cardLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Address</Text>
-                <Text style={[styles.cardValue, { color: themeColors.textPrimary }]}>{contractor.companyAddress}</Text>
-              </View>
-            ) : null}
-            {contractor.description ? (
-              <View style={styles.cardRow}>
-                <Text style={[styles.cardLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Description</Text>
-                <Text style={[styles.cardValue, { color: themeColors.textPrimary }]} numberOfLines={2}>{contractor.description}</Text>
-              </View>
-            ) : null}
-            {contractor.contacts.length > 0 && (
-              <View style={styles.cardRow}>
-                <Text style={[styles.cardLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Contact(s)</Text>
-                {contractor.contacts.map((c, i) => (
-                  <Text key={i} style={[styles.cardValue, { color: themeColors.textPrimary }]}>
-                    {[c.name, c.mobile, c.email].filter(Boolean).join(' · ')}
-                  </Text>
-                ))}
-              </View>
-            )}
-          </View>
-        ))
-      )}
-    </ScrollView>
+              )}
+            </View>
+          ))
+        )}
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: { flex: 1 },
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },

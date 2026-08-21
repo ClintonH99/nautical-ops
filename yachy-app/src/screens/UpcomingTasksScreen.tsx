@@ -23,7 +23,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import vesselTasksService from '../services/vesselTasks';
 import { getTaskUrgencyColor } from '../utils/taskUrgency';
 import { VesselTask, TaskCategory, Department } from '../types';
-import { LoadingSpinner } from '../components';
+import { LoadingSpinner, PageHeader } from '../components';
 
 const UPCOMING_DAYS = 3;
 
@@ -205,6 +205,7 @@ export const UpcomingTasksScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <PageHeader title="Upcoming Tasks" />
       {loading ? (
         <LoadingSpinner />
       ) : tasks.length === 0 ? (

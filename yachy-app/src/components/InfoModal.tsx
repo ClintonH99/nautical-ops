@@ -49,9 +49,12 @@ export const InfoModal: React.FC<InfoModalProps> = ({ screenKey, content, autoSh
     <>
       <TouchableOpacity
         onPress={() => setVisible(true)}
-        style={[styles.infoButton, { borderColor: themeColors.isDark ? '#FFFFFF' : '#1e3a5f' }]}
+        style={[
+          styles.infoButton,
+          { backgroundColor: themeColors.isDark ? '#FFFFFF' : '#1e3a5f' },
+        ]}
       >
-        <Text style={[styles.infoButtonText, { color: themeColors.isDark ? '#FFFFFF' : '#1e3a5f' }]}>i</Text>
+        <Text style={[styles.infoButtonText, { color: themeColors.isDark ? '#1e3a5f' : '#FFFFFF' }]}>i</Text>
       </TouchableOpacity>
 
       <Modal visible={visible} transparent animationType="fade">
@@ -88,22 +91,18 @@ export const InfoModal: React.FC<InfoModalProps> = ({ screenKey, content, autoSh
 
 const styles = StyleSheet.create({
   infoButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: '#1e3a5f',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
   },
   infoButtonText: {
-    fontSize: 13,
-    color: '#1e3a5f',
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
     fontStyle: 'italic',
-    lineHeight: 16,
+    textAlign: 'center',
+    // No lineHeight - it was pushing the glyph below centre.
   },
   overlay: {
     flex: 1,

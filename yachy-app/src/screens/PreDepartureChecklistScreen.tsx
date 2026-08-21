@@ -22,7 +22,7 @@ import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../st
 import preDepartureChecklistsService from '../services/preDepartureChecklists';
 import vesselService from '../services/vessel';
 import { PreDepartureChecklist, Department } from '../types';
-import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner } from '../components';
+import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner, PageHeader } from '../components';
 import { generatePreDepartureChecklistPdf } from '../utils/preDepartureChecklistPdf';
 
 const CAPTAIN_CHECKLIST_MAX_ITEMS = 15;
@@ -354,6 +354,7 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <PageHeader title="Pre-Departure Checklist" />
       {departmentModalVisible && (
         <Modal visible transparent animationType="fade">
           <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentModalVisible(false)}>

@@ -24,7 +24,7 @@ import { useAuthStore } from '../store';
 import safetyEquipmentService, { normalizeSafetyItem } from '../services/safetyEquipment';
 import type { SafetyEquipmentData, SafetyItem } from '../services/safetyEquipment';
 import vesselService from '../services/vessel';
-import { Button, LoadingSpinner } from '../components';
+import { Button, LoadingSpinner, PageHeader } from '../components';
 import { generateSafetyEquipmentPdf } from '../utils/safetyEquipmentPdf';
 
 const DEFAULT_CATEGORIES = [
@@ -284,6 +284,7 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
       style={[styles.container, { backgroundColor: themeColors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <PageHeader title="Create Safety Equipment" />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}

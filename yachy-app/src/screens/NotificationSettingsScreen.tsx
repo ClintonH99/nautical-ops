@@ -19,7 +19,7 @@ import {
 import { supabase } from '../services/supabase';
 import * as Device from 'expo-device';
 import type { NotificationPreferenceKey } from '../types';
-import { LoadingSpinner } from '../components';
+import { LoadingSpinner, PageHeader } from '../components';
 
 const PREFERENCE_LABELS: Record<NotificationPreferenceKey, string> = {
   tasks: 'Tasks',
@@ -149,83 +149,87 @@ export const NotificationSettingsScreen = () => {
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <Text style={[styles.title, { color: themeColors.textPrimary }]}>Notifications</Text>
-      <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-        Receive push notifications for tasks, trips, and important updates.
-      </Text>
+    <View style={styles.pageWrap}>
+      <PageHeader title="Notifications" />
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={[styles.title, { color: themeColors.textPrimary }]}>Notifications</Text>
+        <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+          Receive push notifications for tasks, trips, and important updates.
+        </Text>
 
-      <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
-        <View style={styles.row}>
-          <Text style={[styles.rowLabel, { color: themeColors.textPrimary }]}>
-            Push notifications
-          </Text>
-          {loading ? (
-            <ActivityIndicator size="small" color={COLORS.primary} />
-          ) : (
-            <Switch
-              value={enabled}
-              onValueChange={handleToggle}
-              trackColor={{ false: COLORS.gray200, true: COLORS.primary }}
-              thumbColor={COLORS.white}
-            />
+        <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
+          <View style={styles.row}>
+            <Text style={[styles.rowLabel, { color: themeColors.textPrimary }]}>
+              Push notifications
+            </Text>
+            {loading ? (
+              <ActivityIndicator size="small" color={COLORS.primary} />
+            ) : (
+              <Switch
+                value={enabled}
+                onValueChange={handleToggle}
+                trackColor={{ false: COLORS.gray200, true: COLORS.primary }}
+                thumbColor={COLORS.white}
+              />
+            )}
+          </View>
+          {enabled && (
+            <Text style={[styles.statusText, { color: themeColors.textSecondary }]}>
+              You will receive push notifications.
+            </Text>
           )}
         </View>
+
         {enabled && (
-          <Text style={[styles.statusText, { color: themeColors.textSecondary }]}>
-            You will receive push notifications.
-          </Text>
-        )}
-      </View>
-
-      {enabled && (
-        <View style={styles.preferencesSection}>
-          <Text style={[styles.preferencesTitle, { color: themeColors.textPrimary }]}>
-            What to receive
-          </Text>
-          <Text style={[styles.preferencesSubtitle, { color: themeColors.textSecondary }]}>
-            Choose which updates you want to be notified about.
-          </Text>
-          <View style={[styles.preferencesCard, { backgroundColor: themeColors.surface }]}>
-            {PREFERENCE_ORDER.map((key, index) => (
-              <View
-                key={key}
-                style={[
-                  styles.preferenceRow,
-                  index < PREFERENCE_ORDER.length - 1 && styles.preferenceRowBorder,
-                ]}
-              >
-                <Text style={[styles.preferenceLabel, { color: themeColors.textPrimary }]}>
-                  {PREFERENCE_LABELS[key]}
-                </Text>
-                <Switch
-                  value={preferences[key] ?? true}
-                  onValueChange={(v) => handlePreferenceToggle(key, v)}
-                  trackColor={{ false: COLORS.gray200, true: COLORS.primary }}
-                  thumbColor={COLORS.white}
-                />
-              </View>
-            ))}
+          <View style={styles.preferencesSection}>
+            <Text style={[styles.preferencesTitle, { color: themeColors.textPrimary }]}>
+              What to receive
+            </Text>
+            <Text style={[styles.preferencesSubtitle, { color: themeColors.textSecondary }]}>
+              Choose which updates you want to be notified about.
+            </Text>
+            <View style={[styles.preferencesCard, { backgroundColor: themeColors.surface }]}>
+              {PREFERENCE_ORDER.map((key, index) => (
+                <View
+                  key={key}
+                  style={[
+                    styles.preferenceRow,
+                    index < PREFERENCE_ORDER.length - 1 && styles.preferenceRowBorder,
+                  ]}
+                >
+                  <Text style={[styles.preferenceLabel, { color: themeColors.textPrimary }]}>
+                    {PREFERENCE_LABELS[key]}
+                  </Text>
+                  <Switch
+                    value={preferences[key] ?? true}
+                    onValueChange={(v) => handlePreferenceToggle(key, v)}
+                    trackColor={{ false: COLORS.gray200, true: COLORS.primary }}
+                    thumbColor={COLORS.white}
+                  />
+                </View>
+              ))}
+            </View>
           </View>
-        </View>
-      )}
+        )}
 
-      {!Device.isDevice && (
-        <View style={[styles.warning, { backgroundColor: themeColors.surfaceAlt }]}>
-          <Text style={[styles.warningText, { color: themeColors.textSecondary }]}>
-            Use a physical device to test push notifications. They do not work on simulators.
-          </Text>
-        </View>
-      )}
-    </ScrollView>
+        {!Device.isDevice && (
+          <View style={[styles.warning, { backgroundColor: themeColors.surfaceAlt }]}>
+            <Text style={[styles.warningText, { color: themeColors.textSecondary }]}>
+              Use a physical device to test push notifications. They do not work on simulators.
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: { flex: 1 },
   content: {
     padding: SPACING.lg,

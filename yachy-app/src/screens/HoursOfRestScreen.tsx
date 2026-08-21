@@ -6,7 +6,6 @@
  */
 
 import React, { useState, useCallback, useEffect, useLayoutEffect } from 'react';
-import { InfoModal } from '../components/InfoModal';
 import {
   View,
   Text,
@@ -21,6 +20,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { PageHeader } from '../components';
 import {
   RestEntry,
   checkRollingCompliance,
@@ -40,14 +40,8 @@ function daysAgo(n: number): Date {
   return d;
 }
 
-export const HoursOfRestScreen = ({ navigation }: any) => {
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <InfoModal
-          screenKey="hours_of_rest"
-          autoShow={false}
-          content={{
+
+const HOURS_OF_REST_INFO = {
             title: 'Hours of Rest',
             description: 'Track your daily rest, work, and lunch hours to stay compliant with STCW/MLC regulations.',
             features: [
@@ -57,11 +51,9 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
               'Confirmed entries can still be corrected later by the Captain if needed',
               'Compliance is checked against real STCW rules: minimum 10 hours rest in any 24-hour period, minimum 77 hours in any 7-day period, and no more than a 14-hour gap between rest periods',
             ],
-          }}
-        />
-      ),
-    });
-  }, [navigation]);
+          };
+
+export const HoursOfRestScreen = ({ navigation }: any) => {
 
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
@@ -168,71 +160,75 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
   };
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-      contentContainerStyle={styles.content}
-    >
-      <Text style={[styles.title, { color: themeColors.textPrimary }]}>Hours of Rest</Text>
-      <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-        Tap a date to enter or edit your hours
-      </Text>
+    <View style={styles.pageWrap}>
+      <PageHeader title="Hours of Rest" info={HOURS_OF_REST_INFO} infoScreenKey="hours_of_rest" />
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={styles.content}
+      >
+        <Text style={[styles.title, { color: themeColors.textPrimary }]}>Hours of Rest</Text>
+        <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+          Tap a date to enter or edit your hours
+        </Text>
 
-      {isCaptainOrMov && (
-        <TouchableOpacity
-          style={styles.reviewButton}
-          onPress={() => navigation.navigate('RestToBeConfirmed')}
-        >
-          <Text style={styles.reviewButtonText}>Rest to be confirmed</Text>
-        </TouchableOpacity>
-      )}
-
-      {loading && !hasLoadedOnce ? (
-        <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.xl }} />
-      ) : (
-        <>
-          <Calendar
-            current={todayStr}
-            maxDate={todayStr}
-            markedDates={markedDates}
-            markingType="multi-period"
-            onDayPress={handleDayPress}
-            onMonthChange={(m: { year: number; month: number }) => setViewedMonth(new Date(m.year, m.month - 1, 1))}
-            theme={{
-              backgroundColor: 'transparent',
-              calendarBackground: 'transparent',
-              todayTextColor: COLORS.primary,
-              arrowColor: themeColors.textPrimary,
-              monthTextColor: themeColors.textPrimary,
-              dayTextColor: themeColors.textPrimary,
-              textDisabledColor: themeColors.textSecondary,
-            }}
-          />
-
-          <View style={styles.legendRow}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#16a34a' }]} />
-              <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.xs }}>Completed</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#dc2626' }]} />
-              <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.xs }}>Not completed</Text>
-            </View>
-          </View>
-
+        {isCaptainOrMov && (
           <TouchableOpacity
-            style={[styles.reviewButton, { opacity: exporting ? 0.6 : 1, marginTop: SPACING.lg }]}
-            onPress={handleExportOwnMonth}
-            disabled={exporting}
+            style={styles.reviewButton}
+            onPress={() => navigation.navigate('RestToBeConfirmed')}
           >
-            <Text style={styles.reviewButtonText}>{exporting ? 'Exporting...' : 'Export to PDF'}</Text>
+            <Text style={styles.reviewButtonText}>Rest to be confirmed</Text>
           </TouchableOpacity>
-        </>
-      )}
-    </ScrollView>
+        )}
+
+        {loading && !hasLoadedOnce ? (
+          <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.xl }} />
+        ) : (
+          <>
+            <Calendar
+              current={todayStr}
+              maxDate={todayStr}
+              markedDates={markedDates}
+              markingType="multi-period"
+              onDayPress={handleDayPress}
+              onMonthChange={(m: { year: number; month: number }) => setViewedMonth(new Date(m.year, m.month - 1, 1))}
+              theme={{
+                backgroundColor: 'transparent',
+                calendarBackground: 'transparent',
+                todayTextColor: COLORS.primary,
+                arrowColor: themeColors.textPrimary,
+                monthTextColor: themeColors.textPrimary,
+                dayTextColor: themeColors.textPrimary,
+                textDisabledColor: themeColors.textSecondary,
+              }}
+            />
+
+            <View style={styles.legendRow}>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: '#16a34a' }]} />
+                <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.xs }}>Completed</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: '#dc2626' }]} />
+                <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.xs }}>Not completed</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.reviewButton, { opacity: exporting ? 0.6 : 1, marginTop: SPACING.lg }]}
+              onPress={handleExportOwnMonth}
+              disabled={exporting}
+            >
+              <Text style={styles.reviewButtonText}>{exporting ? 'Exporting...' : 'Export to PDF'}</Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: { flex: 1 },
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   title: { fontSize: FONTS['2xl'], fontWeight: '700' },

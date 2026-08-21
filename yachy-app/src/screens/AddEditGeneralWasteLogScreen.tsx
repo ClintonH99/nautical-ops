@@ -20,7 +20,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import generalWasteLogsService from '../services/generalWasteLogs';
 import { WeightUnit } from '../types';
-import { Input, Button, LoadingSpinner } from '../components';
+import { Input, Button, LoadingSpinner, PageHeader } from '../components';
 
 function formatDate(d: Date): string {
   const yyyy = d.getFullYear();
@@ -170,6 +170,7 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={100}
     >
+      <PageHeader title="New Waste Log Entry" />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}

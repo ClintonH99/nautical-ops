@@ -3,7 +3,6 @@
  */
 
 import React, { useState, useCallback, useLayoutEffect } from 'react';
-import { InfoModal } from '../components/InfoModal';
 import {
   View,
   Text,
@@ -20,7 +19,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import safetyEquipmentService from '../services/safetyEquipment';
-import { Button, LoadingSpinner } from '../components';
+import { Button, LoadingSpinner, PageHeader } from '../components';
 import { generateSafetyEquipmentPdf } from '../utils/safetyEquipmentPdf';
 import type { SafetyEquipment, SafetyEquipmentData } from '../services/safetyEquipment';
 import { normalizeSafetyItem } from '../services/safetyEquipment';
@@ -92,14 +91,8 @@ function SafetyEquipmentPreview({
   );
 }
 
-export const SafetyEquipmentScreen = ({ navigation }: any) => {
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <InfoModal
-          screenKey="safety_equipment"
-          autoShow={false}
-          content={{
+
+const SAFETY_EQUIPMENT_INFO = {
             title: 'Safety Equipment',
             description: 'Log and track safety equipment on-board.',
             features: [
@@ -108,11 +101,9 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
               'Keep an auditable safety inventory',
               'Update records after inspections',
             ],
-          }}
-        />
-      ),
-    });
-  }, [navigation]);
+          };
+
+export const SafetyEquipmentScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
@@ -194,94 +185,98 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
     );
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-      contentContainerStyle={styles.content}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={() => {
-            setRefreshing(true);
-            load();
-          }}
-        />
-      }
-    >
-      <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>Published</Text>
-      {items.map((item) => (
-        <TouchableOpacity
-          key={item.id}
-          style={[styles.card, { backgroundColor: themeColors.surface }]}
-          onPress={() => onEdit(item)}
-          activeOpacity={canManage ? 0.8 : 1}
-        >
-          <View style={styles.cardHeader}>
-            <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
-              {item.title}
-            </Text>
-            {canManage && (
-              <View style={styles.cardActions}>
-                <TouchableOpacity
-                  onPress={() => onEdit(item)}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Ionicons name="pencil-outline" size={20} color={themeColors.textSecondary} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => onDelete(item)}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-          <SafetyEquipmentPreview data={item.data} themeColors={themeColors} />
-          <TouchableOpacity
-            style={styles.downloadBtn}
-            onPress={() => onDownloadPdf(item)}
-            disabled={!!exportingId}
-          >
-            {exportingId === item.id ? (
-              <ActivityIndicator size="small" color={COLORS.primary} />
-            ) : (
-              <Text
-                style={[
-                  styles.downloadBtnText,
-                  { color: themeColors.isDark ? COLORS.white : COLORS.primary },
-                ]}
-              >
-                Export to PDF
-              </Text>
-            )}
-          </TouchableOpacity>
-        </TouchableOpacity>
-      ))}
-      {items.length === 0 && (
-        <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
-          No published plans yet.{canManage ? ' Create one below.' : ''}
-        </Text>
-      )}
-      {!canManage && (
-        <Text style={[styles.crewNote, { color: themeColors.textSecondary }]}>
-          Only HODs and Captain have access. Crew can export to PDF.
-        </Text>
-      )}
-      {canManage && (
-        <View style={styles.createSection}>
-          <Button
-            title="Create"
-            onPress={() => navigation.navigate('CreateSafetyEquipment')}
-            variant="primary"
-            fullWidth
+    <View style={styles.pageWrap}>
+      <PageHeader title="Safety Equipment" info={SAFETY_EQUIPMENT_INFO} infoScreenKey="safety_equipment" />
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              load();
+            }}
           />
-        </View>
-      )}
-    </ScrollView>
+        }
+      >
+        <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>Published</Text>
+        {items.map((item) => (
+          <TouchableOpacity
+            key={item.id}
+            style={[styles.card, { backgroundColor: themeColors.surface }]}
+            onPress={() => onEdit(item)}
+            activeOpacity={canManage ? 0.8 : 1}
+          >
+            <View style={styles.cardHeader}>
+              <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
+                {item.title}
+              </Text>
+              {canManage && (
+                <View style={styles.cardActions}>
+                  <TouchableOpacity
+                    onPress={() => onEdit(item)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Ionicons name="pencil-outline" size={20} color={themeColors.textSecondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => onDelete(item)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+            <SafetyEquipmentPreview data={item.data} themeColors={themeColors} />
+            <TouchableOpacity
+              style={styles.downloadBtn}
+              onPress={() => onDownloadPdf(item)}
+              disabled={!!exportingId}
+            >
+              {exportingId === item.id ? (
+                <ActivityIndicator size="small" color={COLORS.primary} />
+              ) : (
+                <Text
+                  style={[
+                    styles.downloadBtnText,
+                    { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                  ]}
+                >
+                  Export to PDF
+                </Text>
+              )}
+            </TouchableOpacity>
+          </TouchableOpacity>
+        ))}
+        {items.length === 0 && (
+          <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
+            No published plans yet.{canManage ? ' Create one below.' : ''}
+          </Text>
+        )}
+        {!canManage && (
+          <Text style={[styles.crewNote, { color: themeColors.textSecondary }]}>
+            Only HODs and Captain have access. Crew can export to PDF.
+          </Text>
+        )}
+        {canManage && (
+          <View style={styles.createSection}>
+            <Button
+              title="Create"
+              onPress={() => navigation.navigate('CreateSafetyEquipment')}
+              variant="primary"
+              fullWidth
+            />
+          </View>
+        )}
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: { flex: 1 },
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },

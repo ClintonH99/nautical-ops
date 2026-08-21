@@ -15,7 +15,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import uniformsService, { UniformEntry } from '../services/uniforms';
 import { Department } from '../types';
-import { Input, Button, LoadingSpinner } from '../components';
+import { Input, Button, LoadingSpinner, PageHeader } from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 const emptyEntry = (): UniformEntry => ({ amount: '', size: '', color: '', gender: '', dayNight: '' });
@@ -146,6 +146,7 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={100}
     >
+      <PageHeader title={isEdit ? 'Edit' : 'Create'} />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {!isEdit && (
           <View style={styles.deptSection}>

@@ -18,7 +18,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import tripsService from '../services/trips';
 import { Trip } from '../types';
-import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner } from '../components';
+import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner, PageHeader, PillButton } from '../components';
 import { formatLocalDateString } from '../utils';
 import { useVesselTripColors } from '../hooks/useVesselTripColors';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -63,32 +63,6 @@ export const BossTripsScreen = ({ navigation }: any) => {
     }, [loadTrips])
   );
 
-  useEffect(() => {
-    if (!canEditTripColors) return;
-    navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity
-          onPress={() => navigation.navigate('TripColorSettings')}
-          style={{
-            marginRight: SPACING.md,
-            paddingVertical: SPACING.sm,
-            paddingHorizontal: SPACING.md,
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
-        >
-          <Text
-            style={[
-              styles.headerButtonText,
-              { color: themeColors.isDark ? COLORS.white : themeColors.textPrimary },
-            ]}
-          >
-            Edit colors
-          </Text>
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, canEditTripColors, themeColors.textPrimary]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -153,6 +127,7 @@ export const BossTripsScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <PageHeader title="Boss Trips" actions={canEditTripColors ? <PillButton label="Edit colors" onPress={() => navigation.navigate('TripColorSettings')} /> : undefined} />
       {canManageTrips && (
         <View style={styles.addRow}>
           <Button

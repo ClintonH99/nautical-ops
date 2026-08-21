@@ -20,7 +20,7 @@ import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import musterStationsService from '../services/musterStations';
 import vesselService from '../services/vessel';
-import { Button, LoadingSpinner } from '../components';
+import { Button, LoadingSpinner, PageHeader } from '../components';
 import { generateMusterStationPdf } from '../utils/musterStationPdf';
 import type { MusterStationData } from '../services/musterStations';
 
@@ -242,6 +242,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
       style={[styles.container, { backgroundColor: themeColors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <PageHeader title="Create Muster Station" />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}

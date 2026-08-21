@@ -20,6 +20,7 @@ import * as Clipboard from 'expo-clipboard';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES, SHADOWS } from '../constants/theme';
 import { useThemeStore, BACKGROUND_THEMES } from '../store';
 import { supabase } from '../services/supabase';
+import { PageHeader } from '../components';
 
 interface AppUpdate {
   id: string;
@@ -78,77 +79,81 @@ export const FutureUpdatesScreen = () => {
   );
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: themeColors.textPrimary }]}>
-          What's Coming Next
-        </Text>
-        <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-          Nautical Ops is always evolving. Here's what we're working on.
-        </Text>
-      </View>
+    <View style={styles.pageWrap}>
+      <PageHeader title="Future Updates" />
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: themeColors.textPrimary }]}>
+            What's Coming Next
+          </Text>
+          <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+            Nautical Ops is always evolving. Here's what we're working on.
+          </Text>
+        </View>
 
-      {loading ? (
-        <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.xl }} />
-      ) : updates.length === 0 ? (
-        <Text style={[styles.cardDesc, { color: themeColors.textSecondary }]}>
-          No updates posted yet — check back soon.
-        </Text>
-      ) : (
-        STATUS_ORDER.map((statusKey) => {
-          const itemsForStatus = updates.filter((u) => u.status === statusKey);
-          if (itemsForStatus.length === 0) return null;
-          const statusStyle = STATUS_LABELS[statusKey];
+        {loading ? (
+          <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.xl }} />
+        ) : updates.length === 0 ? (
+          <Text style={[styles.cardDesc, { color: themeColors.textSecondary }]}>
+            No updates posted yet — check back soon.
+          </Text>
+        ) : (
+          STATUS_ORDER.map((statusKey) => {
+            const itemsForStatus = updates.filter((u) => u.status === statusKey);
+            if (itemsForStatus.length === 0) return null;
+            const statusStyle = STATUS_LABELS[statusKey];
 
-          return (
-            <View key={statusKey} style={styles.section}>
-              <View style={styles.sectionHeaderRow}>
-                <Text style={[styles.sectionHeader, { color: themeColors.textPrimary }]}>
-                  {statusStyle.label}
-                </Text>
-                <View style={[styles.badge, { backgroundColor: statusStyle.bg }]}>
-                  <Text style={[styles.badgeText, { color: statusStyle.color }]}>
-                    {itemsForStatus.length}
+            return (
+              <View key={statusKey} style={styles.section}>
+                <View style={styles.sectionHeaderRow}>
+                  <Text style={[styles.sectionHeader, { color: themeColors.textPrimary }]}>
+                    {statusStyle.label}
                   </Text>
+                  <View style={[styles.badge, { backgroundColor: statusStyle.bg }]}>
+                    <Text style={[styles.badgeText, { color: statusStyle.color }]}>
+                      {itemsForStatus.length}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.list}>
+                  {itemsForStatus.map(renderCard)}
                 </View>
               </View>
-              <View style={styles.list}>
-                {itemsForStatus.map(renderCard)}
-              </View>
-            </View>
-          );
-        })
-      )}
+            );
+          })
+        )}
 
-      <View style={[styles.feedbackCard, { backgroundColor: themeColors.surface }]}>
-        <Text style={[styles.feedbackTitle, { color: themeColors.textPrimary }]}>
-          Have a feature idea?
-        </Text>
-        <Text style={[styles.feedbackText, { color: themeColors.textSecondary }]}>
-          We build Nautical Ops based on feedback from real crew. Send your ideas to:
-        </Text>
-        <TouchableOpacity
-          onPress={() => Linking.openURL('mailto:support@nautical-ops.com')}
-          onLongPress={async () => {
-            await Clipboard.setStringAsync('support@nautical-ops.com');
-            Alert.alert('Copied', 'Email address copied to clipboard.');
-          }}
-          activeOpacity={0.7}
-        >
-          <Text style={{ color: COLORS.primary, fontWeight: '600', marginTop: SPACING.xs }}>
-            support@nautical-ops.com
+        <View style={[styles.feedbackCard, { backgroundColor: themeColors.surface }]}>
+          <Text style={[styles.feedbackTitle, { color: themeColors.textPrimary }]}>
+            Have a feature idea?
           </Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+          <Text style={[styles.feedbackText, { color: themeColors.textSecondary }]}>
+            We build Nautical Ops based on feedback from real crew. Send your ideas to:
+          </Text>
+          <TouchableOpacity
+            onPress={() => Linking.openURL('mailto:support@nautical-ops.com')}
+            onLongPress={async () => {
+              await Clipboard.setStringAsync('support@nautical-ops.com');
+              Alert.alert('Copied', 'Email address copied to clipboard.');
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={{ color: COLORS.primary, fontWeight: '600', marginTop: SPACING.xs }}>
+              support@nautical-ops.com
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: { flex: 1 },
   content: {
     padding: SPACING.lg,

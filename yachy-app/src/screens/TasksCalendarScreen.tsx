@@ -26,7 +26,7 @@ import yardJobsService from '../services/yardJobs';
 import { PieDayComponent } from '../components/PieDayComponent';
 import { VesselTask, YardPeriodJob, Department } from '../types';
 import { getTaskUrgencyColor, getUrgencyLevel, UrgencyLevel } from '../utils/taskUrgency';
-import { LoadingSpinner } from '../components';
+import { LoadingSpinner, PageHeader } from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -251,269 +251,273 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-      contentContainerStyle={styles.content}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
-      }
-    >
-      <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
-        Urgency / Priority
-      </Text>
-      <TouchableOpacity
-        style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
-        onPress={() => setUrgencyDropdownOpen(!urgencyDropdownOpen)}
-        activeOpacity={0.7}
+    <View style={styles.pageWrap}>
+      <PageHeader title="Yard Period Calendar" />
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
+        }
       >
-        <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
-          {URGENCY_OPTIONS.find((o) => o.value === urgencyFilter)?.label ?? 'All priorities'}
+        <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+          Urgency / Priority
         </Text>
-        <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>
-          {urgencyDropdownOpen ? '▲' : '▼'}
-        </Text>
-      </TouchableOpacity>
-      {urgencyDropdownOpen && (
-        <Modal visible transparent animationType="fade">
-          <Pressable style={styles.modalBackdrop} onPress={() => setUrgencyDropdownOpen(false)}>
-            <View
-              style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
-              onStartShouldSetResponder={() => true}
-            >
-              {URGENCY_OPTIONS.map((opt) => (
-                <TouchableOpacity
-                  key={opt.value}
-                  style={[
-                    styles.modalItem,
-                    urgencyFilter === opt.value && styles.modalItemSelected,
-                  ]}
-                  onPress={() => {
-                    setUrgencyFilter(opt.value);
-                    setUrgencyDropdownOpen(false);
-                  }}
-                >
-                  <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </Pressable>
-        </Modal>
-      )}
+        <TouchableOpacity
+          style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
+          onPress={() => setUrgencyDropdownOpen(!urgencyDropdownOpen)}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
+            {URGENCY_OPTIONS.find((o) => o.value === urgencyFilter)?.label ?? 'All priorities'}
+          </Text>
+          <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>
+            {urgencyDropdownOpen ? '▲' : '▼'}
+          </Text>
+        </TouchableOpacity>
+        {urgencyDropdownOpen && (
+          <Modal visible transparent animationType="fade">
+            <Pressable style={styles.modalBackdrop} onPress={() => setUrgencyDropdownOpen(false)}>
+              <View
+                style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+                onStartShouldSetResponder={() => true}
+              >
+                {URGENCY_OPTIONS.map((opt) => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[
+                      styles.modalItem,
+                      urgencyFilter === opt.value && styles.modalItemSelected,
+                    ]}
+                    onPress={() => {
+                      setUrgencyFilter(opt.value);
+                      setUrgencyDropdownOpen(false);
+                    }}
+                  >
+                    <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </Pressable>
+          </Modal>
+        )}
 
-      <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
-        Department filters
-      </Text>
-      <Text style={[styles.filterHint, { color: themeColors.textSecondary }]}>
-        Tap to show/hide on calendar
-      </Text>
-      <View style={styles.deptChips}>
-        {DEPARTMENTS.map((dept) => (
-          <TouchableOpacity
-            key={dept}
-            style={[
-              styles.deptChip,
-              { borderColor: getDeptColor(dept) ?? COLORS.primary },
-              !visibleDepartments[dept] && styles.deptChipHidden,
-            ]}
-            onPress={() => toggleDepartment(dept)}
-          >
-            <View
-              style={[styles.deptDot, { backgroundColor: getDeptColor(dept) ?? COLORS.primary }]}
-            />
-            <Text
+        <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+          Department filters
+        </Text>
+        <Text style={[styles.filterHint, { color: themeColors.textSecondary }]}>
+          Tap to show/hide on calendar
+        </Text>
+        <View style={styles.deptChips}>
+          {DEPARTMENTS.map((dept) => (
+            <TouchableOpacity
+              key={dept}
               style={[
-                styles.deptChipText,
-                {
-                  color: visibleDepartments[dept]
-                    ? themeColors.textPrimary
-                    : themeColors.textSecondary,
-                },
-                !visibleDepartments[dept] && styles.deptChipTextDim,
+                styles.deptChip,
+                { borderColor: getDeptColor(dept) ?? COLORS.primary },
+                !visibleDepartments[dept] && styles.deptChipHidden,
               ]}
+              onPress={() => toggleDepartment(dept)}
             >
-              {dept.charAt(0) + dept.slice(1).toLowerCase()}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+              <View
+                style={[styles.deptDot, { backgroundColor: getDeptColor(dept) ?? COLORS.primary }]}
+              />
+              <Text
+                style={[
+                  styles.deptChipText,
+                  {
+                    color: visibleDepartments[dept]
+                      ? themeColors.textPrimary
+                      : themeColors.textSecondary,
+                  },
+                  !visibleDepartments[dept] && styles.deptChipTextDim,
+                ]}
+              >
+                {dept.charAt(0) + dept.slice(1).toLowerCase()}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-      <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
-        Yard Period Calendar
-      </Text>
-      <View style={[styles.calendarCard, { backgroundColor: themeColors.surface }]}>
-        {loading ? (
-          <LoadingSpinner />
-        ) : (
+        <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+          Yard Period Calendar
+        </Text>
+        <View style={[styles.calendarCard, { backgroundColor: themeColors.surface }]}>
+          {loading ? (
+            <LoadingSpinner />
+          ) : (
+            <>
+              <Calendar
+                current={new Date().toISOString().slice(0, 10)}
+                dayComponent={PieDayComponent as React.ComponentType<any>}
+                markedDates={
+                  {
+                    ...markedDates,
+                    ...(selectedDate && {
+                      [selectedDate]: {
+                        ...(markedDates[selectedDate] ?? {}),
+                        selected: true,
+                        selectedColor: COLORS.primary,
+                        selectedTextColor: COLORS.white,
+                        segmentColors: markedDates[selectedDate]?.segmentColors,
+                      },
+                    }),
+                  } as Record<string, object>
+                }
+                theme={calendarTheme}
+                onDayPress={({ dateString }) => setSelectedDate(dateString)}
+                onMonthChange={onMonthChange}
+                hideExtraDays
+                hideArrows={false}
+              />
+              <View style={styles.legend}>
+                {DEPARTMENTS.filter((d) => visibleDepartments[d]).map((dept) => (
+                  <View key={dept} style={styles.legendRow}>
+                    <View style={[styles.legendDot, { backgroundColor: getDeptColor(dept) }]} />
+                    <Text style={[styles.legendText, { color: themeColors.textPrimary }]}>
+                      {dept.charAt(0) + dept.slice(1).toLowerCase()}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
+        </View>
+
+        {selectedDate && (
           <>
-            <Calendar
-              current={new Date().toISOString().slice(0, 10)}
-              dayComponent={PieDayComponent as React.ComponentType<any>}
-              markedDates={
-                {
-                  ...markedDates,
-                  ...(selectedDate && {
-                    [selectedDate]: {
-                      ...(markedDates[selectedDate] ?? {}),
-                      selected: true,
-                      selectedColor: COLORS.primary,
-                      selectedTextColor: COLORS.white,
-                      segmentColors: markedDates[selectedDate]?.segmentColors,
-                    },
-                  }),
-                } as Record<string, object>
-              }
-              theme={calendarTheme}
-              onDayPress={({ dateString }) => setSelectedDate(dateString)}
-              onMonthChange={onMonthChange}
-              hideExtraDays
-              hideArrows={false}
-            />
-            <View style={styles.legend}>
-              {DEPARTMENTS.filter((d) => visibleDepartments[d]).map((dept) => (
-                <View key={dept} style={styles.legendRow}>
-                  <View style={[styles.legendDot, { backgroundColor: getDeptColor(dept) }]} />
-                  <Text style={[styles.legendText, { color: themeColors.textPrimary }]}>
-                    {dept.charAt(0) + dept.slice(1).toLowerCase()}
-                  </Text>
-                </View>
-              ))}
-            </View>
+            <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+              Tasks & Jobs for {formatDate(selectedDate)}
+            </Text>
+            {tasksForSelectedDate.tasks.length === 0 && tasksForSelectedDate.yardJobs.length === 0 ? (
+              <Text style={[styles.emptyDate, { color: themeColors.textSecondary }]}>
+                No tasks or yard jobs due on this date
+              </Text>
+            ) : (
+              <View style={styles.taskList}>
+                {tasksForSelectedDate.tasks.map((task) => {
+                  const urgencyColor = getTaskUrgencyColor(
+                    task.doneByDate,
+                    task.createdAt,
+                    task.status
+                  );
+                  const isComplete = task.status === 'COMPLETED';
+                  return (
+                    <TouchableOpacity
+                      key={`task-${task.id}`}
+                      style={[
+                        styles.taskCard,
+                        { backgroundColor: themeColors.surface, borderLeftColor: urgencyColor },
+                      ]}
+                      onPress={() => onEdit(task)}
+                      activeOpacity={0.8}
+                    >
+                      <View style={styles.taskHeader}>
+                        <Text
+                          style={[
+                            styles.taskTitle,
+                            {
+                              color: isComplete ? themeColors.textSecondary : themeColors.textPrimary,
+                            },
+                            isComplete && styles.taskTitleComplete,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {task.title}
+                        </Text>
+                        <View
+                          style={[
+                            styles.deptBadge,
+                            { backgroundColor: getDeptColor(task.department) ?? COLORS.gray300 },
+                          ]}
+                        >
+                          <Text style={styles.deptBadgeText}>
+                            {task.department.charAt(0) + task.department.slice(1).toLowerCase()}
+                          </Text>
+                        </View>
+                      </View>
+                      {task.notes ? (
+                        <Text
+                          style={[styles.taskNotes, { color: themeColors.textSecondary }]}
+                          numberOfLines={2}
+                        >
+                          {task.notes}
+                        </Text>
+                      ) : null}
+                      {!isComplete && (
+                        <TouchableOpacity
+                          style={styles.completeBtn}
+                          onPress={() => onMarkComplete(task)}
+                        >
+                          <Text style={styles.completeBtnText}>Mark complete</Text>
+                        </TouchableOpacity>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+                {tasksForSelectedDate.yardJobs.map((job) => {
+                  const priorityColor = getPriorityColor(job.priority ?? 'GREEN');
+                  const isComplete = job.status === 'COMPLETED';
+                  const dept = job.department ?? 'INTERIOR';
+                  return (
+                    <TouchableOpacity
+                      key={`job-${job.id}`}
+                      style={[
+                        styles.taskCard,
+                        { backgroundColor: themeColors.surface, borderLeftColor: priorityColor },
+                      ]}
+                      onPress={() => onEditYardJob(job)}
+                      activeOpacity={0.8}
+                      disabled={!isHOD}
+                    >
+                      <View style={styles.taskHeader}>
+                        <Text
+                          style={[
+                            styles.taskTitle,
+                            {
+                              color: isComplete ? themeColors.textSecondary : themeColors.textPrimary,
+                            },
+                            isComplete && styles.taskTitleComplete,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {job.jobTitle} {isComplete ? '✓' : ''}
+                        </Text>
+                        <View
+                          style={[
+                            styles.deptBadge,
+                            { backgroundColor: getDeptColor(dept) ?? COLORS.gray300 },
+                          ]}
+                        >
+                          <Text style={styles.deptBadgeText}>
+                            {dept.charAt(0) + dept.slice(1).toLowerCase()} · Yard
+                          </Text>
+                        </View>
+                      </View>
+                      {job.jobDescription ? (
+                        <Text
+                          style={[styles.taskNotes, { color: themeColors.textSecondary }]}
+                          numberOfLines={2}
+                        >
+                          {job.jobDescription}
+                        </Text>
+                      ) : null}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
           </>
         )}
-      </View>
-
-      {selectedDate && (
-        <>
-          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
-            Tasks & Jobs for {formatDate(selectedDate)}
-          </Text>
-          {tasksForSelectedDate.tasks.length === 0 && tasksForSelectedDate.yardJobs.length === 0 ? (
-            <Text style={[styles.emptyDate, { color: themeColors.textSecondary }]}>
-              No tasks or yard jobs due on this date
-            </Text>
-          ) : (
-            <View style={styles.taskList}>
-              {tasksForSelectedDate.tasks.map((task) => {
-                const urgencyColor = getTaskUrgencyColor(
-                  task.doneByDate,
-                  task.createdAt,
-                  task.status
-                );
-                const isComplete = task.status === 'COMPLETED';
-                return (
-                  <TouchableOpacity
-                    key={`task-${task.id}`}
-                    style={[
-                      styles.taskCard,
-                      { backgroundColor: themeColors.surface, borderLeftColor: urgencyColor },
-                    ]}
-                    onPress={() => onEdit(task)}
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.taskHeader}>
-                      <Text
-                        style={[
-                          styles.taskTitle,
-                          {
-                            color: isComplete ? themeColors.textSecondary : themeColors.textPrimary,
-                          },
-                          isComplete && styles.taskTitleComplete,
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {task.title}
-                      </Text>
-                      <View
-                        style={[
-                          styles.deptBadge,
-                          { backgroundColor: getDeptColor(task.department) ?? COLORS.gray300 },
-                        ]}
-                      >
-                        <Text style={styles.deptBadgeText}>
-                          {task.department.charAt(0) + task.department.slice(1).toLowerCase()}
-                        </Text>
-                      </View>
-                    </View>
-                    {task.notes ? (
-                      <Text
-                        style={[styles.taskNotes, { color: themeColors.textSecondary }]}
-                        numberOfLines={2}
-                      >
-                        {task.notes}
-                      </Text>
-                    ) : null}
-                    {!isComplete && (
-                      <TouchableOpacity
-                        style={styles.completeBtn}
-                        onPress={() => onMarkComplete(task)}
-                      >
-                        <Text style={styles.completeBtnText}>Mark complete</Text>
-                      </TouchableOpacity>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-              {tasksForSelectedDate.yardJobs.map((job) => {
-                const priorityColor = getPriorityColor(job.priority ?? 'GREEN');
-                const isComplete = job.status === 'COMPLETED';
-                const dept = job.department ?? 'INTERIOR';
-                return (
-                  <TouchableOpacity
-                    key={`job-${job.id}`}
-                    style={[
-                      styles.taskCard,
-                      { backgroundColor: themeColors.surface, borderLeftColor: priorityColor },
-                    ]}
-                    onPress={() => onEditYardJob(job)}
-                    activeOpacity={0.8}
-                    disabled={!isHOD}
-                  >
-                    <View style={styles.taskHeader}>
-                      <Text
-                        style={[
-                          styles.taskTitle,
-                          {
-                            color: isComplete ? themeColors.textSecondary : themeColors.textPrimary,
-                          },
-                          isComplete && styles.taskTitleComplete,
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {job.jobTitle} {isComplete ? '✓' : ''}
-                      </Text>
-                      <View
-                        style={[
-                          styles.deptBadge,
-                          { backgroundColor: getDeptColor(dept) ?? COLORS.gray300 },
-                        ]}
-                      >
-                        <Text style={styles.deptBadgeText}>
-                          {dept.charAt(0) + dept.slice(1).toLowerCase()} · Yard
-                        </Text>
-                      </View>
-                    </View>
-                    {job.jobDescription ? (
-                      <Text
-                        style={[styles.taskNotes, { color: themeColors.textSecondary }]}
-                        numberOfLines={2}
-                      >
-                        {job.jobDescription}
-                      </Text>
-                    ) : null}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          )}
-        </>
-      )}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: {
     flex: 1,
   },

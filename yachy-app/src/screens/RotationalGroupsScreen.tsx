@@ -24,7 +24,7 @@ import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import userService from '../services/user';
 import { User, RotationGroup } from '../types';
-import { LoadingSpinner } from '../components';
+import { LoadingSpinner, PageHeader } from '../components';
 
 export const RotationalGroupsScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -265,6 +265,7 @@ export const RotationalGroupsScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <PageHeader title="Rotational Groups" />
       <ScrollView
         refreshControl={
           <RefreshControl

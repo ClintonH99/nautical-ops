@@ -20,7 +20,7 @@ import { useAuthStore } from '../store';
 import fuelLogsService from '../services/fuelLogs';
 import vesselService from '../services/vessel';
 import { FuelLog } from '../types';
-import { Button, Input, ButtonTagCard, ButtonTagRow, LoadingSpinner } from '../components';
+import { Button, Input, ButtonTagCard, ButtonTagRow, LoadingSpinner, PageHeader } from '../components';
 import { exportFuelLogPdf } from '../utils/vesselLogsPdf';
 
 function formatCurrency(value: number): string {
@@ -146,6 +146,7 @@ export const FuelLogScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <PageHeader title="Fuel Log" />
       <View style={styles.actionBar}>
         <Button title="Add Log" onPress={onAdd} variant="primary" style={styles.actionBtn} />
         <Button

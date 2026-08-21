@@ -23,7 +23,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import tripsService from '../services/trips';
 import { usePostHog } from 'posthog-react-native';
 import { TripType, Department } from '../types';
-import { Input, Button, LoadingSpinner } from '../components';
+import { Input, Button, LoadingSpinner, PageHeader } from '../components';
 import { useVesselTripColors } from '../hooks/useVesselTripColors';
 import { DEFAULT_COLORS } from '../services/tripColors';
 import { parseLocalDate, toYYYYMMDD } from '../utils';
@@ -257,6 +257,7 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={100}
     >
+      <PageHeader title="Trip" />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}

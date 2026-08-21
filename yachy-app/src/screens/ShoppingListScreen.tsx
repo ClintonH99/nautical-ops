@@ -24,7 +24,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import shoppingListsService, { ShoppingList, ShoppingListItem } from '../services/shoppingLists';
 import { Department } from '../types';
-import { Button } from '../components';
+import { Button, PageHeader } from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -241,144 +241,148 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
   };
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-      contentContainerStyle={styles.content}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
-      }
-    >
-      {renderMasterBoard()}
-      <View style={styles.section}>
-        <Button
-          title={`Create ${sectionTitle} List`}
-          onPress={onCreate}
-          variant="primary"
-          fullWidth
-        />
-        <Text style={[styles.filterLabel, { color: themeColors.textPrimary }]}>Department</Text>
-          <TouchableOpacity
-            style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
-            onPress={() => setDepartmentDropdownOpen(!departmentDropdownOpen)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>{getDepartmentDisplayText()}</Text>
-            <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>{departmentDropdownOpen ? '▲' : '▼'}</Text>
-          </TouchableOpacity>
-          {departmentDropdownOpen && (
-            <Modal visible transparent animationType="fade">
-              <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentDropdownOpen(false)}>
-                <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
-                  <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Filter by department</Text>
-                  <TouchableOpacity
-                    style={[styles.modalItem, DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
-                    onPress={() => {
-                      selectAllDepartments();
-                      setDepartmentDropdownOpen(false);
-                    }}
-                  >
-                    <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>All Departments</Text>
-                  </TouchableOpacity>
-                  {DEPARTMENTS.map((dept) => (
+    <View style={styles.pageWrap}>
+      <PageHeader title={listType === 'trip' ? 'Trip Shopping' : 'General Shopping'} />
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
+        }
+      >
+        {renderMasterBoard()}
+        <View style={styles.section}>
+          <Button
+            title={`Create ${sectionTitle} List`}
+            onPress={onCreate}
+            variant="primary"
+            fullWidth
+          />
+          <Text style={[styles.filterLabel, { color: themeColors.textPrimary }]}>Department</Text>
+            <TouchableOpacity
+              style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
+              onPress={() => setDepartmentDropdownOpen(!departmentDropdownOpen)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>{getDepartmentDisplayText()}</Text>
+              <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>{departmentDropdownOpen ? '▲' : '▼'}</Text>
+            </TouchableOpacity>
+            {departmentDropdownOpen && (
+              <Modal visible transparent animationType="fade">
+                <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentDropdownOpen(false)}>
+                  <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
+                    <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Filter by department</Text>
                     <TouchableOpacity
-                      key={dept}
-                      style={[styles.modalItem, visibleDepartments[dept] && !DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
+                      style={[styles.modalItem, DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
                       onPress={() => {
-                        selectDepartment(dept);
+                        selectAllDepartments();
                         setDepartmentDropdownOpen(false);
                       }}
                     >
-                      <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                        {dept.charAt(0) + dept.slice(1).toLowerCase()}
-                      </Text>
+                      <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>All Departments</Text>
                     </TouchableOpacity>
-                  ))}
-                </View>
-              </Pressable>
-            </Modal>
-          )}
+                    {DEPARTMENTS.map((dept) => (
+                      <TouchableOpacity
+                        key={dept}
+                        style={[styles.modalItem, visibleDepartments[dept] && !DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
+                        onPress={() => {
+                          selectDepartment(dept);
+                          setDepartmentDropdownOpen(false);
+                        }}
+                      >
+                        <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
+                          {dept.charAt(0) + dept.slice(1).toLowerCase()}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </Pressable>
+              </Modal>
+            )}
 
-        {loading ? (
-            <ActivityIndicator size="small" color={COLORS.primary} style={styles.loader} />
-          ) : filteredLists.length === 0 ? (
-            <Text style={[styles.empty, { color: themeColors.textSecondary }]}>
-              {listsForType.length === 0
-                ? `No ${sectionTitle.toLowerCase()} lists yet. Tap Create to add one.`
-                : 'No lists for the selected department(s).'}
-            </Text>
-          ) : (
-            filteredLists.map((list) => {
-              const dept = list.department ?? 'INTERIOR';
-              return (
-          <View key={list.id} style={[styles.card, { backgroundColor: themeColors.surface }]}>
-            <View style={styles.cardHeader}>
-              <View style={styles.cardTitleBlock}>
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('AddEditShoppingList', { listId: list.id })}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
-                    {list.title}
-                  </Text>
-                </TouchableOpacity>
-                <View style={[styles.deptBadge, { backgroundColor: getDepartmentColor(dept, overrides) }]}>
-                  <Text style={styles.deptBadgeText}>
-                    {dept.charAt(0) + dept.slice(1).toLowerCase()}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.cardActions}>
-                <TouchableOpacity onPress={() => onDelete(list)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-                </TouchableOpacity>
-                <Button
-                  title="Edit"
-                  onPress={() => navigation.navigate('AddEditShoppingList', { listId: list.id })}
-                  variant="text"
-                  size="small"
-                  textStyle={{ color: themeColors.isDark ? COLORS.white : COLORS.primary }}
-                />
-              </View>
-            </View>
-            <View style={styles.bulletList}>
-              {list.items.length === 0 ? (
-                <Text style={[styles.bulletPlaceholder, { color: COLORS.textTertiary }]}>No items</Text>
-              ) : (
-                list.items.map((item, idx) => (
-                  <View key={idx} style={styles.bulletRow}>
-                    <TouchableOpacity
-                      onPress={() => toggleItemChecked(list, idx)}
-                      style={[styles.checkbox, item.checked && styles.checkboxChecked]}
-                      activeOpacity={0.7}
-                    >
-                      {item.checked ? (
-                        <Text style={styles.checkboxTick}>✓</Text>
-                      ) : null}
-                    </TouchableOpacity>
-                    <Text
-                      style={[
-                        styles.bulletText,
-                        { color: themeColors.textPrimary },
-                        item.checked && styles.bulletTextChecked,
-                      ]}
-                      numberOfLines={2}
-                    >
-                      {item.amount ? `${item.amount} × ${item.text}` : item.text}
+          {loading ? (
+              <ActivityIndicator size="small" color={COLORS.primary} style={styles.loader} />
+            ) : filteredLists.length === 0 ? (
+              <Text style={[styles.empty, { color: themeColors.textSecondary }]}>
+                {listsForType.length === 0
+                  ? `No ${sectionTitle.toLowerCase()} lists yet. Tap Create to add one.`
+                  : 'No lists for the selected department(s).'}
+              </Text>
+            ) : (
+              filteredLists.map((list) => {
+                const dept = list.department ?? 'INTERIOR';
+                return (
+            <View key={list.id} style={[styles.card, { backgroundColor: themeColors.surface }]}>
+              <View style={styles.cardHeader}>
+                <View style={styles.cardTitleBlock}>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('AddEditShoppingList', { listId: list.id })}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
+                      {list.title}
+                    </Text>
+                  </TouchableOpacity>
+                  <View style={[styles.deptBadge, { backgroundColor: getDepartmentColor(dept, overrides) }]}>
+                    <Text style={styles.deptBadgeText}>
+                      {dept.charAt(0) + dept.slice(1).toLowerCase()}
                     </Text>
                   </View>
-                ))
-              )}
+                </View>
+                <View style={styles.cardActions}>
+                  <TouchableOpacity onPress={() => onDelete(list)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
+                  </TouchableOpacity>
+                  <Button
+                    title="Edit"
+                    onPress={() => navigation.navigate('AddEditShoppingList', { listId: list.id })}
+                    variant="text"
+                    size="small"
+                    textStyle={{ color: themeColors.isDark ? COLORS.white : COLORS.primary }}
+                  />
+                </View>
+              </View>
+              <View style={styles.bulletList}>
+                {list.items.length === 0 ? (
+                  <Text style={[styles.bulletPlaceholder, { color: COLORS.textTertiary }]}>No items</Text>
+                ) : (
+                  list.items.map((item, idx) => (
+                    <View key={idx} style={styles.bulletRow}>
+                      <TouchableOpacity
+                        onPress={() => toggleItemChecked(list, idx)}
+                        style={[styles.checkbox, item.checked && styles.checkboxChecked]}
+                        activeOpacity={0.7}
+                      >
+                        {item.checked ? (
+                          <Text style={styles.checkboxTick}>✓</Text>
+                        ) : null}
+                      </TouchableOpacity>
+                      <Text
+                        style={[
+                          styles.bulletText,
+                          { color: themeColors.textPrimary },
+                          item.checked && styles.bulletTextChecked,
+                        ]}
+                        numberOfLines={2}
+                      >
+                        {item.amount ? `${item.amount} × ${item.text}` : item.text}
+                      </Text>
+                    </View>
+                  ))
+                )}
+              </View>
             </View>
-          </View>
-        );
-        })
-      )}
-      </View>
-    </ScrollView>
+          );
+          })
+        )}
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: { flex: 1 },
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },

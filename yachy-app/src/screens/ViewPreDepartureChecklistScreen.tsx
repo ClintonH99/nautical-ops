@@ -11,7 +11,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import preDepartureChecklistsService from '../services/preDepartureChecklists';
 import { PreDepartureChecklist, Department } from '../types';
-import { LoadingSpinner } from '../components';
+import { LoadingSpinner, PageHeader } from '../components';
 
 const DEPARTMENT_OPTIONS: { value: Department | null; label: string }[] = [
   { value: null, label: 'All Departments' },
@@ -85,59 +85,63 @@ export const ViewPreDepartureChecklistScreen = ({ navigation, route }: any) => {
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-      contentContainerStyle={styles.content}
-    >
-      <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
-        <Text style={[styles.title, { color: themeColors.textPrimary }]}>{checklist.title}</Text>
-        <View style={styles.meta}>
-          <View
-            style={[
-              styles.deptBadge,
-              {
-                backgroundColor: checklist.department
-                  ? getDepartmentColor(checklist.department, overrides)
-                  : COLORS.gray400,
-              },
-            ]}
-          >
-            <Text style={styles.deptBadgeText}>{deptLabel}</Text>
-          </View>
-          <Text style={[styles.date, { color: themeColors.textSecondary }]}>
-            {formatDate(checklist.createdAt)}
-          </Text>
-        </View>
-
-        <View style={styles.itemsSection}>
-          <Text style={[styles.itemsLabel, { color: themeColors.textPrimary }]}>
-            Checklist items
-          </Text>
-          {checklist.items.length === 0 ? (
-            <Text style={[styles.emptyItems, { color: themeColors.textSecondary }]}>
-              No items yet
+    <View style={styles.pageWrap}>
+      <PageHeader title="View Checklist" />
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={styles.content}
+      >
+        <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
+          <Text style={[styles.title, { color: themeColors.textPrimary }]}>{checklist.title}</Text>
+          <View style={styles.meta}>
+            <View
+              style={[
+                styles.deptBadge,
+                {
+                  backgroundColor: checklist.department
+                    ? getDepartmentColor(checklist.department, overrides)
+                    : COLORS.gray400,
+                },
+              ]}
+            >
+              <Text style={styles.deptBadgeText}>{deptLabel}</Text>
+            </View>
+            <Text style={[styles.date, { color: themeColors.textSecondary }]}>
+              {formatDate(checklist.createdAt)}
             </Text>
-          ) : (
-            checklist.items
-              .sort((a, b) => a.sortOrder - b.sortOrder)
-              .map((item, idx) => (
-                <View key={item.id} style={styles.itemRow}>
-                  <Text style={[styles.itemNum, { color: themeColors.textSecondary }]}>
-                    {idx + 1}.
-                  </Text>
-                  <Text style={[styles.itemLabel, { color: themeColors.textPrimary }]}>
-                    {item.label}
-                  </Text>
-                </View>
-              ))
-          )}
+          </View>
+
+          <View style={styles.itemsSection}>
+            <Text style={[styles.itemsLabel, { color: themeColors.textPrimary }]}>
+              Checklist items
+            </Text>
+            {checklist.items.length === 0 ? (
+              <Text style={[styles.emptyItems, { color: themeColors.textSecondary }]}>
+                No items yet
+              </Text>
+            ) : (
+              checklist.items
+                .sort((a, b) => a.sortOrder - b.sortOrder)
+                .map((item, idx) => (
+                  <View key={item.id} style={styles.itemRow}>
+                    <Text style={[styles.itemNum, { color: themeColors.textSecondary }]}>
+                      {idx + 1}.
+                    </Text>
+                    <Text style={[styles.itemLabel, { color: themeColors.textPrimary }]}>
+                      {item.label}
+                    </Text>
+                  </View>
+                ))
+            )}
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: { flex: 1 },
   center: {
     flex: 1,

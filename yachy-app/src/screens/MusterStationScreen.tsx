@@ -4,7 +4,6 @@
  */
 
 import React, { useState, useCallback, useLayoutEffect } from 'react';
-import { InfoModal } from '../components/InfoModal';
 import {
   View,
   Text,
@@ -21,7 +20,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import musterStationsService from '../services/musterStations';
-import { Button, LoadingSpinner } from '../components';
+import { Button, LoadingSpinner, PageHeader } from '../components';
 import { generateMusterStationPdf } from '../utils/musterStationPdf';
 import type { MusterStation, MusterStationData } from '../services/musterStations';
 
@@ -82,14 +81,8 @@ function MusterStationPreview({
   );
 }
 
-export const MusterStationScreen = ({ navigation }: any) => {
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <InfoModal
-          screenKey="muster_station"
-          autoShow={false}
-          content={{
+
+const MUSTER_STATION_INFO = {
             title: 'Muster Station & Duties',
             description: 'Assign crew muster stations and emergency duties.',
             features: [
@@ -98,11 +91,9 @@ export const MusterStationScreen = ({ navigation }: any) => {
               'Keep emergency responsibilities clear',
               'Update assignments as crew changes',
             ],
-          }}
-        />
-      ),
-    });
-  }, [navigation]);
+          };
+
+export const MusterStationScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
@@ -194,74 +185,78 @@ export const MusterStationScreen = ({ navigation }: any) => {
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-      contentContainerStyle={[styles.content, items.length === 0 && styles.contentEmpty]}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>Published</Text>
-      {items.map((item) => (
-        <TouchableOpacity
-          key={item.id}
-          style={[styles.card, { backgroundColor: themeColors.surface }]}
-          onPress={() => isHOD && onEdit(item)}
-          activeOpacity={isHOD ? 0.8 : 1}
-          disabled={!isHOD}
-        >
-          <View style={styles.cardHeader}>
-            <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
-              {item.title}
-            </Text>
-            {isHOD && (
-              <TouchableOpacity
-                onPress={() => onDelete(item)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-              </TouchableOpacity>
-            )}
-          </View>
-          <MusterStationPreview data={item.data} themeColors={themeColors} />
+    <View style={styles.pageWrap}>
+      <PageHeader title="Muster Station & Duties" info={MUSTER_STATION_INFO} infoScreenKey="muster_station" />
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={[styles.content, items.length === 0 && styles.contentEmpty]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>Published</Text>
+        {items.map((item) => (
           <TouchableOpacity
-            style={styles.downloadBtn}
-            onPress={() => onDownloadPdf(item)}
-            disabled={!!exportingId}
+            key={item.id}
+            style={[styles.card, { backgroundColor: themeColors.surface }]}
+            onPress={() => isHOD && onEdit(item)}
+            activeOpacity={isHOD ? 0.8 : 1}
+            disabled={!isHOD}
           >
-            {exportingId === item.id ? (
-              <ActivityIndicator size="small" color={COLORS.primary} />
-            ) : (
-              <Text
-                style={[
-                  styles.downloadBtnText,
-                  { color: themeColors.isDark ? COLORS.white : COLORS.primary },
-                ]}
-              >
-                Export to PDF
+            <View style={styles.cardHeader}>
+              <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
+                {item.title}
               </Text>
-            )}
+              {isHOD && (
+                <TouchableOpacity
+                  onPress={() => onDelete(item)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
+                </TouchableOpacity>
+              )}
+            </View>
+            <MusterStationPreview data={item.data} themeColors={themeColors} />
+            <TouchableOpacity
+              style={styles.downloadBtn}
+              onPress={() => onDownloadPdf(item)}
+              disabled={!!exportingId}
+            >
+              {exportingId === item.id ? (
+                <ActivityIndicator size="small" color={COLORS.primary} />
+              ) : (
+                <Text
+                  style={[
+                    styles.downloadBtnText,
+                    { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                  ]}
+                >
+                  Export to PDF
+                </Text>
+              )}
+            </TouchableOpacity>
           </TouchableOpacity>
-        </TouchableOpacity>
-      ))}
-      {items.length === 0 && (
-        <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
-          No published muster stations yet.{isHOD ? ' Create one below.' : ''}
-        </Text>
-      )}
-      {isHOD && (
-        <View style={styles.createSection}>
-          <Button
-            title="Create"
-            onPress={() => navigation.navigate('CreateMusterStation')}
-            variant="primary"
-            fullWidth
-          />
-        </View>
-      )}
-    </ScrollView>
+        ))}
+        {items.length === 0 && (
+          <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
+            No published muster stations yet.{isHOD ? ' Create one below.' : ''}
+          </Text>
+        )}
+        {isHOD && (
+          <View style={styles.createSection}>
+            <Button
+              title="Create"
+              onPress={() => navigation.navigate('CreateMusterStation')}
+              variant="primary"
+              fullWidth
+            />
+          </View>
+        )}
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: { flex: 1 },
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   contentEmpty: { flexGrow: 1 },

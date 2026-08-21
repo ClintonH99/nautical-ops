@@ -22,7 +22,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import vesselTasksService from '../services/vesselTasks';
 import { VesselTask, TaskCategory, Department } from '../types';
 import { getTaskUrgencyColor } from '../utils/taskUrgency';
-import { ButtonTagCard, ButtonTagRow, LoadingSpinner } from '../components';
+import { ButtonTagCard, ButtonTagRow, LoadingSpinner, PageHeader } from '../components';
 
 const CATEGORY_LABELS: Record<TaskCategory, string> = {
   DAILY: 'Daily',
@@ -184,6 +184,7 @@ export const TasksListScreen = ({ navigation, route }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <PageHeader title="Tasks" />
       {loading ? (
         <LoadingSpinner />
       ) : tasks.length === 0 ? (

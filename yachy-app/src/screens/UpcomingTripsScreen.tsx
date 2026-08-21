@@ -15,7 +15,7 @@ import { Trip, TripType } from '../types';
 import { useVesselTripColors, getTripTypeColorMap } from '../hooks/useVesselTripColors';
 import { DEFAULT_COLORS } from '../services/tripColors';
 import { parseLocalDate, toYYYYMMDD } from '../utils';
-import { LoadingSpinner } from '../components';
+import { LoadingSpinner, PageHeader, PillButton } from '../components';
 
 // Full-day colored cells: period marking with same start/end = whole day in that color
 type MarkedDates = {
@@ -95,32 +95,6 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
     }, [loadTrips])
   );
 
-  useEffect(() => {
-    if (!isHOD) return;
-    navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity
-          onPress={() => navigation.navigate('TripColorSettings')}
-          style={{
-            marginRight: SPACING.md,
-            paddingVertical: SPACING.sm,
-            paddingHorizontal: SPACING.md,
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
-        >
-          <Text
-            style={[
-              styles.headerButtonText,
-              { color: themeColors.isDark ? COLORS.white : themeColors.textPrimary },
-            ]}
-          >
-            Edit colors
-          </Text>
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, isHOD, themeColors.textPrimary]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -163,139 +137,143 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-      contentContainerStyle={styles.content}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
-      }
-    >
+    <View style={styles.pageWrap}>
+      <PageHeader title="Upcoming Trips" actions={<PillButton label="Edit colors" onPress={() => navigation.navigate('TripColorSettings')} />} />
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
+        }
+      >
 
-      {tripsStartingTomorrow.length > 0 && (
-        <View style={styles.tripTomorrowBanner}>
-          <Text style={styles.tripTomorrowBannerText}>
-            Trip{tripsStartingTomorrow.length > 1 ? 's' : ''} starting tomorrow – review your
-            pre-departure checklist
-          </Text>
-        </View>
-      )}
-      <View style={styles.preDepartureRow}>
-        <TouchableOpacity
-          style={[styles.preDepartureBtn, { backgroundColor: themeColors.surface }]}
-          onPress={() => navigation.navigate('PreDepartureChecklist')}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.preDepartureEmoji}>📋</Text>
-          <View style={styles.preDepartureTextWrap}>
-            <Text style={[styles.preDepartureLabel, { color: themeColors.textPrimary }]}>
-              Pre-Departure Checklist
-            </Text>
-            <Text style={[styles.preDepartureHint, { color: themeColors.textSecondary }]}>
-              {tripsStartingTomorrow.length > 0
-                ? `Trip${tripsStartingTomorrow.length > 1 ? 's' : ''} tomorrow: ${tripsStartingTomorrow.map((t) => t.title).join(', ')}`
-                : 'HODs: Add tasks for crew before departure'}
+        {tripsStartingTomorrow.length > 0 && (
+          <View style={styles.tripTomorrowBanner}>
+            <Text style={styles.tripTomorrowBannerText}>
+              Trip{tripsStartingTomorrow.length > 1 ? 's' : ''} starting tomorrow – review your
+              pre-departure checklist
             </Text>
           </View>
-        </TouchableOpacity>
-      </View>
+        )}
+        <View style={styles.preDepartureRow}>
+          <TouchableOpacity
+            style={[styles.preDepartureBtn, { backgroundColor: themeColors.surface }]}
+            onPress={() => navigation.navigate('PreDepartureChecklist')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.preDepartureEmoji}>📋</Text>
+            <View style={styles.preDepartureTextWrap}>
+              <Text style={[styles.preDepartureLabel, { color: themeColors.textPrimary }]}>
+                Pre-Departure Checklist
+              </Text>
+              <Text style={[styles.preDepartureHint, { color: themeColors.textSecondary }]}>
+                {tripsStartingTomorrow.length > 0
+                  ? `Trip${tripsStartingTomorrow.length > 1 ? 's' : ''} tomorrow: ${tripsStartingTomorrow.map((t) => t.title).join(', ')}`
+                  : 'HODs: Add tasks for crew before departure'}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
 
-      <Text
-        style={[styles.sectionTitle, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}
-      >
-        Trip types
-      </Text>
-      <Text style={[styles.filterHint, { color: COLORS.textTertiary }]}>
-        Tap card to open • Tap Show/Hide to filter calendar
-      </Text>
-      <View style={styles.optionsRow}>
-        <View
-          style={[
-            styles.optionCard,
-            { backgroundColor: themeColors.surface, borderLeftColor: c.guest },
-          ]}
+        <Text
+          style={[styles.sectionTitle, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}
         >
-          <TouchableOpacity
-            style={styles.optionCardMain}
-            onPress={() => navigation.navigate('GuestTrips')}
-            activeOpacity={0.8}
+          Trip types
+        </Text>
+        <Text style={[styles.filterHint, { color: COLORS.textTertiary }]}>
+          Tap card to open • Tap Show/Hide to filter calendar
+        </Text>
+        <View style={styles.optionsRow}>
+          <View
+            style={[
+              styles.optionCard,
+              { backgroundColor: themeColors.surface, borderLeftColor: c.guest },
+            ]}
           >
-            <Text style={styles.optionEmoji}>👥</Text>
-            <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>
-              Guest Trips
-            </Text>
-            <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>
-              Charter guests
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.visibilityBtn} onPress={() => toggleVisible('GUEST')}>
-            <Text
-              style={[styles.visibilityBtnText, !visibleTypes.GUEST && styles.visibilityBtnTextDim]}
+            <TouchableOpacity
+              style={styles.optionCardMain}
+              onPress={() => navigation.navigate('GuestTrips')}
+              activeOpacity={0.8}
             >
-              {visibleTypes.GUEST ? 'Hide' : 'Show'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-        <View
-          style={[
-            styles.optionCard,
-            { backgroundColor: themeColors.surface, borderLeftColor: c.boss },
-          ]}
-        >
-          <TouchableOpacity
-            style={styles.optionCardMain}
-            onPress={() => navigation.navigate('BossTrips')}
-            activeOpacity={0.8}
+              <Text style={styles.optionEmoji}>👥</Text>
+              <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>
+                Guest Trips
+              </Text>
+              <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>
+                Charter guests
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.visibilityBtn} onPress={() => toggleVisible('GUEST')}>
+              <Text
+                style={[styles.visibilityBtnText, !visibleTypes.GUEST && styles.visibilityBtnTextDim]}
+              >
+                {visibleTypes.GUEST ? 'Hide' : 'Show'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <View
+            style={[
+              styles.optionCard,
+              { backgroundColor: themeColors.surface, borderLeftColor: c.boss },
+            ]}
           >
-            <Text style={styles.optionEmoji}>⚓</Text>
-            <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>Boss Trips</Text>
-            <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>
-              Owner / family
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.visibilityBtn} onPress={() => toggleVisible('BOSS')}>
-            <Text
-              style={[styles.visibilityBtnText, !visibleTypes.BOSS && styles.visibilityBtnTextDim]}
+            <TouchableOpacity
+              style={styles.optionCardMain}
+              onPress={() => navigation.navigate('BossTrips')}
+              activeOpacity={0.8}
             >
-              {visibleTypes.BOSS ? 'Hide' : 'Show'}
-            </Text>
-          </TouchableOpacity>
+              <Text style={styles.optionEmoji}>⚓</Text>
+              <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>Boss Trips</Text>
+              <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>
+                Owner / family
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.visibilityBtn} onPress={() => toggleVisible('BOSS')}>
+              <Text
+                style={[styles.visibilityBtnText, !visibleTypes.BOSS && styles.visibilityBtnTextDim]}
+              >
+                {visibleTypes.BOSS ? 'Hide' : 'Show'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-      <View style={[styles.optionsRow, styles.optionsRowSecond]}>
-        <View
-          style={[
-            styles.optionCard,
-            { backgroundColor: themeColors.surface, borderLeftColor: c.delivery },
-          ]}
-        >
-          <TouchableOpacity
-            style={styles.optionCardMain}
-            onPress={() => navigation.navigate('DeliveryTrips')}
-            activeOpacity={0.8}
+        <View style={[styles.optionsRow, styles.optionsRowSecond]}>
+          <View
+            style={[
+              styles.optionCard,
+              { backgroundColor: themeColors.surface, borderLeftColor: c.delivery },
+            ]}
           >
-            <Text style={styles.optionEmoji}>🚢</Text>
-            <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>Delivery</Text>
-            <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>
-              Delivery periods
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.visibilityBtn} onPress={() => toggleVisible('DELIVERY')}>
-            <Text
-              style={[
-                styles.visibilityBtnText,
-                !visibleTypes.DELIVERY && styles.visibilityBtnTextDim,
-              ]}
+            <TouchableOpacity
+              style={styles.optionCardMain}
+              onPress={() => navigation.navigate('DeliveryTrips')}
+              activeOpacity={0.8}
             >
-              {visibleTypes.DELIVERY ? 'Hide' : 'Show'}
-            </Text>
-          </TouchableOpacity>
+              <Text style={styles.optionEmoji}>🚢</Text>
+              <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>Delivery</Text>
+              <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>
+                Delivery periods
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.visibilityBtn} onPress={() => toggleVisible('DELIVERY')}>
+              <Text
+                style={[
+                  styles.visibilityBtnText,
+                  !visibleTypes.DELIVERY && styles.visibilityBtnTextDim,
+                ]}
+              >
+                {visibleTypes.DELIVERY ? 'Hide' : 'Show'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: {
     flex: 1,
     backgroundColor: COLORS.background,

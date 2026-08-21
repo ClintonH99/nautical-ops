@@ -4,7 +4,6 @@
  */
 
 import React, { useLayoutEffect } from 'react';
-import { InfoModal } from '../components/InfoModal';
 import {
   View,
   Text,
@@ -14,6 +13,7 @@ import {
 } from 'react-native';
 import { COLORS, FONTS, SPACING, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { PageHeader } from '../components';
 import { useAuthStore } from '../store';
 
 const CATEGORIES = [
@@ -25,14 +25,8 @@ const CATEGORIES = [
   { icon: '📝', label: 'Watch Duties', nav: 'WatchDuties' as const, enabled: true },
 ];
 
-export const VesselCrewSafetyScreen = ({ navigation }: any) => {
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <InfoModal
-          screenKey="vessel_crew_safety"
-          autoShow={false}
-          content={{
+
+const VESSEL_CREW_SAFETY_INFO = {
             title: 'Vessel & Crew Safety',
             description: 'Central hub for safety information and procedures.',
             features: [
@@ -41,11 +35,9 @@ export const VesselCrewSafetyScreen = ({ navigation }: any) => {
               'Read the rules on-board',
               'Run through the pre-departure checklist',
             ],
-          }}
-        />
-      ),
-    });
-  }, [navigation]);
+          };
+
+export const VesselCrewSafetyScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
@@ -59,31 +51,35 @@ export const VesselCrewSafetyScreen = ({ navigation }: any) => {
   }
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>
-      {CATEGORIES.map((category) => (
-        <TouchableOpacity
-          key={category.label}
-          style={[styles.card, { backgroundColor: themeColors.surface }, !category.enabled && styles.cardDisabled]}
-          onPress={() => category.enabled && category.nav && navigation.navigate(category.nav)}
-          activeOpacity={category.enabled ? 0.8 : 1}
-          disabled={!category.enabled}
-        >
-          <Text style={styles.cardIcon}>{category.icon}</Text>
-          <Text style={[styles.cardLabel, { color: themeColors.textPrimary }, !category.enabled && { color: themeColors.textSecondary }]}>
-            {category.label}
-          </Text>
-          {category.enabled ? (
-            <Text style={[styles.cardChevron, { color: themeColors.textSecondary }]}>›</Text>
-          ) : (
-            <Text style={styles.comingSoon}>Coming soon</Text>
-          )}
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
+    <View style={styles.pageWrap}>
+      <PageHeader title="Vessel & Crew Safety" info={VESSEL_CREW_SAFETY_INFO} infoScreenKey="vessel_crew_safety" />
+      <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>
+        {CATEGORIES.map((category) => (
+          <TouchableOpacity
+            key={category.label}
+            style={[styles.card, { backgroundColor: themeColors.surface }, !category.enabled && styles.cardDisabled]}
+            onPress={() => category.enabled && category.nav && navigation.navigate(category.nav)}
+            activeOpacity={category.enabled ? 0.8 : 1}
+            disabled={!category.enabled}
+          >
+            <Text style={styles.cardIcon}>{category.icon}</Text>
+            <Text style={[styles.cardLabel, { color: themeColors.textPrimary }, !category.enabled && { color: themeColors.textSecondary }]}>
+              {category.label}
+            </Text>
+            {category.enabled ? (
+              <Text style={[styles.cardChevron, { color: themeColors.textSecondary }]}>›</Text>
+            ) : (
+              <Text style={styles.comingSoon}>Coming soon</Text>
+            )}
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: { flex: 1 },
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },

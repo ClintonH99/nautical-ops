@@ -13,6 +13,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { PageHeader } from '../components';
 import watchKeepingService, { PublishedWatchTimetable } from '../services/watchKeeping';
 import { formatLocalDateString } from '../utils';
 
@@ -95,42 +96,46 @@ export const WatchScheduleDetailScreen = ({ navigation, route }: any) => {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>
-      <Text style={[styles.viewDate, { color: themeColors.textSecondary }]}>
-        {formatLocalDateString(scheduleDateStr(schedule), { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-      </Text>
-      {schedule.startLocation ? <Text style={[styles.viewMeta, { color: themeColors.textSecondary }]}>From: {schedule.startLocation}</Text> : null}
-      {schedule.destination ? <Text style={[styles.viewMeta, { color: themeColors.textSecondary }]}>To: {schedule.destination}</Text> : null}
-      <Text style={[styles.viewMeta, { color: themeColors.textSecondary }]}>Start: {schedule.startTime}</Text>
-      <View style={styles.slots}>
-        {schedule.slots.map((slot, idx) => (
-          <View key={idx} style={[styles.slotRow, { backgroundColor: themeColors.surface }]}>
-            <Text style={[styles.slotCrew, { color: themeColors.textPrimary }]}>{slot.crewName}</Text>
-            {slot.crewPosition ? <Text style={[styles.slotRole, { color: themeColors.textSecondary }]}>{slot.crewPosition}</Text> : null}
-            <Text style={styles.slotTime}>{slot.startTimeStr} - {slot.endTimeStr}</Text>
-          </View>
-        ))}
-      </View>
-      <View style={styles.viewActions}>
-        <TouchableOpacity style={styles.exportBtn} onPress={exportPdf} disabled={exportingPdf}>
-          <Text style={styles.exportBtnText}>{exportingPdf ? 'Exporting...' : 'Export to PDF'}</Text>
-        </TouchableOpacity>
-        {isHOD && (
-          <>
-            <TouchableOpacity style={styles.editBtn} onPress={handleEdit} disabled={deleting}>
-              <Text style={styles.editBtnText}>Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete} disabled={deleting}>
-              <Text style={styles.deleteBtnText}>{deleting ? 'Deleting...' : 'Delete'}</Text>
-            </TouchableOpacity>
-          </>
-        )}
-      </View>
-    </ScrollView>
+    <View style={styles.pageWrap}>
+      <PageHeader title="Watch Schedule" />
+      <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>
+        <Text style={[styles.viewDate, { color: themeColors.textSecondary }]}>
+          {formatLocalDateString(scheduleDateStr(schedule), { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+        </Text>
+        {schedule.startLocation ? <Text style={[styles.viewMeta, { color: themeColors.textSecondary }]}>From: {schedule.startLocation}</Text> : null}
+        {schedule.destination ? <Text style={[styles.viewMeta, { color: themeColors.textSecondary }]}>To: {schedule.destination}</Text> : null}
+        <Text style={[styles.viewMeta, { color: themeColors.textSecondary }]}>Start: {schedule.startTime}</Text>
+        <View style={styles.slots}>
+          {schedule.slots.map((slot, idx) => (
+            <View key={idx} style={[styles.slotRow, { backgroundColor: themeColors.surface }]}>
+              <Text style={[styles.slotCrew, { color: themeColors.textPrimary }]}>{slot.crewName}</Text>
+              {slot.crewPosition ? <Text style={[styles.slotRole, { color: themeColors.textSecondary }]}>{slot.crewPosition}</Text> : null}
+              <Text style={styles.slotTime}>{slot.startTimeStr} - {slot.endTimeStr}</Text>
+            </View>
+          ))}
+        </View>
+        <View style={styles.viewActions}>
+          <TouchableOpacity style={styles.exportBtn} onPress={exportPdf} disabled={exportingPdf}>
+            <Text style={styles.exportBtnText}>{exportingPdf ? 'Exporting...' : 'Export to PDF'}</Text>
+          </TouchableOpacity>
+          {isHOD && (
+            <>
+              <TouchableOpacity style={styles.editBtn} onPress={handleEdit} disabled={deleting}>
+                <Text style={styles.editBtnText}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete} disabled={deleting}>
+                <Text style={styles.deleteBtnText}>{deleting ? 'Deleting...' : 'Delete'}</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: { flex: 1 },
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   viewDate: { fontSize: FONTS.lg, fontWeight: '600', marginBottom: SPACING.md },

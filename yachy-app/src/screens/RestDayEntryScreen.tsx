@@ -23,6 +23,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { PageHeader } from '../components';
 import {
   RestPeriod,
   RestEntry,
@@ -226,121 +227,125 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   );
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <Text style={[styles.dateTitle, { color: themeColors.textPrimary }]}>{formatDateDisplay(date)}</Text>
-        {status !== 'draft' && (
-          <Text style={{ color: status === 'confirmed' ? '#16a34a' : '#d97706', fontWeight: '700', fontSize: FONTS.base }}>
-            {status === 'confirmed' ? 'Confirmed' : 'Pending confirmation'}
-          </Text>
-        )}
-      </View>
-
-      {isManager && targetUserName && (
-        <Text style={{ color: themeColors.textSecondary, marginTop: 4, marginBottom: SPACING.sm }}>Editing for {targetUserName}</Text>
-      )}
-
-      {status !== 'draft' && !isManager && (
-        <Text style={[styles.lockedNote, { color: themeColors.textSecondary }]}>
-          {status === 'pending_confirmation' ? 'Locked until reviewed' : 'Locked'}
-        </Text>
-      )}
-
-      {status !== 'draft' && isManager && (
-        <View style={styles.editablePill}>
-          <Text style={styles.editablePillText}>You can still make changes</Text>
-        </View>
-      )}
-
-      <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>Hours of rest</Text>
-      {restPeriods.map((p, i) => (
-        <View key={i} style={styles.row}>
-          {renderTimeChip('Start', p.start, () => openPicker({ type: 'rest', index: i, edge: 'start' }))}
-          <Text style={{ color: themeColors.textSecondary }}>{'->'}</Text>
-          {renderTimeChip('End', p.end, () => openPicker({ type: 'rest', index: i, edge: 'end' }))}
-          {!isLocked && restPeriods.length > 1 && (
-            <TouchableOpacity onPress={() => removeRestPeriod(i)}>
-              <Text style={{ color: '#dc2626', marginLeft: SPACING.sm }}>Remove</Text>
-            </TouchableOpacity>
+    <View style={styles.pageWrap}>
+      <PageHeader title="Rest Entry" />
+      <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text style={[styles.dateTitle, { color: themeColors.textPrimary }]}>{formatDateDisplay(date)}</Text>
+          {status !== 'draft' && (
+            <Text style={{ color: status === 'confirmed' ? '#16a34a' : '#d97706', fontWeight: '700', fontSize: FONTS.base }}>
+              {status === 'confirmed' ? 'Confirmed' : 'Pending confirmation'}
+            </Text>
           )}
         </View>
-      ))}
-      {!isLocked && restPeriods.length < 2 && (
-        <TouchableOpacity onPress={addRestPeriod}>
-          <Text style={{ color: COLORS.primary, marginBottom: SPACING.lg }}>+ Add another rest period</Text>
-        </TouchableOpacity>
-      )}
 
-      <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>Comment (optional)</Text>
-      <TextInput
-        value={comment}
-        onChangeText={setComment}
-        editable={!isLocked}
-        maxLength={40}
-        placeholder="Short note for the PDF, e.g. Sick day"
-        placeholderTextColor={themeColors.textSecondary}
-        style={[
-          styles.commentInput,
-          { color: themeColors.textPrimary, backgroundColor: themeColors.surface, borderColor: themeColors.isDark ? 'rgba(255,255,255,0.1)' : COLORS.border },
-        ]}
-      />
-      <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.xs, marginTop: -SPACING.sm, marginBottom: SPACING.lg }}>
-        {comment.length}/40
-      </Text>
-      <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>Time worked</Text>
-      <View style={styles.row}>
-        {renderTimeChip('Start', workStart, () => openPicker({ type: 'work', edge: 'start' }))}
-        <Text style={{ color: themeColors.textSecondary }}>{'->'}</Text>
-        {renderTimeChip('End', workEnd, () => openPicker({ type: 'work', edge: 'end' }))}
-      </View>
+        {isManager && targetUserName && (
+          <Text style={{ color: themeColors.textSecondary, marginTop: 4, marginBottom: SPACING.sm }}>Editing for {targetUserName}</Text>
+        )}
 
-      <Text style={[styles.sectionLabel, { color: themeColors.textPrimary, marginTop: SPACING.lg }]}>Lunch break</Text>
-      <View style={styles.row}>
-        {renderTimeChip('Start', lunchStart, () => openPicker({ type: 'lunch', edge: 'start' }))}
-        <Text style={{ color: themeColors.textSecondary }}>{'->'}</Text>
-        {renderTimeChip('End', lunchEnd, () => openPicker({ type: 'lunch', edge: 'end' }))}
-      </View>
+        {status !== 'draft' && !isManager && (
+          <Text style={[styles.lockedNote, { color: themeColors.textSecondary }]}>
+            {status === 'pending_confirmation' ? 'Locked until reviewed' : 'Locked'}
+          </Text>
+        )}
 
-      {activeField && (
-        <DateTimePicker
-          value={
-            activeField.type === 'rest'
-              ? timeStringToDate(activeField.edge === 'start' ? restPeriods[activeField.index].start : restPeriods[activeField.index].end)
-              : activeField.type === 'work'
-                ? timeStringToDate(activeField.edge === 'start' ? workStart : workEnd)
-                : timeStringToDate(activeField.edge === 'start' ? lunchStart : lunchEnd)
-          }
-          mode="time"
-          display="spinner"
-          onChange={handleTimeChange}
-        />
-      )}
+        {status !== 'draft' && isManager && (
+          <View style={styles.editablePill}>
+            <Text style={styles.editablePillText}>You can still make changes</Text>
+          </View>
+        )}
 
-      <View style={[styles.complianceBox, { backgroundColor: compliance.compliant ? 'rgba(22,163,74,0.08)' : 'rgba(220,38,38,0.08)' }]}>
-        <Text style={{ color: compliance.compliant ? '#16a34a' : '#dc2626', fontWeight: '600' }}>
-          {compliance.totalRestHours}h rest {compliance.compliant ? '- compliant' : '- not compliant'}
-        </Text>
-        {compliance.violations.map((v, i) => (
-          <Text key={i} style={{ color: '#dc2626', fontSize: FONTS.sm, marginTop: 2 }}>{v}</Text>
+        <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>Hours of rest</Text>
+        {restPeriods.map((p, i) => (
+          <View key={i} style={styles.row}>
+            {renderTimeChip('Start', p.start, () => openPicker({ type: 'rest', index: i, edge: 'start' }))}
+            <Text style={{ color: themeColors.textSecondary }}>{'->'}</Text>
+            {renderTimeChip('End', p.end, () => openPicker({ type: 'rest', index: i, edge: 'end' }))}
+            {!isLocked && restPeriods.length > 1 && (
+              <TouchableOpacity onPress={() => removeRestPeriod(i)}>
+                <Text style={{ color: '#dc2626', marginLeft: SPACING.sm }}>Remove</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         ))}
-      </View>
-
-      {isManager ? (
-        <TouchableOpacity style={styles.saveButton} onPress={handleConfirm} disabled={saving}>
-          <Text style={styles.saveButtonText}>{saving ? 'Confirming...' : 'Confirm'}</Text>
-        </TouchableOpacity>
-      ) : (
-        !isLocked && (
-          <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
-            <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save'}</Text>
+        {!isLocked && restPeriods.length < 2 && (
+          <TouchableOpacity onPress={addRestPeriod}>
+            <Text style={{ color: COLORS.primary, marginBottom: SPACING.lg }}>+ Add another rest period</Text>
           </TouchableOpacity>
-        )
-      )}
-    </ScrollView>
+        )}
+
+        <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>Comment (optional)</Text>
+        <TextInput
+          value={comment}
+          onChangeText={setComment}
+          editable={!isLocked}
+          maxLength={40}
+          placeholder="Short note for the PDF, e.g. Sick day"
+          placeholderTextColor={themeColors.textSecondary}
+          style={[
+            styles.commentInput,
+            { color: themeColors.textPrimary, backgroundColor: themeColors.surface, borderColor: themeColors.isDark ? 'rgba(255,255,255,0.1)' : COLORS.border },
+          ]}
+        />
+        <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.xs, marginTop: -SPACING.sm, marginBottom: SPACING.lg }}>
+          {comment.length}/40
+        </Text>
+        <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>Time worked</Text>
+        <View style={styles.row}>
+          {renderTimeChip('Start', workStart, () => openPicker({ type: 'work', edge: 'start' }))}
+          <Text style={{ color: themeColors.textSecondary }}>{'->'}</Text>
+          {renderTimeChip('End', workEnd, () => openPicker({ type: 'work', edge: 'end' }))}
+        </View>
+
+        <Text style={[styles.sectionLabel, { color: themeColors.textPrimary, marginTop: SPACING.lg }]}>Lunch break</Text>
+        <View style={styles.row}>
+          {renderTimeChip('Start', lunchStart, () => openPicker({ type: 'lunch', edge: 'start' }))}
+          <Text style={{ color: themeColors.textSecondary }}>{'->'}</Text>
+          {renderTimeChip('End', lunchEnd, () => openPicker({ type: 'lunch', edge: 'end' }))}
+        </View>
+
+        {activeField && (
+          <DateTimePicker
+            value={
+              activeField.type === 'rest'
+                ? timeStringToDate(activeField.edge === 'start' ? restPeriods[activeField.index].start : restPeriods[activeField.index].end)
+                : activeField.type === 'work'
+                  ? timeStringToDate(activeField.edge === 'start' ? workStart : workEnd)
+                  : timeStringToDate(activeField.edge === 'start' ? lunchStart : lunchEnd)
+            }
+            mode="time"
+            display="spinner"
+            onChange={handleTimeChange}
+          />
+        )}
+
+        <View style={[styles.complianceBox, { backgroundColor: compliance.compliant ? 'rgba(22,163,74,0.08)' : 'rgba(220,38,38,0.08)' }]}>
+          <Text style={{ color: compliance.compliant ? '#16a34a' : '#dc2626', fontWeight: '600' }}>
+            {compliance.totalRestHours}h rest {compliance.compliant ? '- compliant' : '- not compliant'}
+          </Text>
+          {compliance.violations.map((v, i) => (
+            <Text key={i} style={{ color: '#dc2626', fontSize: FONTS.sm, marginTop: 2 }}>{v}</Text>
+          ))}
+        </View>
+
+        {isManager ? (
+          <TouchableOpacity style={styles.saveButton} onPress={handleConfirm} disabled={saving}>
+            <Text style={styles.saveButtonText}>{saving ? 'Confirming...' : 'Confirm'}</Text>
+          </TouchableOpacity>
+        ) : (
+          !isLocked && (
+            <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
+              <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save'}</Text>
+            </TouchableOpacity>
+          )
+        )}
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: { flex: 1 },
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   dateTitle: { fontSize: FONTS.xl, fontWeight: '700', marginBottom: SPACING.xs },

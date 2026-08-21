@@ -25,7 +25,7 @@ import { usePostHog } from 'posthog-react-native';
 import preDepartureChecklistsService from '../services/preDepartureChecklists';
 import tripsService from '../services/trips';
 import { PreDepartureChecklistItem, Department } from '../types';
-import { Input, Button, LoadingSpinner } from '../components';
+import { Input, Button, LoadingSpinner, PageHeader } from '../components';
 import { Trip } from '../types';
 import { formatLocalDateString } from '../utils';
 
@@ -243,6 +243,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={100}
     >
+      <PageHeader title="Pre-Departure Checklist" />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}

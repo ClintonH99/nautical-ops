@@ -28,9 +28,26 @@ import { YardPeriodJob, Department } from '../types';
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner } from '../components';
 import { getTaskUrgencyColor } from '../utils/taskUrgency';
+import { PageHeader, ExportButton, ExportBar } from '../components';
+import { exportYardJobsToPdf } from '../utils/yardJobsPdf';
+
+const SHIPYARD_INFO = {
+  title: 'Shipyard List',
+  description: 'Track defects and jobs for your yard period, from first report through to sign-off.',
+  features: [
+    'Add jobs with defect details, location and equipment serial number',
+    'Set a priority - green, yellow or red - so the yard knows what is urgent',
+    'Assign a contractor and yard location to each job',
+    'Mark jobs complete and see who signed them off',
+    'Export selected jobs to PDF to send to the yard or management',
+  ],
+};
 
 export const YardPeriodJobsScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
+  const [exportMode, setExportMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [exporting, setExporting] = useState(false);
   const { user } = useAuthStore();
   const overrides = useDepartmentColorStore((s) => s.overrides);
   const [jobs, setJobs] = useState<YardPeriodJob[]>([]);
@@ -159,9 +176,13 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
       <ButtonTagCard
         headerTitle={item.jobTitle ?? ''}
         accentColor={borderColor}
+        showCheckbox={exportMode}
+        checked={selectedIds.has(item.id)}
+        selected={exportMode && selectedIds.has(item.id)}
+        onToggleSelect={() => toggleSelect(item.id)}
         onEdit={() => onEdit(item)}
         onDelete={() => onDelete(item)}
-        onPress={() => onEdit(item)}
+        onPress={!exportMode ? () => onEdit(item) : undefined}
         footer={
           isComplete && item.completedByName ? `Completed by ${item.completedByName}` : undefined
         }
@@ -205,6 +226,61 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
     : DEPARTMENTS.filter((d) => visibleDepartments[d])
         .map((d) => d.charAt(0) + d.slice(1).toLowerCase())
         .join(', ');
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectedJobs = filteredJobs.filter((j) => selectedIds.has(j.id));
+
+  const handleExportPdf = async () => {
+    if (selectedJobs.length === 0) {
+      Alert.alert('Nothing selected', 'Tap the jobs you want to include, then export.');
+      return;
+    }
+    setExporting(true);
+    try {
+      await exportYardJobsToPdf(selectedJobs);
+      setExportMode(false);
+      setSelectedIds(new Set());
+    } catch (e: any) {
+      Alert.alert('Export failed', e?.message ?? 'Could not create the PDF. Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const TopBar = () => (
+    <>
+      <PageHeader
+        title="Shipyard List"
+        info={SHIPYARD_INFO}
+        infoScreenKey="shipyard"
+        actions={
+          <ExportButton
+            active={exportMode}
+            onPress={() => {
+              if (exportMode) setSelectedIds(new Set());
+              setExportMode(!exportMode);
+            }}
+          />
+        }
+      />
+      {exportMode && (
+        <ExportBar
+          count={selectedJobs.length}
+          onConfirm={handleExportPdf}
+          exporting={exporting}
+          hint="Tap jobs to select"
+        />
+      )}
+    </>
+  );
 
   const ListHeader = () => (
     <>
@@ -284,6 +360,7 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <TopBar />
       {loading ? null : jobs.length === 0 ? (
         <ScrollView
           style={[styles.container, { backgroundColor: themeColors.background }]}

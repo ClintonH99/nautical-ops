@@ -21,7 +21,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES, SHADOWS } from '../consta
 import { useAuthStore, useThemeStore, BACKGROUND_THEMES } from '../store';
 import { supabase } from '../services/supabase';
 import authService from '../services/auth';
-import { Button, LoadingSpinner } from '../components';
+import { Button, LoadingSpinner, PageHeader } from '../components';
 import userService from '../services/user';
 import { Department } from '../types';
 
@@ -275,459 +275,463 @@ export const ProfileScreen = ({ navigation }: any) => {
   }> = [];
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <View style={styles.content}>
-        {/* Profile Photo Section */}
-        <View style={styles.photoSection}>
-          <View style={styles.photoContainer}>
-            {isUploadingPhoto ? (
-              <View style={styles.photoLoading}>
-                <LoadingSpinner />
-              </View>
-            ) : displayPhotoUri && !photoLoadFailed ? (
-              <Image
-                source={{ uri: displayPhotoUri }}
-                style={styles.photo}
-                onError={() => !localPreviewUri && setPhotoLoadFailed(true)}
-              />
-            ) : (
-              <View style={styles.photoPlaceholder}>
-                <Text style={styles.photoPlaceholderText}>
-                  {user?.name.charAt(0).toUpperCase()}
-                </Text>
-              </View>
-            )}
-          </View>
-          <View style={styles.photoActions}>
-            <Button
-              title="Change Photo"
-              onPress={handlePickImage}
-              variant="outline"
-              shape="pill"
-              size="small"
-              style={styles.photoButton}
-              disabled={isUploadingPhoto}
-            />
-            {profilePhoto && (
+    <View style={styles.pageWrap}>
+      <PageHeader title="Settings & Profile" />
+      <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <View style={styles.content}>
+          {/* Profile Photo Section */}
+          <View style={styles.photoSection}>
+            <View style={styles.photoContainer}>
+              {isUploadingPhoto ? (
+                <View style={styles.photoLoading}>
+                  <LoadingSpinner />
+                </View>
+              ) : displayPhotoUri && !photoLoadFailed ? (
+                <Image
+                  source={{ uri: displayPhotoUri }}
+                  style={styles.photo}
+                  onError={() => !localPreviewUri && setPhotoLoadFailed(true)}
+                />
+              ) : (
+                <View style={styles.photoPlaceholder}>
+                  <Text style={styles.photoPlaceholderText}>
+                    {user?.name.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.photoActions}>
               <Button
-                title="Remove"
-                onPress={handleRemovePhoto}
+                title="Change Photo"
+                onPress={handlePickImage}
                 variant="outline"
                 shape="pill"
                 size="small"
                 style={styles.photoButton}
                 disabled={isUploadingPhoto}
               />
-            )}
+              {profilePhoto && (
+                <Button
+                  title="Remove"
+                  onPress={handleRemovePhoto}
+                  variant="outline"
+                  shape="pill"
+                  size="small"
+                  style={styles.photoButton}
+                  disabled={isUploadingPhoto}
+                />
+              )}
+            </View>
           </View>
-        </View>
 
-        {/* Profile Information */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
-              Profile Information
-            </Text>
-            {!isEditing && (
-              <TouchableOpacity onPress={() => setIsEditing(true)}>
+          {/* Profile Information */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
+                Profile Information
+              </Text>
+              {!isEditing && (
+                <TouchableOpacity onPress={() => setIsEditing(true)}>
+                  <Text
+                    style={[
+                      styles.editButton,
+                      { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                    ]}
+                  >
+                    Edit
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
+              {/* Name */}
+              <View style={styles.field}>
                 <Text
                   style={[
-                    styles.editButton,
-                    { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                    styles.label,
+                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
                   ]}
                 >
-                  Edit
+                  Name
                 </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+                {isEditing ? (
+                  <TextInput
+                    style={[
+                      styles.input,
+                      { backgroundColor: themeColors.background, color: themeColors.textPrimary },
+                    ]}
+                    value={name}
+                    onChangeText={setName}
+                    placeholder="Enter your name"
+                    placeholderTextColor={themeColors.textSecondary}
+                  />
+                ) : (
+                  <Text style={[styles.value, { color: themeColors.textPrimary }]}>{user?.name}</Text>
+                )}
+              </View>
 
-          <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
-            {/* Name */}
-            <View style={styles.field}>
-              <Text
-                style={[
-                  styles.label,
-                  { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                ]}
-              >
-                Name
-              </Text>
-              {isEditing ? (
-                <TextInput
+              {/* Position */}
+              <View style={styles.field}>
+                <Text
                   style={[
-                    styles.input,
-                    { backgroundColor: themeColors.background, color: themeColors.textPrimary },
+                    styles.label,
+                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
                   ]}
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="Enter your name"
-                  placeholderTextColor={themeColors.textSecondary}
-                />
-              ) : (
-                <Text style={[styles.value, { color: themeColors.textPrimary }]}>{user?.name}</Text>
-              )}
-            </View>
-
-            {/* Position */}
-            <View style={styles.field}>
-              <Text
-                style={[
-                  styles.label,
-                  { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                ]}
-              >
-                Position
-              </Text>
-              {isEditing ? (
-                <TextInput
-                  style={[
-                    styles.input,
-                    { backgroundColor: themeColors.background, color: themeColors.textPrimary },
-                  ]}
-                  value={position}
-                  onChangeText={setPosition}
-                  placeholder="Enter your position"
-                  placeholderTextColor={themeColors.textSecondary}
-                />
-              ) : (
-                <Text style={[styles.value, { color: themeColors.textPrimary }]}>
-                  {user?.position}
+                >
+                  Position
                 </Text>
-              )}
-            </View>
+                {isEditing ? (
+                  <TextInput
+                    style={[
+                      styles.input,
+                      { backgroundColor: themeColors.background, color: themeColors.textPrimary },
+                    ]}
+                    value={position}
+                    onChangeText={setPosition}
+                    placeholder="Enter your position"
+                    placeholderTextColor={themeColors.textSecondary}
+                  />
+                ) : (
+                  <Text style={[styles.value, { color: themeColors.textPrimary }]}>
+                    {user?.position}
+                  </Text>
+                )}
+              </View>
 
-            {/* Department */}
-            <View style={styles.field}>
-              <Text
-                style={[
-                  styles.label,
-                  { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                ]}
-              >
-                Department
-              </Text>
-              {isEditing ? (
-                <>
-                  <TouchableOpacity
-                    style={[styles.departmentDropdown, { backgroundColor: themeColors.background }]}
-                    onPress={() => setDepartmentDropdownOpen(true)}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={[styles.departmentDropdownText, { color: themeColors.textPrimary }]}
+              {/* Department */}
+              <View style={styles.field}>
+                <Text
+                  style={[
+                    styles.label,
+                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                  ]}
+                >
+                  Department
+                </Text>
+                {isEditing ? (
+                  <>
+                    <TouchableOpacity
+                      style={[styles.departmentDropdown, { backgroundColor: themeColors.background }]}
+                      onPress={() => setDepartmentDropdownOpen(true)}
+                      activeOpacity={0.7}
                     >
-                      {department.charAt(0) + department.slice(1).toLowerCase()}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.departmentDropdownChevron,
-                        { color: themeColors.textSecondary },
-                      ]}
-                    >
-                      ▼
-                    </Text>
-                  </TouchableOpacity>
-                  {departmentDropdownOpen && (
-                    <Modal visible transparent animationType="fade">
-                      <Pressable
-                        style={styles.modalBackdrop}
-                        onPress={() => setDepartmentDropdownOpen(false)}
+                      <Text
+                        style={[styles.departmentDropdownText, { color: themeColors.textPrimary }]}
                       >
-                        <View
-                          style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
-                          onStartShouldSetResponder={() => true}
+                        {department.charAt(0) + department.slice(1).toLowerCase()}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.departmentDropdownChevron,
+                          { color: themeColors.textSecondary },
+                        ]}
+                      >
+                        ▼
+                      </Text>
+                    </TouchableOpacity>
+                    {departmentDropdownOpen && (
+                      <Modal visible transparent animationType="fade">
+                        <Pressable
+                          style={styles.modalBackdrop}
+                          onPress={() => setDepartmentDropdownOpen(false)}
                         >
-                          {departments.map((dept) => (
-                            <TouchableOpacity
-                              key={dept}
-                              style={[
-                                styles.modalItem,
-                                department === dept && styles.modalItemSelected,
-                              ]}
-                              onPress={() => {
-                                setDepartment(dept);
-                                setDepartmentDropdownOpen(false);
-                              }}
-                            >
-                              <Text
+                          <View
+                            style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+                            onStartShouldSetResponder={() => true}
+                          >
+                            {departments.map((dept) => (
+                              <TouchableOpacity
+                                key={dept}
                                 style={[
-                                  styles.modalItemText,
-                                  { color: themeColors.textPrimary },
-                                  department === dept && styles.modalItemTextSelected,
+                                  styles.modalItem,
+                                  department === dept && styles.modalItemSelected,
                                 ]}
+                                onPress={() => {
+                                  setDepartment(dept);
+                                  setDepartmentDropdownOpen(false);
+                                }}
                               >
-                                {dept.charAt(0) + dept.slice(1).toLowerCase()}
-                              </Text>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      </Pressable>
-                    </Modal>
-                  )}
-                </>
-              ) : (
-                <Text style={[styles.value, { color: themeColors.textPrimary }]}>
-                  {user?.department}
+                                <Text
+                                  style={[
+                                    styles.modalItemText,
+                                    { color: themeColors.textPrimary },
+                                    department === dept && styles.modalItemTextSelected,
+                                  ]}
+                                >
+                                  {dept.charAt(0) + dept.slice(1).toLowerCase()}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        </Pressable>
+                      </Modal>
+                    )}
+                  </>
+                ) : (
+                  <Text style={[styles.value, { color: themeColors.textPrimary }]}>
+                    {user?.department}
+                  </Text>
+                )}
+              </View>
+
+              {/* Email (read-only) */}
+              <View style={[styles.field, styles.fieldLast]}>
+                <Text
+                  style={[
+                    styles.label,
+                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                  ]}
+                >
+                  Email
                 </Text>
-              )}
-            </View>
-
-            {/* Email (read-only) */}
-            <View style={[styles.field, styles.fieldLast]}>
-              <Text
-                style={[
-                  styles.label,
-                  { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                ]}
-              >
-                Email
-              </Text>
-              <Text
-                style={[styles.value, styles.valueDisabled, { color: themeColors.textSecondary }]}
-              >
-                {user?.email}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Account Information (read-only) */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
-            Account Information
-          </Text>
-          <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
-            <View style={styles.field}>
-              <Text
-                style={[
-                  styles.label,
-                  { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                ]}
-              >
-                Role
-              </Text>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: SPACING.sm,
-                  flexWrap: 'wrap',
-                }}
-              >
-                <View style={styles.roleBadge}>
-                  <Text style={[styles.roleText, { textTransform: 'none' }]}>
-                    {user?.role === 'CAPTAIN_MOV'
-                      ? 'MOV (Master of Vessel)'
-                      : user?.role === 'HOD'
-                        ? 'HOD (Head of Department)'
-                        : 'Crew'}
-                  </Text>
-                </View>
-                {user?.contractType === 'temporary' && (
-                  <View style={styles.contractBadgeTemp}>
-                    <Text style={styles.contractBadgeText}>TEMP</Text>
-                  </View>
-                )}
-                {user?.contractType === 'rotational' && (
-                  <View style={styles.contractBadgeRotation}>
-                    <Text style={styles.contractBadgeText}>Rotation</Text>
-                  </View>
-                )}
+                <Text
+                  style={[styles.value, styles.valueDisabled, { color: themeColors.textSecondary }]}
+                >
+                  {user?.email}
+                </Text>
               </View>
             </View>
-            <View style={[styles.field, styles.fieldLast]}>
-              <Text
-                style={[
-                  styles.label,
-                  { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                ]}
-              >
-                Member Since
-              </Text>
-              <Text style={[styles.value, { color: themeColors.textPrimary }]}>
-                {user?.createdAt
-                  ? new Date(user.createdAt).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })
-                  : 'N/A'}
-              </Text>
-            </View>
           </View>
-        </View>
 
-        {/* E-signature */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
-            E-signature
-          </Text>
-          <View style={[styles.settingsCard, { backgroundColor: themeColors.surface }]}>
-            <TouchableOpacity
-              style={[styles.settingsItem, styles.settingsItemLast]}
-              onPress={() => navigation.navigate('SignatureSetup')}
-              activeOpacity={0.7}
-            >
-              <View style={styles.settingsItemLeft}>
-                <Text style={styles.settingsIcon}>{'\u270D\uFE0F'}</Text>
-                <View style={styles.settingsTextContainer}>
-                  <Text style={[styles.settingsLabel, { color: themeColors.textPrimary }]}>
-                    E-signature
-                  </Text>
-                  <Text style={[styles.settingsDescription, { color: themeColors.textSecondary }]}>
-                    Set up your signature for Hours of Rest
-                  </Text>
-                </View>
-              </View>
-              <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>{'\u203A'}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-        {/* Join Vessel */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
-            Join Vessel
-          </Text>
-          <View style={[styles.settingsCard, { backgroundColor: themeColors.surface }]}>
-            <TouchableOpacity
-              style={[styles.settingsItem, isCaptain ? undefined : styles.settingsItemLast]}
-              onPress={() => navigation.navigate('JoinVessel')}
-              activeOpacity={0.7}
-            >
-              <View style={styles.settingsItemLeft}>
-                <Text style={styles.settingsIcon}>{'\u2693'}</Text>
-                <View style={styles.settingsTextContainer}>
-                  <Text style={[styles.settingsLabel, { color: themeColors.textPrimary }]}>
-                    Join a different vessel
-                  </Text>
-                  <Text style={[styles.settingsDescription, { color: themeColors.textSecondary }]}>
-                    Switch vessels using a new invite code
-                  </Text>
-                </View>
-              </View>
-              <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>{'\u203A'}</Text>
-            </TouchableOpacity>
-            {!!user?.vesselId && (
-              <TouchableOpacity
-                style={styles.settingsItem}
-                onPress={handleLeaveVessel}
-                activeOpacity={0.7}
-              >
-                <View style={styles.settingsItemLeft}>
-                  <Text style={styles.settingsIcon}>{'\u26F5'}</Text>
-                  <View style={styles.settingsTextContainer}>
-                    <Text style={[styles.settingsLabel, { color: themeColors.textPrimary }]}>
-                      Leave Vessel
-                    </Text>
-                    <Text style={[styles.settingsDescription, { color: themeColors.textSecondary }]}>
-                      Step away - the vessel and crew continue without you
-                    </Text>
-                  </View>
-                </View>
-                <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>{'\u203A'}</Text>
-              </TouchableOpacity>
-            )}
-            {isCaptain && (
-              <TouchableOpacity
-                style={[styles.settingsItem, styles.settingsItemLast]}
-                onPress={handleDeleteVessel}
-                activeOpacity={0.7}
-              >
-                <View style={styles.settingsItemLeft}>
-                  <Text style={styles.settingsIcon}>{'\u26A0\uFE0F'}</Text>
-                  <View style={styles.settingsTextContainer}>
-                    <Text style={[styles.settingsLabel, { color: COLORS.danger }]}>
-                      Delete Vessel
-                    </Text>
-                    <Text style={[styles.settingsDescription, { color: themeColors.textSecondary }]}>
-                      Cancel the subscription and remove all crew
-                    </Text>
-                  </View>
-                </View>
-                <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>{'\u203A'}</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-        {/* Settings Sections */}
-        {settingsSections.map((section, sectionIndex) => (
-          <View key={sectionIndex} style={styles.section}>
+          {/* Account Information (read-only) */}
+          <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
-              {section.title}
+              Account Information
+            </Text>
+            <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
+              <View style={styles.field}>
+                <Text
+                  style={[
+                    styles.label,
+                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                  ]}
+                >
+                  Role
+                </Text>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: SPACING.sm,
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <View style={styles.roleBadge}>
+                    <Text style={[styles.roleText, { textTransform: 'none' }]}>
+                      {user?.role === 'CAPTAIN_MOV'
+                        ? 'MOV (Master of Vessel)'
+                        : user?.role === 'HOD'
+                          ? 'HOD (Head of Department)'
+                          : 'Crew'}
+                    </Text>
+                  </View>
+                  {user?.contractType === 'temporary' && (
+                    <View style={styles.contractBadgeTemp}>
+                      <Text style={styles.contractBadgeText}>TEMP</Text>
+                    </View>
+                  )}
+                  {user?.contractType === 'rotational' && (
+                    <View style={styles.contractBadgeRotation}>
+                      <Text style={styles.contractBadgeText}>Rotation</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+              <View style={[styles.field, styles.fieldLast]}>
+                <Text
+                  style={[
+                    styles.label,
+                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                  ]}
+                >
+                  Member Since
+                </Text>
+                <Text style={[styles.value, { color: themeColors.textPrimary }]}>
+                  {user?.createdAt
+                    ? new Date(user.createdAt).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })
+                    : 'N/A'}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* E-signature */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
+              E-signature
             </Text>
             <View style={[styles.settingsCard, { backgroundColor: themeColors.surface }]}>
-              {section.items.map((item, itemIndex) => (
+              <TouchableOpacity
+                style={[styles.settingsItem, styles.settingsItemLast]}
+                onPress={() => navigation.navigate('SignatureSetup')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.settingsItemLeft}>
+                  <Text style={styles.settingsIcon}>{'\u270D\uFE0F'}</Text>
+                  <View style={styles.settingsTextContainer}>
+                    <Text style={[styles.settingsLabel, { color: themeColors.textPrimary }]}>
+                      E-signature
+                    </Text>
+                    <Text style={[styles.settingsDescription, { color: themeColors.textSecondary }]}>
+                      Set up your signature for Hours of Rest
+                    </Text>
+                  </View>
+                </View>
+                <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>{'\u203A'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          {/* Join Vessel */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
+              Join Vessel
+            </Text>
+            <View style={[styles.settingsCard, { backgroundColor: themeColors.surface }]}>
+              <TouchableOpacity
+                style={[styles.settingsItem, isCaptain ? undefined : styles.settingsItemLast]}
+                onPress={() => navigation.navigate('JoinVessel')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.settingsItemLeft}>
+                  <Text style={styles.settingsIcon}>{'\u2693'}</Text>
+                  <View style={styles.settingsTextContainer}>
+                    <Text style={[styles.settingsLabel, { color: themeColors.textPrimary }]}>
+                      Join a different vessel
+                    </Text>
+                    <Text style={[styles.settingsDescription, { color: themeColors.textSecondary }]}>
+                      Switch vessels using a new invite code
+                    </Text>
+                  </View>
+                </View>
+                <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>{'\u203A'}</Text>
+              </TouchableOpacity>
+              {!!user?.vesselId && (
                 <TouchableOpacity
-                  key={itemIndex}
-                  style={[
-                    styles.settingsItem,
-                    item.disabled && styles.settingsItemDisabled,
-                    itemIndex === section.items.length - 1 && styles.settingsItemLast,
-                  ]}
-                  onPress={item.onPress}
-                  disabled={item.disabled}
+                  style={styles.settingsItem}
+                  onPress={handleLeaveVessel}
                   activeOpacity={0.7}
                 >
                   <View style={styles.settingsItemLeft}>
-                    <Text style={styles.settingsIcon}>{item.icon}</Text>
+                    <Text style={styles.settingsIcon}>{'\u26F5'}</Text>
                     <View style={styles.settingsTextContainer}>
                       <Text style={[styles.settingsLabel, { color: themeColors.textPrimary }]}>
-                        {item.label}
+                        Leave Vessel
                       </Text>
-                      <Text
-                        style={[styles.settingsDescription, { color: themeColors.textSecondary }]}
-                      >
-                        {item.description}
+                      <Text style={[styles.settingsDescription, { color: themeColors.textSecondary }]}>
+                        Step away - the vessel and crew continue without you
                       </Text>
                     </View>
                   </View>
-                  <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>›</Text>
+                  <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>{'\u203A'}</Text>
                 </TouchableOpacity>
-              ))}
+              )}
+              {isCaptain && (
+                <TouchableOpacity
+                  style={[styles.settingsItem, styles.settingsItemLast]}
+                  onPress={handleDeleteVessel}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.settingsItemLeft}>
+                    <Text style={styles.settingsIcon}>{'\u26A0\uFE0F'}</Text>
+                    <View style={styles.settingsTextContainer}>
+                      <Text style={[styles.settingsLabel, { color: COLORS.danger }]}>
+                        Delete Vessel
+                      </Text>
+                      <Text style={[styles.settingsDescription, { color: themeColors.textSecondary }]}>
+                        Cancel the subscription and remove all crew
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>{'\u203A'}</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
-        ))}
+          {/* Settings Sections */}
+          {settingsSections.map((section, sectionIndex) => (
+            <View key={sectionIndex} style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
+                {section.title}
+              </Text>
+              <View style={[styles.settingsCard, { backgroundColor: themeColors.surface }]}>
+                {section.items.map((item, itemIndex) => (
+                  <TouchableOpacity
+                    key={itemIndex}
+                    style={[
+                      styles.settingsItem,
+                      item.disabled && styles.settingsItemDisabled,
+                      itemIndex === section.items.length - 1 && styles.settingsItemLast,
+                    ]}
+                    onPress={item.onPress}
+                    disabled={item.disabled}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.settingsItemLeft}>
+                      <Text style={styles.settingsIcon}>{item.icon}</Text>
+                      <View style={styles.settingsTextContainer}>
+                        <Text style={[styles.settingsLabel, { color: themeColors.textPrimary }]}>
+                          {item.label}
+                        </Text>
+                        <Text
+                          style={[styles.settingsDescription, { color: themeColors.textSecondary }]}
+                        >
+                          {item.description}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>›</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          ))}
 
-        {/* Version Info */}
-        <View style={styles.versionInfo}>
-          <Text style={[styles.versionText, { color: themeColors.textSecondary }]}>
-            Nautical Ops v1.0.0
-          </Text>
-          <Text style={[styles.versionSubtext, { color: themeColors.textSecondary }]}>
-            Professional yacht operations management
-          </Text>
-        </View>
-
-        {/* Save/Cancel Buttons */}
-        {isEditing && (
-          <View style={styles.actions}>
-            <Button
-              title="Cancel"
-              onPress={handleCancel}
-              variant="outline"
-              shape="pill"
-              fullWidth
-              style={styles.actionButton}
-              disabled={isSaving}
-            />
-            <Button
-              title={isSaving ? 'Saving...' : 'Save Changes'}
-              onPress={handleSave}
-              variant="primary"
-              shape="pill"
-              fullWidth
-              style={styles.actionButton}
-              disabled={isSaving}
-            />
+          {/* Version Info */}
+          <View style={styles.versionInfo}>
+            <Text style={[styles.versionText, { color: themeColors.textSecondary }]}>
+              Nautical Ops v1.0.0
+            </Text>
+            <Text style={[styles.versionSubtext, { color: themeColors.textSecondary }]}>
+              Professional yacht operations management
+            </Text>
           </View>
-        )}
-      </View>
-    </ScrollView>
+
+          {/* Save/Cancel Buttons */}
+          {isEditing && (
+            <View style={styles.actions}>
+              <Button
+                title="Cancel"
+                onPress={handleCancel}
+                variant="outline"
+                shape="pill"
+                fullWidth
+                style={styles.actionButton}
+                disabled={isSaving}
+              />
+              <Button
+                title={isSaving ? 'Saving...' : 'Save Changes'}
+                onPress={handleSave}
+                variant="primary"
+                shape="pill"
+                fullWidth
+                style={styles.actionButton}
+                disabled={isSaving}
+              />
+            </View>
+          )}
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: {
     flex: 1,
     backgroundColor: COLORS.background,

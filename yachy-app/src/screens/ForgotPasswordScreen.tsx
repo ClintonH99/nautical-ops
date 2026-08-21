@@ -19,7 +19,7 @@ import { COLORS, FONTS, SPACING, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import authService from '../services/auth';
 import { useAuthStore } from '../store';
-import { Input, Button } from '../components';
+import { Input, Button, PageHeader } from '../components';
 
 type Step = 'email' | 'code' | 'password';
 
@@ -124,6 +124,7 @@ export const ForgotPasswordScreen = ({ navigation }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={100}
     >
+      <PageHeader title="Reset Password" />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={[styles.title, { color: themeColors.textPrimary }]}>{titles[step]}</Text>
         <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>{subtitles[step]}</Text>

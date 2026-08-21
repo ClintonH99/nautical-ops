@@ -5,7 +5,6 @@
  */
 
 import React, { useState, useCallback, useMemo, useLayoutEffect } from 'react';
-import { InfoModal } from '../components/InfoModal';
 import {
   View,
   Text,
@@ -30,7 +29,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import maintenanceLogsService from '../services/maintenanceLogs';
 import vesselService from '../services/vessel';
 import { MaintenanceLog } from '../types';
-import { Button, LoadingSpinner } from '../components';
+import { Button, LoadingSpinner, PageHeader } from '../components';
 
 const COLUMN_WIDTH = 110;
 const DATE_WIDTH = 88;
@@ -113,14 +112,8 @@ function escapeHtml(s: string): string {
     .replace(/"/g, '&quot;');
 }
 
-export const MaintenanceLogScreen = ({ navigation }: any) => {
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <InfoModal
-          screenKey="maintenance_log"
-          autoShow={false}
-          content={{
+
+const MAINTENANCE_LOG_INFO = {
             title: 'Maintenance Log',
             description: 'Record and track maintenance on vessel equipment.',
             features: [
@@ -129,11 +122,9 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
               'Track service intervals and hours to next service',
               'Select entries and export to PDF',
             ],
-          }}
-        />
-      ),
-    });
-  }, [navigation]);
+          };
+
+export const MaintenanceLogScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const [logs, setLogs] = useState<MaintenanceLog[]>([]);
@@ -392,6 +383,7 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <PageHeader title="Maintenance Log" info={MAINTENANCE_LOG_INFO} infoScreenKey="maintenance_log" />
       <View style={styles.actionsRow}>
         <View style={styles.leftActions}>
           <Button title="Add Log" onPress={onAdd} variant="primary" style={styles.addButton} />

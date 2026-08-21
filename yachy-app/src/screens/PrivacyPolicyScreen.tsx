@@ -7,50 +7,55 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { PageHeader } from '../components';
 import { PRIVACY_POLICY } from '../constants/legalContent';
 
 export const PrivacyPolicyScreen = () => {
   const themeColors = useThemeColors();
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <Text style={[styles.title, { color: themeColors.textPrimary }]}>
-        Privacy Policy
-      </Text>
-      <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-        Last updated: March 2025
-      </Text>
+    <View style={styles.pageWrap}>
+      <PageHeader title="Privacy Policy" />
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={[styles.title, { color: themeColors.textPrimary }]}>
+          Privacy Policy
+        </Text>
+        <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+          Last updated: March 2025
+        </Text>
 
-      <View style={[styles.section, { backgroundColor: themeColors.surface }]}>
-        {PRIVACY_POLICY.map((section, index) => (
-          <View
-            key={index}
-            style={[
-              styles.sectionBlock,
-              index < PRIVACY_POLICY.length - 1 && {
-                borderBottomWidth: 1,
-                borderBottomColor: themeColors.surfaceAlt,
-              },
-            ]}
-          >
-            <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
-              {section.title}
-            </Text>
-            <Text style={[styles.sectionBody, { color: themeColors.textSecondary }]}>
-              {section.content}
-            </Text>
-          </View>
-        ))}
-      </View>
-    </ScrollView>
+        <View style={[styles.section, { backgroundColor: themeColors.surface }]}>
+          {PRIVACY_POLICY.map((section, index) => (
+            <View
+              key={index}
+              style={[
+                styles.sectionBlock,
+                index < PRIVACY_POLICY.length - 1 && {
+                  borderBottomWidth: 1,
+                  borderBottomColor: themeColors.surfaceAlt,
+                },
+              ]}
+            >
+              <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+                {section.title}
+              </Text>
+              <Text style={[styles.sectionBody, { color: themeColors.textSecondary }]}>
+                {section.content}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: { flex: 1 },
   content: {
     padding: SPACING.lg,

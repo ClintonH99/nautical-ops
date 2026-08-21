@@ -22,7 +22,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import maintenanceLogsService from '../services/maintenanceLogs';
-import { Input, Button, LoadingSpinner } from '../components';
+import { Input, Button, LoadingSpinner, PageHeader } from '../components';
 import { usePostHog } from 'posthog-react-native';
 
 const DEFAULT_EQUIPMENT_OPTIONS = [
@@ -417,6 +417,7 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={100}
     >
+      <PageHeader title="Log" />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}

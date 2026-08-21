@@ -22,7 +22,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import pumpOutLogsService from '../services/pumpOutLogs';
 import { DischargeType } from '../types';
-import { Input, Button, LoadingSpinner } from '../components';
+import { Input, Button, LoadingSpinner, PageHeader } from '../components';
 
 function formatDate(d: Date): string {
   const yyyy = d.getFullYear();
@@ -168,6 +168,7 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={100}
     >
+      <PageHeader title="New Pump Out Entry" />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}

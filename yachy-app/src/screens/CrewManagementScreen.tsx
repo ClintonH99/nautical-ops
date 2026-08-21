@@ -28,7 +28,7 @@ import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus';
 import userService from '../services/user';
 import { User, Department } from '../types';
 import { getPlanTier } from '../constants/subscriptionPlans';
-import { LoadingSpinner } from '../components';
+import { LoadingSpinner, PageHeader } from '../components';
 import { canAccessVesselManagement, isMasterOfVessel } from '../utils/access';
 import { getWatchKeepers, addWatchKeeper, removeWatchKeeper, WatchKeeperEntry } from '../services/watchKeepers';
 
@@ -523,6 +523,7 @@ export const CrewManagementScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <PageHeader title="Crew Management" />
       <FlatList
         data={filteredCrew}
         renderItem={renderCrewMember}

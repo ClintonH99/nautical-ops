@@ -19,7 +19,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import rulesService from '../services/rules';
-import { Button, LoadingSpinner } from '../components';
+import { Button, LoadingSpinner, PageHeader } from '../components';
 import { generateRulesPdf } from '../utils/rulesPdf';
 
 export const CreateRulesScreen = ({ navigation, route }: any) => {
@@ -124,6 +124,7 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
       style={[styles.container, { backgroundColor: themeColors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <PageHeader title="Create Rules" />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}

@@ -10,7 +10,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import tripColorsService, { DEFAULT_COLORS } from '../services/tripColors';
-import { Button, LoadingSpinner } from '../components';
+import { Button, LoadingSpinner, PageHeader } from '../components';
 
 type ColorKey = 'guest' | 'boss' | 'delivery' | 'yardPeriod';
 
@@ -119,58 +119,62 @@ export const TripColorSettingsScreen = ({ navigation }: any) => {
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-      contentContainerStyle={styles.content}
-    >
-      <Text
-        style={[
-          styles.intro,
-          { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-        ]}
+    <View style={styles.pageWrap}>
+      <PageHeader title="Trip colors" />
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={styles.content}
       >
-        Choose a color for each trip type. These colors appear on the Upcoming Trips calendar.
-      </Text>
+        <Text
+          style={[
+            styles.intro,
+            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+          ]}
+        >
+          Choose a color for each trip type. These colors appear on the Upcoming Trips calendar.
+        </Text>
 
-      {TRIP_LABELS.map(({ key, label, emoji }) => (
-        <View key={key} style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>
-            {emoji} {label}
-          </Text>
-          <View style={styles.swatchRow}>
-            {COLORS.tripColorSwatches.map((hex) => {
-              const isSelected = colors[key] === hex;
-              return (
-                <TouchableOpacity
-                  key={hex}
-                  style={[
-                    styles.swatch,
-                    { backgroundColor: hex },
-                    isSelected && [styles.swatchSelected, { borderColor: themeColors.textPrimary }],
-                  ]}
-                  onPress={() => handlePick(key, hex)}
-                  disabled={saving}
-                />
-              );
-            })}
+        {TRIP_LABELS.map(({ key, label, emoji }) => (
+          <View key={key} style={styles.section}>
+            <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>
+              {emoji} {label}
+            </Text>
+            <View style={styles.swatchRow}>
+              {COLORS.tripColorSwatches.map((hex) => {
+                const isSelected = colors[key] === hex;
+                return (
+                  <TouchableOpacity
+                    key={hex}
+                    style={[
+                      styles.swatch,
+                      { backgroundColor: hex },
+                      isSelected && [styles.swatchSelected, { borderColor: themeColors.textPrimary }],
+                    ]}
+                    onPress={() => handlePick(key, hex)}
+                    disabled={saving}
+                  />
+                );
+              })}
+            </View>
           </View>
-        </View>
-      ))}
+        ))}
 
-      <View style={styles.footer}>
-        <Button
-          title="Reset to defaults"
-          onPress={handleReset}
-          variant="outline"
-          disabled={saving}
-          style={styles.resetBtn}
-        />
-      </View>
-    </ScrollView>
+        <View style={styles.footer}>
+          <Button
+            title="Reset to defaults"
+            onPress={handleReset}
+            variant="outline"
+            disabled={saving}
+            style={styles.resetBtn}
+          />
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: {
     flex: 1,
   },

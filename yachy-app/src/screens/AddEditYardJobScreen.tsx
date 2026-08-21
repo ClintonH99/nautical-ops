@@ -21,7 +21,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import yardJobsService from '../services/yardJobs';
-import { Input, Button, LoadingSpinner } from '../components';
+import { Input, Button, LoadingSpinner, PageHeader } from '../components';
 import { Department, YardJobPriority } from '../types';
 
 export const AddEditYardJobScreen = ({ navigation, route }: any) => {
@@ -191,6 +191,7 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={100}
     >
+      <PageHeader title="Job" />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}

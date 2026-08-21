@@ -1,8 +1,8 @@
 /**
  * Notepad Screen
  */
-import React, { useState, useCallback, useLayoutEffect } from 'react';
-import { InfoModal } from '../components/InfoModal';
+import React, { useState, useCallback } from 'react';
+import { PageHeader } from '../components';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,27 +10,18 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES, SHADOWS } from '../consta
 import { useAuthStore, useThemeStore, BACKGROUND_THEMES } from '../store';
 import notesService, { Note } from '../services/notes';
 
+const NOTEPAD_INFO = {
+  title: 'Notepad',
+  description: 'Your own private notes - only you can see them.',
+  features: [
+    'Create and edit personal notes',
+    'Notes sync across your own devices',
+    'Not visible to any other crew member',
+    'Edit or remove notes as things change',
+  ],
+};
+
 export const NotepadScreen = ({ navigation }: any) => {
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <InfoModal
-          screenKey="notepad"
-          autoShow={false}
-          content={{
-            title: 'Notepad',
-            description: 'Your own private notes - only you can see them.',
-            features: [
-              'Create and edit personal notes',
-              'Notes sync across your own devices',
-              'Not visible to any other crew member',
-              'Edit or remove notes as things change',
-            ],
-          }}
-        />
-      ),
-    });
-  }, [navigation]);
   const { user } = useAuthStore();
   const backgroundTheme = useThemeStore((s) => s.backgroundTheme);
   const themeColors = BACKGROUND_THEMES[backgroundTheme];
@@ -84,68 +75,72 @@ export const NotepadScreen = ({ navigation }: any) => {
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Header row with New Note button */}
-      <View style={styles.headerRow}>
-        <View>
-          <Text style={[styles.title, { color: themeColors.textPrimary }]}>Notepad</Text>
-          <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>Only visible to you</Text>
+    <View style={styles.pageWrap}>
+      <PageHeader title="Notepad" info={NOTEPAD_INFO} infoScreenKey="notepad" />
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header row with New Note button */}
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={[styles.title, { color: themeColors.textPrimary }]}>Notepad</Text>
+            <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>Only visible to you</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.newBtn, { backgroundColor: COLORS.primary }]}
+            onPress={goToNewNote}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="add" size={18} color="#fff" />
+            <Text style={styles.newBtnText}>New Note</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={[styles.newBtn, { backgroundColor: COLORS.primary }]}
-          onPress={goToNewNote}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="add" size={18} color="#fff" />
-          <Text style={styles.newBtnText}>New Note</Text>
-        </TouchableOpacity>
-      </View>
 
-      {loading ? (
-        <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
-      ) : notes.length === 0 ? (
-        <TouchableOpacity
-          style={[styles.emptyCard, { backgroundColor: themeColors.surface }]}
-          onPress={goToNewNote}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.emptyIcon}>📝</Text>
-          <Text style={[styles.emptyTitle, { color: themeColors.textPrimary }]}>No notes yet</Text>
-          <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>Tap here or "New Note" to get started.</Text>
-        </TouchableOpacity>
-      ) : (
-        <>
-          {notes.map((note) => (
-            <TouchableOpacity
-              key={note.id}
-              style={[styles.card, { backgroundColor: themeColors.surface }]}
-              onPress={() => navigation.navigate('AddEditNote', { noteId: note.id })}
-              onLongPress={() => handleDelete(note)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.cardBody}>
-                <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>{note.title}</Text>
-                {note.content ? (
-                  <Text style={[styles.cardPreview, { color: themeColors.textSecondary }]} numberOfLines={2}>{note.content}</Text>
-                ) : null}
-                <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>
-                  {formatDate(note.updated_at)}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={themeColors.textSecondary} />
-            </TouchableOpacity>
-          ))}
-        </>
-      )}
-    </ScrollView>
+        {loading ? (
+          <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
+        ) : notes.length === 0 ? (
+          <TouchableOpacity
+            style={[styles.emptyCard, { backgroundColor: themeColors.surface }]}
+            onPress={goToNewNote}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.emptyIcon}>📝</Text>
+            <Text style={[styles.emptyTitle, { color: themeColors.textPrimary }]}>No notes yet</Text>
+            <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>Tap here or "New Note" to get started.</Text>
+          </TouchableOpacity>
+        ) : (
+          <>
+            {notes.map((note) => (
+              <TouchableOpacity
+                key={note.id}
+                style={[styles.card, { backgroundColor: themeColors.surface }]}
+                onPress={() => navigation.navigate('AddEditNote', { noteId: note.id })}
+                onLongPress={() => handleDelete(note)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.cardBody}>
+                  <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>{note.title}</Text>
+                  {note.content ? (
+                    <Text style={[styles.cardPreview, { color: themeColors.textSecondary }]} numberOfLines={2}>{note.content}</Text>
+                  ) : null}
+                  <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>
+                    {formatDate(note.updated_at)}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={themeColors.textSecondary} />
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.xl },
   content: { padding: SPACING.lg, paddingTop: SPACING.xl * 2, paddingBottom: SIZES.bottomScrollPadding },

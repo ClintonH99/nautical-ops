@@ -21,7 +21,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus';
-import { Button, LoadingSpinner } from '../components';
+import { Button, LoadingSpinner, PageHeader } from '../components';
 import vesselService from '../services/vessel';
 import userService from '../services/user';
 import { Vessel } from '../types';
@@ -273,366 +273,370 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
   }
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <View style={styles.content}>
-        {/* Subscription / Vessel Plans Link */}
-        <View style={styles.section}>
-          <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
-            {hasActiveSubscription ? (
-              <>
-                <Text style={[styles.currentPlanLabel, { color: themeColors.textPrimary }]}>
-                  Current Plan
-                </Text>
-                <Text style={[styles.currentPlanValue, { color: themeColors.textPrimary }]}>
-                  {subscription
-                    ? `${currentPlan?.label ?? subscription.planTier} • ${getBillingPeriod(subscription.billingPeriod)?.label ?? subscription.billingPeriod}`
-                    : 'Active (via App Store)'}
-                </Text>
-                {subscription && (
-                  <Text style={[styles.renewalText, { color: themeColors.textSecondary }]}>
-                    Renews{' '}
-                    {new Date(subscription.currentPeriodEnd).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
+    <View style={styles.pageWrap}>
+      <PageHeader title="Vessel Settings" />
+      <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <View style={styles.content}>
+          {/* Subscription / Vessel Plans Link */}
+          <View style={styles.section}>
+            <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
+              {hasActiveSubscription ? (
+                <>
+                  <Text style={[styles.currentPlanLabel, { color: themeColors.textPrimary }]}>
+                    Current Plan
                   </Text>
-                )}
-                {needsUpgrade && (
-                  <View
+                  <Text style={[styles.currentPlanValue, { color: themeColors.textPrimary }]}>
+                    {subscription
+                      ? `${currentPlan?.label ?? subscription.planTier} • ${getBillingPeriod(subscription.billingPeriod)?.label ?? subscription.billingPeriod}`
+                      : 'Active (via App Store)'}
+                  </Text>
+                  {subscription && (
+                    <Text style={[styles.renewalText, { color: themeColors.textSecondary }]}>
+                      Renews{' '}
+                      {new Date(subscription.currentPeriodEnd).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })}
+                    </Text>
+                  )}
+                  {needsUpgrade && (
+                    <View
+                      style={[
+                        styles.upgradeBanner,
+                        { backgroundColor: 'rgba(245, 158, 11, 0.2)', borderColor: COLORS.warning },
+                      ]}
+                    >
+                      <Text style={[styles.upgradeBannerText, { color: themeColors.textPrimary }]}>
+                        You have reached your crew limit ({crewCount}/{currentPlan!.maxCrew}). Upgrade
+                        your plan to invite more crew members.
+                      </Text>
+                    </View>
+                  )}
+                </>
+              ) : (
+                <Text style={[styles.plansLinkText, { color: themeColors.textPrimary }]}>
+                  Choose a subscription plan to unlock your invite code and invite crew.
+                </Text>
+              )}
+              <Button
+                title="Manage Subscription in Vessel Plans"
+                onPress={() => navigation.navigate('VesselPlans')}
+                variant="outline"
+                fullWidth
+                style={styles.planButton}
+              />
+            </View>
+          </View>
+
+          {/* Vessel Photo Section */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+              Vessel Photo
+            </Text>
+            <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
+              <Button
+                title={isUploadingBanner ? 'Uploading...' : '📷 Change vessel photo'}
+                onPress={handleChangeVesselPhoto}
+                variant="outline"
+                fullWidth
+                disabled={isUploadingBanner}
+              />
+              <Text
+                style={[
+                  styles.photoHint,
+                  { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                ]}
+              >
+                Updates the banner shown on the home screen. Changes appear when you return to Home.
+              </Text>
+            </View>
+          </View>
+
+          {/* Vessel Name Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+                Vessel Name
+              </Text>
+              {!isEditingName && (
+                <TouchableOpacity onPress={() => setIsEditingName(true)}>
+                  <Text
                     style={[
-                      styles.upgradeBanner,
-                      { backgroundColor: 'rgba(245, 158, 11, 0.2)', borderColor: COLORS.warning },
+                      styles.editButton,
+                      { color: themeColors.isDark ? COLORS.white : COLORS.primary },
                     ]}
                   >
-                    <Text style={[styles.upgradeBannerText, { color: themeColors.textPrimary }]}>
-                      You have reached your crew limit ({crewCount}/{currentPlan!.maxCrew}). Upgrade
-                      your plan to invite more crew members.
+                    Edit
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
+              {isEditingName ? (
+                <>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      { backgroundColor: themeColors.background, color: themeColors.textPrimary },
+                    ]}
+                    value={vesselName}
+                    onChangeText={setVesselName}
+                    placeholder="Enter vessel name"
+                    placeholderTextColor={COLORS.textTertiary}
+                    autoFocus
+                  />
+                  <View style={styles.actions}>
+                    <Button
+                      title="Cancel"
+                      onPress={handleCancelEditName}
+                      variant="outline"
+                      fullWidth
+                      style={styles.actionButton}
+                      disabled={isSavingName}
+                    />
+                    <Button
+                      title={isSavingName ? 'Saving...' : 'Save'}
+                      onPress={handleSaveName}
+                      variant="primary"
+                      fullWidth
+                      style={styles.actionButton}
+                      disabled={isSavingName}
+                    />
+                  </View>
+                </>
+              ) : (
+                <Text style={[styles.vesselNameDisplay, { color: themeColors.textPrimary }]}>
+                  {vessel.name}
+                </Text>
+              )}
+            </View>
+          </View>
+
+          {/* IMO Number Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+                IMO Number
+              </Text>
+              {!isEditingImo && (
+                <TouchableOpacity onPress={() => setIsEditingImo(true)}>
+                  <Text
+                    style={[
+                      styles.editButton,
+                      { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                    ]}
+                  >
+                    Edit
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
+              {isEditingImo ? (
+                <>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      { backgroundColor: themeColors.background, color: themeColors.textPrimary },
+                    ]}
+                    value={imoNumber}
+                    onChangeText={setImoNumber}
+                    placeholder="Enter IMO number"
+                    placeholderTextColor={COLORS.textTertiary}
+                    autoFocus
+                    keyboardType="number-pad"
+                  />
+                  <View style={styles.actions}>
+                    <Button
+                      title="Cancel"
+                      onPress={handleCancelEditImo}
+                      variant="outline"
+                      fullWidth
+                      style={styles.actionButton}
+                      disabled={isSavingImo}
+                    />
+                    <Button
+                      title={isSavingImo ? 'Saving...' : 'Save'}
+                      onPress={handleSaveImo}
+                      variant="primary"
+                      fullWidth
+                      style={styles.actionButton}
+                      disabled={isSavingImo}
+                    />
+                  </View>
+                </>
+              ) : (
+                <Text style={[styles.vesselNameDisplay, { color: themeColors.textPrimary }]}>
+                  {vessel.imoNumber || 'Not set'}
+                </Text>
+              )}
+            </View>
+          </View>
+
+          {/* Invite Code Section */}
+          <View style={[styles.section, !hasActiveSubscription && { opacity: 0.6 }]}>
+            <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Invite Code</Text>
+
+            {hasActiveSubscription && !crewLimitReached ? (
+              <>
+                <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
+                  <View style={styles.codeContainer}>
+                    <Text
+                      style={[
+                        styles.codeLabel,
+                        { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                      ]}
+                    >
+                      Current Code
+                    </Text>
+                    <View style={styles.codeBox}>
+                      <Text style={styles.codeText}>{vessel.inviteCode}</Text>
+                    </View>
+                    <Text
+                      style={[
+                        styles.expiryText,
+                        { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                      ]}
+                    >
+                      {formatExpiry(vessel.inviteExpiry)}
                     </Text>
                   </View>
-                )}
-              </>
-            ) : (
-              <Text style={[styles.plansLinkText, { color: themeColors.textPrimary }]}>
-                Choose a subscription plan to unlock your invite code and invite crew.
-              </Text>
-            )}
-            <Button
-              title="Manage Subscription in Vessel Plans"
-              onPress={() => navigation.navigate('VesselPlans')}
-              variant="outline"
-              fullWidth
-              style={styles.planButton}
-            />
-          </View>
-        </View>
-
-        {/* Vessel Photo Section */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
-            Vessel Photo
-          </Text>
-          <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
-            <Button
-              title={isUploadingBanner ? 'Uploading...' : '📷 Change vessel photo'}
-              onPress={handleChangeVesselPhoto}
-              variant="outline"
-              fullWidth
-              disabled={isUploadingBanner}
-            />
-            <Text
-              style={[
-                styles.photoHint,
-                { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-              ]}
-            >
-              Updates the banner shown on the home screen. Changes appear when you return to Home.
-            </Text>
-          </View>
-        </View>
-
-        {/* Vessel Name Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
-              Vessel Name
-            </Text>
-            {!isEditingName && (
-              <TouchableOpacity onPress={() => setIsEditingName(true)}>
-                <Text
-                  style={[
-                    styles.editButton,
-                    { color: themeColors.isDark ? COLORS.white : COLORS.primary },
-                  ]}
-                >
-                  Edit
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
-            {isEditingName ? (
-              <>
-                <TextInput
-                  style={[
-                    styles.input,
-                    { backgroundColor: themeColors.background, color: themeColors.textPrimary },
-                  ]}
-                  value={vesselName}
-                  onChangeText={setVesselName}
-                  placeholder="Enter vessel name"
-                  placeholderTextColor={COLORS.textTertiary}
-                  autoFocus
-                />
-                <View style={styles.actions}>
-                  <Button
-                    title="Cancel"
-                    onPress={handleCancelEditName}
-                    variant="outline"
-                    fullWidth
-                    style={styles.actionButton}
-                    disabled={isSavingName}
-                  />
-                  <Button
-                    title={isSavingName ? 'Saving...' : 'Save'}
-                    onPress={handleSaveName}
-                    variant="primary"
-                    fullWidth
-                    style={styles.actionButton}
-                    disabled={isSavingName}
-                  />
-                </View>
-              </>
-            ) : (
-              <Text style={[styles.vesselNameDisplay, { color: themeColors.textPrimary }]}>
-                {vessel.name}
-              </Text>
-            )}
-          </View>
-        </View>
-
-        {/* IMO Number Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
-              IMO Number
-            </Text>
-            {!isEditingImo && (
-              <TouchableOpacity onPress={() => setIsEditingImo(true)}>
-                <Text
-                  style={[
-                    styles.editButton,
-                    { color: themeColors.isDark ? COLORS.white : COLORS.primary },
-                  ]}
-                >
-                  Edit
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
-            {isEditingImo ? (
-              <>
-                <TextInput
-                  style={[
-                    styles.input,
-                    { backgroundColor: themeColors.background, color: themeColors.textPrimary },
-                  ]}
-                  value={imoNumber}
-                  onChangeText={setImoNumber}
-                  placeholder="Enter IMO number"
-                  placeholderTextColor={COLORS.textTertiary}
-                  autoFocus
-                  keyboardType="number-pad"
-                />
-                <View style={styles.actions}>
-                  <Button
-                    title="Cancel"
-                    onPress={handleCancelEditImo}
-                    variant="outline"
-                    fullWidth
-                    style={styles.actionButton}
-                    disabled={isSavingImo}
-                  />
-                  <Button
-                    title={isSavingImo ? 'Saving...' : 'Save'}
-                    onPress={handleSaveImo}
-                    variant="primary"
-                    fullWidth
-                    style={styles.actionButton}
-                    disabled={isSavingImo}
-                  />
-                </View>
-              </>
-            ) : (
-              <Text style={[styles.vesselNameDisplay, { color: themeColors.textPrimary }]}>
-                {vessel.imoNumber || 'Not set'}
-              </Text>
-            )}
-          </View>
-        </View>
-
-        {/* Invite Code Section */}
-        <View style={[styles.section, !hasActiveSubscription && { opacity: 0.6 }]}>
-          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Invite Code</Text>
-
-          {hasActiveSubscription && !crewLimitReached ? (
-            <>
-              <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
-                <View style={styles.codeContainer}>
-                  <Text
-                    style={[
-                      styles.codeLabel,
-                      { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                    ]}
-                  >
-                    Current Code
-                  </Text>
-                  <View style={styles.codeBox}>
-                    <Text style={styles.codeText}>{vessel.inviteCode}</Text>
+                  <View style={styles.codeActions}>
+                    <Button
+                      title="📋 Copy"
+                      onPress={handleCopyCode}
+                      variant="outline"
+                      fullWidth
+                      style={styles.codeButton}
+                    />
+                    <Button
+                      title="📤 Share"
+                      onPress={handleShareCode}
+                      variant="outline"
+                      fullWidth
+                      style={styles.codeButton}
+                    />
                   </View>
-                  <Text
-                    style={[
-                      styles.expiryText,
-                      { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                    ]}
-                  >
-                    {formatExpiry(vessel.inviteExpiry)}
+                  <View style={styles.regenerateContainer}>
+                    <Button
+                      title={isRegeneratingCode ? 'Generating...' : '🔄 Regenerate Code'}
+                      onPress={handleRegenerateCode}
+                      variant="outline"
+                      fullWidth
+                      disabled={isRegeneratingCode}
+                    />
+                    <Text
+                      style={[
+                        styles.regenerateWarning,
+                        { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                      ]}
+                    >
+                      ⚠️ This will expire the current code
+                    </Text>
+                  </View>
+                </View>
+                <View style={[styles.infoCard, { backgroundColor: themeColors.surfaceAlt }]}>
+                  <Text style={[styles.infoTitle, { color: themeColors.textPrimary }]}>
+                    💡 About Invite Codes
+                  </Text>
+                  <Text style={[styles.infoText, { color: themeColors.textPrimary }]}>
+                    • Each code is valid for one crew member only
+                  </Text>
+                  <Text style={[styles.infoText, { color: themeColors.textPrimary }]}>
+                    • Code automatically regenerates after each join
+                  </Text>
+                  <Text style={[styles.infoText, { color: themeColors.textPrimary }]}>
+                    • Crew use this code during registration or in Join Vessel
+                  </Text>
+                  <Text style={[styles.infoText, { color: themeColors.textPrimary }]}>
+                    • You can manually regenerate the code anytime
                   </Text>
                 </View>
-                <View style={styles.codeActions}>
-                  <Button
-                    title="📋 Copy"
-                    onPress={handleCopyCode}
-                    variant="outline"
-                    fullWidth
-                    style={styles.codeButton}
-                  />
-                  <Button
-                    title="📤 Share"
-                    onPress={handleShareCode}
-                    variant="outline"
-                    fullWidth
-                    style={styles.codeButton}
-                  />
-                </View>
-                <View style={styles.regenerateContainer}>
-                  <Button
-                    title={isRegeneratingCode ? 'Generating...' : '🔄 Regenerate Code'}
-                    onPress={handleRegenerateCode}
-                    variant="outline"
-                    fullWidth
-                    disabled={isRegeneratingCode}
-                  />
-                  <Text
-                    style={[
-                      styles.regenerateWarning,
-                      { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                    ]}
-                  >
-                    ⚠️ This will expire the current code
-                  </Text>
-                </View>
-              </View>
-              <View style={[styles.infoCard, { backgroundColor: themeColors.surfaceAlt }]}>
-                <Text style={[styles.infoTitle, { color: themeColors.textPrimary }]}>
-                  💡 About Invite Codes
-                </Text>
-                <Text style={[styles.infoText, { color: themeColors.textPrimary }]}>
-                  • Each code is valid for one crew member only
-                </Text>
-                <Text style={[styles.infoText, { color: themeColors.textPrimary }]}>
-                  • Code automatically regenerates after each join
-                </Text>
-                <Text style={[styles.infoText, { color: themeColors.textPrimary }]}>
-                  • Crew use this code during registration or in Join Vessel
-                </Text>
-                <Text style={[styles.infoText, { color: themeColors.textPrimary }]}>
-                  • You can manually regenerate the code anytime
+              </>
+            ) : hasActiveSubscription && crewLimitReached ? (
+              <View style={[styles.card, styles.gatedCard, { backgroundColor: themeColors.surface }]}>
+                <Text style={[styles.gatedText, { color: themeColors.textPrimary }]}>
+                  You have reached your crew limit of{' '}
+                  <Text style={styles.gatedBold}>{currentPlan!.maxCrew}</Text>. Upgrade your plan in{' '}
+                  <Text style={styles.gatedBold}>Vessel Plans</Text> to invite more crew members.
                 </Text>
               </View>
-            </>
-          ) : hasActiveSubscription && crewLimitReached ? (
-            <View style={[styles.card, styles.gatedCard, { backgroundColor: themeColors.surface }]}>
-              <Text style={[styles.gatedText, { color: themeColors.textPrimary }]}>
-                You have reached your crew limit of{' '}
-                <Text style={styles.gatedBold}>{currentPlan!.maxCrew}</Text>. Upgrade your plan in{' '}
-                <Text style={styles.gatedBold}>Vessel Plans</Text> to invite more crew members.
-              </Text>
-            </View>
-          ) : (
-            <View style={[styles.card, styles.gatedCard, { backgroundColor: themeColors.surface }]}>
-              <Text style={[styles.gatedText, { color: themeColors.textPrimary }]}>
-                In order to invite Crew Members to the Vessel, please refer to{' '}
-                <Text style={styles.gatedBold}>Vessel Plans</Text> to see the different plans that
-                will best suit your operations. Once a plan has been chosen and payment has been
-                made then you will have access to the Invite Code for Crew.
-              </Text>
-            </View>
-          )}
-        </View>
+            ) : (
+              <View style={[styles.card, styles.gatedCard, { backgroundColor: themeColors.surface }]}>
+                <Text style={[styles.gatedText, { color: themeColors.textPrimary }]}>
+                  In order to invite Crew Members to the Vessel, please refer to{' '}
+                  <Text style={styles.gatedBold}>Vessel Plans</Text> to see the different plans that
+                  will best suit your operations. Once a plan has been chosen and payment has been
+                  made then you will have access to the Invite Code for Crew.
+                </Text>
+              </View>
+            )}
+          </View>
 
-        {/* Vessel Info Section */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
-            Vessel Information
-          </Text>
-          <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
-            <View style={styles.infoRow}>
-              <Text
-                style={[
-                  styles.infoRowLabel,
-                  { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                ]}
-              >
-                Vessel ID
-              </Text>
-              <Text style={[styles.infoRowValue, { color: themeColors.textPrimary }]}>
-                {vessel.id.slice(0, 8)}...
-              </Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text
-                style={[
-                  styles.infoRowLabel,
-                  { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                ]}
-              >
-                Created
-              </Text>
-              <Text style={[styles.infoRowValue, { color: themeColors.textPrimary }]}>
-                {new Date(vessel.createdAt).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </Text>
-            </View>
-            <View style={[styles.infoRow, styles.infoRowLast]}>
-              <Text
-                style={[
-                  styles.infoRowLabel,
-                  { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                ]}
-              >
-                Last Updated
-              </Text>
-              <Text style={[styles.infoRowValue, { color: themeColors.textPrimary }]}>
-                {new Date(vessel.updatedAt).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </Text>
+          {/* Vessel Info Section */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+              Vessel Information
+            </Text>
+            <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
+              <View style={styles.infoRow}>
+                <Text
+                  style={[
+                    styles.infoRowLabel,
+                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                  ]}
+                >
+                  Vessel ID
+                </Text>
+                <Text style={[styles.infoRowValue, { color: themeColors.textPrimary }]}>
+                  {vessel.id.slice(0, 8)}...
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text
+                  style={[
+                    styles.infoRowLabel,
+                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                  ]}
+                >
+                  Created
+                </Text>
+                <Text style={[styles.infoRowValue, { color: themeColors.textPrimary }]}>
+                  {new Date(vessel.createdAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </Text>
+              </View>
+              <View style={[styles.infoRow, styles.infoRowLast]}>
+                <Text
+                  style={[
+                    styles.infoRowLabel,
+                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                  ]}
+                >
+                  Last Updated
+                </Text>
+                <Text style={[styles.infoRowValue, { color: themeColors.textPrimary }]}>
+                  {new Date(vessel.updatedAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </Text>
+              </View>
             </View>
           </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: { flex: 1 },
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },

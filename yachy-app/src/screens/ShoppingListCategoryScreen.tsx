@@ -3,8 +3,8 @@
  * Choose between General Shopping or Trip Shopping before viewing/creating lists
  */
 
-import React, { useLayoutEffect } from 'react';
-import { InfoModal } from '../components/InfoModal';
+import React from 'react';
+import { PageHeader } from '../components';
 import {
   View,
   Text,
@@ -29,27 +29,18 @@ const CATEGORIES = [
   },
 ];
 
+const SHOPPING_INFO = {
+  title: 'Shopping',
+  description: 'Manage shopping lists organized by category.',
+  features: [
+    'Browse shopping lists by category',
+    'Add items with quantities and notes',
+    'Check off items as they are purchased',
+    'Keep provisioning organized across departments',
+  ],
+};
+
 export const ShoppingListCategoryScreen = ({ navigation }: any) => {
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <InfoModal
-          screenKey="shopping"
-          autoShow={false}
-          content={{
-            title: 'Shopping',
-            description: 'Manage shopping lists organized by category.',
-            features: [
-              'Browse shopping lists by category',
-              'Add items with quantities and notes',
-              'Check off items as they are purchased',
-              'Keep provisioning organized across departments',
-            ],
-          }}
-        />
-      ),
-    });
-  }, [navigation]);
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
@@ -63,7 +54,9 @@ export const ShoppingListCategoryScreen = ({ navigation }: any) => {
   }
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <PageHeader title="Shopping List" info={SHOPPING_INFO} infoScreenKey="shopping" />
+      <ScrollView contentContainerStyle={styles.content}>
       {CATEGORIES.map((category) => (
         <TouchableOpacity
           key={category.listType}
@@ -76,7 +69,8 @@ export const ShoppingListCategoryScreen = ({ navigation }: any) => {
           <Text style={[styles.cardChevron, { color: themeColors.textSecondary }]}>›</Text>
         </TouchableOpacity>
       ))}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 

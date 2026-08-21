@@ -23,7 +23,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import uniformsService, { Uniform } from '../services/uniforms';
 import { Department } from '../types';
 import { exportUniformsToPdf } from '../utils/uniformsPdf';
-import { Button, Input, ButtonTagCard, ButtonTagRow } from '../components';
+import { Button, Input, ButtonTagCard, ButtonTagRow, PageHeader, ExportButton, ExportBar } from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -160,125 +160,121 @@ export const UniformsScreen = ({ navigation }: any) => {
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
-    >
-      <View style={styles.searchRow}>
-        <Input
-          variant="search"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder="Search by label, size, color…"
-          style={styles.searchInput}
-          returnKeyType="search"
-        />
-      </View>
-      <View style={styles.createRow}>
-        <Button
-          title="Create"
-          onPress={() => navigation.navigate('AddEditUniform')}
-          variant="primary"
-          fullWidth
-        />
-        <Button
-          title={exportMode ? 'Cancel' : 'Export to PDF'}
-          onPress={() => {
-            if (exportMode) {
-              setExportMode(false);
-              setSelectedIds(new Set());
-            } else {
-              setExportMode(true);
-            }
-          }}
-          variant={themeColors.isDark ? 'outlineLight' : 'outline'}
-          fullWidth
-          style={styles.exportBtn}
-        />
-      </View>
-      {exportMode && (
-        <View style={styles.exportBar}>
-          <Text style={[styles.exportHint, { color: themeColors.textSecondary }]}>Tap labels to select, then export.</Text>
+    <View style={styles.pageWrap}>
+      <PageHeader title="Uniforms"
+        actions={
+          <ExportButton
+            active={exportMode}
+            onPress={() => {
+              if (exportMode) setSelectedIds(new Set());
+              setExportMode(!exportMode);
+            }}
+          />
+        }
+      />
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
+      >
+        <View style={styles.searchRow}>
+          <Input
+            variant="search"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search by label, size, color…"
+            style={styles.searchInput}
+            returnKeyType="search"
+          />
+        </View>
+        <View style={styles.createRow}>
           <Button
-            title={exporting ? 'Exporting…' : `Export to PDF (${selectedUniforms.length})`}
-            onPress={handleExportPdf}
-            disabled={exporting || selectedUniforms.length === 0}
+            title="Create"
+            onPress={() => navigation.navigate('AddEditUniform')}
             variant="primary"
             fullWidth
           />
         </View>
-      )}
+        {exportMode && (
+          <ExportBar
+            count={selectedUniforms.length}
+            onConfirm={handleExportPdf}
+            exporting={exporting}
+            hint="Tap uniforms to select"
+          />
+        )}
 
-      <Text style={[styles.filterLabel, { color: themeColors.textPrimary }]}>Department</Text>
-      <TouchableOpacity
-        style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
-        onPress={() => setDepartmentDropdownOpen(!departmentDropdownOpen)}
-        activeOpacity={0.7}
-      >
-        <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>{departmentDisplayText}</Text>
-        <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>{departmentDropdownOpen ? '▲' : '▼'}</Text>
-      </TouchableOpacity>
-      {departmentDropdownOpen && (
-        <Modal visible transparent animationType="fade">
-          <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentDropdownOpen(false)}>
-            <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
-              <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Filter by department</Text>
-              <TouchableOpacity
-                style={[styles.modalItem, DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
-                onPress={() => { selectAllDepartments(); setDepartmentDropdownOpen(false); }}
-              >
-                <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>All Departments</Text>
-              </TouchableOpacity>
-              {DEPARTMENTS.map((dept) => (
+        <Text style={[styles.filterLabel, { color: themeColors.textPrimary }]}>Department</Text>
+        <TouchableOpacity
+          style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
+          onPress={() => setDepartmentDropdownOpen(!departmentDropdownOpen)}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>{departmentDisplayText}</Text>
+          <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>{departmentDropdownOpen ? '▲' : '▼'}</Text>
+        </TouchableOpacity>
+        {departmentDropdownOpen && (
+          <Modal visible transparent animationType="fade">
+            <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentDropdownOpen(false)}>
+              <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
+                <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Filter by department</Text>
                 <TouchableOpacity
-                  key={dept}
-                  style={[styles.modalItem, visibleDepartments[dept] && !DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
-                  onPress={() => { selectDepartment(dept); setDepartmentDropdownOpen(false); }}
+                  style={[styles.modalItem, DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
+                  onPress={() => { selectAllDepartments(); setDepartmentDropdownOpen(false); }}
                 >
-                  <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>{dept.charAt(0) + dept.slice(1).toLowerCase()}</Text>
+                  <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>All Departments</Text>
                 </TouchableOpacity>
-              ))}
-            </View>
-          </Pressable>
-        </Modal>
-      )}
-
-      {loading ? (
-        <ActivityIndicator size="small" color={COLORS.primary} style={styles.loader} />
-      ) : filteredUniforms.length === 0 ? (
-        <Text style={[styles.empty, { color: themeColors.textSecondary }]}>
-          {uniforms.length === 0 ? 'No uniform labels yet. Tap Create to add one.' : 'No labels match your search or department filter.'}
-        </Text>
-      ) : (
-        filteredUniforms.map((u) => {
-          const selected = selectedIds.has(u.id);
-          return (
-            <ButtonTagCard
-              key={u.id}
-              headerTitle={u.label ?? ''}
-              showCheckbox={exportMode}
-              checked={selected}
-              onToggleSelect={() => toggleSelect(u.id)}
-              selected={exportMode && selected}
-              onEdit={() => navigation.navigate('AddEditUniform', { uniformId: u.id })}
-              onDelete={() => handleDelete(u)}
-              onPress={!exportMode ? () => navigation.navigate('AddEditUniform', { uniformId: u.id }) : undefined}
-            >
-              <View style={[styles.deptBadge, { backgroundColor: getDepartmentColor(u.department, overrides) }]}>
-                <Text style={styles.deptBadgeText}>{(u.department ?? 'INTERIOR').charAt(0) + (u.department ?? 'INTERIOR').slice(1).toLowerCase()}</Text>
+                {DEPARTMENTS.map((dept) => (
+                  <TouchableOpacity
+                    key={dept}
+                    style={[styles.modalItem, visibleDepartments[dept] && !DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
+                    onPress={() => { selectDepartment(dept); setDepartmentDropdownOpen(false); }}
+                  >
+                    <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>{dept.charAt(0) + dept.slice(1).toLowerCase()}</Text>
+                  </TouchableOpacity>
+                ))}
               </View>
-              <ButtonTagRow label="Entries" value={`${u.entries?.length ?? 0} ${(u.entries?.length ?? 0) === 1 ? 'entry' : 'entries'}`} />
-            </ButtonTagCard>
-          );
-        })
-      )}
-    </ScrollView>
+            </Pressable>
+          </Modal>
+        )}
+
+        {loading ? (
+          <ActivityIndicator size="small" color={COLORS.primary} style={styles.loader} />
+        ) : filteredUniforms.length === 0 ? (
+          <Text style={[styles.empty, { color: themeColors.textSecondary }]}>
+            {uniforms.length === 0 ? 'No uniform labels yet. Tap Create to add one.' : 'No labels match your search or department filter.'}
+          </Text>
+        ) : (
+          filteredUniforms.map((u) => {
+            const selected = selectedIds.has(u.id);
+            return (
+              <ButtonTagCard
+                key={u.id}
+                headerTitle={u.label ?? ''}
+                showCheckbox={exportMode}
+                checked={selected}
+                onToggleSelect={() => toggleSelect(u.id)}
+                selected={exportMode && selected}
+                onEdit={() => navigation.navigate('AddEditUniform', { uniformId: u.id })}
+                onDelete={() => handleDelete(u)}
+                onPress={!exportMode ? () => navigation.navigate('AddEditUniform', { uniformId: u.id }) : undefined}
+              >
+                <View style={[styles.deptBadge, { backgroundColor: getDepartmentColor(u.department, overrides) }]}>
+                  <Text style={styles.deptBadgeText}>{(u.department ?? 'INTERIOR').charAt(0) + (u.department ?? 'INTERIOR').slice(1).toLowerCase()}</Text>
+                </View>
+                <ButtonTagRow label="Entries" value={`${u.entries?.length ?? 0} ${(u.entries?.length ?? 0) === 1 ? 'entry' : 'entries'}`} />
+              </ButtonTagCard>
+            );
+          })
+        )}
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: { flex: 1 },
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
@@ -287,8 +283,6 @@ const styles = StyleSheet.create({
   searchInput: {},
   createRow: { marginBottom: SPACING.lg },
   exportBtn: { marginTop: SPACING.sm },
-  exportBar: { marginBottom: SPACING.lg, paddingVertical: SPACING.sm },
-  exportHint: { fontSize: FONTS.sm, marginBottom: SPACING.sm },
   filterLabel: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs },
   dropdown: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

@@ -22,7 +22,7 @@ import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../st
 import { useThemeColors } from '../hooks/useThemeColors';
 import vesselTasksService from '../services/vesselTasks';
 import { VesselTask, TaskCategory, Department } from '../types';
-import { LoadingSpinner } from '../components';
+import { LoadingSpinner, PageHeader } from '../components';
 
 const CATEGORY_LABELS: Record<TaskCategory, string> = {
   DAILY: 'Daily',
@@ -176,6 +176,7 @@ export const OverdueTasksScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <PageHeader title="Overdue Tasks" />
       {loading ? (
         <LoadingSpinner />
       ) : tasks.length === 0 ? (

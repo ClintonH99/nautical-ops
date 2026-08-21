@@ -23,20 +23,12 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import inventoryService, { InventoryItem } from '../services/inventory';
 import { Department } from '../types';
 import { exportInventoryToPdf } from '../utils/inventoryPdf';
-import { Button, Input, ButtonTagCard, ButtonTagRow } from '../components';
-import { InfoModal } from '../components/InfoModal';
+import { Button, Input, ButtonTagCard, ButtonTagRow, PageHeader, ExportButton, ExportBar } from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
-export const InventoryScreen = ({ navigation }: any) => {
-  const themeColors = useThemeColors();
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <InfoModal
-          screenKey="inventory"
-          autoShow={false}
-          content={{
+
+const INVENTORY_INFO = {
             title: 'Inventory',
             description: 'Track stock and supplies across departments.',
             features: [
@@ -45,11 +37,10 @@ export const InventoryScreen = ({ navigation }: any) => {
               'Search across titles, descriptions, and locations',
               'Select items and export to PDF',
             ],
-          }}
-        />
-      ),
-    });
-  }, [navigation]);
+          };
+
+export const InventoryScreen = ({ navigation }: any) => {
+  const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const overrides = useDepartmentColorStore((s) => s.overrides);
   const [items, setItems] = useState<InventoryItem[]>([]);
@@ -199,165 +190,159 @@ export const InventoryScreen = ({ navigation }: any) => {
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          colors={[COLORS.primary]}
-        />
-      }
-    >
-      <View style={styles.searchRow}>
-        <Input
-          variant="search"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder="Search by item, title, location…"
-          style={styles.searchInput}
-          returnKeyType="search"
-        />
-      </View>
-      <View style={styles.createRow}>
-        <Button
-          title="Create"
-          onPress={() => navigation.navigate('AddEditInventoryItem')}
-          variant="primary"
-          fullWidth
-        />
-        <Button
-          title="Uniforms"
-          onPress={() => navigation.navigate('Uniforms')}
-          variant={themeColors.isDark ? 'outlineLight' : 'outline'}
-          fullWidth
-          style={styles.exportBtn}
-        />
-        <Button
-          title={exportMode ? 'Cancel' : 'Export to PDF'}
-          onPress={() => {
-            if (exportMode) {
-              setExportMode(false);
-              setSelectedIds(new Set());
-            } else {
-              setExportMode(true);
-            }
-          }}
-          variant={themeColors.isDark ? 'outlineLight' : 'outline'}
-          fullWidth
-          style={styles.exportBtn}
-        />
-      </View>
-      {exportMode && (
-        <View style={styles.exportBar}>
-          <Text style={[styles.exportHint, { color: themeColors.textSecondary }]}>
-            Tap items to select, then export.
-          </Text>
+    <View style={styles.pageWrap}>
+      <PageHeader title="Inventory" info={INVENTORY_INFO} infoScreenKey="inventory"
+        actions={
+          <ExportButton
+            active={exportMode}
+            onPress={() => {
+              if (exportMode) setSelectedIds(new Set());
+              setExportMode(!exportMode);
+            }}
+          />
+        }
+      />
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[COLORS.primary]}
+          />
+        }
+      >
+        <View style={styles.searchRow}>
+          <Input
+            variant="search"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search by item, title, location…"
+            style={styles.searchInput}
+            returnKeyType="search"
+          />
+        </View>
+        <View style={styles.createRow}>
           <Button
-            title={exporting ? 'Exporting…' : `Export to PDF (${selectedItems.length})`}
-            onPress={handleExportPdf}
-            disabled={exporting || selectedItems.length === 0}
+            title="Create"
+            onPress={() => navigation.navigate('AddEditInventoryItem')}
             variant="primary"
             fullWidth
           />
+          <Button
+            title="Uniforms"
+            onPress={() => navigation.navigate('Uniforms')}
+            variant={themeColors.isDark ? 'outlineLight' : 'outline'}
+            fullWidth
+            style={styles.exportBtn}
+          />
         </View>
-      )}
+        {exportMode && (
+          <ExportBar
+            count={selectedItems.length}
+            onConfirm={handleExportPdf}
+            exporting={exporting}
+            hint="Tap items to select"
+          />
+        )}
 
-      <Text style={[styles.filterLabel, { color: themeColors.textPrimary }]}>Department</Text>
-      <TouchableOpacity
-        style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
-        onPress={() => setDepartmentDropdownOpen(!departmentDropdownOpen)}
-        activeOpacity={0.7}
-      >
-        <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>{departmentDisplayText}</Text>
-        <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>{departmentDropdownOpen ? '▲' : '▼'}</Text>
-      </TouchableOpacity>
-      {departmentDropdownOpen && (
-        <Modal visible transparent animationType="fade">
-          <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentDropdownOpen(false)}>
-            <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
-              <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
-                Filter by department
-              </Text>
-              <TouchableOpacity
-                style={[styles.modalItem, DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
-                onPress={() => {
-                  selectAllDepartments();
-                  setDepartmentDropdownOpen(false);
-                }}
-              >
-                <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                  All Departments
+        <Text style={[styles.filterLabel, { color: themeColors.textPrimary }]}>Department</Text>
+        <TouchableOpacity
+          style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
+          onPress={() => setDepartmentDropdownOpen(!departmentDropdownOpen)}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>{departmentDisplayText}</Text>
+          <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>{departmentDropdownOpen ? '▲' : '▼'}</Text>
+        </TouchableOpacity>
+        {departmentDropdownOpen && (
+          <Modal visible transparent animationType="fade">
+            <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentDropdownOpen(false)}>
+              <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
+                <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+                  Filter by department
                 </Text>
-              </TouchableOpacity>
-              {DEPARTMENTS.map((dept) => (
                 <TouchableOpacity
-                  key={dept}
-                  style={[styles.modalItem, visibleDepartments[dept] && !DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
+                  style={[styles.modalItem, DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
                   onPress={() => {
-                    selectDepartment(dept);
+                    selectAllDepartments();
                     setDepartmentDropdownOpen(false);
                   }}
                 >
                   <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                    {dept.charAt(0) + dept.slice(1).toLowerCase()}
+                    All Departments
                   </Text>
                 </TouchableOpacity>
-              ))}
-            </View>
-          </Pressable>
-        </Modal>
-      )}
-
-      {loading ? (
-        <ActivityIndicator size="small" color={COLORS.primary} style={styles.loader} />
-      ) : filteredItems.length === 0 ? (
-        <Text style={[styles.empty, { color: themeColors.textSecondary }]}>
-          {items.length === 0
-            ? 'No inventory items yet. Tap Create to add one.'
-            : 'No items match your search or department filter.'}
-        </Text>
-      ) : (
-        filteredItems.map((item) => {
-          const selected = selectedIds.has(item.id);
-          const dateStr = item.createdAt
-            ? new Date(item.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })
-            : '';
-          return (
-            <ButtonTagCard
-              key={item.id}
-              headerTitle={item.title ?? ''}
-              showCheckbox={exportMode}
-              checked={selected}
-              onToggleSelect={() => toggleSelect(item.id)}
-              selected={exportMode && selected}
-              onEdit={() => navigation.navigate('AddEditInventoryItem', { itemId: item.id })}
-              onDelete={() => handleDelete(item)}
-              onPress={!exportMode ? () => navigation.navigate('AddEditInventoryItem', { itemId: item.id }) : undefined}
-            >
-              {dateStr ? <ButtonTagRow label="Date" value={dateStr} /> : null}
-              <View style={[styles.deptBadge, { backgroundColor: getDepartmentColor(item.department, overrides) }]}>
-                <Text style={styles.deptBadgeText}>
-                  {(item.department ?? 'INTERIOR').charAt(0) + (item.department ?? 'INTERIOR').slice(1).toLowerCase()}
-                </Text>
+                {DEPARTMENTS.map((dept) => (
+                  <TouchableOpacity
+                    key={dept}
+                    style={[styles.modalItem, visibleDepartments[dept] && !DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
+                    onPress={() => {
+                      selectDepartment(dept);
+                      setDepartmentDropdownOpen(false);
+                    }}
+                  >
+                    <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
+                      {dept.charAt(0) + dept.slice(1).toLowerCase()}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
-              <ButtonTagRow label="Location" value={item.location ?? ''} />
-              <ButtonTagRow label="Description" value={item.description ?? ''} />
-              <ButtonTagRow
-                label="Items"
-                value={`${item.items?.length ?? 0} ${(item.items?.length ?? 0) === 1 ? 'row' : 'rows'} (Amount · Item)`}
-              />
-            </ButtonTagCard>
-          );
-        })
-      )}
-    </ScrollView>
+            </Pressable>
+          </Modal>
+        )}
+
+        {loading ? (
+          <ActivityIndicator size="small" color={COLORS.primary} style={styles.loader} />
+        ) : filteredItems.length === 0 ? (
+          <Text style={[styles.empty, { color: themeColors.textSecondary }]}>
+            {items.length === 0
+              ? 'No inventory items yet. Tap Create to add one.'
+              : 'No items match your search or department filter.'}
+          </Text>
+        ) : (
+          filteredItems.map((item) => {
+            const selected = selectedIds.has(item.id);
+            const dateStr = item.createdAt
+              ? new Date(item.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })
+              : '';
+            return (
+              <ButtonTagCard
+                key={item.id}
+                headerTitle={item.title ?? ''}
+                showCheckbox={exportMode}
+                checked={selected}
+                onToggleSelect={() => toggleSelect(item.id)}
+                selected={exportMode && selected}
+                onEdit={() => navigation.navigate('AddEditInventoryItem', { itemId: item.id })}
+                onDelete={() => handleDelete(item)}
+                onPress={!exportMode ? () => navigation.navigate('AddEditInventoryItem', { itemId: item.id }) : undefined}
+              >
+                {dateStr ? <ButtonTagRow label="Date" value={dateStr} /> : null}
+                <View style={[styles.deptBadge, { backgroundColor: getDepartmentColor(item.department, overrides) }]}>
+                  <Text style={styles.deptBadgeText}>
+                    {(item.department ?? 'INTERIOR').charAt(0) + (item.department ?? 'INTERIOR').slice(1).toLowerCase()}
+                  </Text>
+                </View>
+                <ButtonTagRow label="Location" value={item.location ?? ''} />
+                <ButtonTagRow label="Description" value={item.description ?? ''} />
+                <ButtonTagRow
+                  label="Items"
+                  value={`${item.items?.length ?? 0} ${(item.items?.length ?? 0) === 1 ? 'row' : 'rows'} (Amount · Item)`}
+                />
+              </ButtonTagCard>
+            );
+          })
+        )}
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: { flex: 1 },
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
@@ -366,8 +351,6 @@ const styles = StyleSheet.create({
   searchInput: {},
   createRow: { marginBottom: SPACING.lg },
   exportBtn: { marginTop: SPACING.sm },
-  exportBar: { marginBottom: SPACING.lg, paddingVertical: SPACING.sm },
-  exportHint: { fontSize: FONTS.sm, marginBottom: SPACING.sm },
   filterLabel: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs },
   dropdown: {
     flexDirection: 'row',

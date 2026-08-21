@@ -3,7 +3,6 @@
  */
 
 import React, { useEffect, useLayoutEffect } from 'react';
-import { InfoModal } from '../components/InfoModal';
 import {
   View,
   Text,
@@ -16,7 +15,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { TaskCategory } from '../types';
-import { Button } from '../components';
+import { Button, PageHeader } from '../components';
 import vesselTasksService from '../services/vesselTasks';
 
 const CLEANUP_STORAGE_KEY = 'yachy_tasks_last_cleanup_month';
@@ -27,14 +26,8 @@ const CATEGORIES: { key: TaskCategory; label: string; icon: string }[] = [
   { key: 'MONTHLY', label: 'Monthly', icon: '🗓️' },
 ];
 
-export const TasksScreen = ({ navigation }: any) => {
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <InfoModal
-          screenKey="tasks"
-          autoShow={false}
-          content={{
+
+const TASKS_INFO = {
             title: 'Tasks',
             description: 'Create, assign, and track tasks across the vessel.',
             features: [
@@ -43,11 +36,9 @@ export const TasksScreen = ({ navigation }: any) => {
               'Switch between list and calendar views',
               'Mark tasks complete as work gets done',
             ],
-          }}
-        />
-      ),
-    });
-  }, [navigation]);
+          };
+
+export const TasksScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
@@ -79,68 +70,72 @@ export const TasksScreen = ({ navigation }: any) => {
   }
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>
-      <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-        Choose a category to view and manage tasks
-      </Text>
-      <Button
-        title="Create Task"
-        onPress={() => navigation.navigate('AddEditTask', {})}
-        variant="primary"
-        fullWidth
-        style={styles.createButton}
-      />
+    <View style={styles.pageWrap}>
+      <PageHeader title="Tasks" info={TASKS_INFO} infoScreenKey="tasks" />
+      <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>
+        <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+          Choose a category to view and manage tasks
+        </Text>
+        <Button
+          title="Create Task"
+          onPress={() => navigation.navigate('AddEditTask', {})}
+          variant="primary"
+          fullWidth
+          style={styles.createButton}
+        />
 
-      <TouchableOpacity
-        style={[styles.card, { backgroundColor: themeColors.surface }]}
-        onPress={() => navigation.navigate('UpcomingTasks')}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.cardIcon}>📋</Text>
-        <View style={styles.cardLabelWrap}>
-          <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>Upcoming Tasks</Text>
-          <Text style={[styles.cardHint, { color: themeColors.textSecondary }]}>Tasks due in the next 3 days</Text>
-        </View>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.card, styles.overdueCard, { backgroundColor: themeColors.surface }]}
-        onPress={() => navigation.navigate('OverdueTasks')}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.cardIcon}>⚠️</Text>
-        <View style={styles.cardLabelWrap}>
-          <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>Overdue Tasks</Text>
-          <Text style={[styles.cardHint, { color: themeColors.textSecondary }]}>Tasks past their deadline</Text>
-        </View>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.card, { backgroundColor: themeColors.surface }]}
-        onPress={() => navigation.navigate('CompletedTasks')}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.cardIcon}>✓</Text>
-        <View style={styles.cardLabelWrap}>
-          <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>Completed Tasks</Text>
-          <Text style={[styles.cardHint, { color: themeColors.textSecondary }]}>Tasks you've finished</Text>
-        </View>
-      </TouchableOpacity>
-      {CATEGORIES.map((cat) => (
         <TouchableOpacity
-          key={cat.key}
           style={[styles.card, { backgroundColor: themeColors.surface }]}
-          onPress={() => navigation.navigate('TasksList', { category: cat.key })}
+          onPress={() => navigation.navigate('UpcomingTasks')}
           activeOpacity={0.8}
         >
-          <Text style={styles.cardIcon}>{cat.icon}</Text>
-          <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>{cat.label}</Text>
-          <Text style={[styles.cardHint, { color: themeColors.textSecondary }]}>View & create tasks</Text>
+          <Text style={styles.cardIcon}>📋</Text>
+          <View style={styles.cardLabelWrap}>
+            <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>Upcoming Tasks</Text>
+            <Text style={[styles.cardHint, { color: themeColors.textSecondary }]}>Tasks due in the next 3 days</Text>
+          </View>
         </TouchableOpacity>
-      ))}
-    </ScrollView>
+        <TouchableOpacity
+          style={[styles.card, styles.overdueCard, { backgroundColor: themeColors.surface }]}
+          onPress={() => navigation.navigate('OverdueTasks')}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.cardIcon}>⚠️</Text>
+          <View style={styles.cardLabelWrap}>
+            <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>Overdue Tasks</Text>
+            <Text style={[styles.cardHint, { color: themeColors.textSecondary }]}>Tasks past their deadline</Text>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.card, { backgroundColor: themeColors.surface }]}
+          onPress={() => navigation.navigate('CompletedTasks')}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.cardIcon}>✓</Text>
+          <View style={styles.cardLabelWrap}>
+            <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>Completed Tasks</Text>
+            <Text style={[styles.cardHint, { color: themeColors.textSecondary }]}>Tasks you've finished</Text>
+          </View>
+        </TouchableOpacity>
+        {CATEGORIES.map((cat) => (
+          <TouchableOpacity
+            key={cat.key}
+            style={[styles.card, { backgroundColor: themeColors.surface }]}
+            onPress={() => navigation.navigate('TasksList', { category: cat.key })}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.cardIcon}>{cat.icon}</Text>
+            <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>{cat.label}</Text>
+            <Text style={[styles.cardHint, { color: themeColors.textSecondary }]}>View & create tasks</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: {
     flex: 1,
   },

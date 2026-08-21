@@ -22,6 +22,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { PageHeader } from '../components';
 import { useAuthStore } from '../store';
 import watchKeepingService, { PublishedWatchTimetable } from '../services/watchKeeping';
 import { formatLocalDateString } from '../utils';
@@ -199,70 +200,74 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-      contentContainerStyle={styles.content}
-      refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={loadPublished} colors={[COLORS.primary]} />
-      }
-    >
-      {loading && publishedTimetables.length === 0 ? (
-        <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: SPACING.xl }} />
-      ) : publishedTimetables.length === 0 ? (
-        <Text style={[styles.empty, { color: themeColors.textSecondary }]}>
-          No Watch Schedules yet. Create a timetable in Create, generate it, then tap Export to add it here.
-        </Text>
-      ) : (
-        publishedTimetables.map((t) => (
-          <TouchableOpacity
-            key={t.id}
-            style={[styles.card, { backgroundColor: themeColors.surface }]}
-            onPress={() => navigation.navigate('WatchScheduleDetail', { schedule: t })}
-            activeOpacity={0.8}
-          >
-            <View style={styles.cardHeader}>
-              <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>{t.watchTitle}</Text>
-              {isHOD && (
-                <View style={styles.cardHeaderActions}>
-                  <TouchableOpacity
-                    onPress={() => handleEdit(t)}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <Text style={{ color: COLORS.primary, fontSize: FONTS.sm, fontWeight: '600' }}>Edit</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => handleDelete(t)}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    disabled={deleting}
-                  >
-                    <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-            <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>{formatLocalDateString(scheduleDateStr(t), { weekday: 'short', month: 'short', day: 'numeric' })}</Text>
-            {t.startLocation ? <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>From: {t.startLocation}</Text> : null}
-            {t.destination ? <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>To: {t.destination}</Text> : null}
+    <View style={styles.pageWrap}>
+      <PageHeader title="Watch Schedule" />
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={loadPublished} colors={[COLORS.primary]} />
+        }
+      >
+        {loading && publishedTimetables.length === 0 ? (
+          <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: SPACING.xl }} />
+        ) : publishedTimetables.length === 0 ? (
+          <Text style={[styles.empty, { color: themeColors.textSecondary }]}>
+            No Watch Schedules yet. Create a timetable in Create, generate it, then tap Export to add it here.
+          </Text>
+        ) : (
+          publishedTimetables.map((t) => (
             <TouchableOpacity
-              style={styles.cardExportBtn}
-              onPress={(e) => {
-                e.stopPropagation();
-                exportWatchSchedulePdf(t);
-              }}
+              key={t.id}
+              style={[styles.card, { backgroundColor: themeColors.surface }]}
+              onPress={() => navigation.navigate('WatchScheduleDetail', { schedule: t })}
+              activeOpacity={0.8}
             >
-              <Ionicons name="download-outline" size={16} color={COLORS.primary} />
-              <Text style={[styles.cardExportText, { color: COLORS.primary }]}>Export to PDF</Text>
+              <View style={styles.cardHeader}>
+                <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>{t.watchTitle}</Text>
+                {isHOD && (
+                  <View style={styles.cardHeaderActions}>
+                    <TouchableOpacity
+                      onPress={() => handleEdit(t)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Text style={{ color: COLORS.primary, fontSize: FONTS.sm, fontWeight: '600' }}>Edit</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleDelete(t)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      disabled={deleting}
+                    >
+                      <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+              <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>{formatLocalDateString(scheduleDateStr(t), { weekday: 'short', month: 'short', day: 'numeric' })}</Text>
+              {t.startLocation ? <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>From: {t.startLocation}</Text> : null}
+              {t.destination ? <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>To: {t.destination}</Text> : null}
+              <TouchableOpacity
+                style={styles.cardExportBtn}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  exportWatchSchedulePdf(t);
+                }}
+              >
+                <Ionicons name="download-outline" size={16} color={COLORS.primary} />
+                <Text style={[styles.cardExportText, { color: COLORS.primary }]}>Export to PDF</Text>
+              </TouchableOpacity>
+              <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>Start: {t.startTime}</Text>
             </TouchableOpacity>
-            <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>Start: {t.startTime}</Text>
-          </TouchableOpacity>
-        ))
-      )}
+          ))
+        )}
 
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: { flex: 1 },
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },

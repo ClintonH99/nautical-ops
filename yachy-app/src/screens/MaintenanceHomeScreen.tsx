@@ -4,11 +4,11 @@
  */
 
 import React, { useLayoutEffect } from 'react';
-import { InfoModal } from '../components/InfoModal';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { COLORS, FONTS, SPACING, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { PageHeader } from '../components';
 
 const CATEGORIES = [
   { icon: '📋', label: 'Maintenance Log', nav: 'MaintenanceLog' as const },
@@ -17,14 +17,8 @@ const CATEGORIES = [
 ];
 
 
-export const MaintenanceHomeScreen = ({ navigation }: any) => {
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <InfoModal
-          screenKey="maintenance"
-          autoShow={false}
-          content={{
+
+const MAINTENANCE_HOME_INFO = {
             title: 'Maintenance',
             description: 'Track maintenance logs and scheduled work.',
             features: [
@@ -33,11 +27,9 @@ export const MaintenanceHomeScreen = ({ navigation }: any) => {
               'Reference past work for recurring tasks',
               'Stay on top of vessel upkeep',
             ],
-          }}
-        />
-      ),
-    });
-  }, [navigation]);
+          };
+
+export const MaintenanceHomeScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
@@ -51,26 +43,30 @@ export const MaintenanceHomeScreen = ({ navigation }: any) => {
   }
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>
-      <View style={styles.cardsContainer}>
-      {CATEGORIES.map((category) => (
-        <TouchableOpacity
-          key={category.nav}
-          style={[styles.card, { backgroundColor: themeColors.surface }]}
-          onPress={() => navigation.navigate(category.nav)}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.cardIcon}>{category.icon}</Text>
-          <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>{category.label}</Text>
-          <Text style={[styles.cardChevron, { color: themeColors.textSecondary }]}>›</Text>
-        </TouchableOpacity>
-      ))}
-      </View>
-    </ScrollView>
+    <View style={styles.pageWrap}>
+      <PageHeader title="Maintenance" info={MAINTENANCE_HOME_INFO} infoScreenKey="maintenance" />
+      <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>
+        <View style={styles.cardsContainer}>
+        {CATEGORIES.map((category) => (
+          <TouchableOpacity
+            key={category.nav}
+            style={[styles.card, { backgroundColor: themeColors.surface }]}
+            onPress={() => navigation.navigate(category.nav)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.cardIcon}>{category.icon}</Text>
+            <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>{category.label}</Text>
+            <Text style={[styles.cardChevron, { color: themeColors.textSecondary }]}>›</Text>
+          </TouchableOpacity>
+        ))}
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: {
     flex: 1,
   },

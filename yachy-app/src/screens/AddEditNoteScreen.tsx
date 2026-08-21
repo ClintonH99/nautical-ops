@@ -18,6 +18,7 @@ import {
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore, useThemeStore, BACKGROUND_THEMES } from '../store';
 import notesService from '../services/notes';
+import { PageHeader } from '../components';
 
 export const AddEditNoteScreen = ({ navigation, route }: any) => {
   const noteId: string | undefined = route.params?.noteId;
@@ -109,6 +110,7 @@ export const AddEditNoteScreen = ({ navigation, route }: any) => {
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <PageHeader title={noteId ? 'Edit Note' : 'New Note'} />
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={styles.content}

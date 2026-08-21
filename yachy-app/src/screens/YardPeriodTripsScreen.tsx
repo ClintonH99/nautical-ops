@@ -19,7 +19,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import tripsService from '../services/trips';
 import { Trip, Department } from '../types';
-import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner } from '../components';
+import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner, PageHeader } from '../components';
 import { useVesselTripColors } from '../hooks/useVesselTripColors';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { DEFAULT_COLORS } from '../services/tripColors';
@@ -206,6 +206,7 @@ export const YardPeriodTripsScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <PageHeader title="Yard Period" />
       {loading && trips.length === 0 ? null : trips.length === 0 ? (
         <FlatList
           ListHeaderComponent={<ListHeader />}

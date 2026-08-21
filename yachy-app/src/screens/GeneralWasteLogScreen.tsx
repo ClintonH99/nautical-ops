@@ -20,7 +20,7 @@ import { useAuthStore } from '../store';
 import generalWasteLogsService from '../services/generalWasteLogs';
 import vesselService from '../services/vessel';
 import { GeneralWasteLog } from '../types';
-import { Button, Input, ButtonTagCard, ButtonTagRow, LoadingSpinner } from '../components';
+import { Button, Input, ButtonTagCard, ButtonTagRow, LoadingSpinner, PageHeader } from '../components';
 import { exportGeneralWasteLogPdf } from '../utils/vesselLogsPdf';
 
 export const GeneralWasteLogScreen = ({ navigation }: any) => {
@@ -144,6 +144,7 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <PageHeader title="General Waste Log" />
       <View style={styles.actionBar}>
         <Button title="Add Log" onPress={onAdd} variant="primary" style={styles.actionBtn} />
         <Button

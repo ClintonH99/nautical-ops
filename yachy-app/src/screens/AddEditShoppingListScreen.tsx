@@ -28,7 +28,7 @@ import shoppingListsService, {
   ShoppingListType,
 } from '../services/shoppingLists';
 import { Department } from '../types';
-import { Input, Button, LoadingSpinner } from '../components';
+import { Input, Button, LoadingSpinner, PageHeader } from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -186,6 +186,7 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={100}
     >
+      <PageHeader title="Shopping List" />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}

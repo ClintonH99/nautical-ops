@@ -20,7 +20,7 @@ import { useAuthStore } from '../store';
 import pumpOutLogsService from '../services/pumpOutLogs';
 import vesselService from '../services/vessel';
 import { PumpOutLog, DischargeType } from '../types';
-import { Button, Input, ButtonTagCard, ButtonTagRow, LoadingSpinner } from '../components';
+import { Button, Input, ButtonTagCard, ButtonTagRow, LoadingSpinner, PageHeader } from '../components';
 import { exportPumpOutLogPdf } from '../utils/vesselLogsPdf';
 
 const DISCHARGE_LABELS: Record<DischargeType, string> = {
@@ -153,6 +153,7 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <PageHeader title="Pump Out Log" />
       <View style={styles.actionBar}>
         <Button title="Add Log" onPress={onAdd} variant="primary" style={styles.actionBtn} />
         <Button

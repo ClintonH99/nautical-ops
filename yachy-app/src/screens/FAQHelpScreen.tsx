@@ -17,6 +17,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { PageHeader } from '../components';
 import { useAuthStore } from '../store';
 import { supabase } from '../services/supabase';
 import { Linking } from 'react-native';
@@ -82,96 +83,100 @@ export const FAQScreen = ({ navigation }: any) => {
   };
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-        Find answers to common questions about Nautical Ops
-      </Text>
-
-      {loading ? (
-        <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.xl }} />
-      ) : (
-        <View style={styles.faqList}>
-          {faqs.map((faq) => {
-            const isOpen = expandedId === faq.id;
-            return (
-              <TouchableOpacity
-                key={faq.id}
-                style={[styles.faqItem, { backgroundColor: themeColors.surface, borderColor: themeColors.isDark ? 'rgba(255,255,255,0.08)' : COLORS.border }]}
-                onPress={() => setExpandedId(isOpen ? null : faq.id)}
-                activeOpacity={0.8}
-              >
-                <View style={styles.faqHeader}>
-                  <Text style={[styles.faqQuestion, { color: themeColors.textPrimary }]}>
-                    {faq.question}
-                  </Text>
-                  <Ionicons
-                    name={isOpen ? 'chevron-up' : 'chevron-down'}
-                    size={18}
-                    color={themeColors.textSecondary}
-                    style={styles.faqChevron}
-                  />
-                </View>
-                {isOpen && (
-                  <Text style={[styles.faqAnswer, { color: themeColors.textSecondary }]}>
-                    {faq.answer}
-                  </Text>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      )}
-
-      <View style={[styles.submitCard, { backgroundColor: themeColors.surface, borderColor: themeColors.isDark ? 'rgba(255,255,255,0.08)' : COLORS.border }]}>
-        <Text style={[styles.submitTitle, { color: themeColors.textPrimary }]}>
-          Still have a question?
+    <View style={styles.pageWrap}>
+      <PageHeader title="FAQ & Help" />
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+          Find answers to common questions about Nautical Ops
         </Text>
-        <Text style={[styles.submitSubtitle, { color: themeColors.textSecondary }]}>
-          Can't find what you're looking for? Submit your question and we'll get back to you.
-        </Text>
-        <TextInput
-          style={[styles.input, { backgroundColor: themeColors.background, color: themeColors.textPrimary, borderColor: themeColors.isDark ? 'rgba(255,255,255,0.12)' : COLORS.border }]}
-          placeholder="Type your question here..."
-          placeholderTextColor={themeColors.textSecondary}
-          value={question}
-          onChangeText={setQuestion}
-          multiline
-          numberOfLines={4}
-          textAlignVertical="top"
-        />
-        <TouchableOpacity
-          style={[styles.submitButton, { backgroundColor: COLORS.primary, opacity: submitting ? 0.7 : 1 }]}
-          onPress={handleSubmit}
-          disabled={submitting}
-        >
-          {submitting ? (
-            <ActivityIndicator color="white" size="small" />
-          ) : (
-            <Text style={styles.submitButtonText}>Submit Question</Text>
-          )}
-        </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.websiteButton, { borderColor: COLORS.primary }]}
-          onPress={() =>
-            Linking.openURL('https://www.nautical-ops.com/support').catch(() => {})
-          }
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.websiteButtonText, { color: COLORS.primary }]}>
-            Visit Website
+        {loading ? (
+          <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.xl }} />
+        ) : (
+          <View style={styles.faqList}>
+            {faqs.map((faq) => {
+              const isOpen = expandedId === faq.id;
+              return (
+                <TouchableOpacity
+                  key={faq.id}
+                  style={[styles.faqItem, { backgroundColor: themeColors.surface, borderColor: themeColors.isDark ? 'rgba(255,255,255,0.08)' : COLORS.border }]}
+                  onPress={() => setExpandedId(isOpen ? null : faq.id)}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.faqHeader}>
+                    <Text style={[styles.faqQuestion, { color: themeColors.textPrimary }]}>
+                      {faq.question}
+                    </Text>
+                    <Ionicons
+                      name={isOpen ? 'chevron-up' : 'chevron-down'}
+                      size={18}
+                      color={themeColors.textSecondary}
+                      style={styles.faqChevron}
+                    />
+                  </View>
+                  {isOpen && (
+                    <Text style={[styles.faqAnswer, { color: themeColors.textSecondary }]}>
+                      {faq.answer}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
+        <View style={[styles.submitCard, { backgroundColor: themeColors.surface, borderColor: themeColors.isDark ? 'rgba(255,255,255,0.08)' : COLORS.border }]}>
+          <Text style={[styles.submitTitle, { color: themeColors.textPrimary }]}>
+            Still have a question?
           </Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+          <Text style={[styles.submitSubtitle, { color: themeColors.textSecondary }]}>
+            Can't find what you're looking for? Submit your question and we'll get back to you.
+          </Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: themeColors.background, color: themeColors.textPrimary, borderColor: themeColors.isDark ? 'rgba(255,255,255,0.12)' : COLORS.border }]}
+            placeholder="Type your question here..."
+            placeholderTextColor={themeColors.textSecondary}
+            value={question}
+            onChangeText={setQuestion}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+          <TouchableOpacity
+            style={[styles.submitButton, { backgroundColor: COLORS.primary, opacity: submitting ? 0.7 : 1 }]}
+            onPress={handleSubmit}
+            disabled={submitting}
+          >
+            {submitting ? (
+              <ActivityIndicator color="white" size="small" />
+            ) : (
+              <Text style={styles.submitButtonText}>Submit Question</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.websiteButton, { borderColor: COLORS.primary }]}
+            onPress={() =>
+              Linking.openURL('https://www.nautical-ops.com/support').catch(() => {})
+            }
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.websiteButtonText, { color: COLORS.primary }]}>
+              Visit Website
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  pageWrap: { flex: 1 },
   container: { flex: 1 },
   content: {
     padding: SPACING.lg,
