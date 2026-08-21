@@ -36,7 +36,7 @@ cd yachy-app && npm start
 
 ## Quick One-Liner (Gates 1 + 2)
 ```bash
-cd ~/Desktop/nautical-ops/yachy-app && npx tsc --noEmit && echo "✅ TS OK" && npm start
+cd ~/Desktop/"Nautical Ops"/nautical-ops/yachy-app && npx tsc --noEmit && echo "✅ TS OK" && npm start
 ```
 
 ---
