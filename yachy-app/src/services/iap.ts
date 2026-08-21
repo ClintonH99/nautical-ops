@@ -65,10 +65,12 @@ export async function fetchIAPProducts(): Promise<IAPProduct[]> {
 
 /**
  * Purchase a subscription by Apple Product ID.
- * Returns whatever requestPurchase() resolves with - the
- * purchaseUpdatedListener event was found to be unreliable in testing,
- * so the caller uses this return value directly rather than relying
- * solely on the listener.
+ * Returns whatever requestPurchase() resolves with, and the caller acts on
+ * that directly - this is the normal path. purchaseUpdatedListener was once
+ * believed unreliable, but it was guarding on a property that does not exist
+ * in expo-iap 4.3.1, so it never fired; that is fixed. It now serves as the
+ * fallback for purchases Apple redelivers later, such as one interrupted by
+ * lost connectivity.
  */
 export async function purchaseSubscription(productId: string): Promise<any> {
   try {
