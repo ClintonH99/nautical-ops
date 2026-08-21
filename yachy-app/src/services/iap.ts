@@ -165,7 +165,11 @@ export function setupIAPListeners(
   onPurchaseError: (error: PurchaseError) => void
 ): () => void {
   const purchaseListener = purchaseUpdatedListener((purchase: Purchase) => {
-    if (purchase.transactionReceipt) {
+    // Catches purchases Apple delivers outside the direct requestPurchase()
+    // return - chiefly a purchase interrupted by lost connectivity at sea,
+    // which Apple queues and redelivers here on next launch. Guards on the
+    // same fields verifyAndActivateIAPPurchase accepts.
+    if (purchase.transactionId || purchase.id) {
       onPurchaseSuccess(purchase);
     }
   });
