@@ -106,7 +106,7 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
         <Text style={[styles.message, { color: themeColors.textSecondary }]}>
-          Only HODs can create or edit rules.
+          Only HODs and Captain have access.
         </Text>
       </View>
     );

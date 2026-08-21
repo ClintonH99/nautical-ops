@@ -257,7 +257,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
     const watchIntervalHours =
       crewCount <= 1 ? totalRunningHours : Math.max(1, Math.ceil(restHours / (crewCount - 1)));
     if (!isHOD) {
-      Alert.alert('Access denied', 'Only HODs can generate watch keeping timetables.');
+      Alert.alert('Access denied', 'Only HODs and Captain have access.');
       return;
     }
     setGenerating(true);
@@ -338,7 +338,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
         <Text style={[styles.message, { color: themeColors.textSecondary }]}>
-          Only HODs can create watch timetables.
+          Only HODs and Captain have access.
         </Text>
       </View>
     );

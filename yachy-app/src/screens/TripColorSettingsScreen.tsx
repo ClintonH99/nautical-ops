@@ -94,7 +94,7 @@ export const TripColorSettingsScreen = ({ navigation }: any) => {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
         <Text style={[styles.message, { color: themeColors.textSecondary }]}>
-          Only HODs can edit trip colors.
+          Only HODs and Captain have access.
         </Text>
       </View>
     );

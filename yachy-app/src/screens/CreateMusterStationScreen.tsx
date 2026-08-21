@@ -223,7 +223,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
             { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
           ]}
         >
-          Only HODs can create or edit muster stations.
+          Only HODs and Captain have access.
         </Text>
       </View>
     );
