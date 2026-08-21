@@ -22,7 +22,7 @@ import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../st
 import preDepartureChecklistsService from '../services/preDepartureChecklists';
 import vesselService from '../services/vessel';
 import { PreDepartureChecklist, Department } from '../types';
-import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner, PageHeader } from '../components';
+import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner, PageHeader, ExportButton, ExportBar } from '../components';
 import { generatePreDepartureChecklistPdf } from '../utils/preDepartureChecklistPdf';
 
 const CAPTAIN_CHECKLIST_MAX_ITEMS = 15;
@@ -44,6 +44,7 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportMode, setExportMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [departmentFilter, setDepartmentFilter] = useState<Department | ''>('');
   const [departmentModalVisible, setDepartmentModalVisible] = useState(false);
@@ -198,7 +199,7 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
     return (
       <ButtonTagCard
         headerTitle={item.title ?? ''}
-        showCheckbox
+        showCheckbox={exportMode}
         checked={isSelected}
         onToggleSelect={() => toggleSelection(item.id)}
         selected={isSelected}
@@ -257,22 +258,8 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
         {(isHOD || isCaptain) && (
           <Button title="Create" onPress={onCreate} variant="primary" fullWidth />
         )}
-        <Button
-          title={
-            exportingPdf
-              ? 'Exporting…'
-              : selectedChecklists.length > 0
-                ? `Export to PDF (${selectedChecklists.length})`
-                : 'Export to PDF'
-          }
-          onPress={onExportPdf}
-          variant={themeColors.isDark ? 'outlineLight' : 'outline'}
-          fullWidth
-          disabled={exportingPdf || selectedChecklists.length === 0}
-          style={styles.exportBtn}
-        />
       </View>
-      {filteredChecklists.length > 0 && (
+      {exportMode && filteredChecklists.length > 0 && (
         <View style={[styles.selectionBar, { backgroundColor: themeColors.surface }]}>
           <View style={styles.selectionBarActions}>
             <TouchableOpacity
@@ -354,7 +341,25 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <PageHeader title="Pre-Departure Checklist" />
+      <PageHeader title="Pre-Departure Checklist"
+        actions={
+          <ExportButton
+            active={exportMode}
+            onPress={() => {
+              if (exportMode) setSelectedIds(new Set());
+              setExportMode(!exportMode);
+            }}
+          />
+        }
+      />
+      {exportMode && (
+        <ExportBar
+          count={selectedChecklists.length}
+          onConfirm={onExportPdf}
+          exporting={exportingPdf}
+          hint="Tap checklists to select"
+        />
+      )}
       {departmentModalVisible && (
         <Modal visible transparent animationType="fade">
           <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentModalVisible(false)}>

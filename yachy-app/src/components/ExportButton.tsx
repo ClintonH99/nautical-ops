@@ -12,17 +12,23 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { COLORS } from '../constants/theme';
 
 interface ExportButtonProps {
-  /** True while selection mode is on - the button then reads Cancel. */
+  /**
+   * True while selection mode is on - the button then reads Cancel.
+   * Screens with nothing to select (one document, one tap) pass false.
+   */
   active: boolean;
   onPress: () => void;
   /** Override the resting label, e.g. "Export list". */
   label?: string;
+  /** True while a PDF is being generated - the button reads Exporting. */
+  busy?: boolean;
 }
 
 export const ExportButton: React.FC<ExportButtonProps> = ({
   active,
   onPress,
   label = 'Export',
+  busy = false,
 }) => {
   const themeColors = useThemeColors();
   const tint = active ? themeColors.textSecondary : COLORS.primary;
@@ -30,12 +36,13 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={[styles.button, { borderColor: tint }]}
+      disabled={busy}
+      style={[styles.button, { borderColor: tint, opacity: busy ? 0.6 : 1 }]}
       accessibilityRole="button"
       accessibilityLabel={active ? 'Cancel export' : 'Export to PDF'}
     >
       <Text style={[styles.label, { color: tint }]}>
-        {active ? 'Cancel' : `⤓  ${label}`}
+        {busy ? 'Exporting…' : active ? 'Cancel' : `⤓  ${label}`}
       </Text>
     </TouchableOpacity>
   );

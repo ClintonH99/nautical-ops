@@ -19,7 +19,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import rulesService from '../services/rules';
-import { Button, LoadingSpinner, PageHeader } from '../components';
+import { Button, LoadingSpinner, PageHeader, ExportButton } from '../components';
 import { generateRulesPdf } from '../utils/rulesPdf';
 
 export const CreateRulesScreen = ({ navigation, route }: any) => {
@@ -124,7 +124,9 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
       style={[styles.container, { backgroundColor: themeColors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <PageHeader title="Create Rules" />
+      <PageHeader title="Create Rules"
+        actions={<ExportButton active={false} onPress={onExport} />}
+      />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -184,13 +186,6 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
         </TouchableOpacity>
 
         <View style={styles.actions}>
-          <Button
-            title="Export to PDF"
-            onPress={onExport}
-            variant="outline"
-            fullWidth
-            style={styles.btn}
-          />
           <Button
             title={isEdit ? 'Save' : 'Publish'}
             onPress={onPublish}

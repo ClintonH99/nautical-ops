@@ -20,7 +20,7 @@ import { useAuthStore } from '../store';
 import generalWasteLogsService from '../services/generalWasteLogs';
 import vesselService from '../services/vessel';
 import { GeneralWasteLog } from '../types';
-import { Button, Input, ButtonTagCard, ButtonTagRow, LoadingSpinner, PageHeader } from '../components';
+import { Button, Input, ButtonTagCard, ButtonTagRow, LoadingSpinner, PageHeader, ExportButton, ExportBar } from '../components';
 import { exportGeneralWasteLogPdf } from '../utils/vesselLogsPdf';
 
 export const GeneralWasteLogScreen = ({ navigation }: any) => {
@@ -31,6 +31,7 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
   const [refreshing, setRefreshing] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [exportMode, setExportMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const vesselId = user?.vesselId ?? null;
@@ -144,22 +145,28 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <PageHeader title="General Waste Log" />
+      <PageHeader
+        title="General Waste Log"
+        actions={
+          <ExportButton
+            active={exportMode}
+            onPress={() => {
+              if (exportMode) setSelectedIds(new Set());
+              setExportMode(!exportMode);
+            }}
+          />
+        }
+      />
+      {exportMode && (
+        <ExportBar
+          count={selectedIds.size}
+          onConfirm={onExportPdf}
+          exporting={exportingPdf}
+          hint="Tap logs to select"
+        />
+      )}
       <View style={styles.actionBar}>
         <Button title="Add Log" onPress={onAdd} variant="primary" style={styles.actionBtn} />
-        <Button
-          title={
-            exportingPdf
-              ? 'Exporting…'
-              : selectedIds.size > 0
-                ? `Export to PDF (${selectedIds.size})`
-                : 'Export to PDF'
-          }
-          onPress={onExportPdf}
-          variant={themeColors.isDark ? 'outlineLight' : 'outline'}
-          style={styles.actionBtn}
-          disabled={exportingPdf || selectedIds.size === 0}
-        />
       </View>
 
       {logs.length > 0 && !loading && (
@@ -174,9 +181,11 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
               returnKeyType="search"
             />
           </View>
-          <TouchableOpacity onPress={toggleSelectAll} style={styles.selectAllRow}>
-            <Text style={styles.selectAllText}>{allSelected ? 'Deselect All' : 'Select All'}</Text>
-          </TouchableOpacity>
+          {exportMode && (
+            <TouchableOpacity onPress={toggleSelectAll} style={styles.selectAllRow}>
+              <Text style={styles.selectAllText}>{allSelected ? 'Deselect All' : 'Select All'}</Text>
+            </TouchableOpacity>
+          )}
         </>
       )}
 
@@ -216,10 +225,10 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
                 <ButtonTagCard
                   key={log.id}
                   headerTitle={log.positionLocation ?? ''}
-                  showCheckbox
+                  showCheckbox={exportMode}
                   checked={selected}
                   onToggleSelect={() => toggleSelect(log.id)}
-                  selected={selected}
+                  selected={exportMode && selected}
                   onEdit={() => onEdit(log)}
                   onDelete={() => onDelete(log)}
                   footer={log.createdByName ? `Logged by ${log.createdByName}` : undefined}

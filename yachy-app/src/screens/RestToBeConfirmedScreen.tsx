@@ -24,7 +24,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { PageHeader } from '../components';
+import { PageHeader, ExportButton } from '../components';
 import { DayReview, DayReviewEntry, Department, getMonthReview, getPastMonths, getMonthDataForPdf } from '../services/restEntries';
 import { generateHoursOfRestPdf } from '../utils/hoursOfRestPdf';
 import { canAccessVesselManagement } from '../utils/access';
@@ -192,7 +192,21 @@ export const RestToBeConfirmedScreen = () => {
 
   return (
     <View style={styles.pageWrap}>
-      <PageHeader title="Rest to be Confirmed" />
+      <PageHeader
+        title="Rest to be Confirmed"
+        actions={
+          uniqueCrew.length > 0 ? (
+            <ExportButton
+              active={false}
+              busy={exporting}
+              onPress={() => {
+                setSelectedExportIds(new Set());
+                setExportModalVisible(true);
+              }}
+            />
+          ) : undefined
+        }
+      />
       <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>
         <View style={styles.tabRow}>
           <TouchableOpacity
@@ -283,15 +297,6 @@ export const RestToBeConfirmedScreen = () => {
               <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.xl }} />
             ) : (
               <>
-                {uniqueCrew.length > 0 && (
-                  <TouchableOpacity
-                    style={styles.reviewButton}
-                    onPress={() => { setSelectedExportIds(new Set()); setExportModalVisible(true); }}
-                  >
-                    <Text style={styles.reviewButtonText}>Export to PDF</Text>
-                  </TouchableOpacity>
-                )}
-
                 {renderSection('Not Complete', '#dc2626', notComplete)}
                 {renderSection('Complete', '#d97706', complete)}
                 {renderSection('Confirmed', '#16a34a', confirmed)}

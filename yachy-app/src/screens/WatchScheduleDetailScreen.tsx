@@ -13,7 +13,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { PageHeader } from '../components';
+import { PageHeader, ExportButton } from '../components';
 import watchKeepingService, { PublishedWatchTimetable } from '../services/watchKeeping';
 import { formatLocalDateString } from '../utils';
 
@@ -97,7 +97,9 @@ export const WatchScheduleDetailScreen = ({ navigation, route }: any) => {
 
   return (
     <View style={styles.pageWrap}>
-      <PageHeader title="Watch Schedule" />
+      <PageHeader title="Watch Schedule"
+        actions={<ExportButton active={false} busy={exportingPdf} onPress={exportPdf} />}
+      />
       <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>
         <Text style={[styles.viewDate, { color: themeColors.textSecondary }]}>
           {formatLocalDateString(scheduleDateStr(schedule), { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
@@ -115,9 +117,6 @@ export const WatchScheduleDetailScreen = ({ navigation, route }: any) => {
           ))}
         </View>
         <View style={styles.viewActions}>
-          <TouchableOpacity style={styles.exportBtn} onPress={exportPdf} disabled={exportingPdf}>
-            <Text style={styles.exportBtnText}>{exportingPdf ? 'Exporting...' : 'Export to PDF'}</Text>
-          </TouchableOpacity>
           {isHOD && (
             <>
               <TouchableOpacity style={styles.editBtn} onPress={handleEdit} disabled={deleting}>

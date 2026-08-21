@@ -29,7 +29,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import maintenanceLogsService from '../services/maintenanceLogs';
 import vesselService from '../services/vessel';
 import { MaintenanceLog } from '../types';
-import { Button, LoadingSpinner, PageHeader } from '../components';
+import { Button, LoadingSpinner, PageHeader, ExportButton, ExportBar } from '../components';
 
 const COLUMN_WIDTH = 110;
 const DATE_WIDTH = 88;
@@ -132,6 +132,7 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
   const [refreshing, setRefreshing] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [exportMode, setExportMode] = useState(false);
   const [filters, setFilters] = useState<Record<FilterKey, string>>({
     equipment: '',
     location: '',
@@ -383,11 +384,32 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <PageHeader title="Maintenance Log" info={MAINTENANCE_LOG_INFO} infoScreenKey="maintenance_log" />
+      <PageHeader
+        title="Maintenance Log"
+        info={MAINTENANCE_LOG_INFO}
+        infoScreenKey="maintenance_log"
+        actions={
+          <ExportButton
+            active={exportMode}
+            onPress={() => {
+              if (exportMode) setSelectedIds(new Set());
+              setExportMode(!exportMode);
+            }}
+          />
+        }
+      />
+      {exportMode && (
+        <ExportBar
+          count={selectedIds.size}
+          onConfirm={exportPdf}
+          exporting={exportingPdf}
+          hint="Tap logs to select"
+        />
+      )}
       <View style={styles.actionsRow}>
         <View style={styles.leftActions}>
           <Button title="Add Log" onPress={onAdd} variant="primary" style={styles.addButton} />
-          {logs.length > 0 && (
+          {exportMode && logs.length > 0 && (
             <TouchableOpacity
               onPress={toggleSelectAll}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -401,19 +423,6 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
             </TouchableOpacity>
           )}
         </View>
-        <Button
-          title={
-            exportingPdf
-              ? 'Exporting…'
-              : selectedIds.size > 0
-                ? `Export to PDF (${selectedIds.size})`
-                : 'Export to PDF'
-          }
-          onPress={exportPdf}
-          variant={themeColors.isDark ? 'outlineLight' : 'outline'}
-          style={styles.pdfButton}
-          disabled={exportingPdf || logs.length === 0 || selectedIds.size === 0}
-        />
       </View>
 
 
@@ -501,17 +510,19 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
                     styles.cellView,
                     styles.headerCellView,
                     styles.checkboxHeaderCell,
-                    { width: CHECKBOX_WIDTH },
+                    { width: exportMode ? CHECKBOX_WIDTH : 0 },
                   ]}
                 >
+                  {exportMode && (
                   <Checkbox
-                    checked={
-                      filteredLogs.length > 0 && filteredLogs.every((l) => selectedIds.has(l.id))
-                    }
-                    onPress={toggleSelectAll}
-                    disabled={filteredLogs.length === 0}
-                    themeColors={themeColors}
-                  />
+                      checked={
+                        filteredLogs.length > 0 && filteredLogs.every((l) => selectedIds.has(l.id))
+                      }
+                      onPress={toggleSelectAll}
+                      disabled={filteredLogs.length === 0}
+                      themeColors={themeColors}
+                    />
+                  )}
                 </View>
                 <Text style={[styles.cell, styles.headerCell, styles.equipmentCell]}>
                   Equipment
@@ -532,12 +543,14 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
                     activeOpacity={0.7}
                     onPress={() => setExpandedId(expandedId === log.id ? null : log.id)}
                   >
-                    <View style={[styles.cell, styles.checkboxCell, { width: CHECKBOX_WIDTH }]}>
+                    <View style={[styles.cell, styles.checkboxCell, { width: exportMode ? CHECKBOX_WIDTH : 0 }]}>
+                      {exportMode && (
                       <Checkbox
-                        checked={selectedIds.has(log.id)}
-                        onPress={() => toggleSelect(log.id)}
-                        themeColors={themeColors}
-                      />
+                          checked={selectedIds.has(log.id)}
+                          onPress={() => toggleSelect(log.id)}
+                          themeColors={themeColors}
+                        />
+                      )}
                     </View>
                     <Text
                       style={[styles.cell, styles.equipmentCell, { color: themeColors.textPrimary }]}

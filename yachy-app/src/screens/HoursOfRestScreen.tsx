@@ -20,7 +20,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { PageHeader } from '../components';
+import { PageHeader, ExportButton } from '../components';
 import {
   RestEntry,
   checkRollingCompliance,
@@ -161,7 +161,9 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.pageWrap}>
-      <PageHeader title="Hours of Rest" info={HOURS_OF_REST_INFO} infoScreenKey="hours_of_rest" />
+      <PageHeader title="Hours of Rest" info={HOURS_OF_REST_INFO} infoScreenKey="hours_of_rest"
+        actions={<ExportButton active={false} busy={exporting} onPress={handleExportOwnMonth} />}
+      />
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={styles.content}
@@ -213,13 +215,6 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
               </View>
             </View>
 
-            <TouchableOpacity
-              style={[styles.reviewButton, { opacity: exporting ? 0.6 : 1, marginTop: SPACING.lg }]}
-              onPress={handleExportOwnMonth}
-              disabled={exporting}
-            >
-              <Text style={styles.reviewButtonText}>{exporting ? 'Exporting...' : 'Export to PDF'}</Text>
-            </TouchableOpacity>
           </>
         )}
       </ScrollView>

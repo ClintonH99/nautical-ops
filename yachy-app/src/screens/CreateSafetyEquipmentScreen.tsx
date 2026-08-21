@@ -24,7 +24,7 @@ import { useAuthStore } from '../store';
 import safetyEquipmentService, { normalizeSafetyItem } from '../services/safetyEquipment';
 import type { SafetyEquipmentData, SafetyItem } from '../services/safetyEquipment';
 import vesselService from '../services/vessel';
-import { Button, LoadingSpinner, PageHeader } from '../components';
+import { Button, LoadingSpinner, PageHeader, ExportButton } from '../components';
 import { generateSafetyEquipmentPdf } from '../utils/safetyEquipmentPdf';
 
 const DEFAULT_CATEGORIES = [
@@ -284,7 +284,9 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
       style={[styles.container, { backgroundColor: themeColors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <PageHeader title="Create Safety Equipment" />
+      <PageHeader title="Create Safety Equipment"
+        actions={<ExportButton active={false} onPress={onExport} />}
+      />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -459,13 +461,6 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
           </View>
         ))}
         <View style={styles.actions}>
-          <Button
-            title="Export to PDF"
-            onPress={onExport}
-            variant="outline"
-            fullWidth
-            style={styles.btn}
-          />
           <Button
             title={isEdit ? 'Save' : 'Publish'}
             onPress={onPublish}
