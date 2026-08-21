@@ -264,7 +264,7 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
       )}
       {!canManage && (
         <Text style={[styles.crewNote, { color: themeColors.textSecondary }]}>
-          Only HOD or MOV can create or edit safety equipment. Crew can export to PDF.
+          Only HODs and Captain have access. Crew can export to PDF.
         </Text>
       )}
       {canManage && (

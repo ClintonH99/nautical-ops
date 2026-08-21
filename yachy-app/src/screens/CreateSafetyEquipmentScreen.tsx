@@ -268,7 +268,7 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
         <Text style={[styles.message, { color: themeColors.textSecondary }]}>
-          Only HOD or MOV can create or edit safety equipment. Crew can export to PDF.
+          Only HODs and Captain have access. Crew can export to PDF.
         </Text>
       </View>
     );

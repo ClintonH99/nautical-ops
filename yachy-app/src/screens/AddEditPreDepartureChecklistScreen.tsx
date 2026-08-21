@@ -211,7 +211,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
         <Text style={[styles.message, { color: themeColors.textSecondary }]}>
-          Only HODs and Captains can create pre-departure checklists.
+          Only HODs and Captain have access.
         </Text>
       </View>
     );
@@ -231,7 +231,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
         <Text style={[styles.message, { color: themeColors.textSecondary }]}>
           {department === null
             ? "Only the Captain can edit the Captain's checklist."
-            : 'Only HODs can edit department checklists.'}
+            : 'Only HODs and Captain have access.'}
         </Text>
       </View>
     );
