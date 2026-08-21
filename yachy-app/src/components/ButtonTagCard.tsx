@@ -23,6 +23,16 @@ export interface ButtonTagCardProps {
   onToggleSelect?: () => void;
   footer?: string;
   accentColor?: string;
+  /**
+   * Opt in to the collapsed/expanded behaviour: the card shows only its title
+   * and `summary` until tapped, then reveals children, edit, delete and footer.
+   * The screen owns which card is open, so only one is open at a time.
+   */
+  collapsible?: boolean;
+  expanded?: boolean;
+  onToggleExpand?: () => void;
+  /** One line kept visible while collapsed, e.g. a date. */
+  summary?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -62,13 +72,21 @@ export function ButtonTagCard({
   onToggleSelect,
   footer,
   accentColor,
+  collapsible,
+  expanded,
+  onToggleExpand,
+  summary,
   children,
 }: ButtonTagCardProps) {
   const themeColors = useThemeColors();
+  // While collapsed, everything below the summary line stays hidden.
+  const showDetail = !collapsible || !!expanded;
 
   const handlePress = () => {
     if (showCheckbox && onToggleSelect) {
       onToggleSelect();
+    } else if (collapsible && onToggleExpand) {
+      onToggleExpand();
     } else if (onPress) {
       onPress();
     }
@@ -84,7 +102,7 @@ export function ButtonTagCard({
       ]}
       onPress={handlePress}
       activeOpacity={0.85}
-      disabled={!showCheckbox && !onPress}
+      disabled={!showCheckbox && !onPress && !collapsible}
     >
       <View style={styles.cardHeader}>
         <View style={styles.cardLeft}>
@@ -106,7 +124,17 @@ export function ButtonTagCard({
           ) : null)}
         </View>
         <View style={styles.cardActions}>
-          {onDelete && (
+          {collapsible && !showDetail && (
+            <Ionicons name="chevron-down" size={18} color={themeColors.textSecondary} />
+          )}
+          {collapsible && showDetail && (
+            <Ionicons
+              name="chevron-up"
+              size={18}
+              color={themeColors.isDark ? COLORS.white : COLORS.primary}
+            />
+          )}
+          {showDetail && onDelete && (
             <TouchableOpacity
               onPress={(e) => { e.stopPropagation(); onDelete(); }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -114,7 +142,7 @@ export function ButtonTagCard({
               <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
             </TouchableOpacity>
           )}
-          {onEdit && (
+          {showDetail && onEdit && (
             <TouchableOpacity
               onPress={(e) => { e.stopPropagation(); onEdit(); }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -125,9 +153,11 @@ export function ButtonTagCard({
         </View>
       </View>
 
-      {children}
+      {collapsible && summary ? <View style={styles.cardSummary}>{summary}</View> : null}
 
-      {footer && (
+      {showDetail && children}
+
+      {showDetail && footer && (
         <Text style={[styles.cardCreatedBy, { color: themeColors.textSecondary }]}>
           {footer}
         </Text>
@@ -194,6 +224,7 @@ const styles = StyleSheet.create({
   deptBadge: { alignSelf: 'flex-start', paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: BORDER_RADIUS.sm },
   deptBadgeText: { fontSize: FONTS.xs, fontWeight: '600', color: COLORS.white },
   cardCreatedBy: { fontSize: FONTS.xs, marginTop: SPACING.xs, fontStyle: 'italic' },
+  cardSummary: { marginTop: 2 },
   checkbox: {
     width: 22,
     height: 22,

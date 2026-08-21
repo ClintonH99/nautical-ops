@@ -55,6 +55,7 @@ export const InventoryScreen = ({ navigation }: any) => {
   });
   const [departmentDropdownOpen, setDepartmentDropdownOpen] = useState(false);
   const [exportMode, setExportMode] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exporting, setExporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -319,8 +320,11 @@ export const InventoryScreen = ({ navigation }: any) => {
                 onEdit={() => navigation.navigate('AddEditInventoryItem', { itemId: item.id })}
                 onDelete={() => handleDelete(item)}
                 onPress={!exportMode ? () => navigation.navigate('AddEditInventoryItem', { itemId: item.id }) : undefined}
+                collapsible={!exportMode}
+                expanded={expandedId === item.id}
+                onToggleExpand={() => setExpandedId(expandedId === item.id ? null : item.id)}
+                summary={dateStr ? <ButtonTagRow label="Date" value={dateStr} /> : undefined}
               >
-                {dateStr ? <ButtonTagRow label="Date" value={dateStr} /> : null}
                 <View style={[styles.deptBadge, { backgroundColor: getDepartmentColor(item.department, overrides) }]}>
                   <Text style={styles.deptBadgeText}>
                     {(item.department ?? 'INTERIOR').charAt(0) + (item.department ?? 'INTERIOR').slice(1).toLowerCase()}

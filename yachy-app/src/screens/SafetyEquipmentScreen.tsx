@@ -114,6 +114,7 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [exportMode, setExportMode] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exportingList, setExportingList] = useState(false);
 
@@ -247,8 +248,12 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
           <TouchableOpacity
             key={item.id}
             style={[styles.card, { backgroundColor: themeColors.surface }]}
-            onPress={() => (exportMode ? toggleSelect(item.id) : onEdit(item))}
-            activeOpacity={canManage || exportMode ? 0.8 : 1}
+            onPress={() =>
+              exportMode
+                ? toggleSelect(item.id)
+                : setExpandedId(expandedId === item.id ? null : item.id)
+            }
+            activeOpacity={0.8}
           >
             <View style={styles.cardHeader}>
               {exportMode && (
@@ -261,7 +266,10 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
               <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
                 {item.title}
               </Text>
-              {canManage && (
+              {!exportMode && expandedId !== item.id && (
+                <Ionicons name="chevron-down" size={18} color={themeColors.textSecondary} />
+              )}
+              {canManage && !exportMode && expandedId === item.id && (
                 <View style={styles.cardActions}>
                   <TouchableOpacity
                     onPress={() => onEdit(item)}
@@ -278,7 +286,9 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
                 </View>
               )}
             </View>
-            <SafetyEquipmentPreview data={item.data} themeColors={themeColors} />
+            {expandedId === item.id && (
+              <SafetyEquipmentPreview data={item.data} themeColors={themeColors} />
+            )}
           </TouchableOpacity>
         ))}
         {items.length === 0 && (

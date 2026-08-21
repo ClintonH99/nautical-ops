@@ -46,6 +46,7 @@ const SHIPYARD_INFO = {
 export const YardPeriodJobsScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const [exportMode, setExportMode] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exporting, setExporting] = useState(false);
   const { user } = useAuthStore();
@@ -186,8 +187,11 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
         footer={
           isComplete && item.completedByName ? `Completed by ${item.completedByName}` : undefined
         }
+        collapsible={!exportMode}
+        expanded={expandedId === item.id}
+        onToggleExpand={() => setExpandedId(expandedId === item.id ? null : item.id)}
+        summary={dateVal ? <ButtonTagRow label="Date" value={dateVal} /> : undefined}
       >
-        {dateVal ? <ButtonTagRow label="Date" value={dateVal} /> : null}
         <ButtonTagRow
           label="Department"
           value={deptLabel}

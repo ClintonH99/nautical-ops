@@ -36,6 +36,7 @@ export const FuelLogScreen = ({ navigation }: any) => {
   const [exportingPdf, setExportingPdf] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exportMode, setExportMode] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const vesselId = user?.vesselId ?? null;
@@ -231,8 +232,16 @@ export const FuelLogScreen = ({ navigation }: any) => {
                   onEdit={() => onEdit(log)}
                   onDelete={() => onDelete(log)}
                   footer={log.createdByName ? `Logged by ${log.createdByName}` : undefined}
+                  collapsible={!exportMode}
+                  expanded={expandedId === log.id}
+                  onToggleExpand={() => setExpandedId(expandedId === log.id ? null : log.id)}
+                  summary={
+                    <ButtonTagRow
+                      label="Date"
+                      value={[log.logDate, log.logTime].filter(Boolean).join('  ·  ')}
+                    />
+                  }
                 >
-                  <ButtonTagRow label="Date" value={log.logDate ?? ''} />
                   <ButtonTagRow label="Time" value={log.logTime ?? ''} />
                   <View style={[styles.statsRow, { backgroundColor: themeColors.background }]}>
                     <View style={styles.statBox}>
