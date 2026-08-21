@@ -62,6 +62,7 @@ export interface User {
 export interface Vessel {
   id: string;
   name: string;
+  imoNumber?: string;
   managementCompanyId?: string;
   inviteCode: string;
   inviteExpiry: string;

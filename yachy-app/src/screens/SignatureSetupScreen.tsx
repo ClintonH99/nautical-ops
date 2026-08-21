@@ -53,7 +53,7 @@ export const SignatureSetupScreen = () => {
       setSaved(data);
       if (data) {
         setMode('view');
-        setActiveTab(data.signatureType);
+        setActiveTab(data.signatureType === 'drawn' ? 'draw' : 'type');
         if (data.signatureType === 'typed') setTypedName(data.typedName ?? '');
       } else {
         setMode('edit');
@@ -108,7 +108,7 @@ export const SignatureSetupScreen = () => {
   const handleCancelEdit = () => {
     if (saved) {
       setMode('view');
-      setActiveTab(saved.signatureType);
+      setActiveTab(saved.signatureType === 'drawn' ? 'draw' : 'type');
       if (saved.signatureType === 'typed') setTypedName(saved.typedName ?? '');
     }
   };
