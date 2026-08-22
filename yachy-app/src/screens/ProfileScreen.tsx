@@ -24,6 +24,11 @@ import authService from '../services/auth';
 import { Button, LoadingSpinner, PageHeader } from '../components';
 import userService from '../services/user';
 import { Department } from '../types';
+import Constants from 'expo-constants';
+
+// Read from app.json at build time, so it can never drift from the
+// version actually shipped.
+const APP_VERSION = Constants.expoConfig?.version ?? '';
 
 export const ProfileScreen = ({ navigation }: any) => {
   const { user, setUser } = useAuthStore();
@@ -694,7 +699,7 @@ export const ProfileScreen = ({ navigation }: any) => {
           {/* Version Info */}
           <View style={styles.versionInfo}>
             <Text style={[styles.versionText, { color: themeColors.textSecondary }]}>
-              Nautical Ops v1.0.0
+              Nautical Ops v{APP_VERSION}
             </Text>
             <Text style={[styles.versionSubtext, { color: themeColors.textSecondary }]}>
               Professional yacht operations management
