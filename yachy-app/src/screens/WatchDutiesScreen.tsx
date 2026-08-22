@@ -258,7 +258,7 @@ export const WatchDutiesScreen = () => {
     ]);
   };
 
-  const handleAddItem = async (groupId: string) => {
+  const handleAddItem = async (groupId: string, keepOpen = false) => {
     if (!newItemText.trim()) return;
     const group = dutyGroups.find((g) => g.id === groupId);
     const sortOrder = group ? group.items.length : 0;
@@ -272,7 +272,9 @@ export const WatchDutiesScreen = () => {
         )
       );
       setNewItemText('');
-      setAddingItemGroupId(null);
+      // Submitting with the return key keeps the field open so several
+      // duties can be typed one after another; the Add button finishes up.
+      if (!keepOpen) setAddingItemGroupId(null);
       loadData();
     } catch (e) {
       Alert.alert('Error', 'Failed to add item.');
@@ -670,6 +672,9 @@ export const WatchDutiesScreen = () => {
                   placeholderTextColor={themeColors.textSecondary}
                   style={[styles.rulesInput, { flex: 1, minHeight: 36, color: themeColors.textPrimary, borderColor: themeColors.textSecondary, paddingVertical: 6 }]}
                   autoFocus
+                  returnKeyType="done"
+                  blurOnSubmit={false}
+                  onSubmitEditing={() => handleAddItem(group.id, true)}
                 />
                 <TouchableOpacity onPress={() => handleAddItem(group.id)}>
                   <Text style={{ color: COLORS.primary, fontWeight: '600' }}>Add</Text>
