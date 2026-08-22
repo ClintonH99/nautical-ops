@@ -20,8 +20,8 @@ interface LabeledDropdownProps {
   /** True while the picker is open - flips the chevron. */
   open?: boolean;
   onPress: () => void;
-  /** Extra space above the row, for the first field in a section. */
-  spacedTop?: boolean;
+  /** Drop the standard top spacing where the row already sits below a gap. */
+  tightTop?: boolean;
 }
 
 export const LabeledDropdown: React.FC<LabeledDropdownProps> = ({
@@ -29,12 +29,12 @@ export const LabeledDropdown: React.FC<LabeledDropdownProps> = ({
   value,
   open = false,
   onPress,
-  spacedTop = false,
+  tightTop = false,
 }) => {
   const themeColors = useThemeColors();
 
   return (
-    <View style={[styles.row, spacedTop && styles.rowSpaced]}>
+    <View style={[styles.row, tightTop && styles.rowTight]}>
       <Text style={[styles.label, { color: themeColors.textPrimary }]}>{label}</Text>
       <TouchableOpacity
         style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
@@ -59,11 +59,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: SPACING.lg,
     marginBottom: SPACING.md,
     gap: SPACING.md,
   },
-  rowSpaced: {
-    marginTop: SPACING.lg,
+  rowTight: {
+    marginTop: 0,
   },
   label: {
     fontSize: FONTS.base,

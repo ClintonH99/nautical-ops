@@ -540,7 +540,6 @@ export const WatchDutiesScreen = () => {
         value={selectedDept === 'All' ? 'All Departments' : DEPT_LABEL[selectedDept]}
         open={filterModalVisible}
         onPress={() => setFilterModalVisible(true)}
-        spacedTop
       />
 
       {filterModalVisible && (
