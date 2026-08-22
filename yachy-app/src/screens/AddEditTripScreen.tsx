@@ -23,7 +23,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import tripsService from '../services/trips';
 import { usePostHog } from 'posthog-react-native';
 import { TripType, Department } from '../types';
-import { Input, Button, LoadingSpinner, PageHeader } from '../components';
+import { Input, Button, LoadingSpinner, PageHeader, LabeledDropdown } from '../components';
 import { useVesselTripColors } from '../hooks/useVesselTripColors';
 import { DEFAULT_COLORS } from '../services/tripColors';
 import { parseLocalDate, toYYYYMMDD } from '../utils';
@@ -280,24 +280,12 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
         />
         {type === 'YARD_PERIOD' && (
           <>
-            <Text style={[styles.label, { color: themeColors.textPrimary }]}>Department</Text>
-            <TouchableOpacity
-              style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
+            <LabeledDropdown
+              label="Department"
+              value={DEPARTMENT_OPTIONS.find((o) => o.value === department)?.label ?? 'Select'}
+              open={departmentModalVisible}
               onPress={() => setDepartmentModalVisible(true)}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={[
-                  styles.dropdownText,
-                  { color: department ? themeColors.textPrimary : themeColors.textSecondary },
-                ]}
-              >
-                {DEPARTMENT_OPTIONS.find((o) => o.value === department)?.label ?? 'Select'}
-              </Text>
-              <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>
-                {departmentModalVisible ? '▲' : '▼'}
-              </Text>
-            </TouchableOpacity>
+            />
             {departmentModalVisible && (
               <Modal visible transparent animationType="fade">
                 <Pressable

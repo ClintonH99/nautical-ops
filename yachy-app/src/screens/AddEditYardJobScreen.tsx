@@ -21,7 +21,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import yardJobsService from '../services/yardJobs';
-import { Input, Button, LoadingSpinner, PageHeader } from '../components';
+import { Input, Button, LoadingSpinner, PageHeader, LabeledDropdown } from '../components';
 import { Department, YardJobPriority } from '../types';
 
 export const AddEditYardJobScreen = ({ navigation, route }: any) => {
@@ -197,20 +197,14 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="always"
       >
-        <Text style={[styles.label, { color: themeColors.textPrimary }]}>Department</Text>
+        <LabeledDropdown
+          label="Department"
+          value={department.charAt(0) + department.slice(1).toLowerCase()}
+          onPress={() => setDepartmentDropdownOpen(true)}
+        />
         <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
           Which department is this job for?
         </Text>
-        <TouchableOpacity
-          style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
-          onPress={() => setDepartmentDropdownOpen(true)}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
-            {department.charAt(0) + department.slice(1).toLowerCase()}
-          </Text>
-          <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>▼</Text>
-        </TouchableOpacity>
         <Input
           label="Title"
           value={jobTitle}

@@ -28,7 +28,7 @@ import shoppingListsService, {
   ShoppingListType,
 } from '../services/shoppingLists';
 import { Department } from '../types';
-import { Input, Button, LoadingSpinner, PageHeader } from '../components';
+import { Input, Button, LoadingSpinner, PageHeader, LabeledDropdown } from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -201,19 +201,12 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
         />
         {!isEdit && !asMasterList && (
           <View style={styles.deptSection}>
-            <Text style={[styles.deptLabel, { color: themeColors.textPrimary }]}>Department</Text>
-            <TouchableOpacity
-              style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
+            <LabeledDropdown
+              label="Department"
+              value={department.charAt(0) + department.slice(1).toLowerCase()}
+              open={departmentDropdownOpen}
               onPress={() => setDepartmentDropdownOpen(!departmentDropdownOpen)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
-                {department.charAt(0) + department.slice(1).toLowerCase()}
-              </Text>
-              <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>
-                {departmentDropdownOpen ? '▲' : '▼'}
-              </Text>
-            </TouchableOpacity>
+            />
             {departmentDropdownOpen && (
               <Modal visible transparent animationType="fade">
                 <Pressable

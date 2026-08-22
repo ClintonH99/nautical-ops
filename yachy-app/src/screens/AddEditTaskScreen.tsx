@@ -23,7 +23,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import vesselTasksService from '../services/vesselTasks';
 import { usePostHog } from 'posthog-react-native';
 import { TaskCategory, TaskRecurring, Department } from '../types';
-import { Input, Button, LoadingSpinner, PageHeader } from '../components';
+import { Input, Button, LoadingSpinner, PageHeader, LabeledDropdown } from '../components';
 
 const CATEGORY_LABELS: Record<TaskCategory, string> = {
   DAILY: 'Daily',
@@ -206,21 +206,15 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={[styles.label, { color: themeColors.textPrimary }]}>Department</Text>
+        <LabeledDropdown
+          label="Department"
+          value={department.charAt(0) + department.slice(1).toLowerCase()}
+          onPress={() => setDepartmentDropdownOpen(true)}
+        />
         <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
           Tasks are scoped by department. Crew will filter by their department to see only relevant
           tasks.
         </Text>
-        <TouchableOpacity
-          style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
-          onPress={() => setDepartmentDropdownOpen(true)}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
-            {department.charAt(0) + department.slice(1).toLowerCase()}
-          </Text>
-          <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>▼</Text>
-        </TouchableOpacity>
         {departmentDropdownOpen && (
           <Modal visible transparent animationType="fade">
             <Pressable

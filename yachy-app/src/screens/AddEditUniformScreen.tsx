@@ -15,7 +15,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import uniformsService, { UniformEntry } from '../services/uniforms';
 import { Department } from '../types';
-import { Input, Button, LoadingSpinner, PageHeader } from '../components';
+import { Input, Button, LoadingSpinner, PageHeader, LabeledDropdown } from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 const emptyEntry = (): UniformEntry => ({ amount: '', size: '', color: '', gender: '', dayNight: '' });
@@ -150,17 +150,12 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {!isEdit && (
           <View style={styles.deptSection}>
-            <Text style={[styles.deptLabel, { color: themeColors.textPrimary }]}>Department</Text>
-            <TouchableOpacity
-              style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
+            <LabeledDropdown
+              label="Department"
+              value={department.charAt(0) + department.slice(1).toLowerCase()}
+              open={departmentDropdownOpen}
               onPress={() => setDepartmentDropdownOpen(!departmentDropdownOpen)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
-                {department.charAt(0) + department.slice(1).toLowerCase()}
-              </Text>
-              <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>{departmentDropdownOpen ? '▲' : '▼'}</Text>
-            </TouchableOpacity>
+            />
             {departmentDropdownOpen && (
               <Modal visible transparent animationType="fade">
                 <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentDropdownOpen(false)}>

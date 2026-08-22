@@ -22,7 +22,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import contractorsService, { ContractorContact } from '../services/contractors';
 import { Department } from '../types';
-import { Input, Button, LoadingSpinner, PageHeader } from '../components';
+import { Input, Button, LoadingSpinner, PageHeader, LabeledDropdown } from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -189,17 +189,11 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={[styles.label, { color: themeColors.textPrimary }]}>Department</Text>
-        <TouchableOpacity
-          style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
+        <LabeledDropdown
+          label="Department"
+          value={department.charAt(0) + department.slice(1).toLowerCase()}
           onPress={() => setDepartmentDropdownOpen(true)}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
-            {department.charAt(0) + department.slice(1).toLowerCase()}
-          </Text>
-          <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>▼</Text>
-        </TouchableOpacity>
+        />
         {departmentDropdownOpen && (
           <Modal visible transparent animationType="fade">
             <Pressable

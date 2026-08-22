@@ -25,7 +25,7 @@ import { usePostHog } from 'posthog-react-native';
 import preDepartureChecklistsService from '../services/preDepartureChecklists';
 import tripsService from '../services/trips';
 import { PreDepartureChecklistItem, Department } from '../types';
-import { Input, Button, LoadingSpinner, PageHeader } from '../components';
+import { Input, Button, LoadingSpinner, PageHeader, LabeledDropdown } from '../components';
 import { Trip } from '../types';
 import { formatLocalDateString } from '../utils';
 
@@ -278,17 +278,12 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
         {showEditableFields && (
           <>
             <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: themeColors.textPrimary }]}>Department</Text>
-              <TouchableOpacity
-                style={[styles.pickerTrigger, { backgroundColor: themeColors.surface }]}
+              <LabeledDropdown
+                label="Department"
+                value={selectedDeptLabel}
+                open={departmentModalVisible}
                 onPress={() => setDepartmentModalVisible(true)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.pickerValue, { color: themeColors.textPrimary }]}>
-                  {selectedDeptLabel}
-                </Text>
-                <Text style={[styles.pickerIcon, { color: themeColors.textSecondary }]}>▾</Text>
-              </TouchableOpacity>
+              />
             </View>
             <View style={styles.fieldContainer}>
               <Text style={[styles.label, { color: themeColors.textPrimary }]}>

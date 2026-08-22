@@ -23,7 +23,7 @@ import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import inventoryService, { InventoryItemRow } from '../services/inventory';
 import { Department } from '../types';
-import { Input, Button, LoadingSpinner, PageHeader } from '../components';
+import { Input, Button, LoadingSpinner, PageHeader, LabeledDropdown } from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -175,27 +175,12 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.label, { color: themeColors.textPrimary }]}>Department</Text>
-        <Text
-          style={[
-            styles.hint,
-            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-          ]}
-        >
-          Which department is this for?
-        </Text>
-        <TouchableOpacity
-          style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
+        <LabeledDropdown
+          label="Department"
+          value={department.charAt(0) + department.slice(1).toLowerCase()}
+          open={departmentDropdownOpen}
           onPress={() => setDepartmentDropdownOpen(!departmentDropdownOpen)}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
-            {department.charAt(0) + department.slice(1).toLowerCase()}
-          </Text>
-          <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>
-            {departmentDropdownOpen ? '▲' : '▼'}
-          </Text>
-        </TouchableOpacity>
+        />
         {departmentDropdownOpen && (
           <Modal visible transparent animationType="fade">
             <Pressable
