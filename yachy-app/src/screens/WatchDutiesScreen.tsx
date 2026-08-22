@@ -86,6 +86,7 @@ const WATCH_DUTIES_INFO = {
               'View Watch Duty Rules - Captain/HOD can edit, everyone can view and export',
               'See the week-ahead watch assignment schedule',
               'Check off duty checklist items by department',
+              'Adding items: tap + Add item, type, and press enter for each one - press enter on a blank line to finish',
               'Stay on top of who is covering what, and when',
             ],
           };
@@ -259,8 +260,13 @@ export const WatchDutiesScreen = () => {
     ]);
   };
 
-  const handleAddItem = async (groupId: string, keepOpen = false) => {
-    if (!newItemText.trim()) return;
+  const handleAddItem = async (groupId: string) => {
+    // The return key is the only way in or out of this field now: an empty
+    // line means the user is finished adding.
+    if (!newItemText.trim()) {
+      setAddingItemGroupId(null);
+      return;
+    }
     const group = dutyGroups.find((g) => g.id === groupId);
     const sortOrder = group ? group.items.length : 0;
     try {
@@ -273,9 +279,7 @@ export const WatchDutiesScreen = () => {
         )
       );
       setNewItemText('');
-      // Submitting with the return key keeps the field open so several
-      // duties can be typed one after another; the Add button finishes up.
-      if (!keepOpen) setAddingItemGroupId(null);
+      // Field stays open so several duties can be typed one after another.
       loadData();
     } catch (e) {
       Alert.alert('Error', 'Failed to add item.');
@@ -689,11 +693,8 @@ export const WatchDutiesScreen = () => {
                   autoFocus
                   returnKeyType="done"
                   blurOnSubmit={false}
-                  onSubmitEditing={() => handleAddItem(group.id, true)}
+                  onSubmitEditing={() => handleAddItem(group.id)}
                 />
-                <TouchableOpacity onPress={() => handleAddItem(group.id)}>
-                  <Text style={{ color: COLORS.primary, fontWeight: '600' }}>Add</Text>
-                </TouchableOpacity>
               </View>
             ) : (
               <TouchableOpacity onPress={() => { setAddingItemGroupId(group.id); setNewItemText(''); }} style={{ marginTop: 6 }}>
