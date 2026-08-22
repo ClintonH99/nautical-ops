@@ -243,6 +243,16 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
           />
         }
       >
+        {canManage && (
+          <View style={styles.createSection}>
+            <Button
+              title="Create"
+              onPress={() => navigation.navigate('CreateSafetyEquipment')}
+              variant="primary"
+              fullWidth
+            />
+          </View>
+        )}
         <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>Published</Text>
         {items.map((item) => (
           <TouchableOpacity
@@ -272,16 +282,23 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
               {canManage && !exportMode && expandedId === item.id && (
                 <View style={styles.cardActions}>
                   <TouchableOpacity
-                    onPress={() => onEdit(item)}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <Ionicons name="pencil-outline" size={20} color={themeColors.textSecondary} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
                     onPress={() => onDelete(item)}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
                     <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => onEdit(item)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text
+                      style={[
+                        styles.editBtn,
+                        { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                      ]}
+                    >
+                      Edit
+                    </Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -293,23 +310,13 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
         ))}
         {items.length === 0 && (
           <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
-            No published plans yet.{canManage ? ' Create one below.' : ''}
+            No published plans yet.{canManage ? ' Tap Create to add one.' : ''}
           </Text>
         )}
         {!canManage && (
           <Text style={[styles.crewNote, { color: themeColors.textSecondary }]}>
             Only HODs and Captain have access. Crew can export to PDF.
           </Text>
-        )}
-        {canManage && (
-          <View style={styles.createSection}>
-            <Button
-              title="Create"
-              onPress={() => navigation.navigate('CreateSafetyEquipment')}
-              variant="primary"
-              fullWidth
-            />
-          </View>
         )}
       </ScrollView>
     </View>
@@ -323,6 +330,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
   sectionTitle: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.md },
+  editBtn: { fontSize: FONTS.sm, fontWeight: '600' },
   card: {
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.lg,
