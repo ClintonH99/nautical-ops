@@ -106,6 +106,7 @@ export const WatchDutiesScreen = () => {
   const [assignments, setAssignments] = useState<WatchAssignment[]>([]);
   const [dutyGroups, setDutyGroups] = useState<DutyGroup[]>([]);
   const [selectedDept, setSelectedDept] = useState<Department | 'All'>('All');
+  const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [addGroupModalVisible, setAddGroupModalVisible] = useState(false);
   const [newGroupTitle, setNewGroupTitle] = useState('');
@@ -568,7 +569,7 @@ export const WatchDutiesScreen = () => {
         </Modal>
       )}
 
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: SPACING.xl, marginBottom: SPACING.md }}>
         <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base, fontWeight: '600' }}>Duties</Text>
         {canManage && (
           <TouchableOpacity onPress={() => { setNewGroupTitle(''); setNewGroupDept('BRIDGE'); setAddGroupModalVisible(true); }}>
@@ -623,19 +624,33 @@ export const WatchDutiesScreen = () => {
 
       {filteredGroups.map((group) => (
         <View key={group.id} style={[styles.card, { backgroundColor: themeColors.surface, marginBottom: SPACING.sm }]}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base, fontWeight: '600' }}>{group.title}</Text>
+          <TouchableOpacity
+            style={styles.cardHeaderRow}
+            onPress={() => setExpandedGroupId(expandedGroupId === group.id ? null : group.id)}
+            activeOpacity={0.8}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base, fontWeight: '600' }}>{group.title}</Text>
+              <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.xs, marginTop: 2 }}>
+                {group.items.length} item{group.items.length === 1 ? '' : 's'}
+              </Text>
+            </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <View style={{ backgroundColor: COLORS.primary + '20', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }}>
                 <Text style={{ color: COLORS.primary, fontSize: FONTS.xs }}>{DEPT_LABEL[group.department]}</Text>
               </View>
-              {canManage && (
+              {canManage && expandedGroupId === group.id && (
                 <TouchableOpacity onPress={() => handleDeleteGroup(group.id, group.title)}>
                   <Text style={{ color: '#dc2626', fontSize: FONTS.sm }}>Delete</Text>
                 </TouchableOpacity>
               )}
+              <Text style={{ color: themeColors.textSecondary, fontSize: 12 }}>
+                {expandedGroupId === group.id ? '\u25b2' : '\u25bc'}
+              </Text>
             </View>
-          </View>
+          </TouchableOpacity>
+          {expandedGroupId === group.id && (
+          <>
           {group.items.map((item) => (
             <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <TouchableOpacity
@@ -685,6 +700,8 @@ export const WatchDutiesScreen = () => {
                 <Text style={{ color: COLORS.primary, fontSize: FONTS.sm }}>+ Add item</Text>
               </TouchableOpacity>
             )
+          )}
+          </>
           )}
         </View>
       ))}
