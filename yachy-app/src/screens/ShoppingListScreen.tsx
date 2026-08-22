@@ -24,7 +24,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import shoppingListsService, { ShoppingList, ShoppingListItem } from '../services/shoppingLists';
 import { Department } from '../types';
-import { Button, PageHeader } from '../components';
+import { Button, PageHeader, LabeledDropdown } from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -258,15 +258,12 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
             variant="primary"
             fullWidth
           />
-          <Text style={[styles.filterLabel, { color: themeColors.textPrimary }]}>Department</Text>
-            <TouchableOpacity
-              style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
-              onPress={() => setDepartmentDropdownOpen(!departmentDropdownOpen)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>{getDepartmentDisplayText()}</Text>
-              <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>{departmentDropdownOpen ? '▲' : '▼'}</Text>
-            </TouchableOpacity>
+          <LabeledDropdown
+            label="Department"
+            value={getDepartmentDisplayText()}
+            open={departmentDropdownOpen}
+            onPress={() => setDepartmentDropdownOpen(!departmentDropdownOpen)}
+          />
             {departmentDropdownOpen && (
               <Modal visible transparent animationType="fade">
                 <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentDropdownOpen(false)}>

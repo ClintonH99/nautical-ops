@@ -27,7 +27,7 @@ import { User } from '../types';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { PageHeader } from '../components';
+import { PageHeader, LabeledDropdown } from '../components';
 import {
   getRules,
   saveRules,
@@ -535,18 +535,13 @@ export const WatchDutiesScreen = () => {
         )}
       </View>
 
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: SPACING.lg, marginBottom: SPACING.sm }}>
-        <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base, fontWeight: '600' }}>Department</Text>
-        <TouchableOpacity
-          style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
-          onPress={() => setFilterModalVisible(true)}
-        >
-          <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>
-            {selectedDept === 'All' ? 'All Departments' : DEPT_LABEL[selectedDept]}
-          </Text>
-          <Text style={{ color: themeColors.textSecondary, fontSize: 10 }}>{filterModalVisible ? '\u25b2' : '\u25bc'}</Text>
-        </TouchableOpacity>
-      </View>
+      <LabeledDropdown
+        label="Department"
+        value={selectedDept === 'All' ? 'All Departments' : DEPT_LABEL[selectedDept]}
+        open={filterModalVisible}
+        onPress={() => setFilterModalVisible(true)}
+        spacedTop
+      />
 
       {filterModalVisible && (
         <Modal visible transparent animationType="fade">

@@ -16,3 +16,4 @@ export type { ScreenInfoContent } from './InfoModal';
 export { PillButton } from './PillButton';
 export { ExportBar } from './ExportBar';
 export { Checkbox } from './Checkbox';
+export { LabeledDropdown } from './LabeledDropdown';

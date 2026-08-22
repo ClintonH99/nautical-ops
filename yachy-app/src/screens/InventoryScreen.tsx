@@ -23,7 +23,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import inventoryService, { InventoryItem } from '../services/inventory';
 import { Department } from '../types';
 import { exportInventoryToPdf } from '../utils/inventoryPdf';
-import { Button, Input, ButtonTagCard, ButtonTagRow, PageHeader, ExportButton, ExportBar } from '../components';
+import { Button, Input, ButtonTagCard, ButtonTagRow, PageHeader, ExportButton, ExportBar, LabeledDropdown } from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -249,15 +249,12 @@ export const InventoryScreen = ({ navigation }: any) => {
           />
         )}
 
-        <Text style={[styles.filterLabel, { color: themeColors.textPrimary }]}>Department</Text>
-        <TouchableOpacity
-          style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
+        <LabeledDropdown
+          label="Department"
+          value={departmentDisplayText}
+          open={departmentDropdownOpen}
           onPress={() => setDepartmentDropdownOpen(!departmentDropdownOpen)}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>{departmentDisplayText}</Text>
-          <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>{departmentDropdownOpen ? '▲' : '▼'}</Text>
-        </TouchableOpacity>
+        />
         {departmentDropdownOpen && (
           <Modal visible transparent animationType="fade">
             <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentDropdownOpen(false)}>

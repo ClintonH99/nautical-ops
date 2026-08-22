@@ -26,7 +26,7 @@ import yardJobsService from '../services/yardJobs';
 import { YardPeriodJob, Department } from '../types';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
-import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner } from '../components';
+import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner, LabeledDropdown } from '../components';
 import { getTaskUrgencyColor } from '../utils/taskUrgency';
 import { PageHeader, ExportButton, ExportBar } from '../components';
 import { exportYardJobsToPdf } from '../utils/yardJobsPdf';
@@ -293,19 +293,12 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
       </View>
       <View style={styles.filterBar}>
         <View style={styles.filterBarContent}>
-          <Text style={[styles.filterLabel, { color: themeColors.textPrimary }]}>Department</Text>
-          <TouchableOpacity
-            style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
+          <LabeledDropdown
+            label="Department"
+            value={departmentDisplayText}
+            open={departmentDropdownOpen}
             onPress={() => setDepartmentDropdownOpen(!departmentDropdownOpen)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
-              {departmentDisplayText}
-            </Text>
-            <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>
-              {departmentDropdownOpen ? '\u25b2' : '\u25bc'}
-            </Text>
-          </TouchableOpacity>
+          />
         </View>
       </View>
       {departmentDropdownOpen && (

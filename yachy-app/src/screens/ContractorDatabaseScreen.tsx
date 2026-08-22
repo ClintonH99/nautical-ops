@@ -22,7 +22,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import contractorsService, { Contractor } from '../services/contractors';
 import { Department } from '../types';
-import { Button, Input, PageHeader } from '../components';
+import { Button, Input, PageHeader, LabeledDropdown } from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -235,15 +235,12 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
 
         {contractors.length > 0 && !loading && (
           <>
-            <Text style={[styles.filterLabel, { color: themeColors.textPrimary }]}>Department</Text>
-            <TouchableOpacity
-              style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
+            <LabeledDropdown
+              label="Department"
+              value={departmentDisplayText}
+              open={departmentDropdownOpen}
               onPress={() => setDepartmentDropdownOpen(!departmentDropdownOpen)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>{departmentDisplayText}</Text>
-              <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>{departmentDropdownOpen ? '▲' : '▼'}</Text>
-            </TouchableOpacity>
+            />
             {departmentDropdownOpen && (
               <Modal visible transparent animationType="fade">
                 <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentDropdownOpen(false)}>

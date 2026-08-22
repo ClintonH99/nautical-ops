@@ -24,7 +24,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { PageHeader, ExportButton } from '../components';
+import { PageHeader, ExportButton, LabeledDropdown } from '../components';
 import { DayReview, DayReviewEntry, Department, getMonthReview, getPastMonths, getMonthDataForPdf } from '../services/restEntries';
 import { generateHoursOfRestPdf } from '../utils/hoursOfRestPdf';
 import { canAccessVesselManagement } from '../utils/access';
@@ -225,19 +225,12 @@ export const RestToBeConfirmedScreen = () => {
 
         <View style={styles.filterBar}>
           <View style={styles.filterBarContent}>
-            <Text style={[styles.filterLabel, { color: themeColors.textPrimary }]}>Department</Text>
-            <TouchableOpacity
-              style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
+            <LabeledDropdown
+              label="Department"
+              value={selectedDept === 'All' ? 'All Departments' : DEPT_LABEL[selectedDept]}
+              open={filterModalVisible}
               onPress={() => setFilterModalVisible(true)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
-                {selectedDept === 'All' ? 'All Departments' : DEPT_LABEL[selectedDept]}
-              </Text>
-              <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>
-                {filterModalVisible ? '\u25b2' : '\u25bc'}
-              </Text>
-            </TouchableOpacity>
+            />
           </View>
         </View>
 

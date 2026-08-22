@@ -22,7 +22,7 @@ import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../st
 import preDepartureChecklistsService from '../services/preDepartureChecklists';
 import vesselService from '../services/vessel';
 import { PreDepartureChecklist, Department } from '../types';
-import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner, PageHeader, ExportButton, ExportBar } from '../components';
+import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner, PageHeader, ExportButton, ExportBar, LabeledDropdown } from '../components';
 import { generatePreDepartureChecklistPdf } from '../utils/preDepartureChecklistPdf';
 
 const CAPTAIN_CHECKLIST_MAX_ITEMS = 15;
@@ -311,22 +311,15 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
       )}
       <View style={styles.filterBar}>
         <View style={styles.filterBarContent}>
-          <Text style={[styles.filterLabel, { color: themeColors.textPrimary }]}>Department</Text>
-          <TouchableOpacity
-            style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
-            onPress={() => setDepartmentModalVisible(true)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
-              {departmentFilter
+          <LabeledDropdown
+            label="Department"
+            value={departmentFilter
                 ? (DEPARTMENT_OPTIONS.find((o) => o.value === departmentFilter)?.label ??
                   departmentFilter)
                 : 'All departments'}
-            </Text>
-            <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>
-              {departmentModalVisible ? '▲' : '▼'}
-            </Text>
-          </TouchableOpacity>
+            open={departmentModalVisible}
+            onPress={() => setDepartmentModalVisible(true)}
+          />
         </View>
         {departmentFilter ? (
           <TouchableOpacity onPress={() => setDepartmentFilter('')} style={styles.clearFilters}>
