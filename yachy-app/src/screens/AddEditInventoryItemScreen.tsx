@@ -265,6 +265,7 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
                 value={row.amount}
                 onChangeText={(v) => setRowAt(index, 'amount', v)}
                 placeholder="#"
+                keyboardType="decimal-pad"
                 placeholderTextColor={COLORS.gray400}
                 returnKeyType="next"
               />

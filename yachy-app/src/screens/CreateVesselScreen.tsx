@@ -29,10 +29,6 @@ import { usePostHog } from 'posthog-react-native';
 
 const ACCENT_GOLD = '#c9a227';
 
-// HomeScreen falls back to the bundled asset when no banner is set, so a
-// slow or failed upload costs nothing the user can see.
-const BANNER_UPLOAD_MAX_MS = 8000;
-
 export const CreateVesselScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const isAuthenticated = useAuthStore((s) => !!s.user);
@@ -63,24 +59,22 @@ export const CreateVesselScreen = ({ navigation }: any) => {
       });
 
       // The default banner is required by ADMIN/Rules/DEFAULT_VESSEL_BANNER.md
-      // but must never block vessel creation. A try/catch is not enough on its
-      // own: the blob -> arrayBuffer conversion inside uploadBannerImage can
-      // hang forever on React Native rather than rejecting, which left this
-      // screen spinning indefinitely. Race it so the promise always settles.
-      try {
-        await Promise.race([
-          (async () => {
-            const asset = Asset.fromModule(require('../../assets/default-vessel-banner.png'));
-            await asset.downloadAsync();
-            if (asset.localUri) {
-              await vesselService.uploadBannerImage(vessel.id, asset.localUri);
-            }
-          })(),
-          new Promise<void>((resolve) => setTimeout(resolve, BANNER_UPLOAD_MAX_MS)),
-        ]);
-      } catch (bannerErr) {
-        if (__DEV__) console.warn('Default vessel banner upload failed (non-fatal):', bannerErr);
-      }
+      // but the user must never wait on it. It is deliberately not awaited:
+      // the blob -> arrayBuffer conversion inside uploadBannerImage can hang
+      // forever on React Native rather than rejecting, and even when it works
+      // it is slow. Fire it and move on - HomeScreen falls back to the bundled
+      // asset until the upload lands, so nothing visible depends on it.
+      void (async () => {
+        try {
+          const asset = Asset.fromModule(require('../../assets/default-vessel-banner.png'));
+          await asset.downloadAsync();
+          if (asset.localUri) {
+            await vesselService.uploadBannerImage(vessel.id, asset.localUri);
+          }
+        } catch (bannerErr) {
+          if (__DEV__) console.warn('Default vessel banner upload failed (non-fatal):', bannerErr);
+        }
+      })();
 
       const {
         data: { user },

@@ -259,6 +259,7 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
               value={item.amount ?? ''}
               onChangeText={(v) => setItemAt(index, 'amount', v)}
               placeholder="#"
+              keyboardType="decimal-pad"
               placeholderTextColor={COLORS.textTertiary}
               returnKeyType="next"
               onSubmitEditing={() => itemInputRefs.current[index]?.focus()}

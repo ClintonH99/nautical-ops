@@ -194,6 +194,7 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
                     value={entry.amount}
                     onChangeText={(v) => setEntryAt(index, 'amount', v)}
                     placeholder="#"
+                    keyboardType="decimal-pad"
                     placeholderTextColor={COLORS.gray400}
                     returnKeyType="next"
                     onSubmitEditing={() => sizeRefs.current[index]?.focus()}
