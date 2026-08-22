@@ -19,7 +19,17 @@ function loc(arr: string[]): string {
   return (arr || []).length ? (arr || []).map((l) => escapeHtml(l)).join('. ') : '-';
 }
 
-export async function generateMusterStationPdf(data: MusterStationData, filename: string): Promise<void> {
+const STYLES =
+  '@page{size:A4 landscape;margin:20mm 16mm}body{font-family:system-ui,sans-serif;font-size:11px;color:#111}' +
+  'h1{font-size:18px;font-weight:700;color:#1E3A8A;margin-bottom:8px}' +
+  'h2{font-size:14px;font-weight:700;color:#111;margin:0 0 8px}' +
+  '.subtitle{font-size:10px;color:#666;margin-bottom:12px}' +
+  'table{width:100%;border-collapse:collapse;font-size:10px}th,td{padding:6px 8px;border:1px solid #e5e7eb;text-align:left}' +
+  'thead tr{background:#1E3A8A;color:#fff;font-weight:600}tr:nth-child(even) td{background:#f9fafb}.loc{margin:4px 0}' +
+  '.station{page-break-inside:avoid}.station + .station{page-break-before:always;padding-top:8px}';
+
+/** The body of one muster station: its locations and its duty table. */
+function buildStation(data: MusterStationData, heading?: string): string {
   const sig = (data.emergencySignals || {}) as Record<string, string>;
   const crew = data.crewMembers || [];
 
@@ -42,19 +52,9 @@ export async function generateMusterStationPdf(data: MusterStationData, filename
     )
     .join('');
 
-  const html =
-    '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' +
-    '@page{size:A4 landscape;margin:20mm 16mm}body{font-family:system-ui,sans-serif;font-size:11px;color:#111}' +
-    'h1{font-size:18px;font-weight:700;color:#1E3A8A;margin-bottom:8px}.subtitle{font-size:10px;color:#666;margin-bottom:12px}' +
-    'table{width:100%;border-collapse:collapse;font-size:10px}th,td{padding:6px 8px;border:1px solid #e5e7eb;text-align:left}' +
-    'thead tr{background:#1E3A8A;color:#fff;font-weight:600}tr:nth-child(even) td{background:#f9fafb}.loc{margin:4px 0}' +
-    '</style></head><body>' +
-    '<h1>' +
-    escapeHtml(data.vesselName || 'Vessel') +
-    ' Muster Station & Duties</h1>' +
-    '<p class="subtitle">Generated ' +
-    new Date().toISOString().slice(0, 10) +
-    '</p>' +
+  return (
+    '<div class="station">' +
+    (heading ? '<h2>' + escapeHtml(heading) + '</h2>' : '') +
     '<div class="loc"><strong>Muster Station:</strong> ' +
     escapeHtml(data.musterStation || '-') +
     '</div>' +
@@ -83,12 +83,66 @@ export async function generateMusterStationPdf(data: MusterStationData, filename
     escapeHtml(sig.medical || '-') +
     '</td></tr>' +
     crewRows +
-    '</tbody></table></body></html>';
+    '</tbody></table></div>'
+  );
+}
 
+async function shareHtmlAsPdf(html: string, filename: string): Promise<void> {
   const { uri } = await Print.printToFileAsync({ html });
   const newUri = FileSystem.cacheDirectory + filename;
   await FileSystem.moveAsync({ from: uri, to: newUri });
   if (await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(newUri, { mimeType: 'application/pdf', dialogTitle: 'Save ' + filename });
   }
+}
+
+/** One muster station per document. */
+export async function generateMusterStationPdf(
+  data: MusterStationData,
+  filename: string
+): Promise<void> {
+  const html =
+    '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' +
+    STYLES +
+    '</style></head><body>' +
+    '<h1>' +
+    escapeHtml(data.vesselName || 'Vessel') +
+    ' Muster Station &amp; Duties</h1>' +
+    '<p class="subtitle">Generated ' +
+    new Date().toISOString().slice(0, 10) +
+    '</p>' +
+    buildStation(data) +
+    '</body></html>';
+  await shareHtmlAsPdf(html, filename);
+}
+
+/**
+ * Several muster stations in one document, each under its own heading and
+ * starting on a fresh page. Used by the Export control in the page header.
+ */
+export async function generateMusterStationListPdf(
+  stations: { title: string; data: MusterStationData }[],
+  vesselName: string
+): Promise<void> {
+  if (stations.length === 0) throw new Error('Select at least one muster station to export.');
+
+  const today = new Date().toISOString().slice(0, 10);
+  const html =
+    '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' +
+    STYLES +
+    '</style></head><body>' +
+    '<h1>' +
+    escapeHtml(vesselName || 'Vessel') +
+    ' Muster Station &amp; Duties</h1>' +
+    '<p class="subtitle">Generated ' +
+    today +
+    ' &middot; ' +
+    stations.length +
+    ' station' +
+    (stations.length === 1 ? '' : 's') +
+    '</p>' +
+    stations.map((s) => buildStation(s.data, s.title || 'Untitled')).join('') +
+    '</body></html>';
+
+  await shareHtmlAsPdf(html, 'Muster_Station_Duties_' + today + '.pdf');
 }

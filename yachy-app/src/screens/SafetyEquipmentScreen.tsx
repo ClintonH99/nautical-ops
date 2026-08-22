@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
-  sectionTitle: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.md },
+  sectionTitle: { fontSize: FONTS.sm, fontWeight: '600', marginTop: SPACING.xl, marginBottom: SPACING.md },
   editBtn: { fontSize: FONTS.sm, fontWeight: '600' },
   card: {
     borderRadius: BORDER_RADIUS.lg,
@@ -361,6 +361,6 @@ const styles = StyleSheet.create({
   previewMore: { fontSize: FONTS.xs, marginTop: 2 },
   previewEmpty: { fontSize: FONTS.sm, fontStyle: 'italic', marginTop: SPACING.sm },
   emptyText: { fontSize: FONTS.base, marginBottom: SPACING.xl, textAlign: 'center' },
-  createSection: { marginTop: SPACING.lg },
+  createSection: { marginTop: SPACING.lg, marginBottom: SPACING.sm },
   crewNote: { fontSize: FONTS.sm, textAlign: 'center', marginTop: SPACING.md, fontStyle: 'italic' },
 });

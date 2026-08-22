@@ -20,8 +20,8 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import musterStationsService from '../services/musterStations';
-import { Button, LoadingSpinner, PageHeader } from '../components';
-import { generateMusterStationPdf } from '../utils/musterStationPdf';
+import { Button, LoadingSpinner, PageHeader, ExportButton, ExportBar, Checkbox } from '../components';
+import { generateMusterStationListPdf } from '../utils/musterStationPdf';
 import type { MusterStation, MusterStationData } from '../services/musterStations';
 
 function MusterStationPreview({
@@ -101,7 +101,9 @@ export const MusterStationScreen = ({ navigation }: any) => {
   const [items, setItems] = useState<MusterStation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [exportingId, setExportingId] = useState<string | null>(null);
+  const [exportMode, setExportMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [exportingList, setExportingList] = useState(false);
 
   const load = useCallback(async () => {
     if (!vesselId) return;
@@ -127,18 +129,34 @@ export const MusterStationScreen = ({ navigation }: any) => {
     load();
   };
 
-  const onDownloadPdf = async (item: MusterStation) => {
-    setExportingId(item.id);
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectedStations = items.filter((i) => selectedIds.has(i.id));
+
+  const onExportSelected = async () => {
+    if (selectedStations.length === 0) {
+      Alert.alert('Nothing selected', 'Tap the muster stations you want to include, then export.');
+      return;
+    }
+    setExportingList(true);
     try {
-      const fn =
-        (item.title || 'Muster Station').replace(/[^a-z0-9]/gi, '_') +
-        '_Muster_Station_and_Duties.pdf';
-      await generateMusterStationPdf(item.data, fn);
-    } catch (e) {
-      console.error('Export PDF error:', e);
-      Alert.alert('Error', 'Could not export PDF');
+      await generateMusterStationListPdf(
+        selectedStations.map((m) => ({ title: m.title, data: m.data })),
+        String(selectedStations[0]?.data?.vesselName ?? '')
+      );
+      setExportMode(false);
+      setSelectedIds(new Set());
+    } catch (e: any) {
+      Alert.alert('Export failed', e?.message ?? 'Could not create the PDF. Please try again.');
     } finally {
-      setExportingId(null);
+      setExportingList(false);
     }
   };
 
@@ -186,7 +204,28 @@ export const MusterStationScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.pageWrap}>
-      <PageHeader title="Muster Station & Duties" info={MUSTER_STATION_INFO} infoScreenKey="muster_station" />
+      <PageHeader
+        title="Muster Station & Duties"
+        info={MUSTER_STATION_INFO}
+        infoScreenKey="muster_station"
+        actions={
+          <ExportButton
+            active={exportMode}
+            onPress={() => {
+              if (exportMode) setSelectedIds(new Set());
+              setExportMode(!exportMode);
+            }}
+          />
+        }
+      />
+      {exportMode && (
+        <ExportBar
+          count={selectedStations.length}
+          onConfirm={onExportSelected}
+          exporting={exportingList}
+          hint="Tap stations to select"
+        />
+      )}
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={[styles.content, items.length === 0 && styles.contentEmpty]}
@@ -197,11 +236,20 @@ export const MusterStationScreen = ({ navigation }: any) => {
           <TouchableOpacity
             key={item.id}
             style={[styles.card, { backgroundColor: themeColors.surface }]}
-            onPress={() => isHOD && onEdit(item)}
-            activeOpacity={isHOD ? 0.8 : 1}
-            disabled={!isHOD}
+            onPress={() =>
+              exportMode ? toggleSelect(item.id) : isHOD && onEdit(item)
+            }
+            activeOpacity={isHOD || exportMode ? 0.8 : 1}
+            disabled={!isHOD && !exportMode}
           >
             <View style={styles.cardHeader}>
+              {exportMode && (
+                <Checkbox
+                  checked={selectedIds.has(item.id)}
+                  onPress={() => toggleSelect(item.id)}
+                  surface={themeColors.surface}
+                />
+              )}
               <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
                 {item.title}
               </Text>
@@ -215,24 +263,6 @@ export const MusterStationScreen = ({ navigation }: any) => {
               )}
             </View>
             <MusterStationPreview data={item.data} themeColors={themeColors} />
-            <TouchableOpacity
-              style={styles.downloadBtn}
-              onPress={() => onDownloadPdf(item)}
-              disabled={!!exportingId}
-            >
-              {exportingId === item.id ? (
-                <ActivityIndicator size="small" color={COLORS.primary} />
-              ) : (
-                <Text
-                  style={[
-                    styles.downloadBtnText,
-                    { color: themeColors.isDark ? COLORS.white : COLORS.primary },
-                  ]}
-                >
-                  Export to PDF
-                </Text>
-              )}
-            </TouchableOpacity>
           </TouchableOpacity>
         ))}
         {items.length === 0 && (
@@ -296,8 +326,6 @@ const styles = StyleSheet.create({
   previewValue: { fontSize: FONTS.sm, marginBottom: SPACING.sm },
   previewMetaWrap: { marginBottom: SPACING.sm },
   previewMeta: { fontSize: FONTS.xs },
-  downloadBtn: { alignSelf: 'flex-start', paddingVertical: SPACING.xs },
-  downloadBtnText: { fontSize: FONTS.base, color: COLORS.primary, fontWeight: '600' },
   emptyText: { fontSize: FONTS.base, marginBottom: SPACING.xl, textAlign: 'center' },
   createSection: { marginTop: SPACING.lg },
 });
