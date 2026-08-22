@@ -122,7 +122,7 @@ export const ForgotPasswordScreen = ({ navigation }: any) => {
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: themeColors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={100}
+      keyboardVerticalOffset={0}
     >
       <PageHeader title="Reset Password" />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">

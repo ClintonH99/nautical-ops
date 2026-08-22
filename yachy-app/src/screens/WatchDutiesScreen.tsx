@@ -325,7 +325,7 @@ export const WatchDutiesScreen = () => {
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: themeColors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={100}
+      keyboardVerticalOffset={0}
     >
       <PageHeader title="Watch Duties" info={WATCH_DUTIES_INFO} infoScreenKey="watch_duties" />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">

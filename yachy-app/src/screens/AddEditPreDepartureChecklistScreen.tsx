@@ -241,7 +241,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: themeColors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={100}
+      keyboardVerticalOffset={0}
     >
       <PageHeader title="Pre-Departure Checklist" />
       <ScrollView
