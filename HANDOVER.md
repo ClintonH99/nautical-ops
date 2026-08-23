@@ -162,15 +162,34 @@ None of these has been exercised on a device, across five builds:
 
 ---
 
+## 8b. ADMIN compliance is largely unaudited
+
+`ADMIN/Rules/` holds **30 rule files**. I have read **5**. The remaining 25 have not been checked against the code by me or, as far as I can tell, recently by anyone.
+
+This matters because the 2026-08-21/22 work changed page headers, export controls, edit buttons, department rows and card behaviour across most of the app — and there are ADMIN rules governing exactly those things, including eight separate dark-mode rules (`DARK_MODE_EXPORT_PDF.md`, `DARK_MODE_EDIT_BUTTONS.md`, `DARK_MODE_LABELS_HINTS.md`, `DARK_MODE_TITLES.md`, `DARK_MODE_TEXT_BOXES.md`, and others). Those changes were made without reading them.
+
+**Two violations found by reading only two rule files:**
+
+1. **`ProfileScreen`'s department dropdown was not standardised.** `DEPARTMENT_SELECTION_DROPDOWN.md` names `ProfileScreen` explicitly. The 2026-08-22 rollout converted 16 screens to `LabeledDropdown` and missed this one — the search pattern didn't match its markup. Any claim that the department layout is applied "everywhere" is inaccurate.
+
+2. **`RegisterScreen` uses department button toggles.** `DEPARTMENT_SELECTION_DROPDOWN.md` requires a dropdown and permits toggles only for `RegisterCrewScreen`, because of its multi-select requirement. This is pre-existing, and was consciously left in place on 2026-08-22 without checking whether a rule covered it.
+
+**If two violations surfaced from two rule files, assume more exist.** A systematic audit of all 30 against the code is worth doing before trusting any statement about design consistency in this app — including the statements in this document.
+
+Also unread by me: the **11 edge functions** (including `verify-apple-iap`, `paddle-webhook`, `create-paddle-checkout`, `delete-account`, `delete-vessel`), all **42 migrations**, and the **8 `.cursor/rules/*.mdc`** files at the repo root and in `yachy-app/`, which carry additional binding rules on routing, permissions, date pickers and web sign-in.
+
+---
+
 ## 9. If I were picking up this codebase
 
 In priority order, and each small enough to verify:
 
-1. **Fix `uploadBannerImage` at source** — the hang can still bite in Vessel Settings and probably avatars. Then create the `vessel-banners` bucket.
-2. **Add affected-row checks to delete/update handlers** — silent no-ops are invisible today.
-3. **Look hard at `iap.ts`** — 2 of the 3 typecheck errors are there, and it handles money.
-4. **Test coverage** — one test file for 44,000 lines. The services are the highest-value target.
-5. **Delete or archive the 61 stale `.md` files** — they actively mislead.
-6. **Split the 1000-line screens.**
+1. **Audit all 30 `ADMIN/Rules/` files against the code.** Two violations turned up from reading two files. This is the highest-value first task, because it tells you how far the documented standard and the actual app have drifted.
+2. **Fix `uploadBannerImage` at source** — the hang can still bite in Vessel Settings and probably avatars. Then create the `vessel-banners` bucket.
+3. **Add affected-row checks to delete/update handlers** — silent no-ops are invisible today.
+4. **Look hard at `iap.ts`** — 2 of the 3 typecheck errors are there, and it handles money.
+5. **Test coverage** — one test file for 44,000 lines. The services are the highest-value target.
+6. **Delete or archive the 61 stale `.md` files** — they actively mislead.
+7. **Split the 1000-line screens.**
 
 The structural problem behind "I change something and it breaks something else" is mostly this: 83 screens each carrying their own copies of layout, styles, and patterns. The work on 2026-08-21/22 pulled the page header, export controls, department row, and card behaviour into shared components — that direction is worth continuing, because each thing extracted is one fewer place to break.
