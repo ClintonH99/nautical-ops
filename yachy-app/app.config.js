@@ -6,6 +6,7 @@ module.exports = {
     ...appJson.expo,
     extra: {
       ...appJson.expo.extra,
+      appEnv: process.env.APP_ENV || 'development',
       posthogProjectToken: process.env.POSTHOG_PROJECT_TOKEN,
       posthogHost: process.env.POSTHOG_HOST,
     },

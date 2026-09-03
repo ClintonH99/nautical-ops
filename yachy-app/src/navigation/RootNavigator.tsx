@@ -4,7 +4,12 @@
  */
 
 import React, { useCallback, useEffect } from 'react';
-import { NavigationContainer, DefaultTheme, getStateFromPath } from '@react-navigation/native';
+import {
+  NavigationContainer,
+  DefaultTheme,
+  getStateFromPath,
+  useNavigationContainerRef,
+} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View, StyleSheet, Platform, AppState } from 'react-native';
@@ -110,6 +115,11 @@ import {
 import { DEVICE_LIMIT_MESSAGE } from '../services/deviceAccess';
 import { reconcileAppleSubscription } from '../services/iap';
 import { COLORS } from '../constants/theme';
+import {
+  isSentryEnabled,
+  sentryNavigationIntegration,
+  setSentryUserContext,
+} from '../lib/sentry';
 
 const Stack = createNativeStackNavigator();
 
@@ -265,6 +275,7 @@ export const RootNavigator = () => {
   } = useAuthStore();
   const isCaptain = user?.role === 'CAPTAIN_MOV';
   const hasVessel = !!user?.vesselId;
+  const navigationRef = useNavigationContainerRef();
   // Welcome: logged-out cold start only. Logged-in users skip Welcome (straight to MainTabs / CaptainWelcome).
   // Per ADMIN rule: Crew members never see CaptainWelcome - go straight to MainTabs
   const initialRoute = !isAuthenticated
@@ -278,6 +289,24 @@ export const RootNavigator = () => {
   const themeColors = BACKGROUND_THEMES[backgroundTheme];
 
   const loadTheme = useThemeStore((s) => s.loadTheme);
+
+  useEffect(() => {
+    if (isSentryEnabled) {
+      sentryNavigationIntegration.registerNavigationContainer(navigationRef);
+    }
+  }, [navigationRef]);
+
+  useEffect(() => {
+    setSentryUserContext(
+      user
+        ? {
+            id: user.id,
+            role: user.role,
+            vesselId: user.vesselId,
+          }
+        : null
+    );
+  }, [user?.id, user?.role, user?.vesselId]);
 
   const applyAccountAccess = useCallback(
     async (candidate: NonNullable<typeof user>): Promise<boolean> => {
@@ -656,6 +685,7 @@ export const RootNavigator = () => {
 
   return (
     <NavigationContainer
+      ref={navigationRef}
       theme={navTheme}
       linking={webLinking}
       fallback={
