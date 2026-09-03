@@ -21,7 +21,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES, SHADOWS } from '../consta
 import { useAuthStore, useThemeStore, BACKGROUND_THEMES } from '../store';
 import { supabase } from '../services/supabase';
 import authService from '../services/auth';
-import { Button, LoadingSpinner, PageHeader } from '../components';
+import { Button, LoadingSpinner, PageHeader, LabeledDropdown } from '../components';
 import userService from '../services/user';
 import { Department } from '../types';
 import Constants from 'expo-constants';
@@ -33,6 +33,7 @@ const APP_VERSION = Constants.expoConfig?.version ?? '';
 export const ProfileScreen = ({ navigation }: any) => {
   const { user, setUser } = useAuthStore();
   const isCaptain = user?.role === 'CAPTAIN_MOV';
+  const displaysAsCaptain = isCaptain || user?.position?.toLowerCase().includes('captain') === true;
 
   const refreshUser = async () => {
     if (!user?.id) return;
@@ -89,7 +90,7 @@ export const ProfileScreen = ({ navigation }: any) => {
   const handleDeleteVessel = () => {
     Alert.alert(
       'Delete Vessel',
-      "This cancels the subscription and moves every crew member (including you) onto their own private account. This cannot be undone. If you subscribed through the iOS app, you'll also need to cancel it separately in your Apple ID Settings - Apple doesn't allow this to be done from within the app.",
+      "This moves every crew member (including you) onto their own private account and cannot be undone. If you subscribed through Apple or Google Play, you must also cancel the subscription in that store's settings.",
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -99,10 +100,12 @@ export const ProfileScreen = ({ navigation }: any) => {
             const result = await callVesselFunction('delete-vessel');
             if (result?.success) {
               await refreshUser();
-              if (result.needsManualAppleCancellation) {
+              if (result.needsManualStoreCancellation) {
+                const storeName =
+                  result.cancellationProvider === 'google' ? 'Google Play' : 'your Apple ID';
                 Alert.alert(
                   'Vessel Deleted',
-                  "One more step: since you subscribed through the iOS app, go to your Apple ID Settings and cancel the subscription there too, or you'll keep being charged."
+                  `One more step: go to ${storeName} subscription settings and cancel the subscription there too, or you'll keep being charged.`
                 );
               } else {
                 Alert.alert('Done', 'The vessel has been deleted.');
@@ -364,7 +367,7 @@ export const ProfileScreen = ({ navigation }: any) => {
                   <TextInput
                     style={[
                       styles.input,
-                      { backgroundColor: themeColors.background, color: themeColors.textPrimary },
+                      { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
                     ]}
                     value={name}
                     onChangeText={setName}
@@ -372,7 +375,9 @@ export const ProfileScreen = ({ navigation }: any) => {
                     placeholderTextColor={themeColors.textSecondary}
                   />
                 ) : (
-                  <Text style={[styles.value, { color: themeColors.textPrimary }]}>{user?.name}</Text>
+                  <Text style={[styles.value, { color: themeColors.textPrimary }]}>
+                    {user?.name}
+                  </Text>
                 )}
               </View>
 
@@ -390,7 +395,7 @@ export const ProfileScreen = ({ navigation }: any) => {
                   <TextInput
                     style={[
                       styles.input,
-                      { backgroundColor: themeColors.background, color: themeColors.textPrimary },
+                      { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
                     ]}
                     value={position}
                     onChangeText={setPosition}
@@ -406,35 +411,15 @@ export const ProfileScreen = ({ navigation }: any) => {
 
               {/* Department */}
               <View style={styles.field}>
-                <Text
-                  style={[
-                    styles.label,
-                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                  ]}
-                >
-                  Department
-                </Text>
                 {isEditing ? (
                   <>
-                    <TouchableOpacity
-                      style={[styles.departmentDropdown, { backgroundColor: themeColors.background }]}
+                    <LabeledDropdown
+                      label="Department"
+                      value={department.charAt(0) + department.slice(1).toLowerCase()}
+                      open={departmentDropdownOpen}
                       onPress={() => setDepartmentDropdownOpen(true)}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        style={[styles.departmentDropdownText, { color: themeColors.textPrimary }]}
-                      >
-                        {department.charAt(0) + department.slice(1).toLowerCase()}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.departmentDropdownChevron,
-                          { color: themeColors.textSecondary },
-                        ]}
-                      >
-                        ▼
-                      </Text>
-                    </TouchableOpacity>
+                      tightTop
+                    />
                     {departmentDropdownOpen && (
                       <Modal visible transparent animationType="fade">
                         <Pressable
@@ -474,9 +459,19 @@ export const ProfileScreen = ({ navigation }: any) => {
                     )}
                   </>
                 ) : (
-                  <Text style={[styles.value, { color: themeColors.textPrimary }]}>
-                    {user?.department}
-                  </Text>
+                  <>
+                    <Text
+                      style={[
+                        styles.label,
+                        { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                      ]}
+                    >
+                      Department
+                    </Text>
+                    <Text style={[styles.value, { color: themeColors.textPrimary }]}>
+                      {user?.department}
+                    </Text>
+                  </>
                 )}
               </View>
 
@@ -524,7 +519,7 @@ export const ProfileScreen = ({ navigation }: any) => {
                 >
                   <View style={styles.roleBadge}>
                     <Text style={[styles.roleText, { textTransform: 'none' }]}>
-                      {user?.role === 'CAPTAIN_MOV'
+                      {displaysAsCaptain
                         ? 'MOV (Master of Vessel)'
                         : user?.role === 'HOD'
                           ? 'HOD (Head of Department)'
@@ -582,12 +577,16 @@ export const ProfileScreen = ({ navigation }: any) => {
                     <Text style={[styles.settingsLabel, { color: themeColors.textPrimary }]}>
                       E-signature
                     </Text>
-                    <Text style={[styles.settingsDescription, { color: themeColors.textSecondary }]}>
+                    <Text
+                      style={[styles.settingsDescription, { color: themeColors.textSecondary }]}
+                    >
                       Set up your signature for Hours of Rest
                     </Text>
                   </View>
                 </View>
-                <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>{'\u203A'}</Text>
+                <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>
+                  {'\u203A'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -608,12 +607,16 @@ export const ProfileScreen = ({ navigation }: any) => {
                     <Text style={[styles.settingsLabel, { color: themeColors.textPrimary }]}>
                       Join a different vessel
                     </Text>
-                    <Text style={[styles.settingsDescription, { color: themeColors.textSecondary }]}>
+                    <Text
+                      style={[styles.settingsDescription, { color: themeColors.textSecondary }]}
+                    >
                       Switch vessels using a new invite code
                     </Text>
                   </View>
                 </View>
-                <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>{'\u203A'}</Text>
+                <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>
+                  {'\u203A'}
+                </Text>
               </TouchableOpacity>
               {!!user?.vesselId && (
                 <TouchableOpacity
@@ -627,12 +630,16 @@ export const ProfileScreen = ({ navigation }: any) => {
                       <Text style={[styles.settingsLabel, { color: themeColors.textPrimary }]}>
                         Leave Vessel
                       </Text>
-                      <Text style={[styles.settingsDescription, { color: themeColors.textSecondary }]}>
+                      <Text
+                        style={[styles.settingsDescription, { color: themeColors.textSecondary }]}
+                      >
                         Step away - the vessel and crew continue without you
                       </Text>
                     </View>
                   </View>
-                  <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>{'\u203A'}</Text>
+                  <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>
+                    {'\u203A'}
+                  </Text>
                 </TouchableOpacity>
               )}
               {isCaptain && (
@@ -647,12 +654,16 @@ export const ProfileScreen = ({ navigation }: any) => {
                       <Text style={[styles.settingsLabel, { color: COLORS.danger }]}>
                         Delete Vessel
                       </Text>
-                      <Text style={[styles.settingsDescription, { color: themeColors.textSecondary }]}>
+                      <Text
+                        style={[styles.settingsDescription, { color: themeColors.textSecondary }]}
+                      >
                         Cancel the subscription and remove all crew
                       </Text>
                     </View>
                   </View>
-                  <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>{'\u203A'}</Text>
+                  <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>
+                    {'\u203A'}
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -881,23 +892,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
-  },
-  departmentDropdown: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  departmentDropdownText: {
-    fontSize: FONTS.base,
-    fontWeight: '500',
-  },
-  departmentDropdownChevron: {
-    fontSize: 10,
   },
   modalBackdrop: {
     flex: 1,

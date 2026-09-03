@@ -157,6 +157,7 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
               ]}
             >
               <Input
+                forceLight
                 label="Full Name"
                 placeholder="John Doe"
                 value={formData.name}
@@ -165,6 +166,7 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
               />
 
               <Input
+                forceLight
                 label="Email"
                 placeholder="your@email.com"
                 value={formData.email}
@@ -176,6 +178,7 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
               />
 
               <Input
+                forceLight
                 label="Password"
                 placeholder="Minimum 6 characters"
                 value={formData.password}
@@ -187,6 +190,7 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
               />
 
               <Input
+                forceLight
                 label="Confirm Password"
                 placeholder="Re-enter password"
                 value={formData.confirmPassword}

@@ -25,7 +25,14 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { PageHeader, ExportButton, LabeledDropdown } from '../components';
-import { DayReview, DayReviewEntry, Department, getMonthReview, getPastMonths, getMonthDataForPdf } from '../services/restEntries';
+import {
+  DayReview,
+  DayReviewEntry,
+  Department,
+  getMonthReview,
+  getPastMonths,
+  getMonthDataForPdf,
+} from '../services/restEntries';
 import { generateHoursOfRestPdf } from '../utils/hoursOfRestPdf';
 import { canAccessVesselManagement } from '../utils/access';
 
@@ -83,13 +90,16 @@ export const RestToBeConfirmedScreen = () => {
     setLoading(false);
   }, [user?.vesselId]);
 
-  const loadMonth = useCallback(async (year: number, month: number) => {
-    if (!user?.vesselId) return;
-    setLoading(true);
-    const result = await getMonthReview(user.vesselId, year, month);
-    setDays(result);
-    setLoading(false);
-  }, [user?.vesselId]);
+  const loadMonth = useCallback(
+    async (year: number, month: number) => {
+      if (!user?.vesselId) return;
+      setLoading(true);
+      const result = await getMonthReview(user.vesselId, year, month);
+      setDays(result);
+      setLoading(false);
+    },
+    [user?.vesselId]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -148,9 +158,10 @@ export const RestToBeConfirmedScreen = () => {
     setExporting(true);
     try {
       const now = new Date();
-      const { year, month } = tab === 'history' && selectedMonth
-        ? selectedMonth
-        : { year: now.getFullYear(), month: now.getMonth() + 1 };
+      const { year, month } =
+        tab === 'history' && selectedMonth
+          ? selectedMonth
+          : { year: now.getFullYear(), month: now.getMonth() + 1 };
 
       for (const userId of selectedExportIds) {
         const crewMember = uniqueCrew.find((c) => c.userId === userId);
@@ -176,10 +187,17 @@ export const RestToBeConfirmedScreen = () => {
         <Text style={[styles.sectionLabel, { color }]}>{title}</Text>
         {list.map((day) => (
           <View key={day.date} style={[styles.dayCard, { borderColor: color }]}>
-            <Text style={[styles.dayTitle, { color: themeColors.textPrimary, marginBottom: 4 }]}>{day.date}</Text>
+            <Text style={[styles.dayTitle, { color: themeColors.textPrimary, marginBottom: 4 }]}>
+              {day.date}
+            </Text>
             {day.entries.map((e) => (
-              <TouchableOpacity key={e.userId} onPress={() => openDay(day.date, e.userId, e.userName)}>
-                <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.sm, marginTop: 2 }}>
+              <TouchableOpacity
+                key={e.userId}
+                onPress={() => openDay(day.date, e.userId, e.userName)}
+              >
+                <Text
+                  style={{ color: themeColors.textSecondary, fontSize: FONTS.sm, marginTop: 2 }}
+                >
                   - {e.userName} - {STATUS_LABEL[e.status]}
                 </Text>
               </TouchableOpacity>
@@ -207,11 +225,18 @@ export const RestToBeConfirmedScreen = () => {
           ) : undefined
         }
       />
-      <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={styles.content}
+      >
         <View style={styles.tabRow}>
           <TouchableOpacity
             style={[styles.tab, tab === 'current' && styles.tabActive]}
-            onPress={() => { setTab('current'); setSelectedMonth(null); loadCurrent(); }}
+            onPress={() => {
+              setTab('current');
+              setSelectedMonth(null);
+              loadCurrent();
+            }}
           >
             <Text style={[styles.tabText, tab === 'current' && styles.tabTextActive]}>Current</Text>
           </TouchableOpacity>
@@ -246,17 +271,27 @@ export const RestToBeConfirmedScreen = () => {
                 </Text>
                 <TouchableOpacity
                   style={[styles.modalItem, selectedDept === 'All' && styles.modalItemSelected]}
-                  onPress={() => { setSelectedDept('All'); setFilterModalVisible(false); }}
+                  onPress={() => {
+                    setSelectedDept('All');
+                    setFilterModalVisible(false);
+                  }}
                 >
-                  <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>All Departments</Text>
+                  <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
+                    All Departments
+                  </Text>
                 </TouchableOpacity>
                 {filterOptions.map((dept) => (
                   <TouchableOpacity
                     key={dept}
                     style={[styles.modalItem, selectedDept === dept && styles.modalItemSelected]}
-                    onPress={() => { setSelectedDept(dept); setFilterModalVisible(false); }}
+                    onPress={() => {
+                      setSelectedDept(dept);
+                      setFilterModalVisible(false);
+                    }}
                   >
-                    <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>{DEPT_LABEL[dept]}</Text>
+                    <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
+                      {DEPT_LABEL[dept]}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -270,7 +305,10 @@ export const RestToBeConfirmedScreen = () => {
               <TouchableOpacity
                 key={`${m.year}-${m.month}`}
                 style={[styles.monthRow, { borderColor: themeColors.textSecondary }]}
-                onPress={() => { setSelectedMonth(m); loadMonth(m.year, m.month); }}
+                onPress={() => {
+                  setSelectedMonth(m);
+                  loadMonth(m.year, m.month);
+                }}
               >
                 <Text style={{ color: themeColors.textPrimary }}>{m.label}</Text>
               </TouchableOpacity>
@@ -281,7 +319,10 @@ export const RestToBeConfirmedScreen = () => {
         {(tab === 'current' || (tab === 'history' && selectedMonth)) && (
           <>
             {tab === 'history' && selectedMonth && (
-              <TouchableOpacity onPress={() => setSelectedMonth(null)} style={{ marginBottom: SPACING.md }}>
+              <TouchableOpacity
+                onPress={() => setSelectedMonth(null)}
+                style={{ marginBottom: SPACING.md }}
+              >
                 <Text style={{ color: COLORS.primary }}>Back to months</Text>
               </TouchableOpacity>
             )}
@@ -303,7 +344,10 @@ export const RestToBeConfirmedScreen = () => {
 
         {exportModalVisible && (
           <Modal visible transparent animationType="fade">
-            <Pressable style={styles.modalBackdrop} onPress={() => !exporting && setExportModalVisible(false)}>
+            <Pressable
+              style={styles.modalBackdrop}
+              onPress={() => !exporting && setExportModalVisible(false)}
+            >
               <View
                 style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
                 onStartShouldSetResponder={() => true}
@@ -313,7 +357,9 @@ export const RestToBeConfirmedScreen = () => {
                 </Text>
 
                 <TouchableOpacity style={styles.modalItem} onPress={toggleSelectAll}>
-                  <Text style={[styles.modalItemText, { color: COLORS.primary, fontWeight: '600' }]}>
+                  <Text
+                    style={[styles.modalItemText, { color: COLORS.primary, fontWeight: '600' }]}
+                  >
                     {selectedExportIds.size === uniqueCrew.length ? 'Deselect all' : 'Select all'}
                   </Text>
                 </TouchableOpacity>
@@ -321,22 +367,32 @@ export const RestToBeConfirmedScreen = () => {
                 {uniqueCrew.map((c) => (
                   <TouchableOpacity
                     key={c.userId}
-                    style={[styles.modalItem, selectedExportIds.has(c.userId) && styles.modalItemSelected]}
+                    style={[
+                      styles.modalItem,
+                      selectedExportIds.has(c.userId) && styles.modalItemSelected,
+                    ]}
                     onPress={() => toggleExportSelection(c.userId)}
                   >
                     <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                      {selectedExportIds.has(c.userId) ? '\u2713 ' : ''}{c.userName}
+                      {selectedExportIds.has(c.userId) ? '\u2713 ' : ''}
+                      {c.userName}
                     </Text>
                   </TouchableOpacity>
                 ))}
 
                 <TouchableOpacity
-                  style={[styles.reviewButton, { marginTop: SPACING.md, opacity: exporting || selectedExportIds.size === 0 ? 0.6 : 1 }]}
+                  style={[
+                    styles.reviewButton,
+                    {
+                      marginTop: SPACING.md,
+                      opacity: exporting || selectedExportIds.size === 0 ? 0.6 : 1,
+                    },
+                  ]}
                   onPress={handleExportSelected}
                   disabled={exporting || selectedExportIds.size === 0}
                 >
                   <Text style={styles.reviewButtonText}>
-                    {exporting ? 'Exporting...' : `Export (${selectedExportIds.size})`}
+                    {exporting ? 'Exporting...' : `Export to PDF (${selectedExportIds.size})`}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -353,7 +409,13 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   tabRow: { flexDirection: 'row', gap: 8, marginBottom: SPACING.md },
-  tab: { flex: 1, padding: SPACING.sm, borderRadius: BORDER_RADIUS.md, alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.05)' },
+  tab: {
+    flex: 1,
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
   tabActive: { backgroundColor: COLORS.primary },
   tabText: { fontSize: FONTS.sm },
   tabTextActive: { color: '#fff', fontWeight: '600' },
@@ -404,8 +466,19 @@ const styles = StyleSheet.create({
   modalItemText: { fontSize: FONTS.base },
   monthRow: { padding: SPACING.md, borderRadius: BORDER_RADIUS.md, borderWidth: 1 },
   sectionLabel: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.sm },
-  dayCard: { padding: SPACING.md, borderRadius: BORDER_RADIUS.md, borderWidth: 1, marginBottom: SPACING.sm },
+  dayCard: {
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    marginBottom: SPACING.sm,
+  },
   dayTitle: { fontSize: FONTS.base, fontWeight: '600' },
-  reviewButton: { backgroundColor: COLORS.primary, padding: SPACING.md, borderRadius: BORDER_RADIUS.md, alignItems: 'center', marginBottom: SPACING.lg },
+  reviewButton: {
+    backgroundColor: COLORS.primary,
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    marginBottom: SPACING.lg,
+  },
   reviewButtonText: { color: '#fff', fontWeight: '600' },
 });

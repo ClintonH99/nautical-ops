@@ -3,7 +3,7 @@
  * Handles auth flow and main navigation
  */
 
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { NavigationContainer, DefaultTheme, getStateFromPath } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -92,10 +92,23 @@ import {
 import { CreateVesselScreen, CaptainWelcomeScreen } from '../screens';
 import { WatchScheduleDetailScreen } from '../screens/WatchScheduleDetailScreen';
 import { MainTabsNavigator } from './MainTabsNavigator';
-import { useAuthStore, useDepartmentColorStore, useThemeStore, BACKGROUND_THEMES } from '../store';
+import {
+  useAuthStore,
+  useDepartmentColorStore,
+  useThemeStore,
+  BACKGROUND_THEMES,
+  LOGIN_NOTICE_STORAGE_KEY,
+  PAYMENT_RESTRICTION_STORAGE_KEY,
+} from '../store';
 import authService from '../services/auth';
-import { supabase } from '../services/supabase';
+import { supabase, SUPABASE_AUTH_STORAGE_KEY } from '../services/supabase';
 import { startRealtimeSync, stopRealtimeSync } from '../services/realtimeSync';
+import {
+  evaluateAccountAccess,
+  SUBSCRIPTION_PAYMENT_REQUIRED_MESSAGE,
+} from '../services/accountAccess';
+import { DEVICE_LIMIT_MESSAGE } from '../services/deviceAccess';
+import { reconcileAppleSubscription } from '../services/iap';
 import { COLORS } from '../constants/theme';
 
 const Stack = createNativeStackNavigator();
@@ -192,8 +205,18 @@ const APP_SCREEN_PATHS = {
   AddEditContractor: 'contractors/edit',
 };
 
-const createWebLinkingConfig = (isAuthenticated: boolean) => {
-  const screens = isAuthenticated ? APP_SCREEN_PATHS : AUTH_SCREEN_PATHS;
+const PAYMENT_RESTRICTED_PATHS = {
+  VesselPlans: 'vessel-plans',
+  TermsConditions: 'terms',
+  PrivacyPolicy: 'privacy',
+};
+
+const createWebLinkingConfig = (isAuthenticated: boolean, captainPaymentRequired = false) => {
+  const screens = !isAuthenticated
+    ? AUTH_SCREEN_PATHS
+    : captainPaymentRequired
+      ? PAYMENT_RESTRICTED_PATHS
+      : APP_SCREEN_PATHS;
 
   return {
     prefixes: WEB_PREFIXES,
@@ -210,7 +233,7 @@ const createWebLinkingConfig = (isAuthenticated: boolean) => {
 
       // Logged in: /login should resolve to home
       if (isAuthenticated && cleanedPath === 'login') {
-        return getStateFromPath('', options);
+        return getStateFromPath(captainPaymentRequired ? 'vessel-plans' : '', options);
       }
 
       const resolved = getStateFromPath(cleanedPath, options);
@@ -219,7 +242,10 @@ const createWebLinkingConfig = (isAuthenticated: boolean) => {
       // Invalid/protected URL behavior:
       // - logged out -> /login
       // - logged in -> /
-      return getStateFromPath(isAuthenticated ? '' : 'login', options);
+      return getStateFromPath(
+        isAuthenticated ? (captainPaymentRequired ? 'vessel-plans' : '') : 'login',
+        options
+      );
     },
   };
 };
@@ -227,20 +253,81 @@ const createWebLinkingConfig = (isAuthenticated: boolean) => {
 // ROUTING RULE: Users with an account AND assigned to a vessel always go to Home (MainTabs).
 // CaptainWelcome (create vessel) is ONLY for captains who have no vessel yet.
 export const RootNavigator = () => {
-  const { isAuthenticated, isLoading, setUser, setLoading, user } = useAuthStore();
+  const {
+    isAuthenticated,
+    isLoading,
+    setUser,
+    setLoading,
+    user,
+    captainPaymentRequired,
+    setCaptainPaymentRequired,
+    setLoginNotice,
+  } = useAuthStore();
   const isCaptain = user?.role === 'CAPTAIN_MOV';
   const hasVessel = !!user?.vesselId;
   // Welcome: logged-out cold start only. Logged-in users skip Welcome (straight to MainTabs / CaptainWelcome).
   // Per ADMIN rule: Crew members never see CaptainWelcome - go straight to MainTabs
   const initialRoute = !isAuthenticated
     ? 'Login'
-    : isCaptain && !hasVessel
-      ? 'CaptainWelcome'
-      : 'MainTabs';
+    : captainPaymentRequired
+      ? 'VesselPlans'
+      : isCaptain && !hasVessel
+        ? 'CaptainWelcome'
+        : 'MainTabs';
   const backgroundTheme = useThemeStore((s) => s.backgroundTheme);
   const themeColors = BACKGROUND_THEMES[backgroundTheme];
 
   const loadTheme = useThemeStore((s) => s.loadTheme);
+
+  const applyAccountAccess = useCallback(
+    async (candidate: NonNullable<typeof user>): Promise<boolean> => {
+      const decision = await evaluateAccountAccess(candidate);
+
+      if (decision.state === 'unavailable') {
+        // A connectivity/backend failure must not create a new restriction or
+        // clear one that the server already confirmed earlier.
+        setUser(candidate);
+        return !useAuthStore.getState().captainPaymentRequired;
+      }
+
+      if (decision.state === 'device_limit_reached') {
+        setLoginNotice(DEVICE_LIMIT_MESSAGE);
+        setCaptainPaymentRequired(false);
+        try {
+          await supabase.auth.signOut({ scope: 'local' });
+        } catch {
+          /* best-effort local sign-out */
+        }
+        setUser(null);
+        return false;
+      }
+
+      if (decision.state === 'crew_payment_required') {
+        setLoginNotice(SUBSCRIPTION_PAYMENT_REQUIRED_MESSAGE);
+        setCaptainPaymentRequired(false);
+        try {
+          await supabase.auth.signOut({ scope: 'local' });
+        } catch {
+          /* best-effort local sign-out */
+        }
+        setUser(null);
+        return false;
+      }
+
+      if (decision.state === 'captain_payment_required') {
+        setLoginNotice(null);
+        setCaptainPaymentRequired(true);
+        setUser(candidate);
+        return false;
+      }
+
+      setLoginNotice(null);
+      setCaptainPaymentRequired(false);
+      setUser(candidate);
+      return true;
+    },
+    [setCaptainPaymentRequired, setLoginNotice, setUser]
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -254,7 +341,42 @@ export const RootNavigator = () => {
         /* theme load is non-critical */
       });
       try {
-        const cached = await AsyncStorage.getItem('nautical_ops_cached_user');
+        const [cached, storedAuth, storedNotice, storedPaymentRestriction] = await Promise.all([
+          AsyncStorage.getItem('nautical_ops_cached_user'),
+          AsyncStorage.getItem(SUPABASE_AUTH_STORAGE_KEY),
+          AsyncStorage.getItem(LOGIN_NOTICE_STORAGE_KEY),
+          AsyncStorage.getItem(PAYMENT_RESTRICTION_STORAGE_KEY),
+        ]);
+
+        if (storedNotice) setLoginNotice(storedNotice);
+        if (storedPaymentRestriction === 'true') setCaptainPaymentRequired(true);
+
+        let hasUsableLocalSession = false;
+        try {
+          const session = storedAuth ? JSON.parse(storedAuth) : null;
+          hasUsableLocalSession = Boolean(
+            session?.access_token &&
+            session?.refresh_token &&
+            typeof session?.expires_at === 'number' &&
+            session.expires_at * 1000 > Date.now() + 30_000
+          );
+        } catch {
+          /* malformed auth storage is handled as signed out below */
+        }
+
+        if (!hasUsableLocalSession) {
+          // Do not delete a structurally valid Supabase session merely because
+          // its short-lived access token expired. getSession() below can still
+          // renew it using the refresh token. We only withhold the cached UI so
+          // authenticated screens cannot make requests with the expired token.
+          await AsyncStorage.removeItem('nautical_ops_cached_user');
+          if (mounted) {
+            setUser(null);
+            setLoading(false);
+          }
+          return false;
+        }
+
         if (cached && mounted) {
           const parsed = JSON.parse(cached);
           if (parsed?.id) {
@@ -266,6 +388,9 @@ export const RootNavigator = () => {
       } catch {
         /* cache is best-effort */
       }
+      // No cached user means Login is the safest immediately usable screen.
+      // Do not hold first launch behind the network session/profile request.
+      if (mounted) setLoading(false);
       return false;
     };
 
@@ -297,20 +422,12 @@ export const RootNavigator = () => {
         }
 
         if (mounted && userData) {
-          const isCaptain =
-            userData.role === 'CAPTAIN_MOV';
+          const isCaptain = userData.role === 'CAPTAIN_MOV';
           if (isCaptain && !userData.vesselId) {
             const refetch = await authService.getUserProfile(session.user.id);
             if (mounted && refetch?.vesselId) userData = refetch;
           }
-          if (isCaptain) {
-            setUser(userData);
-          } else if (userData.vesselId) {
-            // TODO: Re-enable subscription check once payment flow is set up
-            if (mounted) setUser(userData);
-          } else {
-            setUser(userData);
-          }
+          if (mounted) await applyAccountAccess(userData);
         }
       } catch (error) {
         if (__DEV__) console.error('Auth check error:', error);
@@ -324,21 +441,9 @@ export const RootNavigator = () => {
       }
     };
 
-    void (async () => {
-      const renderedFromCache = await renderFromCache();
-      try {
-        await Promise.race([
-          runBootstrap(renderedFromCache),
-          new Promise<void>((resolve) => setTimeout(() => resolve(), BOOTSTRAP_MAX_MS)),
-        ]);
-      } finally {
-        // Only matters on a first launch with no cache. For a returning user
-        // loading was already cleared before the network was touched.
-        if (mounted) setLoading(false);
-      }
-    })();
+    let unsubscribeAuth: (() => void) | undefined;
 
-    const { data: authListener } = authService.onAuthStateChange(async (user) => {
+    const handleAuthChange = async (user: Parameters<typeof setUser>[0]) => {
       try {
         // Password reset verifies an OTP, which signs the user in mid-flow.
         // Without this guard the stack remounts and ForgotPasswordScreen is
@@ -348,38 +453,65 @@ export const RootNavigator = () => {
           setUser(null);
           return;
         }
-        const isCaptain = user.role === 'CAPTAIN_MOV';
-        if (isCaptain && !user.vesselId) {
+        if (user.role === 'CAPTAIN_MOV' && !user.vesselId) {
           const refetch = await authService.getUserProfile(user.id);
-          if (refetch?.vesselId) setUser(refetch);
-          else setUser(user);
-        } else if (isCaptain) {
-          setUser(user);
-        } else if (user.vesselId) {
-          // TODO: Re-enable subscription check once payment flow is set up
-          // const subscription = await getVesselSubscription(user.vesselId);
-          // if (subscription?.status === 'active') {
-          //   setUser(user);
-          // } else {
-          //   await supabase.auth.signOut();
-          //   setUser(null);
-          // }
-          setUser(user);
+          await applyAccountAccess(refetch?.vesselId ? refetch : user);
         } else {
-          setUser(user);
+          await applyAccountAccess(user);
         }
       } catch (error) {
         if (__DEV__) console.error('Auth listener error:', error);
       } finally {
         setLoading(false);
       }
-    });
+    };
+
+    void (async () => {
+      const renderedFromCache = await renderFromCache();
+      if (!mounted) return;
+
+      try {
+        const bootstrap = runBootstrap(renderedFromCache);
+        await Promise.race([
+          bootstrap,
+          new Promise<void>((resolve) => setTimeout(() => resolve(), BOOTSTRAP_MAX_MS)),
+        ]);
+
+        // Finish the session refresh/cleanup before subscribing. Registering
+        // first makes Supabase run a second INITIAL_SESSION refresh and log an
+        // invalid refresh token as a red-screen error in Expo Go.
+        await bootstrap;
+        if (!mounted) return;
+
+        const { data: authListener } = authService.onAuthStateChange(handleAuthChange);
+        unsubscribeAuth = () => authListener?.subscription?.unsubscribe();
+
+        if (
+          Platform.OS !== 'web' &&
+          AppState.currentState === 'active' &&
+          useAuthStore.getState().isAuthenticated
+        ) {
+          supabase.auth.startAutoRefresh();
+        }
+      } finally {
+        // Only matters on a first launch with no cache. For a returning user
+        // loading was already cleared before the network was touched.
+        if (mounted) setLoading(false);
+      }
+    })();
 
     return () => {
       mounted = false;
-      authListener?.subscription?.unsubscribe();
+      unsubscribeAuth?.();
     };
-  }, [loadTheme, setLoading, setUser]);
+  }, [
+    applyAccountAccess,
+    loadTheme,
+    setCaptainPaymentRequired,
+    setLoading,
+    setLoginNotice,
+    setUser,
+  ]);
 
   const loadDepartmentColorOverrides = useDepartmentColorStore((s) => s.loadOverrides);
   useEffect(() => {
@@ -401,7 +533,8 @@ export const RootNavigator = () => {
         onUserUpdated: (u) => {
           // CreateVesselScreen defers setUser until "Go to Home" to avoid stack remount
           if (useAuthStore.getState().deferUserUpdate) return;
-          setUser(u ?? null);
+          if (u) void applyAccountAccess(u);
+          else setUser(null);
         },
       });
     }, 0);
@@ -409,7 +542,70 @@ export const RootNavigator = () => {
       clearTimeout(t);
       stopRealtimeSync();
     };
-  }, [isAuthenticated, user?.id, user?.vesselId, setUser]);
+  }, [applyAccountAccess, isAuthenticated, user?.id, user?.vesselId, setUser]);
+
+  // Subscription/device access is checked on app resume and periodically while
+  // open. Restricted Captains are refreshed every 15 seconds so a successful
+  // payment unlocks promptly without exposing provider records via Realtime.
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
+    let active = true;
+    let checking = false;
+
+    const checkAccess = async () => {
+      if (checking) return;
+      checking = true;
+      try {
+        const currentUser = useAuthStore.getState().user;
+        if (active && currentUser) await applyAccountAccess(currentUser);
+      } finally {
+        checking = false;
+      }
+    };
+
+    const interval = setInterval(checkAccess, captainPaymentRequired ? 15_000 : 300_000);
+    const appStateSubscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void checkAccess();
+    });
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+      appStateSubscription.remove();
+    };
+  }, [applyAccountAccess, captainPaymentRequired, isAuthenticated, user]);
+
+  // Existing Apple subscriptions created before server notifications need one
+  // verified refresh to link their transaction chain to the vessel. Run it in
+  // the background after first paint, at most once every 24 hours.
+  useEffect(() => {
+    if (
+      Platform.OS !== 'ios' ||
+      !isAuthenticated ||
+      user?.role !== 'CAPTAIN_MOV' ||
+      !user.vesselId
+    ) {
+      return;
+    }
+
+    let active = true;
+    const storageKey = `nautical_ops_apple_reconcile_${user.vesselId}`;
+    const timer = setTimeout(() => {
+      void (async () => {
+        const lastAttempt = Number(await AsyncStorage.getItem(storageKey));
+        if (Number.isFinite(lastAttempt) && Date.now() - lastAttempt < 24 * 60 * 60 * 1000) return;
+        await AsyncStorage.setItem(storageKey, String(Date.now()));
+        const refreshed = await reconcileAppleSubscription(user.vesselId!);
+        const currentUser = useAuthStore.getState().user;
+        if (active && refreshed && currentUser) await applyAccountAccess(currentUser);
+      })();
+    }, 1500);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [applyAccountAccess, isAuthenticated, user?.role, user?.vesselId]);
 
   // Resume: restart token auto-refresh and refresh profile after backgrounding (Supabase RN guidance)
   useEffect(() => {
@@ -419,7 +615,7 @@ export const RootNavigator = () => {
         void authService.getSession().then((session) => {
           if (!session?.user?.id) return;
           void authService.getUserProfileWithRetry(session.user.id).then((fresh) => {
-            if (fresh) setUser(fresh);
+            if (fresh) void applyAccountAccess(fresh);
           });
         });
       } else {
@@ -429,7 +625,7 @@ export const RootNavigator = () => {
 
     const sub = AppState.addEventListener('change', onAppStateChange);
     return () => sub.remove();
-  }, [setUser]);
+  }, [applyAccountAccess]);
 
   if (isLoading) {
     return (
@@ -453,7 +649,10 @@ export const RootNavigator = () => {
     },
   };
 
-  const webLinking = Platform.OS === 'web' ? createWebLinkingConfig(isAuthenticated) : undefined;
+  const webLinking =
+    Platform.OS === 'web'
+      ? createWebLinkingConfig(isAuthenticated, captainPaymentRequired)
+      : undefined;
 
   return (
     <NavigationContainer
@@ -544,6 +743,25 @@ export const RootNavigator = () => {
                 options={{ headerShown: false }}
               />
             </>
+          ) : captainPaymentRequired ? (
+            <>
+              <Stack.Screen
+                name="VesselPlans"
+                component={VesselPlansScreen}
+                initialParams={{ paymentRestricted: true }}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="TermsConditions"
+                component={TermsConditionsScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="PrivacyPolicy"
+                component={PrivacyPolicyScreen}
+                options={{ headerShown: false }}
+              />
+            </>
           ) : (
             // Main App Stack (tabs = Home, Explore, Profile)
             <>
@@ -573,11 +791,7 @@ export const RootNavigator = () => {
                 component={CreateVesselScreen}
                 options={{ headerShown: false }}
               />
-              <Stack.Screen
-                name="FAQHelp"
-                component={FAQScreen}
-                options={{ headerShown: false }}
-              />
+              <Stack.Screen name="FAQHelp" component={FAQScreen} options={{ headerShown: false }} />
               <Stack.Screen
                 name="Settings"
                 component={ProfileScreen}
@@ -657,11 +871,7 @@ export const RootNavigator = () => {
                 component={CreateSafetyEquipmentScreen}
                 options={{ headerShown: false }}
               />
-              <Stack.Screen
-                name="Rules"
-                component={RulesScreen}
-                options={{ headerShown: false }}
-              />
+              <Stack.Screen name="Rules" component={RulesScreen} options={{ headerShown: false }} />
               <Stack.Screen
                 name="CreateRules"
                 component={CreateRulesScreen}
@@ -703,11 +913,7 @@ export const RootNavigator = () => {
                 component={TripColorSettingsScreen}
                 options={{ headerShown: false }}
               />
-              <Stack.Screen
-                name="Tasks"
-                component={TasksScreen}
-                options={{ headerShown: false }}
-              />
+              <Stack.Screen name="Tasks" component={TasksScreen} options={{ headerShown: false }} />
               <Stack.Screen
                 name="TasksList"
                 component={TasksListScreen}
@@ -968,21 +1174,21 @@ export const RootNavigator = () => {
               />
               <Stack.Screen
                 name="FutureUpdates"
-              component={FutureUpdatesScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="Notepad"
-              component={NotepadScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="AddEditNote"
-              component={AddEditNoteScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="AddEditContractor"
+                component={FutureUpdatesScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="Notepad"
+                component={NotepadScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="AddEditNote"
+                component={AddEditNoteScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="AddEditContractor"
                 component={AddEditContractorScreen}
                 options={{ headerShown: false }}
               />

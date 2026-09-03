@@ -22,12 +22,15 @@ import { Button, Input } from '../components';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import vesselService from '../services/vessel';
-import { supabase } from '../services/supabase';
 import authService from '../services/auth';
 import { useAuthStore } from '../store';
 import { usePostHog } from 'posthog-react-native';
 
 const ACCENT_GOLD = '#c9a227';
+const MARITIME_BACKGROUND = '#0f172a';
+const MARITIME_SURFACE = '#1e293b';
+const MARITIME_TEXT = '#f8fafc';
+const MARITIME_TEXT_MUTED = '#cbd5e1';
 
 export const CreateVesselScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -38,7 +41,7 @@ export const CreateVesselScreen = ({ navigation }: any) => {
   const [vesselName, setVesselName] = useState('');
   useEffect(() => {
     return () => setDeferUserUpdate(false);
-  }, []);
+  }, [setDeferUserUpdate]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [createdVessel, setCreatedVessel] = useState<any>(null);
@@ -54,16 +57,15 @@ export const CreateVesselScreen = ({ navigation }: any) => {
     setError('');
 
     try {
+      // The server creates the vessel and assigns this Captain atomically.
+      // Defer auth-store realtime updates until the success screen is ready.
+      setDeferUserUpdate(true);
       const vessel = await vesselService.createVessel({
         name: vesselName.trim(),
       });
 
-      // The default banner is required by ADMIN/Rules/DEFAULT_VESSEL_BANNER.md
-      // but the user must never wait on it. It is deliberately not awaited:
-      // the blob -> arrayBuffer conversion inside uploadBannerImage can hang
-      // forever on React Native rather than rejecting, and even when it works
-      // it is slow. Fire it and move on - HomeScreen falls back to the bundled
-      // asset until the upload lands, so nothing visible depends on it.
+      // The default banner is non-critical. Upload it behind the success screen
+      // so users never wait on storage; Home falls back to the bundled image.
       void (async () => {
         try {
           const asset = Asset.fromModule(require('../../assets/default-vessel-banner.png'));
@@ -76,32 +78,9 @@ export const CreateVesselScreen = ({ navigation }: any) => {
         }
       })();
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        throw new Error('No authenticated user found');
-      }
-
-      setDeferUserUpdate(true);
-
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({
-          vessel_id: vessel.id,
-          role: 'CAPTAIN_MOV',
-          vessel_joined_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', user.id);
-
-      if (updateError) {
-        console.error('Update user error:', updateError);
-        throw updateError;
-      }
-
-      const updatedUser = await authService.getUserProfile(user.id);
+      const session = await authService.getSession();
+      if (!session?.user) throw new Error('No authenticated user found');
+      const updatedUser = await authService.getUserProfile(session.user.id);
       setPendingUpdatedUser(updatedUser);
       setCreatedVessel(vessel);
       posthog.capture('vessel_created', {
@@ -129,22 +108,19 @@ export const CreateVesselScreen = ({ navigation }: any) => {
 
   if (createdVessel) {
     return (
-      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-        <StatusBar
-          barStyle={themeColors.isDark ? 'light-content' : 'dark-content'}
-          backgroundColor={themeColors.background}
-        />
+      <View style={[styles.container, { backgroundColor: MARITIME_BACKGROUND }]}>
+        <StatusBar barStyle="light-content" backgroundColor={MARITIME_BACKGROUND} />
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 }]}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.hero}>
-            <View style={[styles.heroBadge, { backgroundColor: themeColors.surface }]}>
+            <View style={[styles.heroBadge, { backgroundColor: MARITIME_SURFACE }]}>
               <Ionicons name="boat-outline" size={20} color={ACCENT_GOLD} />
-              <Text style={[styles.heroBadgeText, { color: themeColors.textPrimary }]}>Nautical Ops</Text>
+              <Text style={[styles.heroBadgeText, { color: MARITIME_TEXT }]}>Nautical Ops</Text>
             </View>
-            <Text style={[styles.successTitle, { color: themeColors.textPrimary }]}>Vessel Created!</Text>
-            <Text style={[styles.successSubtitle, { color: themeColors.textSecondary }]}>
+            <Text style={[styles.successTitle, { color: MARITIME_TEXT }]}>Vessel Created!</Text>
+            <Text style={[styles.successSubtitle, { color: MARITIME_TEXT_MUTED }]}>
               {createdVessel.name} is ready to go
             </Text>
             <View style={styles.heroAccent} />
@@ -159,17 +135,18 @@ export const CreateVesselScreen = ({ navigation }: any) => {
               },
             ]}
           >
-            <Text style={[styles.instructionsTitle, { color: themeColors.textPrimary }]}>
-              Next Steps
-            </Text>
-            <Text style={[styles.instructionText, { color: themeColors.textSecondary }]}>
+            <Text style={[styles.instructionsTitle, { color: MARITIME_TEXT }]}>Next Steps</Text>
+            <Text style={[styles.instructionText, { color: MARITIME_TEXT_MUTED }]}>
               1. Open Settings and go to Vessel Plans to select a plan
             </Text>
-            <Text style={[styles.instructionText, { color: themeColors.textSecondary }]}>
+            <Text style={[styles.instructionText, { color: MARITIME_TEXT_MUTED }]}>
               2. Complete payment to unlock your invite code
             </Text>
-            <Text style={[styles.instructionText, { color: themeColors.textSecondary }]}>
+            <Text style={[styles.instructionText, { color: MARITIME_TEXT_MUTED }]}>
               3. Share the invite code with your crew members
+            </Text>
+            <Text style={[styles.instructionText, { color: MARITIME_TEXT_MUTED }]}>
+              Invite Code is accessible in the settings menu.
             </Text>
           </View>
 
@@ -178,7 +155,7 @@ export const CreateVesselScreen = ({ navigation }: any) => {
               title="Continue to Dashboard"
               onPress={handleContinue}
               fullWidth
-              variant="outline"
+              variant="outlineLight"
               style={styles.actionButton}
             />
           </View>
@@ -214,9 +191,13 @@ export const CreateVesselScreen = ({ navigation }: any) => {
           <View style={styles.hero}>
             <View style={[styles.heroBadge, { backgroundColor: themeColors.surface }]}>
               <Ionicons name="boat-outline" size={20} color={ACCENT_GOLD} />
-              <Text style={[styles.heroBadgeText, { color: themeColors.textPrimary }]}>Nautical Ops</Text>
+              <Text style={[styles.heroBadgeText, { color: themeColors.textPrimary }]}>
+                Nautical Ops
+              </Text>
             </View>
-            <Text style={[styles.heroTitle, { color: themeColors.textPrimary }]}>Create your vessel</Text>
+            <Text style={[styles.heroTitle, { color: themeColors.textPrimary }]}>
+              Create your vessel
+            </Text>
             <Text style={[styles.heroSubtitle, { color: themeColors.textSecondary }]}>
               Set up your yacht and get an invite code for your crew
             </Text>
@@ -232,12 +213,15 @@ export const CreateVesselScreen = ({ navigation }: any) => {
               },
             ]}
           >
-            <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]}>Create Vessel</Text>
+            <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]}>
+              Create Vessel
+            </Text>
             <Text style={[styles.cardSubtitle, { color: themeColors.textSecondary }]}>
               Enter your vessel name to get started
             </Text>
 
             <Input
+              forceLight
               label="Vessel Name"
               placeholder="e.g., M/Y Excellence, S/Y Adventure"
               value={vesselName}

@@ -58,17 +58,16 @@ function RulesPreview({
   );
 }
 
-
 const RULES_INFO = {
-            title: 'Rules On-Board',
-            description: 'The vessel\'s standing rules and conduct guidelines.',
-            features: [
-              'Read the vessel\'s on-board rules',
-              'Keep conduct expectations clear for all crew',
-              'Reference standing policies at any time',
-              'Update rules as they evolve',
-            ],
-          };
+  title: 'Rules On-Board',
+  description: "The vessel's standing rules and conduct guidelines.",
+  features: [
+    "Read the vessel's on-board rules",
+    'Keep conduct expectations clear for all crew',
+    'Reference standing policies at any time',
+    'Update rules as they evolve',
+  ],
+};
 
 export const RulesScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -176,7 +175,10 @@ export const RulesScreen = ({ navigation }: any) => {
             disabled={!isHOD}
           >
             <View style={styles.cardHeader}>
-              <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
+              <Text
+                style={[styles.cardTitle, { color: themeColors.textPrimary }]}
+                numberOfLines={1}
+              >
                 {item.data?.title || item.title}
               </Text>
               {isHOD && (
@@ -195,7 +197,10 @@ export const RulesScreen = ({ navigation }: any) => {
               disabled={!!exportingId}
             >
               {exportingId === item.id ? (
-                <ActivityIndicator size="small" color={COLORS.primary} />
+                <ActivityIndicator
+                  size="small"
+                  color={themeColors.isDark ? COLORS.white : COLORS.primary}
+                />
               ) : (
                 <Text
                   style={[

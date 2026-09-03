@@ -125,7 +125,7 @@ class PreDepartureChecklistsService {
     if (listError) throw listError;
 
     if (input.items.length > 0) {
-      await supabase.from('pre_departure_checklist_items').insert(
+      const { error: itemsError } = await supabase.from('pre_departure_checklist_items').insert(
         input.items.map((item, idx) => ({
           checklist_id: checklist.id,
           label: item.label.trim(),
@@ -133,6 +133,11 @@ class PreDepartureChecklistsService {
           checked: false,
         }))
       );
+      if (itemsError) {
+        // Avoid leaving an empty checklist when its initial items fail.
+        await supabase.from('pre_departure_checklists').delete().eq('id', checklist.id);
+        throw itemsError;
+      }
     }
 
     const created = await this.getById(checklist.id);
@@ -147,17 +152,24 @@ class PreDepartureChecklistsService {
     if (input.department !== undefined) patch.department = input.department ?? null;
 
     if (Object.keys(patch).length > 0) {
-      const { error } = await supabase.from('pre_departure_checklists').update(patch).eq('id', id);
+      const { data, error } = await supabase
+        .from('pre_departure_checklists')
+        .update(patch)
+        .eq('id', id)
+        .select('id');
       if (error) throw error;
+      if (!data?.length) throw new Error('Checklist not found or you do not have permission.');
     }
   }
 
   async updateItemChecked(itemId: string, checked: boolean): Promise<void> {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('pre_departure_checklist_items')
       .update({ checked })
-      .eq('id', itemId);
+      .eq('id', itemId)
+      .select('id');
     if (error) throw error;
+    if (!data?.length) throw new Error('Checklist item not found or you do not have permission.');
   }
 
   async addItem(checklistId: string, label: string): Promise<PreDepartureChecklistItem> {
@@ -181,13 +193,23 @@ class PreDepartureChecklistsService {
   }
 
   async deleteItem(itemId: string): Promise<void> {
-    const { error } = await supabase.from('pre_departure_checklist_items').delete().eq('id', itemId);
+    const { data, error } = await supabase
+      .from('pre_departure_checklist_items')
+      .delete()
+      .eq('id', itemId)
+      .select('id');
     if (error) throw error;
+    if (!data?.length) throw new Error('Checklist item not found or you do not have permission.');
   }
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase.from('pre_departure_checklists').delete().eq('id', id);
+    const { data, error } = await supabase
+      .from('pre_departure_checklists')
+      .delete()
+      .eq('id', id)
+      .select('id');
     if (error) throw error;
+    if (!data?.length) throw new Error('Checklist not found or you do not have permission.');
   }
 }
 

@@ -6,6 +6,7 @@
 import React from 'react';
 import { Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { COLORS } from '../constants/theme';
+import { useThemeColors } from '../hooks/useThemeColors';
 
 interface PillButtonProps {
   label: string;
@@ -14,16 +15,21 @@ interface PillButtonProps {
   tint?: string;
 }
 
-export const PillButton: React.FC<PillButtonProps> = ({ label, onPress, tint = COLORS.primary }) => (
-  <TouchableOpacity
-    onPress={onPress}
-    style={[styles.button, { borderColor: tint }]}
-    accessibilityRole="button"
-    accessibilityLabel={label}
-  >
-    <Text style={[styles.label, { color: tint }]}>{label}</Text>
-  </TouchableOpacity>
-);
+export const PillButton: React.FC<PillButtonProps> = ({ label, onPress, tint }) => {
+  const themeColors = useThemeColors();
+  const resolvedTint = tint ?? (themeColors.isDark ? COLORS.white : COLORS.primary);
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={[styles.button, { borderColor: resolvedTint }]}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      <Text style={[styles.label, { color: resolvedTint }]}>{label}</Text>
+    </TouchableOpacity>
+  );
+};
 
 const styles = StyleSheet.create({
   button: {

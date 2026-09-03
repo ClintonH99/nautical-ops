@@ -59,22 +59,30 @@ An empty `~/Desktop/nautical-ops/` (lowercase) also exists, containing only `.cl
 
 **`vessel-banners` storage bucket does not exist.** Verified: `404 NoSuchBucket`. `ADMIN/Rules/DEFAULT_VESSEL_BANNER.md` requires the default banner uploaded there on vessel creation, so that upload fails on every signup. Invisible because `HomeScreen` falls back to the bundled asset. **Fix: create the bucket (public) in Supabase. No code change.**
 
-**`uploadBannerImage` can hang forever on React Native.** In `services/vessel.ts`:
-```js
-const blob = await response.blob();
-const arrayBuffer = await new Response(blob).arrayBuffer();
-```
-RN's fetch polyfill doesn't reliably implement this. The promise may **never settle** — not reject — so `try/catch` cannot save you.
-
-This hung Captain signup indefinitely on TestFlight while working in Expo Go, because Expo Go serves assets over HTTP from Metro and a production build uses a local `file://` path. `CreateVesselScreen` now works around it by not awaiting. **The method itself is still dangerous** and is called from `VesselSettingsScreen` (vessel photo) with no workaround. `services/user.ts:343` says the avatar upload mirrors the same approach. **Fix at source.**
+**Resolved in the working tree: React Native local-file uploads could hang forever.** The old `fetch(uri).blob() -> Response(blob).arrayBuffer()` path behaved differently in Expo Go and TestFlight. Vessel-banner and profile-photo uploads now share `utils/fileUpload.ts`: native builds read bytes through Expo FileSystem, while web keeps its supported fetch path. Three regression tests cover native, web, and unreadable-file behavior. The live `vessel-banners` bucket is still required separately.
 
 **Supabase reports success for writes affecting zero rows.** A `PATCH`/`DELETE` silently refused by RLS returns `200`/`204` with an empty array and **no error**. Verified directly. Every delete handler here checks `error`, which stays `null`. Nothing checks affected-row counts.
 
-**Subscription gate disabled.** `RootNavigator` carries `// TODO: Re-enable subscription check`.
+**Subscription gate implemented in the working tree.** `RootNavigator` now enforces provider-confirmed renewal failure after the 16-day grace period while failing open for connectivity/backend uncertainty. The migration and provider notification function are not deployed yet.
 
 ---
 
 ## 4. ADMIN rule violations — confirmed
+
+Update after the original handover: the six violations below were approved for correction. Export labels and dark-mode styling, Profile/Register department dropdowns, and the instant-startup rule are now being brought into alignment; verify the current Git diff and latest commit before treating them as released.
+
+Resolution implemented in the working tree:
+- Shared PDF controls now say **Export to PDF**, including selected-item counts.
+- Shared Export and Edit-color pills use white text and borders in Night mode.
+- Hand-written Edit controls in Watch Duties, Watch Schedule, Watch Schedule Detail, and Maintenance Log use white in Night mode.
+- Profile and standard registration now use the shared labelled department dropdown. `RegisterCrewScreen` remains the documented multi-select exception.
+- `WELCOME_SCREEN_ON_APP_OPEN.md` now records the approved instant-startup behaviour instead of requiring an artificial three-second delay.
+
+Next dark-mode audit findings (not fixed in this change):
+- The shared `Input` component uses `COLORS.gray400` for ordinary placeholders in Night mode instead of `themeColors.textSecondary`.
+- Nine form screens contain custom inputs with hardcoded gray/tertiary placeholder colours.
+- Profile, Vessel Settings, Add/Edit Uniform, FAQ Help, Add/Edit Maintenance, and parts of Create Safety Equipment use `themeColors.background` for custom form inputs where `DARK_MODE_TEXT_BOXES.md` requires `themeColors.surface`.
+- A broader static scan found many hardcoded navy or dark text styles. Each occurrence still needs render-path inspection because some are on light or coloured surfaces and are not automatically violations.
 
 `ADMIN/` is the documented source of truth and **wins over existing code** (`.cursor/rules/admin-reference.mdc` makes this binding). All 30 rule statements were read. Six confirmed violations:
 
@@ -118,13 +126,12 @@ Also binding, at repo root and in `yachy-app/`: `.cursor/rules/` — `admin-refe
 
 ---
 
-## 6. Edge functions (11)
+## 6. Edge functions (10 active)
 
 | Function | Purpose |
 |---|---|
 | `verify-apple-iap` | Verify Apple IAP via App Store Server API |
-| `create-paddle-checkout` | Paddle Billing transaction, returns checkout URL |
-| `paddle-webhook` | Paddle Billing webhook handler |
+| `apple-subscription-webhook` | Refresh Apple subscription state from App Store Server Notifications |
 | `delete-account` | Delete a user account entirely |
 | `delete-vessel` | Delete a vessel (Captain/MOV only) |
 | `leave-vessel` | Leave a vessel without deleting it |
@@ -134,7 +141,7 @@ Also binding, at repo root and in `yachy-app/`: `.cursor/rules/` — `admin-refe
 | `claim-auth-link` | Claim an auth code with the app session |
 | `get-auth-link` | Web polls this for the action link; one-time use |
 
-Deno, excluded from the app's `tsconfig`. **None has been read beyond its header comment.** Subscriptions are dual-rail: Paddle for web, Apple IAP for iOS, both landing in `vessel_subscriptions`.
+Deno, excluded from the app's `tsconfig`. The payment functions have now been audited. The approved payment split is Apple IAP on iOS and Google Play Billing on Android; Nautical Ops web is access-only. Paddle is reserved exclusively for the separate Fleet HQ website. The old Nautical Ops Paddle checkout and webhook sources were removed, while historical database columns/migrations were preserved for safe compatibility.
 
 ---
 
@@ -241,3 +248,55 @@ The boundary of what this document can be trusted on:
 8. **Split the 1000-line screens.**
 
 The structural reason behind "I change something and it breaks something else" is that 83 screens each carried their own copies of layout, styles and patterns. The 2026-08-21/22 work pulled the header, export controls, department row and card behaviour into shared components. That direction is right — each thing extracted is one fewer place to break — but note it also introduced four rule violations in one pass, because the shared components were written without reading the rules that governed them. **Extract, but read `ADMIN/` first.**
+
+---
+
+## 13. Audit continuation — 2026-09-03
+
+This section records findings from the continued audit and their current working-tree status. None of these changes is released until it is committed, pushed, built, and—where applicable—deployed to Supabase.
+
+### Dark mode
+
+- **Resolved in the working tree:** `Button.tsx` now makes outline/text controls white in Night mode.
+- **Resolved in the working tree:** ordinary `Input.tsx` placeholders now use `themeColors.textSecondary` in Night mode; fixed-light and search fields retain their intentional gray placeholders.
+- **Resolved in the working tree:** `ConsentCheckbox` links and `InfoModal` bullets are readable in Night mode.
+- **Resolved in the working tree:** the audited custom form inputs use dark surfaces and theme-aware placeholders.
+- **Resolved in the working tree:** generated Watch Timetable rows use the current theme surface instead of hardcoded white.
+- **Remaining:** the broader static scan contains many hardcoded colors. Each must be checked against its actual rendered surface; not every hardcoded color is a defect.
+
+### Authentication and onboarding
+
+- **Resolved in the working tree:** Login, Register Captain, Register Crew, and Create Vessel pass `forceLight` to their shared inputs.
+- Captain/Crew post-registration routing and Captain-without-vessel routing match the governing rules.
+- Password visibility toggles are present on the checked password fields.
+- The exact invalid-login and duplicate-email messages are implemented in `auth.ts`.
+- **Resolved in the working tree:** first-launch Login is no longer blocked on a network profile request, and `WelcomeScreen` has no artificial three-second delay. Returning users with a cached profile still render immediately while Supabase refreshes behind the UI.
+- **Resolved in the working tree:** the vessel-success view uses the fixed maritime palette and states that the invite code is accessible from Settings.
+
+### Permissions and database enforcement
+
+- **Resolved in the working tree:** Captain/MOV and HOD can create, edit, and delete all Muster Stations and all pre-departure checklists, including the All Departments checklist. The `.cursor` rules now match this policy, and a new always-applied Captain full-access rule prevents future HOD-only regressions.
+- Safety Equipment screen guards match its HOD/Captain/Crew matrix.
+- **Resolved in the working tree:** Profile and Settings display MOV when either the secure role is `CAPTAIN_MOV` or a legacy profile position contains `captain`. Access control continues to use the role, not editable display text.
+- **Partially resolved in the working tree:** a migration now adds the missing Muster Station table definition and enforces read access for vessel members plus write access for HOD/Captain on Muster Stations and pre-departure checklists. It has not been deployed to the live Supabase project.
+- **Remaining:** other checked-in RLS policies generally enforce vessel membership only, not feature-specific roles. Their product permissions must be confirmed before tightening them.
+- **Remaining:** eighteen client-used database tables have no checked-in creation migration: `app_updates`, `department_signers`, `faqs`, `notes`, `rest_entries`, `rules`, `safety_equipment`, `uniforms`, `user_questions`, `user_signatures`, `users`, `vessels`, `watch_assignments`, `watch_duty_completions`, `watch_duty_groups`, `watch_duty_items`, `watch_duty_rules`, and `watch_keepers`. The `profile-photos` and `vessel-banners` storage buckets also have no complete creation migration. Their live RLS cannot be verified from Git.
+
+### Subscriptions and payments
+
+- **Resolved in the working tree:** one payment architecture is now documented consistently: Apple IAP on iOS, Google Play Billing on Android, no payment processing in Nautical Ops web, and Paddle only in Fleet HQ.
+- **Resolved in the working tree:** the renewal gate now gives all users normal access through a 16-day grace period; after provider-confirmed expiry, Crew/HOD are signed out and Captain/MOV is restricted to Vessel Plans until payment is confirmed. Connectivity failures fail open.
+- **Resolved in the working tree:** Apple transactions are bound to a vessel, bundle/expiry checks are performed server-side, and App Store Server Notifications can refresh renewal state in the background.
+- **Remaining deployment:** the new subscription migration, Apple webhook, Apple server secrets, and App Store notification URL have not been deployed/configured against production.
+- **Remaining Android implementation:** Google Play subscriptions/base plans, exact product IDs, service-account credentials, server verification, and Real-time Developer Notifications are not yet configured. No IDs will be guessed.
+- **Remaining legacy cleanup:** historical Paddle database columns/migrations remain intentionally. If old Paddle subscriptions exist in production, their disposition must be confirmed before data or live functions are removed.
+- The rule lists 5%, 8%, and 10% multi-month discounts; code sets every `discountPercent` to zero. The 11–15 monthly price is `$119.99` in the rule and `$119.00` in code.
+- Payment-access unit tests now cover entitlement, grace, confirmed non-payment, stale provider data, malformed dates, and never-subscribed vessels. Provider webhook integration tests still need to be added.
+
+### Verification after the fixes
+
+- `npm run typecheck`: passes with zero errors.
+- `npm test -- --runInBand --detectOpenHandles`: all 13 tests pass; no open handle is reported in diagnostic mode.
+- `npm run lint -- --quiet`: passes with zero errors after including Node `.mjs` build scripts in the ESLint configuration. The broader lint run still reports 342 warnings.
+- `npx expo install --check`: dependencies match the local Expo SDK 54 map; the check ran offline, so Expo warned that registry validation was unavailable.
+- `git diff --check`: passes.

@@ -17,14 +17,14 @@ Access to create, edit, and remove safety equipment is restricted by role.
 ## Role Definitions
 
 - **HOD**: `user?.role === 'HOD'`
-- **MOV (Master of Vessel)**: `user?.position?.toLowerCase().includes('captain')`
+- **MOV (Master of Vessel)**: `user?.role === 'CAPTAIN_MOV'`
 - **Crew**: All other authenticated users
 
 ## Implementation
 
 ```ts
 const isHOD = user?.role === 'HOD';
-const isMOV = user?.position?.toLowerCase().includes('captain');
+const isMOV = user?.role === 'CAPTAIN_MOV';
 const canManage = isHOD || isMOV;
 ```
 

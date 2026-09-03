@@ -78,7 +78,7 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [vesselId, listType, user?.id]);
+  }, [vesselId]);
 
   useFocusEffect(useCallback(() => {
     loadLists();

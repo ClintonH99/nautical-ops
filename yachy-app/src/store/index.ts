@@ -19,19 +19,27 @@ interface AuthState {
   isLoading: boolean;
   /** When true, realtime sync must not call setUser (CreateVessel flow defers until "Go to Home") */
   deferUserUpdate: boolean;
+  loginNotice: string | null;
+  captainPaymentRequired: boolean;
   setUser: (user: User | null) => void;
   setLoading: (loading: boolean) => void;
   setDeferUserUpdate: (defer: boolean) => void;
+  setLoginNotice: (notice: string | null) => void;
+  setCaptainPaymentRequired: (required: boolean) => void;
   logout: () => void;
 }
 
 const CACHED_USER_STORAGE_KEY = 'nautical_ops_cached_user';
+export const LOGIN_NOTICE_STORAGE_KEY = 'nautical_ops_login_notice';
+export const PAYMENT_RESTRICTION_STORAGE_KEY = 'nautical_ops_payment_restriction';
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
   deferUserUpdate: false,
+  loginNotice: null,
+  captainPaymentRequired: false,
   setUser: (user) => {
     // Cache the profile so a returning user can be rendered instantly on the
     // next cold start, without waiting on a network round-trip.
@@ -44,12 +52,34 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   setLoading: (loading) => set({ isLoading: loading }),
   setDeferUserUpdate: (defer) => set({ deferUserUpdate: defer }),
+  setLoginNotice: (loginNotice) => {
+    const operation = loginNotice
+      ? AsyncStorage.setItem(LOGIN_NOTICE_STORAGE_KEY, loginNotice)
+      : AsyncStorage.removeItem(LOGIN_NOTICE_STORAGE_KEY);
+    operation.catch(() => {});
+    set({ loginNotice });
+  },
+  setCaptainPaymentRequired: (captainPaymentRequired) => {
+    const operation = captainPaymentRequired
+      ? AsyncStorage.setItem(PAYMENT_RESTRICTION_STORAGE_KEY, 'true')
+      : AsyncStorage.removeItem(PAYMENT_RESTRICTION_STORAGE_KEY);
+    operation.catch(() => {});
+    set({ captainPaymentRequired });
+  },
   logout: () => {
     AsyncStorage.removeItem(CACHED_USER_STORAGE_KEY).catch(() => {});
+    AsyncStorage.removeItem(LOGIN_NOTICE_STORAGE_KEY).catch(() => {});
+    AsyncStorage.removeItem(PAYMENT_RESTRICTION_STORAGE_KEY).catch(() => {});
     // Clear the analytics identity too, or the next person to log in on a
     // shared device is recorded as the person who just logged out.
     posthog.reset();
-    set({ user: null, isAuthenticated: false, deferUserUpdate: false });
+    set({
+      user: null,
+      isAuthenticated: false,
+      deferUserUpdate: false,
+      loginNotice: null,
+      captainPaymentRequired: false,
+    });
   },
 }));
 

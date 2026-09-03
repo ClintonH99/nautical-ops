@@ -32,9 +32,17 @@ export const WatchScheduleDetailScreen = ({ navigation, route }: any) => {
   const exportPdf = async () => {
     setExportingPdf(true);
     try {
-      const dateStr = formatLocalDateString(scheduleDateStr(schedule), { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+      const dateStr = formatLocalDateString(scheduleDateStr(schedule), {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      });
       const rows = schedule.slots
-        .map((s) => `<tr><td>${s.crewName}</td><td>${s.crewPosition || ''}</td><td>${s.startTimeStr} - ${s.endTimeStr}</td></tr>`)
+        .map(
+          (s) =>
+            `<tr><td>${s.crewName}</td><td>${s.crewPosition || ''}</td><td>${s.startTimeStr} - ${s.endTimeStr}</td></tr>`
+        )
         .join('');
       const html = `
         <!DOCTYPE html><html><head><meta charset="utf-8">
@@ -59,7 +67,10 @@ export const WatchScheduleDetailScreen = ({ navigation, route }: any) => {
       const filename = `Watch_Schedule_${scheduleDateStr(schedule)}.pdf`;
       const newUri = `${FileSystem.cacheDirectory}${filename}`;
       await FileSystem.moveAsync({ from: uri, to: newUri });
-      await Sharing.shareAsync(newUri, { mimeType: 'application/pdf', dialogTitle: 'Export Watch Schedule as PDF' });
+      await Sharing.shareAsync(newUri, {
+        mimeType: 'application/pdf',
+        dialogTitle: 'Export Watch Schedule as PDF',
+      });
     } catch (e) {
       Alert.alert('Error', 'Could not export PDF');
     } finally {
@@ -97,30 +108,63 @@ export const WatchScheduleDetailScreen = ({ navigation, route }: any) => {
 
   return (
     <View style={styles.pageWrap}>
-      <PageHeader title="Watch Schedule"
+      <PageHeader
+        title="Watch Schedule"
         actions={<ExportButton active={false} busy={exportingPdf} onPress={exportPdf} />}
       />
-      <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={styles.content}
+      >
         <Text style={[styles.viewDate, { color: themeColors.textSecondary }]}>
-          {formatLocalDateString(scheduleDateStr(schedule), { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+          {formatLocalDateString(scheduleDateStr(schedule), {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
+          })}
         </Text>
-        {schedule.startLocation ? <Text style={[styles.viewMeta, { color: themeColors.textSecondary }]}>From: {schedule.startLocation}</Text> : null}
-        {schedule.destination ? <Text style={[styles.viewMeta, { color: themeColors.textSecondary }]}>To: {schedule.destination}</Text> : null}
-        <Text style={[styles.viewMeta, { color: themeColors.textSecondary }]}>Start: {schedule.startTime}</Text>
+        {schedule.startLocation ? (
+          <Text style={[styles.viewMeta, { color: themeColors.textSecondary }]}>
+            From: {schedule.startLocation}
+          </Text>
+        ) : null}
+        {schedule.destination ? (
+          <Text style={[styles.viewMeta, { color: themeColors.textSecondary }]}>
+            To: {schedule.destination}
+          </Text>
+        ) : null}
+        <Text style={[styles.viewMeta, { color: themeColors.textSecondary }]}>
+          Start: {schedule.startTime}
+        </Text>
         <View style={styles.slots}>
           {schedule.slots.map((slot, idx) => (
             <View key={idx} style={[styles.slotRow, { backgroundColor: themeColors.surface }]}>
-              <Text style={[styles.slotCrew, { color: themeColors.textPrimary }]}>{slot.crewName}</Text>
-              {slot.crewPosition ? <Text style={[styles.slotRole, { color: themeColors.textSecondary }]}>{slot.crewPosition}</Text> : null}
-              <Text style={styles.slotTime}>{slot.startTimeStr} - {slot.endTimeStr}</Text>
+              <Text style={[styles.slotCrew, { color: themeColors.textPrimary }]}>
+                {slot.crewName}
+              </Text>
+              {slot.crewPosition ? (
+                <Text style={[styles.slotRole, { color: themeColors.textSecondary }]}>
+                  {slot.crewPosition}
+                </Text>
+              ) : null}
+              <Text style={styles.slotTime}>
+                {slot.startTimeStr} - {slot.endTimeStr}
+              </Text>
             </View>
           ))}
         </View>
         <View style={styles.viewActions}>
           {isHOD && (
             <>
-              <TouchableOpacity style={styles.editBtn} onPress={handleEdit} disabled={deleting}>
-                <Text style={styles.editBtnText}>Edit</Text>
+              <TouchableOpacity
+                style={[styles.editBtn, themeColors.isDark && styles.editBtnDark]}
+                onPress={handleEdit}
+                disabled={deleting}
+              >
+                <Text style={[styles.editBtnText, themeColors.isDark && styles.editBtnTextDark]}>
+                  Edit
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete} disabled={deleting}>
                 <Text style={styles.deleteBtnText}>{deleting ? 'Deleting...' : 'Delete'}</Text>
@@ -145,10 +189,29 @@ const styles = StyleSheet.create({
   slotRole: { fontSize: FONTS.xs, marginTop: 2 },
   slotTime: { fontSize: FONTS.sm, color: COLORS.primary, marginTop: 4, fontWeight: '600' },
   viewActions: { marginTop: SPACING.xl, gap: SPACING.md },
-  exportBtn: { padding: SPACING.md, borderRadius: BORDER_RADIUS.md, backgroundColor: COLORS.primary, alignItems: 'center' },
+  exportBtn: {
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+  },
   exportBtnText: { color: '#fff', fontWeight: '600' },
-  editBtn: { padding: SPACING.md, borderRadius: BORDER_RADIUS.md, borderWidth: 1, borderColor: COLORS.primary, alignItems: 'center' },
+  editBtn: {
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    alignItems: 'center',
+  },
+  editBtnDark: { borderColor: COLORS.white },
   editBtnText: { color: COLORS.primary, fontWeight: '600' },
-  deleteBtn: { padding: SPACING.md, borderRadius: BORDER_RADIUS.md, borderWidth: 1, borderColor: COLORS.danger, alignItems: 'center' },
+  editBtnTextDark: { color: COLORS.white },
+  deleteBtn: {
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.danger,
+    alignItems: 'center',
+  },
   deleteBtnText: { color: COLORS.danger, fontWeight: '600' },
 });

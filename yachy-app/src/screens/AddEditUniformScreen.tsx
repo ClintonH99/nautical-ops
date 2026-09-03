@@ -190,12 +190,12 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
                   <Text style={[styles.fieldLabel, { color: themeColors.textSecondary }]}>#</Text>
                   <TextInput
                     ref={(el) => { amountRefs.current[index] = el; }}
-                    style={[styles.input, { backgroundColor: themeColors.background, color: themeColors.textPrimary }]}
+                    style={[styles.input, { backgroundColor: themeColors.surface, color: themeColors.textPrimary }]}
                     value={entry.amount}
                     onChangeText={(v) => setEntryAt(index, 'amount', v)}
                     placeholder="#"
                     keyboardType="decimal-pad"
-                    placeholderTextColor={COLORS.gray400}
+                    placeholderTextColor={themeColors.textSecondary}
                     returnKeyType="next"
                     onSubmitEditing={() => sizeRefs.current[index]?.focus()}
                   />
@@ -204,11 +204,11 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
                   <Text style={[styles.fieldLabel, { color: themeColors.textSecondary }]}>Size</Text>
                   <TextInput
                     ref={(el) => { sizeRefs.current[index] = el; }}
-                    style={[styles.input, { backgroundColor: themeColors.background, color: themeColors.textPrimary }]}
+                    style={[styles.input, { backgroundColor: themeColors.surface, color: themeColors.textPrimary }]}
                     value={entry.size}
                     onChangeText={(v) => setEntryAt(index, 'size', v)}
                     placeholder="Size"
-                    placeholderTextColor={COLORS.gray400}
+                    placeholderTextColor={themeColors.textSecondary}
                     returnKeyType="next"
                     onSubmitEditing={() => colorRefs.current[index]?.focus()}
                   />
@@ -217,11 +217,11 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
                   <Text style={[styles.fieldLabel, { color: themeColors.textSecondary }]}>Color</Text>
                   <TextInput
                     ref={(el) => { colorRefs.current[index] = el; }}
-                    style={[styles.input, { backgroundColor: themeColors.background, color: themeColors.textPrimary }]}
+                    style={[styles.input, { backgroundColor: themeColors.surface, color: themeColors.textPrimary }]}
                     value={entry.color}
                     onChangeText={(v) => setEntryAt(index, 'color', v)}
                     placeholder="Color"
-                    placeholderTextColor={COLORS.gray400}
+                    placeholderTextColor={themeColors.textSecondary}
                     returnKeyType="next"
                     onSubmitEditing={() => genderRefs.current[index]?.focus()}
                   />
@@ -232,11 +232,11 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
                   <Text style={[styles.fieldLabel, { color: themeColors.textSecondary }]}>Male / female</Text>
                   <TextInput
                     ref={(el) => { genderRefs.current[index] = el; }}
-                    style={[styles.input, { backgroundColor: themeColors.background, color: themeColors.textPrimary }]}
+                    style={[styles.input, { backgroundColor: themeColors.surface, color: themeColors.textPrimary }]}
                     value={entry.gender}
                     onChangeText={(v) => setEntryAt(index, 'gender', v)}
                     placeholder="M / F"
-                    placeholderTextColor={COLORS.gray400}
+                    placeholderTextColor={themeColors.textSecondary}
                     returnKeyType="next"
                     onSubmitEditing={() => dayNightRefs.current[index]?.focus()}
                   />
@@ -245,11 +245,11 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
                   <Text style={[styles.fieldLabel, { color: themeColors.textSecondary }]}>Day / night (optional)</Text>
                   <TextInput
                     ref={(el) => { dayNightRefs.current[index] = el; }}
-                    style={[styles.input, { backgroundColor: themeColors.background, color: themeColors.textPrimary }]}
+                    style={[styles.input, { backgroundColor: themeColors.surface, color: themeColors.textPrimary }]}
                     value={entry.dayNight ?? ''}
                     onChangeText={(v) => setEntryAt(index, 'dayNight', v)}
                     placeholder="Day / Night"
-                    placeholderTextColor={COLORS.gray400}
+                    placeholderTextColor={themeColors.textSecondary}
                     returnKeyType="done"
                     onSubmitEditing={() => { if (isLast) addEntry(); }}
                   />
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
-  label: { Size: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs, marginTop: SPACING.md },
+  label: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs, marginTop: SPACING.md },
   deptSection: { marginBottom: SPACING.lg },
   deptLabel: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs },
   dropdown: {

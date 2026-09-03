@@ -528,12 +528,12 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
               <TextInput
                 style={[
                   styles.createNewInput,
-                  { backgroundColor: themeColors.background, color: themeColors.textPrimary },
+                  { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
                 ]}
                 value={newEquipmentName}
                 onChangeText={setNewEquipmentName}
                 placeholder="Enter equipment name"
-                placeholderTextColor={COLORS.gray400}
+                placeholderTextColor={themeColors.textSecondary}
                 autoCapitalize="words"
                 autoFocus
               />
@@ -668,12 +668,12 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
               <TextInput
                 style={[
                   styles.createNewInput,
-                  { backgroundColor: themeColors.background, color: themeColors.textPrimary },
+                  { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
                 ]}
                 value={newLocationName}
                 onChangeText={setNewLocationName}
                 placeholder="Enter location name"
-                placeholderTextColor={COLORS.gray400}
+                placeholderTextColor={themeColors.textSecondary}
                 autoCapitalize="words"
                 autoFocus
               />
@@ -714,7 +714,7 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
               value={serialNumber}
               onChangeText={setSerialNumber}
               placeholder="Optional - tap Recent for this equipment + location"
-              placeholderTextColor={COLORS.gray400}
+              placeholderTextColor={themeColors.textSecondary}
             />
             <TouchableOpacity
               style={styles.recentBtn}

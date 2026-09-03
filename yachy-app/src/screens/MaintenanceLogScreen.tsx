@@ -112,17 +112,16 @@ function escapeHtml(s: string): string {
     .replace(/"/g, '&quot;');
 }
 
-
 const MAINTENANCE_LOG_INFO = {
-            title: 'Maintenance Log',
-            description: 'Record and track maintenance on vessel equipment.',
-            features: [
-              'Add maintenance log entries per equipment',
-              'Filter by equipment, location, serial, and hours',
-              'Track service intervals and hours to next service',
-              'Select entries and export to PDF',
-            ],
-          };
+  title: 'Maintenance Log',
+  description: 'Record and track maintenance on vessel equipment.',
+  features: [
+    'Add maintenance log entries per equipment',
+    'Filter by equipment, location, serial, and hours',
+    'Track service intervals and hours to next service',
+    'Select entries and export to PDF',
+  ],
+};
 
 export const MaintenanceLogScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -425,7 +424,6 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
         </View>
       </View>
 
-
       {filterDropdownKey && (
         <Modal visible transparent animationType="fade">
           <Pressable style={styles.filterModalBackdrop} onPress={() => setFilterDropdownKey(null)}>
@@ -503,49 +501,53 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
           }
           showsVerticalScrollIndicator
         >
-            <View style={styles.table}>
-              <View style={[styles.row, styles.headerRow]}>
-                <View
-                  style={[
-                    styles.cellView,
-                    styles.headerCellView,
-                    styles.checkboxHeaderCell,
-                    { width: exportMode ? CHECKBOX_WIDTH : 0 },
-                  ]}
-                >
-                  {exportMode && (
+          <View style={styles.table}>
+            <View style={[styles.row, styles.headerRow]}>
+              <View
+                style={[
+                  styles.cellView,
+                  styles.headerCellView,
+                  styles.checkboxHeaderCell,
+                  { width: exportMode ? CHECKBOX_WIDTH : 0 },
+                ]}
+              >
+                {exportMode && (
                   <Checkbox
-                      checked={
-                        filteredLogs.length > 0 && filteredLogs.every((l) => selectedIds.has(l.id))
-                      }
-                      onPress={toggleSelectAll}
-                      disabled={filteredLogs.length === 0}
-                      themeColors={themeColors}
-                    />
-                  )}
-                </View>
-                <Text style={[styles.cell, styles.headerCell, styles.equipmentCell]}>
-                  Equipment
-                </Text>
-                <Text style={[styles.cell, styles.headerCell, { width: DATE_WIDTH }]}>Date</Text>
+                    checked={
+                      filteredLogs.length > 0 && filteredLogs.every((l) => selectedIds.has(l.id))
+                    }
+                    onPress={toggleSelectAll}
+                    disabled={filteredLogs.length === 0}
+                    themeColors={themeColors}
+                  />
+                )}
               </View>
-              {filteredLogs.length === 0 ? (
-                <View style={styles.filterEmptyRow}>
-                  <Text style={[styles.filterEmptyText, { color: themeColors.textSecondary }]}>
-                    No logs match the current filters
-                  </Text>
-                </View>
-              ) : (
-                filteredLogs.map((log) => (
-                  <View key={log.id}>
+              <Text style={[styles.cell, styles.headerCell, styles.equipmentCell]}>Equipment</Text>
+              <Text style={[styles.cell, styles.headerCell, { width: DATE_WIDTH }]}>Date</Text>
+            </View>
+            {filteredLogs.length === 0 ? (
+              <View style={styles.filterEmptyRow}>
+                <Text style={[styles.filterEmptyText, { color: themeColors.textSecondary }]}>
+                  No logs match the current filters
+                </Text>
+              </View>
+            ) : (
+              filteredLogs.map((log) => (
+                <View key={log.id}>
                   <TouchableOpacity
                     style={styles.row}
                     activeOpacity={0.7}
                     onPress={() => setExpandedId(expandedId === log.id ? null : log.id)}
                   >
-                    <View style={[styles.cell, styles.checkboxCell, { width: exportMode ? CHECKBOX_WIDTH : 0 }]}>
+                    <View
+                      style={[
+                        styles.cell,
+                        styles.checkboxCell,
+                        { width: exportMode ? CHECKBOX_WIDTH : 0 },
+                      ]}
+                    >
                       {exportMode && (
-                      <Checkbox
+                        <Checkbox
                           checked={selectedIds.has(log.id)}
                           onPress={() => toggleSelect(log.id)}
                           themeColors={themeColors}
@@ -553,7 +555,11 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
                       )}
                     </View>
                     <Text
-                      style={[styles.cell, styles.equipmentCell, { color: themeColors.textPrimary }]}
+                      style={[
+                        styles.cell,
+                        styles.equipmentCell,
+                        { color: themeColors.textPrimary },
+                      ]}
                       numberOfLines={2}
                     >
                       {log.equipment}
@@ -575,7 +581,9 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
                         <Text style={[styles.previewTitle, { color: themeColors.textPrimary }]}>
                           {log.equipment}
                         </Text>
-                        <Text style={[styles.previewSubtitle, { color: themeColors.textSecondary }]}>
+                        <Text
+                          style={[styles.previewSubtitle, { color: themeColors.textSecondary }]}
+                        >
                           {[log.portStarboardNa, log.serialNumber, formatDate(log.createdAt)]
                             .filter(Boolean)
                             .join('  \u00b7  ')}
@@ -583,54 +591,94 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
                       </View>
                       <View style={styles.previewRow}>
                         <View style={styles.previewHalf}>
-                          <Text style={[styles.previewLabel, { color: themeColors.textSecondary }]}>HOURS OF SERVICE</Text>
-                          <Text style={[styles.previewValue, { color: themeColors.textPrimary }]}>{log.hoursOfService || '\u2014'}</Text>
+                          <Text style={[styles.previewLabel, { color: themeColors.textSecondary }]}>
+                            HOURS OF SERVICE
+                          </Text>
+                          <Text style={[styles.previewValue, { color: themeColors.textPrimary }]}>
+                            {log.hoursOfService || '\u2014'}
+                          </Text>
                         </View>
                         <View style={styles.previewHalf}>
-                          <Text style={[styles.previewLabel, { color: themeColors.textSecondary }]}>HOURS AT NEXT SERVICE</Text>
-                          <Text style={[styles.previewValue, { color: themeColors.textPrimary }]}>{log.hoursAtNextService || '\u2014'}</Text>
+                          <Text style={[styles.previewLabel, { color: themeColors.textSecondary }]}>
+                            HOURS AT NEXT SERVICE
+                          </Text>
+                          <Text style={[styles.previewValue, { color: themeColors.textPrimary }]}>
+                            {log.hoursAtNextService || '\u2014'}
+                          </Text>
                         </View>
                       </View>
                       <View style={styles.previewBlock}>
-                        <Text style={[styles.previewLabel, { color: themeColors.textSecondary }]}>WHAT SERVICE WAS DONE</Text>
-                        <Text style={[styles.previewValue, { color: themeColors.textPrimary }]}>{log.whatServiceDone || '\u2014'}</Text>
+                        <Text style={[styles.previewLabel, { color: themeColors.textSecondary }]}>
+                          WHAT SERVICE WAS DONE
+                        </Text>
+                        <Text style={[styles.previewValue, { color: themeColors.textPrimary }]}>
+                          {log.whatServiceDone || '\u2014'}
+                        </Text>
                       </View>
                       <View style={styles.previewBlock}>
-                        <Text style={[styles.previewLabel, { color: themeColors.textSecondary }]}>NOTES</Text>
-                        <Text style={[styles.previewValue, { color: themeColors.textPrimary }]}>{log.notes || '\u2014'}</Text>
+                        <Text style={[styles.previewLabel, { color: themeColors.textSecondary }]}>
+                          NOTES
+                        </Text>
+                        <Text style={[styles.previewValue, { color: themeColors.textPrimary }]}>
+                          {log.notes || '\u2014'}
+                        </Text>
                       </View>
                       <View style={styles.previewRow}>
                         <View style={styles.previewHalf}>
-                          <Text style={[styles.previewLabel, { color: themeColors.textSecondary }]}>SERVICE DONE BY</Text>
-                          <Text style={[styles.previewValue, { color: themeColors.textPrimary }]}>{log.serviceDoneBy || '\u2014'}</Text>
+                          <Text style={[styles.previewLabel, { color: themeColors.textSecondary }]}>
+                            SERVICE DONE BY
+                          </Text>
+                          <Text style={[styles.previewValue, { color: themeColors.textPrimary }]}>
+                            {log.serviceDoneBy || '\u2014'}
+                          </Text>
                         </View>
                         <View style={styles.previewHalf}>
-                          <Text style={[styles.previewLabel, { color: themeColors.textSecondary }]}>DATE</Text>
-                          <Text style={[styles.previewValue, { color: themeColors.textPrimary }]}>{formatDate(log.createdAt)}</Text>
+                          <Text style={[styles.previewLabel, { color: themeColors.textSecondary }]}>
+                            DATE
+                          </Text>
+                          <Text style={[styles.previewValue, { color: themeColors.textPrimary }]}>
+                            {formatDate(log.createdAt)}
+                          </Text>
                         </View>
                       </View>
                       <View style={styles.previewActions}>
                         <TouchableOpacity
-                          style={[styles.previewActionBtn, { borderColor: COLORS.primary }]}
+                          style={[
+                            styles.previewActionBtn,
+                            { borderColor: themeColors.isDark ? COLORS.white : COLORS.primary },
+                          ]}
                           onPress={() => onEdit(log)}
                         >
-                          <Ionicons name="create-outline" size={18} color={COLORS.primary} />
-                          <Text style={[styles.previewActionText, { color: COLORS.primary }]}>Edit</Text>
+                          <Ionicons
+                            name="create-outline"
+                            size={18}
+                            color={themeColors.isDark ? COLORS.white : COLORS.primary}
+                          />
+                          <Text
+                            style={[
+                              styles.previewActionText,
+                              { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                            ]}
+                          >
+                            Edit
+                          </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={[styles.previewActionBtn, { borderColor: COLORS.danger }]}
                           onPress={() => onDelete(log)}
                         >
                           <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
-                          <Text style={[styles.previewActionText, { color: COLORS.danger }]}>Delete</Text>
+                          <Text style={[styles.previewActionText, { color: COLORS.danger }]}>
+                            Delete
+                          </Text>
                         </TouchableOpacity>
                       </View>
                     </View>
                   )}
-                  </View>
-                ))
-              )}
-            </View>
+                </View>
+              ))
+            )}
+          </View>
         </ScrollView>
       )}
     </View>

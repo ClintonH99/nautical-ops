@@ -22,6 +22,13 @@ import { Button, Input } from '../components';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import authService from '../services/auth';
+import { supabase } from '../services/supabase';
+import {
+  evaluateAccountAccess,
+  SUBSCRIPTION_PAYMENT_REQUIRED_MESSAGE,
+} from '../services/accountAccess';
+import { DEVICE_LIMIT_MESSAGE } from '../services/deviceAccess';
+import type { User } from '../types';
 import { useAuthStore } from '../store';
 import { usePostHog } from 'posthog-react-native';
 
@@ -58,9 +65,50 @@ export const LoginScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({ email: '', password: '' });
 
-  const setUser = useAuthStore((state) => state.setUser);
+  const {
+    setUser,
+    loginNotice,
+    setLoginNotice,
+    setCaptainPaymentRequired,
+  } = useAuthStore();
   const [loginError, setLoginError] = useState('');
   const posthog = usePostHog();
+
+  const completeLogin = async (user: User, method: 'email' | 'google' | 'apple') => {
+    const decision = await evaluateAccountAccess(user);
+
+    if (decision.state === 'device_limit_reached' || decision.state === 'crew_payment_required') {
+      const message =
+        decision.state === 'device_limit_reached'
+          ? DEVICE_LIMIT_MESSAGE
+          : SUBSCRIPTION_PAYMENT_REQUIRED_MESSAGE;
+      setLoginNotice(message);
+      setLoginError('');
+      setCaptainPaymentRequired(false);
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch {
+        /* best-effort local sign-out */
+      }
+      setUser(null);
+      if (Platform.OS !== 'web') Alert.alert('Access Restricted', message);
+      return;
+    }
+
+    setLoginNotice(null);
+    setCaptainPaymentRequired(decision.state === 'captain_payment_required');
+    posthog.identify(user.id, {
+      $set: { email: user.email, name: user.name, role: user.role, position: user.position },
+      $set_once: { first_login_date: new Date().toISOString() },
+    });
+    posthog.capture('user_signed_in', {
+      method,
+      role: user.role,
+      has_vessel: !!user.vesselId,
+      payment_restricted: decision.state === 'captain_payment_required',
+    });
+    setUser(user);
+  };
 
   const validateForm = () => {
     let valid = true;
@@ -90,13 +138,14 @@ export const LoginScreen = ({ navigation }: any) => {
     if (socialLoading) return;
     setSocialLoading(provider);
     setLoginError('');
+    setLoginNotice(null);
     try {
       const { user } =
         provider === 'google'
           ? await authService.signInWithGoogle()
           : await authService.signInWithApple();
       // A cancelled sign-in returns no user and is not an error.
-      if (user) setUser(user);
+      if (user) await completeLogin(user, provider);
     } catch (e: any) {
       if (e?.message === 'NO_ACCOUNT') {
         const msg = 'No account found for that sign-in. Please create an account first.';
@@ -114,6 +163,7 @@ export const LoginScreen = ({ navigation }: any) => {
 
   const handleLogin = async () => {
     setLoginError('');
+    setLoginNotice(null);
     if (!validateForm()) return;
 
     setLoading(true);
@@ -121,27 +171,7 @@ export const LoginScreen = ({ navigation }: any) => {
       const { user } = await authService.signIn({ email, password });
 
       if (user) {
-        // TODO: Re-enable subscription check once payment flow is set up
-        // const isCaptain = user.role === 'CAPTAIN_MOV';
-        // if (!isCaptain && user.vesselId) {
-        //   const subscription = await getVesselSubscription(user.vesselId);
-        //   if (subscription?.status !== 'active') {
-        //     const msg = 'Ensure subscription has been paid by the MOV. Once paid, access will be granted again.';
-        //     setLoginError(msg);
-        //     if (Platform.OS !== 'web') Alert.alert('Access Restricted', msg);
-        //     return;
-        //   }
-        // }
-        posthog.identify(user.id, {
-          $set: { email: user.email, name: user.name, role: user.role, position: user.position },
-          $set_once: { first_login_date: new Date().toISOString() },
-        });
-        posthog.capture('user_signed_in', {
-          method: 'email',
-          role: user.role,
-          has_vessel: !!user.vesselId,
-        });
-        setUser(user);
+        await completeLogin(user, 'email');
       } else {
         const msg = 'Email Address or Password is Incorrect, Try Again.';
         setLoginError(msg);
@@ -195,12 +225,19 @@ export const LoginScreen = ({ navigation }: any) => {
               },
             ]}
           >
+            {loginNotice ? (
+              <View style={styles.accessNotice}>
+                <Ionicons name="alert-circle-outline" size={20} color={COLORS.danger} />
+                <Text style={styles.accessNoticeText}>{loginNotice}</Text>
+              </View>
+            ) : null}
             <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]}>Sign in</Text>
             <Text style={[styles.cardSubtitle, { color: themeColors.textSecondary }]}>
               Enter your credentials to get started
             </Text>
 
             <Input
+              forceLight
               label="Email"
               placeholder="crew@vessel.com"
               value={email}
@@ -212,6 +249,7 @@ export const LoginScreen = ({ navigation }: any) => {
             />
 
             <Input
+              forceLight
               label="Password"
               placeholder="Your password"
               value={password}
@@ -375,6 +413,24 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sm,
     color: COLORS.danger,
     textAlign: 'center',
+  },
+  accessNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: SPACING.sm,
+    padding: SPACING.md,
+    marginBottom: SPACING.lg,
+    borderWidth: 1,
+    borderColor: COLORS.danger,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: 'rgba(220, 38, 38, 0.08)',
+  },
+  accessNoticeText: {
+    flex: 1,
+    color: COLORS.danger,
+    fontSize: FONTS.sm,
+    lineHeight: 20,
+    fontWeight: '600',
   },
   createSection: {
     marginBottom: SPACING.xl,

@@ -1,0 +1,18 @@
+---
+description: Captain/MOV always has full access throughout Nautical Ops
+alwaysApply: true
+---
+
+# Captain/MOV Full Access
+
+- A user whose role is `CAPTAIN_MOV` must always be able to view, create, edit, and delete everything in the app while the vessel is entitled or inside its renewal grace period.
+- Sole exception: after a previously paid vessel's renewal grace period ends without payment, Captain/MOV is restricted to Vessel Plans until payment is confirmed.
+- Never exclude `CAPTAIN_MOV` from an authorization check.
+- A feature described as HOD-managed must also allow `CAPTAIN_MOV`.
+- Prefer a clearly named guard such as:
+
+```ts
+const canManage = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
+```
+
+- Verify both the visible UI and the server/database authorization path. Hiding a button is not sufficient security.

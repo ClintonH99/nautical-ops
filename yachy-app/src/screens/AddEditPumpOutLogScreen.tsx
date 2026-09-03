@@ -221,7 +221,7 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
               value={pumpoutServiceName}
               onChangeText={setPumpoutServiceName}
               placeholder="Pumpout Truck or Marina Pumpout"
-              placeholderTextColor={COLORS.gray400}
+              placeholderTextColor={themeColors.textSecondary}
               autoCapitalize="words"
             />
           </View>
@@ -250,7 +250,7 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
           value={description}
           onChangeText={setDescription}
           placeholder="Tipped the dockhand $20"
-          placeholderTextColor={COLORS.gray300}
+          placeholderTextColor={themeColors.textSecondary}
           multiline
           numberOfLines={3}
         />

@@ -56,8 +56,8 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
   const isHOD = user?.role === 'HOD';
   const isCaptain = user?.role === 'CAPTAIN_MOV';
 
-  // Captain's checklist (All Departments): only captain can edit. Department checklists: only HOD.
-  const canEdit = (dept: Department | null) => isCaptain || (dept !== null && isHOD);
+  // Captain/MOV and appointed HODs can manage every pre-departure checklist.
+  const canEdit = () => isCaptain || isHOD;
 
   const [title, setTitle] = useState('');
   const [tripId, setTripId] = useState<string | null>(null);
@@ -108,7 +108,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
     }, [checklistId, loadChecklist, loadTrips])
   );
 
-  const isEditable = canEdit(department);
+  const isEditable = canEdit();
   // When creating, both HOD and Captain need to see the form to pick department. When editing, only authorized editor.
   const showEditableFields = isEdit ? isEditable : isHOD || isCaptain;
 
@@ -229,9 +229,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
         <Text style={[styles.message, { color: themeColors.textSecondary }]}>
-          {department === null
-            ? "Only the Captain can edit the Captain's checklist."
-            : 'Only HODs and Captain have access.'}
+          Only HODs and Captain have access.
         </Text>
       </View>
     );

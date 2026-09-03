@@ -8,9 +8,13 @@ alwaysApply: false
 
 **Rule:** Users who have an account AND are assigned to a vessel must always be taken directly to the Home screen (MainTabs) after login.
 
+**Subscription exception:** When a previously paid vessel has passed its renewal grace period without payment, Captain/MOV goes only to Vessel Plans. Crew/HOD are signed out with the approved temporary-lockout message.
+
 ## Implementation
 
-- **Users WITH vessel** (`user.vesselId` truthy) → Home (MainTabs)
+- **Users WITH vessel** (`user.vesselId` truthy) and paid/grace/never previously subscribed → Home (MainTabs)
+- **Captain/MOV after failed-renewal grace expires** → Vessel Plans only
+- **Crew/HOD after failed-renewal grace expires** → Login with the temporary-lockout message
 - **Crew** (position does not include "captain") → Home (MainTabs)
 - **Captains WITHOUT vessel** → CaptainWelcome (create vessel flow)
 

@@ -596,7 +596,10 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
               contentContainerStyle={styles.timetableListContent}
             >
               {timetableSlots.map((slot, idx) => (
-                <View key={idx} style={styles.timetableRow}>
+                <View
+                  key={idx}
+                  style={[styles.timetableRow, { backgroundColor: themeColors.surface }]}
+                >
                   <View style={styles.timetableRowLeft}>
                     <View
                       style={{

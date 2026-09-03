@@ -1,10 +1,10 @@
 /**
  * Edge Function: Delete a vessel entirely (Captain/MOV only).
  *
- * Cancels the real Paddle subscription if one exists. Apple IAP
- * subscriptions cannot be cancelled by an app or developer - only the
- * paying customer can do that, in their own Apple ID settings - so the
- * response tells the client whether that manual step is still needed.
+ * Apple and Google store subscriptions cannot be cancelled by this service;
+ * the response tells the client when the customer must cancel in the store.
+ * A historical Paddle-linked vessel is blocked from deletion until support
+ * has confirmed that legacy billing is cancelled, preventing orphan charges.
  *
  * Every user on the vessel, INCLUDING the captain making this call,
  * is moved onto their own private solo "Crew Account" vessel - nobody's
@@ -25,7 +25,14 @@ async function createSoloVessel(): Promise<string> {
   expiry.setFullYear(expiry.getFullYear() + 1);
   const { data, error } = await supabase
     .from('vessels')
-    .insert([{ name: 'Crew Account', invite_code: code, invite_expiry: expiry.toISOString(), is_solo: true }])
+    .insert([
+      {
+        name: 'Crew Account',
+        invite_code: code,
+        invite_expiry: expiry.toISOString(),
+        is_solo: true,
+      },
+    ])
     .select()
     .single();
   if (error || !data) throw new Error('Could not create solo vessel');
@@ -42,17 +49,29 @@ async function cleanupStorage(bucket: string, vesselId: string) {
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(token);
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     const { data: callerRow } = await supabase
@@ -62,41 +81,33 @@ Deno.serve(async (req) => {
       .single();
 
     if (!callerRow?.vessel_id || callerRow.role !== 'CAPTAIN_MOV') {
-      return new Response(JSON.stringify({ error: 'Only the Captain/MOV can delete a vessel' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: 'Only the Captain/MOV can delete a vessel' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
     const vesselId = callerRow.vessel_id;
 
     const { data: subscription } = await supabase
       .from('vessel_subscriptions')
-      .select('paddle_subscription_id')
+      .select('paddle_subscription_id, payment_provider')
       .eq('vessel_id', vesselId)
       .maybeSingle();
 
-    let paddleCancelled = false;
-    let needsManualAppleCancellation = false;
-
     if (subscription?.paddle_subscription_id) {
-      const paddleRes = await fetch(
-        `https://api.paddle.com/subscriptions/${subscription.paddle_subscription_id}/cancel`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${Deno.env.get('PADDLE_LIVE_API_KEY')}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ effective_from: 'immediately' }),
-        }
+      return new Response(
+        JSON.stringify({
+          error:
+            'This vessel has a legacy billing record. Contact support@nautical-ops.com so billing can be cancelled safely before the vessel is deleted.',
+        }),
+        { status: 409, headers: { 'Content-Type': 'application/json' } }
       );
-      if (paddleRes.ok) {
-        paddleCancelled = true;
-      } else {
-        console.error('delete-vessel: Paddle cancellation failed', await paddleRes.text());
-      }
-    } else if (subscription) {
-      // A subscription row exists but has no Paddle ID - it's an Apple
-      // IAP subscription, which we cannot cancel on the customer's behalf.
-      needsManualAppleCancellation = true;
     }
+
+    const cancellationProvider =
+      subscription?.payment_provider === 'apple' || subscription?.payment_provider === 'google'
+        ? subscription.payment_provider
+        : null;
 
     const { data: crewToMove } = await supabase
       .from('users')
@@ -117,15 +128,30 @@ Deno.serve(async (req) => {
     const { error: vesselDeleteError } = await supabase.from('vessels').delete().eq('id', vesselId);
     if (vesselDeleteError) {
       console.error('delete-vessel: vessel delete failed', vesselDeleteError);
-      return new Response(JSON.stringify({ error: 'Could not delete vessel. Please contact support@nautical-ops.com' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return new Response(
+        JSON.stringify({
+          error: 'Could not delete vessel. Please contact support@nautical-ops.com',
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
     return new Response(
-      JSON.stringify({ success: true, paddleCancelled, needsManualAppleCancellation }),
+      JSON.stringify({
+        success: true,
+        needsManualStoreCancellation: cancellationProvider !== null,
+        cancellationProvider,
+        // Kept during the app transition so existing iOS builds still show
+        // their Apple-specific cancellation reminder.
+        needsManualAppleCancellation: cancellationProvider === 'apple',
+      }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (err) {
     console.error('delete-vessel: uncaught error', err);
-    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(
+      JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 });

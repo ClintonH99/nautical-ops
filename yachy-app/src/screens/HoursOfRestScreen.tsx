@@ -97,7 +97,7 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
       setLoading(false);
       setHasLoadedOnce(true);
     }
-  }, [user?.id, user?.vesselId, isCaptainOrMov, viewedMonth]);
+  }, [user?.id, viewedMonth]);
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
   useEffect(() => { loadData(); }, [loadData]);

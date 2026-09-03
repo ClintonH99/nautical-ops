@@ -11,7 +11,7 @@ export interface UseSubscriptionStatusResult {
   hasActiveSubscription: boolean;
   subscription: VesselSubscription | null;
   isLoading: boolean;
-  refetch: () => Promise<void>;
+  refetch: () => Promise<VesselSubscription | null>;
 }
 
 export function useSubscriptionStatus(vesselId: string | null): UseSubscriptionStatusResult {
@@ -22,15 +22,17 @@ export function useSubscriptionStatus(vesselId: string | null): UseSubscriptionS
     if (!vesselId) {
       setSubscription(null);
       setIsLoading(false);
-      return;
+      return null;
     }
 
     setIsLoading(true);
     try {
       const sub = await getVesselSubscription(vesselId);
       setSubscription(sub);
+      return sub;
     } catch {
       setSubscription(null);
+      return null;
     } finally {
       setIsLoading(false);
     }

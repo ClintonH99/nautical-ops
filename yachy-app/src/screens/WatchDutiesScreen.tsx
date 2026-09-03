@@ -55,7 +55,10 @@ const DEPT_LABEL: Record<Department, string> = {
 const ALL_DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
 function toDateStr(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function timeStringToDate(t: string): Date {
@@ -78,22 +81,20 @@ function getMonday(d: Date): Date {
   return date;
 }
 
-
 const WATCH_DUTIES_INFO = {
-            title: 'Watch Duties',
-            description: 'Rules, the week-ahead watch schedule, and department duty checklists.',
-            features: [
-              'View Watch Duty Rules - Captain/HOD can edit, everyone can view and export',
-              'See the week-ahead watch assignment schedule',
-              'Check off duty checklist items by department',
-              'Adding items: tap + Add item, type, and press enter for each one - press enter on a blank line to finish',
-              'Stay on top of who is covering what, and when',
-            ],
-          };
+  title: 'Watch Duties',
+  description: 'Rules, the week-ahead watch schedule, and department duty checklists.',
+  features: [
+    'View Watch Duty Rules - Captain/HOD can edit, everyone can view and export',
+    'See the week-ahead watch assignment schedule',
+    'Check off duty checklist items by department',
+    'Adding items: tap + Add item, type, and press enter for each one - press enter on a blank line to finish',
+    'Stay on top of who is covering what, and when',
+  ],
+};
 
 export const WatchDutiesScreen = () => {
   const navigation = useNavigation<any>();
-
 
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
@@ -125,10 +126,11 @@ export const WatchDutiesScreen = () => {
   const [activeTimeField, setActiveTimeField] = useState<'start' | 'end' | null>(null);
   const [savingAssignment, setSavingAssignment] = useState(false);
 
-  const weekStart = getMonday(new Date());
+  const weekStartDate = getMonday(new Date());
+  const weekStart = toDateStr(weekStartDate);
   const weekDates = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(weekStart);
-    d.setDate(weekStart.getDate() + i);
+    const d = new Date(weekStartDate);
+    d.setDate(weekStartDate.getDate() + i);
     return d;
   });
 
@@ -138,7 +140,7 @@ export const WatchDutiesScreen = () => {
     try {
       const [rulesData, assignmentData, dutyData] = await Promise.all([
         getRules(user.vesselId),
-        getWeekAssignments(user.vesselId, toDateStr(weekStart)),
+        getWeekAssignments(user.vesselId, weekStart),
         getDutyGroups(user.vesselId, user.id),
       ]);
       setRules(rulesData);
@@ -154,13 +156,16 @@ export const WatchDutiesScreen = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.vesselId]);
+  }, [canManage, user?.id, user?.vesselId, weekStart]);
 
-  useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
 
-  const filteredGroups = selectedDept === 'All'
-    ? dutyGroups
-    : dutyGroups.filter((g) => g.department === selectedDept);
+  const filteredGroups =
+    selectedDept === 'All' ? dutyGroups : dutyGroups.filter((g) => g.department === selectedDept);
 
   const handleToggleItem = async (itemId: string, currentlyChecked: boolean) => {
     if (!user?.id) return;
@@ -198,8 +203,14 @@ export const WatchDutiesScreen = () => {
     if (!user?.vesselId || !assignDate || !selectedCrewId) return;
     setSavingAssignment(true);
     try {
-      await addWatchAssignment(user.vesselId, assignDate, selectedCrewId, assignStartTime, assignEndTime);
-      const updated = await getWeekAssignments(user.vesselId, toDateStr(weekStart));
+      await addWatchAssignment(
+        user.vesselId,
+        assignDate,
+        selectedCrewId,
+        assignStartTime,
+        assignEndTime
+      );
+      const updated = await getWeekAssignments(user.vesselId, weekStart);
       setAssignments(updated);
       setSelectedCrewId(null);
     } catch (e) {
@@ -232,7 +243,10 @@ export const WatchDutiesScreen = () => {
     setSavingGroup(true);
     try {
       const id = await createDutyGroup(user.vesselId, newGroupTitle.trim(), newGroupDept);
-      setDutyGroups((prev) => [...prev, { id, title: newGroupTitle.trim(), department: newGroupDept, items: [] }]);
+      setDutyGroups((prev) => [
+        ...prev,
+        { id, title: newGroupTitle.trim(), department: newGroupDept, items: [] },
+      ]);
       setNewGroupTitle('');
       setAddGroupModalVisible(false);
     } catch (e) {
@@ -274,7 +288,18 @@ export const WatchDutiesScreen = () => {
       setDutyGroups((prev) =>
         prev.map((g) =>
           g.id === groupId
-            ? { ...g, items: [...g.items, { id: `temp-${Date.now()}`, label: newItemText.trim(), sortOrder, checked: false }] }
+            ? {
+                ...g,
+                items: [
+                  ...g.items,
+                  {
+                    id: `temp-${Date.now()}`,
+                    label: newItemText.trim(),
+                    sortOrder,
+                    checked: false,
+                  },
+                ],
+              }
             : g
         )
       );
@@ -296,7 +321,9 @@ export const WatchDutiesScreen = () => {
           try {
             await deleteDutyItem(itemId);
             setDutyGroups((prev) =>
-              prev.map((g) => (g.id === groupId ? { ...g, items: g.items.filter((i) => i.id !== itemId) } : g))
+              prev.map((g) =>
+                g.id === groupId ? { ...g, items: g.items.filter((i) => i.id !== itemId) } : g
+              )
             );
           } catch (e) {
             Alert.alert('Error', 'Failed to remove item.');
@@ -322,7 +349,12 @@ export const WatchDutiesScreen = () => {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: themeColors.background, justifyContent: 'center' }]}>
+      <View
+        style={[
+          styles.container,
+          { backgroundColor: themeColors.background, justifyContent: 'center' },
+        ]}
+      >
         <ActivityIndicator color={COLORS.primary} />
       </View>
     );
@@ -335,371 +367,649 @@ export const WatchDutiesScreen = () => {
       keyboardVerticalOffset={0}
     >
       <PageHeader title="Watch Duties" info={WATCH_DUTIES_INFO} infoScreenKey="watch_duties" />
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>This week</Text>
-      <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
-        {weekDates.map((d, i) => {
-          const dateStr = toDateStr(d);
-          const dayAssignments = assignments.filter((a) => a.date === dateStr);
-          return (
-            <TouchableOpacity
-              key={dateStr}
-              disabled={!canManage}
-              onPress={() => openAssignModal(dateStr)}
-              style={[styles.weekRow, i < weekDates.length - 1 && styles.weekRowBorder, { borderColor: themeColors.textSecondary + '30' }]}
-            >
-              <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.sm }}>
-                {d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
-              </Text>
-              {dayAssignments.length === 0 ? (
-                canManage ? (
-                  <View style={{ backgroundColor: COLORS.primary + '20', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}>
-                    <Text style={{ color: COLORS.primary, fontSize: FONTS.xs, fontWeight: '600' }}>{'\u2192'} Select a crew member</Text>
-                  </View>
-                ) : (
-                  <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.sm, opacity: 0.6 }}>Not assigned</Text>
-                )
-              ) : (
-                <View style={{ alignItems: 'flex-end' }}>
-                  {dayAssignments.map((a) => (
-                    <Text key={a.id} style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>
-                      {a.userName} · {a.startTime}–{a.endTime}
-                    </Text>
-                  ))}
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-
-      {assignModalVisible && assignDate && (
-        <Modal visible transparent animationType="fade">
-          <View style={styles.modalBackdrop}>
-            <Pressable style={StyleSheet.absoluteFill} onPress={closeAssignModal} />
-            <View style={[styles.modalBox, { backgroundColor: themeColors.surface, maxHeight: activeTimeField ? '85%' : 400 }]}>
-              <ScrollView showsVerticalScrollIndicator={false} scrollEnabled={!activeTimeField}>
-
-              {crewPickerVisible ? (
-                <>
-                  <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Select crew</Text>
-                  {crewList.map((c) => (
-                    <TouchableOpacity
-                      key={c.id}
-                      style={[styles.modalItem, selectedCrewId === c.id && styles.modalItemSelected]}
-                      onPress={() => { setSelectedCrewId(c.id); setCrewPickerVisible(false); }}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>This week</Text>
+        <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
+          {weekDates.map((d, i) => {
+            const dateStr = toDateStr(d);
+            const dayAssignments = assignments.filter((a) => a.date === dateStr);
+            return (
+              <TouchableOpacity
+                key={dateStr}
+                disabled={!canManage}
+                onPress={() => openAssignModal(dateStr)}
+                style={[
+                  styles.weekRow,
+                  i < weekDates.length - 1 && styles.weekRowBorder,
+                  { borderColor: themeColors.textSecondary + '30' },
+                ]}
+              >
+                <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.sm }}>
+                  {d.toLocaleDateString(undefined, {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short',
+                  })}
+                </Text>
+                {dayAssignments.length === 0 ? (
+                  canManage ? (
+                    <View
+                      style={{
+                        backgroundColor: COLORS.primary + '20',
+                        borderRadius: 12,
+                        paddingHorizontal: 10,
+                        paddingVertical: 4,
+                      }}
                     >
-                      <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base }}>{c.name}</Text>
-                    </TouchableOpacity>
-                  ))}
-                  <TouchableOpacity onPress={() => setCrewPickerVisible(false)} style={[styles.secondaryButton, { marginTop: SPACING.md }]}>
-                    <Text style={{ color: themeColors.textPrimary }}>Back</Text>
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <>
-                  <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
-                    {new Date(assignDate + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
-                  </Text>
+                      <Text
+                        style={{ color: COLORS.primary, fontSize: FONTS.xs, fontWeight: '600' }}
+                      >
+                        {'\u2192'} Select a crew member
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text
+                      style={{ color: themeColors.textSecondary, fontSize: FONTS.sm, opacity: 0.6 }}
+                    >
+                      Not assigned
+                    </Text>
+                  )
+                ) : (
+                  <View style={{ alignItems: 'flex-end' }}>
+                    {dayAssignments.map((a) => (
+                      <Text
+                        key={a.id}
+                        style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}
+                      >
+                        {a.userName} · {a.startTime}–{a.endTime}
+                      </Text>
+                    ))}
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
-                  {assignments.filter((a) => a.date === assignDate).length > 0 && (
-                    <View style={{ marginBottom: SPACING.md }}>
-                      {assignments.filter((a) => a.date === assignDate).map((a) => (
-                        <View key={a.id} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6 }}>
-                          <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>{a.userName} {'\u00b7'} {a.startTime}{'\u2013'}{a.endTime}</Text>
-                          <TouchableOpacity onPress={() => handleRemoveAssignment(a.id)}>
-                            <Text style={{ color: '#dc2626', fontSize: FONTS.sm }}>Remove</Text>
+        {assignModalVisible && assignDate && (
+          <Modal visible transparent animationType="fade">
+            <View style={styles.modalBackdrop}>
+              <Pressable style={StyleSheet.absoluteFill} onPress={closeAssignModal} />
+              <View
+                style={[
+                  styles.modalBox,
+                  {
+                    backgroundColor: themeColors.surface,
+                    maxHeight: activeTimeField ? '85%' : 400,
+                  },
+                ]}
+              >
+                <ScrollView showsVerticalScrollIndicator={false} scrollEnabled={!activeTimeField}>
+                  {crewPickerVisible ? (
+                    <>
+                      <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+                        Select crew
+                      </Text>
+                      {crewList.map((c) => (
+                        <TouchableOpacity
+                          key={c.id}
+                          style={[
+                            styles.modalItem,
+                            selectedCrewId === c.id && styles.modalItemSelected,
+                          ]}
+                          onPress={() => {
+                            setSelectedCrewId(c.id);
+                            setCrewPickerVisible(false);
+                          }}
+                        >
+                          <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base }}>
+                            {c.name}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                      <TouchableOpacity
+                        onPress={() => setCrewPickerVisible(false)}
+                        style={[styles.secondaryButton, { marginTop: SPACING.md }]}
+                      >
+                        <Text style={{ color: themeColors.textPrimary }}>Back</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+                        {new Date(assignDate + 'T00:00:00').toLocaleDateString(undefined, {
+                          weekday: 'long',
+                          day: 'numeric',
+                          month: 'long',
+                        })}
+                      </Text>
+
+                      {assignments.filter((a) => a.date === assignDate).length > 0 && (
+                        <View style={{ marginBottom: SPACING.md }}>
+                          {assignments
+                            .filter((a) => a.date === assignDate)
+                            .map((a) => (
+                              <View
+                                key={a.id}
+                                style={{
+                                  flexDirection: 'row',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  paddingVertical: 6,
+                                }}
+                              >
+                                <Text
+                                  style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}
+                                >
+                                  {a.userName} {'\u00b7'} {a.startTime}
+                                  {'\u2013'}
+                                  {a.endTime}
+                                </Text>
+                                <TouchableOpacity onPress={() => handleRemoveAssignment(a.id)}>
+                                  <Text style={{ color: '#dc2626', fontSize: FONTS.sm }}>
+                                    Remove
+                                  </Text>
+                                </TouchableOpacity>
+                              </View>
+                            ))}
+                        </View>
+                      )}
+
+                      <Text
+                        style={{
+                          color: themeColors.textSecondary,
+                          fontSize: FONTS.sm,
+                          marginBottom: 6,
+                        }}
+                      >
+                        Add crew member
+                      </Text>
+                      <TouchableOpacity
+                        style={[
+                          styles.dropdown,
+                          { backgroundColor: themeColors.background, marginBottom: SPACING.sm },
+                        ]}
+                        onPress={() => setCrewPickerVisible(true)}
+                      >
+                        <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>
+                          {selectedCrewId
+                            ? (crewList.find((c) => c.id === selectedCrewId)?.name ?? 'Select crew')
+                            : 'Select crew'}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <View
+                        style={{ flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md }}
+                      >
+                        <TouchableOpacity
+                          style={[
+                            styles.dropdown,
+                            { backgroundColor: themeColors.background, flex: 1 },
+                          ]}
+                          onPress={() => setActiveTimeField('start')}
+                        >
+                          <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>
+                            Start {assignStartTime}
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[
+                            styles.dropdown,
+                            { backgroundColor: themeColors.background, flex: 1 },
+                          ]}
+                          onPress={() => setActiveTimeField('end')}
+                        >
+                          <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>
+                            End {assignEndTime}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      {activeTimeField && (
+                        <DateTimePicker
+                          value={timeStringToDate(
+                            activeTimeField === 'start' ? assignStartTime : assignEndTime
+                          )}
+                          mode="time"
+                          display="spinner"
+                          themeVariant={themeColors.isDark ? 'dark' : 'light'}
+                          onChange={(event, selectedDate) => {
+                            if (selectedDate) {
+                              const timeStr = dateToTimeString(selectedDate);
+                              if (activeTimeField === 'start') setAssignStartTime(timeStr);
+                              else setAssignEndTime(timeStr);
+                            }
+                            if (Platform.OS === 'android') setActiveTimeField(null);
+                          }}
+                        />
+                      )}
+                      {activeTimeField && Platform.OS === 'ios' && (
+                        <TouchableOpacity
+                          onPress={() => setActiveTimeField(null)}
+                          style={[styles.primaryButton, { marginBottom: SPACING.md }]}
+                        >
+                          <Text style={{ color: '#fff', fontWeight: '600' }}>Done</Text>
+                        </TouchableOpacity>
+                      )}
+
+                      {!activeTimeField && (
+                        <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
+                          <TouchableOpacity
+                            onPress={closeAssignModal}
+                            style={styles.secondaryButton}
+                          >
+                            <Text style={{ color: themeColors.textPrimary }}>Close</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={handleAssignCrew}
+                            disabled={savingAssignment || !selectedCrewId}
+                            style={[
+                              styles.primaryButton,
+                              { opacity: savingAssignment || !selectedCrewId ? 0.6 : 1 },
+                            ]}
+                          >
+                            <Text style={{ color: '#fff', fontWeight: '600' }}>
+                              {savingAssignment ? 'Assigning...' : 'Assign'}
+                            </Text>
                           </TouchableOpacity>
                         </View>
-                      ))}
-                    </View>
+                      )}
+                    </>
                   )}
+                </ScrollView>
+              </View>
+            </View>
+          </Modal>
+        )}
 
-                  <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.sm, marginBottom: 6 }}>Add crew member</Text>
-                  <TouchableOpacity
-                    style={[styles.dropdown, { backgroundColor: themeColors.background, marginBottom: SPACING.sm }]}
-                    onPress={() => setCrewPickerVisible(true)}
+        <View
+          style={[styles.card, { backgroundColor: themeColors.surface, marginTop: SPACING.lg }]}
+        >
+          <View style={styles.cardHeaderRow}>
+            <Text
+              style={[styles.sectionTitle, { color: themeColors.textPrimary, marginBottom: 0 }]}
+            >
+              Rules
+            </Text>
+            {canManage && !editingRules && (
+              <TouchableOpacity
+                onPress={() => {
+                  setRulesDraft(rules);
+                  setEditingRules(true);
+                }}
+              >
+                <Text
+                  style={{
+                    color: themeColors.isDark ? COLORS.white : COLORS.primary,
+                    fontSize: FONTS.sm,
+                    fontWeight: '600',
+                  }}
+                >
+                  Edit
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {editingRules ? (
+            <>
+              <TextInput
+                value={rulesDraft}
+                onChangeText={setRulesDraft}
+                multiline
+                style={[
+                  styles.rulesInput,
+                  { color: themeColors.textPrimary, borderColor: themeColors.textSecondary },
+                ]}
+                placeholder="Enter watch duty rules..."
+                placeholderTextColor={themeColors.textSecondary}
+              />
+              <View style={{ flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm }}>
+                <TouchableOpacity
+                  onPress={() => setEditingRules(false)}
+                  style={styles.secondaryButton}
+                >
+                  <Text style={{ color: themeColors.textPrimary }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleSaveRules}
+                  disabled={savingRules}
+                  style={styles.primaryButton}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '600' }}>
+                    {savingRules ? 'Saving...' : 'Save'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : rules.trim() ? (
+            <View style={{ marginTop: SPACING.sm }}>
+              {rules
+                .split('\n')
+                .filter((line) => line.trim().length > 0)
+                .map((line, i) => (
+                  <Text
+                    key={i}
+                    style={{
+                      color: themeColors.textSecondary,
+                      fontSize: FONTS.sm,
+                      marginBottom: 4,
+                    }}
                   >
-                    <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>
-                      {selectedCrewId ? crewList.find((c) => c.id === selectedCrewId)?.name ?? 'Select crew' : 'Select crew'}
+                    {i + 1}. {line.trim()}
+                  </Text>
+                ))}
+            </View>
+          ) : (
+            <Text
+              style={{
+                color: themeColors.textSecondary,
+                fontSize: FONTS.sm,
+                marginTop: SPACING.sm,
+              }}
+            >
+              No rules set yet.
+            </Text>
+          )}
+        </View>
+
+        <LabeledDropdown
+          label="Department"
+          value={selectedDept === 'All' ? 'All Departments' : DEPT_LABEL[selectedDept]}
+          open={filterModalVisible}
+          onPress={() => setFilterModalVisible(true)}
+        />
+
+        {filterModalVisible && (
+          <Modal visible transparent animationType="fade">
+            <Pressable style={styles.modalBackdrop} onPress={() => setFilterModalVisible(false)}>
+              <View
+                style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+                onStartShouldSetResponder={() => true}
+              >
+                <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+                  Filter by department
+                </Text>
+                <TouchableOpacity
+                  style={[styles.modalItem, selectedDept === 'All' && styles.modalItemSelected]}
+                  onPress={() => {
+                    setSelectedDept('All');
+                    setFilterModalVisible(false);
+                  }}
+                >
+                  <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base }}>
+                    All Departments
+                  </Text>
+                </TouchableOpacity>
+                {ALL_DEPARTMENTS.map((dept) => (
+                  <TouchableOpacity
+                    key={dept}
+                    style={[styles.modalItem, selectedDept === dept && styles.modalItemSelected]}
+                    onPress={() => {
+                      setSelectedDept(dept);
+                      setFilterModalVisible(false);
+                    }}
+                  >
+                    <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base }}>
+                      {DEPT_LABEL[dept]}
                     </Text>
                   </TouchableOpacity>
+                ))}
+              </View>
+            </Pressable>
+          </Modal>
+        )}
 
-                  <View style={{ flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md }}>
-                    <TouchableOpacity
-                      style={[styles.dropdown, { backgroundColor: themeColors.background, flex: 1 }]}
-                      onPress={() => setActiveTimeField('start')}
-                    >
-                      <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>Start {assignStartTime}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.dropdown, { backgroundColor: themeColors.background, flex: 1 }]}
-                      onPress={() => setActiveTimeField('end')}
-                    >
-                      <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>End {assignEndTime}</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {activeTimeField && (
-                    <DateTimePicker
-                      value={timeStringToDate(activeTimeField === 'start' ? assignStartTime : assignEndTime)}
-                      mode="time"
-                      display="spinner"
-                      themeVariant={themeColors.isDark ? 'dark' : 'light'}
-                      onChange={(event, selectedDate) => {
-                        if (selectedDate) {
-                          const timeStr = dateToTimeString(selectedDate);
-                          if (activeTimeField === 'start') setAssignStartTime(timeStr);
-                          else setAssignEndTime(timeStr);
-                        }
-                        if (Platform.OS === 'android') setActiveTimeField(null);
-                      }}
-                    />
-                  )}
-                  {activeTimeField && Platform.OS === 'ios' && (
-                    <TouchableOpacity
-                      onPress={() => setActiveTimeField(null)}
-                      style={[styles.primaryButton, { marginBottom: SPACING.md }]}
-                    >
-                      <Text style={{ color: '#fff', fontWeight: '600' }}>Done</Text>
-                    </TouchableOpacity>
-                  )}
-
-                  {!activeTimeField && (
-                    <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
-                      <TouchableOpacity onPress={closeAssignModal} style={styles.secondaryButton}>
-                        <Text style={{ color: themeColors.textPrimary }}>Close</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={handleAssignCrew}
-                        disabled={savingAssignment || !selectedCrewId}
-                        style={[styles.primaryButton, { opacity: savingAssignment || !selectedCrewId ? 0.6 : 1 }]}
-                      >
-                        <Text style={{ color: '#fff', fontWeight: '600' }}>{savingAssignment ? 'Assigning...' : 'Assign'}</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </>
-              )}
-            
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
-      )}
-
-      <View style={[styles.card, { backgroundColor: themeColors.surface, marginTop: SPACING.lg }]}>
-        <View style={styles.cardHeaderRow}>
-          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary, marginBottom: 0 }]}>Rules</Text>
-          {canManage && !editingRules && (
-            <TouchableOpacity onPress={() => { setRulesDraft(rules); setEditingRules(true); }}>
-              <Text style={{ color: COLORS.primary, fontSize: FONTS.sm, fontWeight: '600' }}>Edit</Text>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginTop: SPACING.xl,
+            marginBottom: SPACING.md,
+          }}
+        >
+          <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base, fontWeight: '600' }}>
+            Duties
+          </Text>
+          {canManage && (
+            <TouchableOpacity
+              onPress={() => {
+                setNewGroupTitle('');
+                setNewGroupDept('BRIDGE');
+                setAddGroupModalVisible(true);
+              }}
+            >
+              <Text style={{ color: COLORS.primary, fontSize: FONTS.sm, fontWeight: '600' }}>
+                + Add group
+              </Text>
             </TouchableOpacity>
           )}
         </View>
-        {editingRules ? (
-          <>
-            <TextInput
-              value={rulesDraft}
-              onChangeText={setRulesDraft}
-              multiline
-              style={[styles.rulesInput, { color: themeColors.textPrimary, borderColor: themeColors.textSecondary }]}
-              placeholder="Enter watch duty rules..."
-              placeholderTextColor={themeColors.textSecondary}
-            />
-            <View style={{ flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm }}>
-              <TouchableOpacity onPress={() => setEditingRules(false)} style={styles.secondaryButton}>
-                <Text style={{ color: themeColors.textPrimary }}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleSaveRules} disabled={savingRules} style={styles.primaryButton}>
-                <Text style={{ color: '#fff', fontWeight: '600' }}>{savingRules ? 'Saving...' : 'Save'}</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        ) : rules.trim() ? (
-          <View style={{ marginTop: SPACING.sm }}>
-            {rules
-              .split('\n')
-              .filter((line) => line.trim().length > 0)
-              .map((line, i) => (
-                <Text key={i} style={{ color: themeColors.textSecondary, fontSize: FONTS.sm, marginBottom: 4 }}>
-                  {i + 1}. {line.trim()}
-                </Text>
-              ))}
-          </View>
-        ) : (
-          <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.sm, marginTop: SPACING.sm }}>
-            No rules set yet.
+
+        {addGroupModalVisible && (
+          <Modal visible transparent animationType="fade">
+            <KeyboardAvoidingView
+              style={styles.modalBackdrop}
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            >
+              <Pressable
+                style={{ flex: 1, width: '100%', justifyContent: 'center', alignItems: 'center' }}
+                onPress={() => setAddGroupModalVisible(false)}
+              >
+                <View
+                  style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+                  onStartShouldSetResponder={() => true}
+                >
+                  <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+                    New duty group
+                  </Text>
+                  <TextInput
+                    value={newGroupTitle}
+                    onChangeText={setNewGroupTitle}
+                    placeholder="e.g. Morning Duties"
+                    placeholderTextColor={themeColors.textSecondary}
+                    style={[
+                      styles.rulesInput,
+                      {
+                        color: themeColors.textPrimary,
+                        borderColor: themeColors.textSecondary,
+                        minHeight: 44,
+                        marginBottom: SPACING.md,
+                      },
+                    ]}
+                  />
+                  <Text
+                    style={{
+                      color: themeColors.textSecondary,
+                      fontSize: FONTS.sm,
+                      marginBottom: 8,
+                    }}
+                  >
+                    Department
+                  </Text>
+                  {ALL_DEPARTMENTS.map((dept) => (
+                    <TouchableOpacity
+                      key={dept}
+                      style={[styles.modalItem, newGroupDept === dept && styles.modalItemSelected]}
+                      onPress={() => setNewGroupDept(dept)}
+                    >
+                      <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base }}>
+                        {DEPT_LABEL[dept]}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                  <View style={{ flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.md }}>
+                    <TouchableOpacity
+                      onPress={() => setAddGroupModalVisible(false)}
+                      style={styles.secondaryButton}
+                    >
+                      <Text style={{ color: themeColors.textPrimary }}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={handleCreateGroup}
+                      disabled={savingGroup || !newGroupTitle.trim()}
+                      style={styles.primaryButton}
+                    >
+                      <Text style={{ color: '#fff', fontWeight: '600' }}>
+                        {savingGroup ? 'Creating...' : 'Create'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </Pressable>
+            </KeyboardAvoidingView>
+          </Modal>
+        )}
+
+        {filteredGroups.length === 0 && (
+          <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.sm }}>
+            No duty groups yet.
           </Text>
         )}
-      </View>
 
-      <LabeledDropdown
-        label="Department"
-        value={selectedDept === 'All' ? 'All Departments' : DEPT_LABEL[selectedDept]}
-        open={filterModalVisible}
-        onPress={() => setFilterModalVisible(true)}
-      />
-
-      {filterModalVisible && (
-        <Modal visible transparent animationType="fade">
-          <Pressable style={styles.modalBackdrop} onPress={() => setFilterModalVisible(false)}>
-            <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
-              <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Filter by department</Text>
-              <TouchableOpacity
-                style={[styles.modalItem, selectedDept === 'All' && styles.modalItemSelected]}
-                onPress={() => { setSelectedDept('All'); setFilterModalVisible(false); }}
-              >
-                <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base }}>All Departments</Text>
-              </TouchableOpacity>
-              {ALL_DEPARTMENTS.map((dept) => (
-                <TouchableOpacity
-                  key={dept}
-                  style={[styles.modalItem, selectedDept === dept && styles.modalItemSelected]}
-                  onPress={() => { setSelectedDept(dept); setFilterModalVisible(false); }}
-                >
-                  <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base }}>{DEPT_LABEL[dept]}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </Pressable>
-        </Modal>
-      )}
-
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: SPACING.xl, marginBottom: SPACING.md }}>
-        <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base, fontWeight: '600' }}>Duties</Text>
-        {canManage && (
-          <TouchableOpacity onPress={() => { setNewGroupTitle(''); setNewGroupDept('BRIDGE'); setAddGroupModalVisible(true); }}>
-            <Text style={{ color: COLORS.primary, fontSize: FONTS.sm, fontWeight: '600' }}>+ Add group</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {addGroupModalVisible && (
-        <Modal visible transparent animationType="fade">
-          <KeyboardAvoidingView
-            style={styles.modalBackdrop}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        {filteredGroups.map((group) => (
+          <View
+            key={group.id}
+            style={[
+              styles.card,
+              { backgroundColor: themeColors.surface, marginBottom: SPACING.sm },
+            ]}
           >
-          <Pressable style={{ flex: 1, width: '100%', justifyContent: 'center', alignItems: 'center' }} onPress={() => setAddGroupModalVisible(false)}>
-            <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
-              <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>New duty group</Text>
-              <TextInput
-                value={newGroupTitle}
-                onChangeText={setNewGroupTitle}
-                placeholder="e.g. Morning Duties"
-                placeholderTextColor={themeColors.textSecondary}
-                style={[styles.rulesInput, { color: themeColors.textPrimary, borderColor: themeColors.textSecondary, minHeight: 44, marginBottom: SPACING.md }]}
-              />
-              <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.sm, marginBottom: 8 }}>Department</Text>
-              {ALL_DEPARTMENTS.map((dept) => (
-                <TouchableOpacity
-                  key={dept}
-                  style={[styles.modalItem, newGroupDept === dept && styles.modalItemSelected]}
-                  onPress={() => setNewGroupDept(dept)}
-                >
-                  <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base }}>{DEPT_LABEL[dept]}</Text>
-                </TouchableOpacity>
-              ))}
-              <View style={{ flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.md }}>
-                <TouchableOpacity onPress={() => setAddGroupModalVisible(false)} style={styles.secondaryButton}>
-                  <Text style={{ color: themeColors.textPrimary }}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={handleCreateGroup} disabled={savingGroup || !newGroupTitle.trim()} style={styles.primaryButton}>
-                  <Text style={{ color: '#fff', fontWeight: '600' }}>{savingGroup ? 'Creating...' : 'Create'}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </Pressable>
-          </KeyboardAvoidingView>
-        </Modal>
-      )}
-
-      {filteredGroups.length === 0 && (
-        <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.sm }}>No duty groups yet.</Text>
-      )}
-
-      {filteredGroups.map((group) => (
-        <View key={group.id} style={[styles.card, { backgroundColor: themeColors.surface, marginBottom: SPACING.sm }]}>
-          <TouchableOpacity
-            style={styles.cardHeaderRow}
-            onPress={() => setExpandedGroupId(expandedGroupId === group.id ? null : group.id)}
-            activeOpacity={0.8}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base, fontWeight: '600' }}>{group.title}</Text>
-              <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.xs, marginTop: 2 }}>
-                {group.items.length} item{group.items.length === 1 ? '' : 's'}
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <View style={{ backgroundColor: COLORS.primary + '20', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }}>
-                <Text style={{ color: COLORS.primary, fontSize: FONTS.xs }}>{DEPT_LABEL[group.department]}</Text>
-              </View>
-              {canManage && expandedGroupId === group.id && (
-                <TouchableOpacity onPress={() => handleDeleteGroup(group.id, group.title)}>
-                  <Text style={{ color: '#dc2626', fontSize: FONTS.sm }}>Delete</Text>
-                </TouchableOpacity>
-              )}
-              <Text style={{ color: themeColors.textSecondary, fontSize: 12 }}>
-                {expandedGroupId === group.id ? '\u25b2' : '\u25bc'}
-              </Text>
-            </View>
-          </TouchableOpacity>
-          {expandedGroupId === group.id && (
-          <>
-          {group.items.map((item) => (
-            <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6, flex: 1 }}
-                onPress={() => handleToggleItem(item.id, item.checked)}
-              >
-                <Text style={{ fontSize: 16, color: item.checked ? '#16a34a' : themeColors.textSecondary }}>
-                  {item.checked ? '\u2611' : '\u2610'}
-                </Text>
+            <TouchableOpacity
+              style={styles.cardHeaderRow}
+              onPress={() => setExpandedGroupId(expandedGroupId === group.id ? null : group.id)}
+              activeOpacity={0.8}
+            >
+              <View style={{ flex: 1 }}>
                 <Text
                   style={{
-                    color: item.checked ? themeColors.textSecondary : themeColors.textPrimary,
-                    fontSize: FONTS.sm,
-                    textDecorationLine: item.checked ? 'line-through' : 'none',
+                    color: themeColors.textPrimary,
+                    fontSize: FONTS.base,
+                    fontWeight: '600',
                   }}
                 >
-                  {item.label}
+                  {group.title}
                 </Text>
-              </TouchableOpacity>
-              {canManage && (
-                <TouchableOpacity onPress={() => handleDeleteItem(group.id, item.id)}>
-                  <Text style={{ color: '#dc2626', fontSize: FONTS.xs }}>Remove</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          ))}
-          {canManage && (
-            addingItemGroupId === group.id ? (
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 6, alignItems: 'center' }}>
-                <TextInput
-                  value={newItemText}
-                  onChangeText={setNewItemText}
-                  placeholder="New item"
-                  placeholderTextColor={themeColors.textSecondary}
-                  style={[styles.rulesInput, { flex: 1, minHeight: 36, color: themeColors.textPrimary, borderColor: themeColors.textSecondary, paddingVertical: 6 }]}
-                  autoFocus
-                  returnKeyType="done"
-                  blurOnSubmit={false}
-                  onSubmitEditing={() => handleAddItem(group.id)}
-                />
+                <Text
+                  style={{ color: themeColors.textSecondary, fontSize: FONTS.xs, marginTop: 2 }}
+                >
+                  {group.items.length} item{group.items.length === 1 ? '' : 's'}
+                </Text>
               </View>
-            ) : (
-              <TouchableOpacity onPress={() => { setAddingItemGroupId(group.id); setNewItemText(''); }} style={{ marginTop: 6 }}>
-                <Text style={{ color: COLORS.primary, fontSize: FONTS.sm }}>+ Add item</Text>
-              </TouchableOpacity>
-            )
-          )}
-          </>
-          )}
-        </View>
-      ))}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View
+                  style={{
+                    backgroundColor: COLORS.primary + '20',
+                    borderRadius: 10,
+                    paddingHorizontal: 8,
+                    paddingVertical: 2,
+                  }}
+                >
+                  <Text style={{ color: COLORS.primary, fontSize: FONTS.xs }}>
+                    {DEPT_LABEL[group.department]}
+                  </Text>
+                </View>
+                {canManage && expandedGroupId === group.id && (
+                  <TouchableOpacity onPress={() => handleDeleteGroup(group.id, group.title)}>
+                    <Text style={{ color: '#dc2626', fontSize: FONTS.sm }}>Delete</Text>
+                  </TouchableOpacity>
+                )}
+                <Text style={{ color: themeColors.textSecondary, fontSize: 12 }}>
+                  {expandedGroupId === group.id ? '\u25b2' : '\u25bc'}
+                </Text>
+              </View>
+            </TouchableOpacity>
+            {expandedGroupId === group.id && (
+              <>
+                {group.items.map((item) => (
+                  <View
+                    key={item.id}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <TouchableOpacity
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 8,
+                        paddingVertical: 6,
+                        flex: 1,
+                      }}
+                      onPress={() => handleToggleItem(item.id, item.checked)}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 16,
+                          color: item.checked ? '#16a34a' : themeColors.textSecondary,
+                        }}
+                      >
+                        {item.checked ? '\u2611' : '\u2610'}
+                      </Text>
+                      <Text
+                        style={{
+                          color: item.checked ? themeColors.textSecondary : themeColors.textPrimary,
+                          fontSize: FONTS.sm,
+                          textDecorationLine: item.checked ? 'line-through' : 'none',
+                        }}
+                      >
+                        {item.label}
+                      </Text>
+                    </TouchableOpacity>
+                    {canManage && (
+                      <TouchableOpacity onPress={() => handleDeleteItem(group.id, item.id)}>
+                        <Text style={{ color: '#dc2626', fontSize: FONTS.xs }}>Remove</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ))}
+                {canManage &&
+                  (addingItemGroupId === group.id ? (
+                    <View
+                      style={{ flexDirection: 'row', gap: 8, marginTop: 6, alignItems: 'center' }}
+                    >
+                      <TextInput
+                        value={newItemText}
+                        onChangeText={setNewItemText}
+                        placeholder="New item"
+                        placeholderTextColor={themeColors.textSecondary}
+                        style={[
+                          styles.rulesInput,
+                          {
+                            flex: 1,
+                            minHeight: 36,
+                            color: themeColors.textPrimary,
+                            borderColor: themeColors.textSecondary,
+                            paddingVertical: 6,
+                          },
+                        ]}
+                        autoFocus
+                        returnKeyType="done"
+                        blurOnSubmit={false}
+                        onSubmitEditing={() => handleAddItem(group.id)}
+                      />
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setAddingItemGroupId(group.id);
+                        setNewItemText('');
+                      }}
+                      style={{ marginTop: 6 }}
+                    >
+                      <Text style={{ color: COLORS.primary, fontSize: FONTS.sm }}>+ Add item</Text>
+                    </TouchableOpacity>
+                  ))}
+              </>
+            )}
+          </View>
+        ))}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -712,11 +1022,36 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: FONTS.base, fontWeight: '600', marginBottom: SPACING.sm },
   card: { borderRadius: BORDER_RADIUS.lg, padding: SPACING.md },
   cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  weekRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
+  weekRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
   weekRowBorder: { borderBottomWidth: 1 },
-  rulesInput: { borderWidth: 1, borderRadius: BORDER_RADIUS.md, padding: SPACING.sm, minHeight: 80, textAlignVertical: 'top', fontSize: FONTS.sm },
-  primaryButton: { flex: 1, backgroundColor: COLORS.primary, padding: SPACING.sm, borderRadius: BORDER_RADIUS.md, alignItems: 'center' },
-  secondaryButton: { flex: 1, borderWidth: 1, borderColor: COLORS.border, padding: SPACING.sm, borderRadius: BORDER_RADIUS.md, alignItems: 'center' },
+  rulesInput: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.sm,
+    minHeight: 80,
+    textAlignVertical: 'top',
+    fontSize: FONTS.sm,
+  },
+  primaryButton: {
+    flex: 1,
+    backgroundColor: COLORS.primary,
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+  },
+  secondaryButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+  },
   dropdown: {
     flexDirection: 'row',
     justifyContent: 'space-between',

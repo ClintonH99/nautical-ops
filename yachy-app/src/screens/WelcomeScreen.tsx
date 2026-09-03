@@ -16,8 +16,6 @@ import { useAuthStore } from '../store';
 
 const ACCENT_GOLD = '#c9a227';
 
-const WELCOME_DURATION_MS = 3000;
-
 export const WelcomeScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { isAuthenticated, user } = useAuthStore();
@@ -34,10 +32,7 @@ export const WelcomeScreen = ({ navigation }: any) => {
       return;
     }
 
-    const timer = setTimeout(() => {
-      navigation.replace('Login');
-    }, WELCOME_DURATION_MS);
-    return () => clearTimeout(timer);
+    navigation.replace('Login');
   }, [navigation, isAuthenticated, user, isCaptain, hasVessel]);
 
   return (

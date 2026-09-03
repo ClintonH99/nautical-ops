@@ -53,8 +53,7 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
   const isHOD = user?.role === 'HOD';
   const isCaptain = user?.role === 'CAPTAIN_MOV';
 
-  const canEditChecklist = (checklist: PreDepartureChecklist) =>
-    isCaptain || (checklist.department !== null && isHOD);
+  const canEditChecklist = (_checklist: PreDepartureChecklist) => isCaptain || isHOD;
 
   const filteredChecklists = useMemo(() => {
     if (!departmentFilter) return checklists;

@@ -1,5 +1,5 @@
 /**
- * Ensures static marketing/legal pages and pricing config exist in dist/ after expo export.
+ * Ensures static marketing/legal pages exist in dist/ after expo export.
  * Expo usually copies public/*, but CI/Vercel can differ; this step is idempotent.
  */
 
@@ -14,7 +14,6 @@ const distDir = path.join(appRoot, 'dist');
 
 const FILES = [
   'pricing.html',
-  'pricing-config.js',
   'privacy-policy.html',
   'terms-and-conditions.html',
   'refund-policy.html',

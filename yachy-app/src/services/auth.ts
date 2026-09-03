@@ -11,6 +11,7 @@ import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import * as Device from 'expo-device';
 import { supabase } from './supabase';
 import vesselService from './vessel';
+import { registerCurrentDevice, releaseCurrentDevice } from './deviceAccess';
 import { User } from '../types';
 
 export interface LoginCredentials {
@@ -25,7 +26,6 @@ export interface RegisterData extends LoginCredentials {
   department2?: string | null;
   contractType?: string;
   inviteCode?: string;
-  vesselId?: string;
   role?: string;
 }
 
@@ -33,15 +33,6 @@ const GOOGLE_WEB_CLIENT_ID =
   '85474399891-g61250m3f56fas70duo2flsvr7ud6dm3.apps.googleusercontent.com';
 const GOOGLE_IOS_CLIENT_ID =
   '85474399891-q9i3vgnhc07n8nuqafcfj4a8om40a5nl.apps.googleusercontent.com';
-
-const PLAN_MAX_CREW: Record<string, number> = {
-  '1_5': 5,
-  '6_10': 10,
-  '11_15': 15,
-  '16_25': 25,
-  '26_40': 40,
-  '40_plus': Infinity,
-};
 
 class AuthService {
   async signIn({ email, password }: LoginCredentials) {
@@ -56,13 +47,20 @@ class AuthService {
       if (data.user) {
         const PROFILE_TIMEOUT_MS = 15000;
         const userDataPromise = this.getUserProfile(data.user.id);
-        const timeoutPromise = new Promise<null>((_, reject) =>
-          setTimeout(
-            () => reject(new Error('Profile load timed out. Please try again.')),
-            PROFILE_TIMEOUT_MS
-          )
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        const timeoutPromise = new Promise<null>(
+          (_, reject) =>
+            (timeoutId = setTimeout(
+              () => reject(new Error('Profile load timed out. Please try again.')),
+              PROFILE_TIMEOUT_MS
+            ))
         );
-        let userData = await Promise.race([userDataPromise, timeoutPromise]);
+        let userData: User | null;
+        try {
+          userData = await Promise.race([userDataPromise, timeoutPromise]);
+        } finally {
+          if (timeoutId) clearTimeout(timeoutId);
+        }
         if (!userData) {
           userData = await this.ensureOAuthUserProfile(data.user);
         }
@@ -113,11 +111,7 @@ class AuthService {
         return { user: userData, session: data.session };
       } catch (error: any) {
         // Cancelling is not an error worth surfacing.
-        if (
-          error?.code === 'SIGN_IN_CANCELLED' ||
-          error?.code === '-5' ||
-          error?.code === 12501
-        ) {
+        if (error?.code === 'SIGN_IN_CANCELLED' || error?.code === '-5' || error?.code === 12501) {
           return { user: null, session: null };
         }
         if (__DEV__) console.error('Google sign in error:', error);
@@ -331,7 +325,6 @@ class AuthService {
     department2,
     contractType,
     inviteCode,
-    vesselId,
     role: explicitRole,
   }: RegisterData) {
     try {
@@ -339,10 +332,9 @@ class AuthService {
         console.log('🚀 Starting signup process...');
         console.log('📧 Email:', email);
         console.log('🎫 Invite Code:', inviteCode || 'None');
-        console.log('⚓ Vessel ID:', vesselId || 'None');
       }
       let validatedVessel: { id: string; name: string } | null = null;
-      if (inviteCode && inviteCode.trim() && !vesselId) {
+      if (inviteCode && inviteCode.trim()) {
         const vessel = await this.validateInviteCode(inviteCode);
         if (!vessel) throw new Error('Invalid invite code');
         validatedVessel = vessel;
@@ -361,7 +353,7 @@ class AuthService {
       }
       if (authData.user) {
         if (__DEV__) console.log('✅ Auth user created:', authData.user.id);
-        const role = explicitRole ?? (vesselId ? 'HOD' : 'CREW');
+        const role = explicitRole === 'CAPTAIN_MOV' ? 'CAPTAIN_MOV' : 'CREW';
         const userProfile: any = {
           id: authData.user.id,
           email,
@@ -374,22 +366,7 @@ class AuthService {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
-        let joinedViaInviteCode = false;
-        if (vesselId) {
-          userProfile.vessel_id = vesselId;
-        } else if (validatedVessel) {
-          userProfile.vessel_id = validatedVessel.id;
-          joinedViaInviteCode = true;
-        } else if (role === 'CREW') {
-          // No invite code provided - give this crew member their own
-          // private vessel automatically, same createVessel() a Captain
-          // uses, just auto-named rather than asked for a name. They can
-          // move to a real vessel later via Join Vessel with a real code.
-          const soloVessel = await vesselService.createVessel({ name: 'Crew Account', isSolo: true });
-          userProfile.vessel_id = soloVessel.id;
-        }
-        if (__DEV__)
-          console.log('💾 Creating user profile with vessel_id:', userProfile.vessel_id || 'null');
+        if (__DEV__) console.log('💾 Creating unassigned user profile');
         const { error: profileError } = await supabase.from('users').insert([userProfile]);
         if (profileError) {
           if (__DEV__) console.error('❌ Profile creation error:', profileError);
@@ -405,30 +382,22 @@ class AuthService {
           throw profileError;
         }
         if (__DEV__) console.log('✅ User profile created successfully!');
-        if (joinedViaInviteCode && userProfile.vessel_id) {
-          try {
-            const newCode = await vesselService.regenerateInviteCode(userProfile.vessel_id);
-            if (__DEV__) console.log('🔄 Invite code regenerated for next crew member:', newCode);
-          } catch (regenError) {
-            if (__DEV__)
-              console.error('⚠️ Failed to regenerate invite code (non-fatal):', regenError);
-          }
+
+        const deviceAccess = await registerCurrentDevice();
+        if (deviceAccess.state === 'limit_reached') {
+          throw new Error('This account is already registered on 2 devices.');
         }
-        const mappedUser: User = {
-          id: userProfile.id,
-          email: userProfile.email,
-          name: userProfile.name,
-          position: userProfile.position,
-          department: userProfile.department,
-          department2: userProfile.department_2 ?? null,
-          contractType: userProfile.contract_type ?? 'permanent',
-          rotationGroupId: userProfile.rotation_group_id ?? null,
-          role: userProfile.role,
-          vesselId: userProfile.vessel_id,
-          profilePhoto: userProfile.profile_photo,
-          createdAt: userProfile.created_at,
-          updatedAt: userProfile.updated_at,
-        };
+
+        if (validatedVessel) {
+          await this.joinVessel(authData.user.id, inviteCode!);
+        } else if (role === 'CREW') {
+          // New crew without an invite receive a private solo workspace. The
+          // server creates it and assigns membership in one transaction.
+          await vesselService.createVessel({ name: 'Crew Account', isSolo: true });
+        }
+
+        const mappedUser = await this.getUserProfile(authData.user.id);
+        if (!mappedUser) throw new Error('Account profile could not be loaded');
         if (__DEV__)
           console.log(
             '🎉 Signup complete! User:',
@@ -483,6 +452,7 @@ class AuthService {
 
   async signOut() {
     try {
+      await releaseCurrentDevice();
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
     } catch (error) {
@@ -569,105 +539,22 @@ class AuthService {
   }
 
   async validateInviteCode(inviteCode: string) {
-    try {
-      if (__DEV__) console.log('🔍 Validating invite code in database:', inviteCode);
-      const { data, error } = await supabase
-        .from('vessels')
-        .select('*')
-        .eq('invite_code', inviteCode)
-        .maybeSingle();
-      if (error) throw new Error('Invalid invite code');
-      if (!data) throw new Error('Invalid invite code');
-      if (__DEV__) console.log('✅ Vessel found:', data.name, 'ID:', data.id);
-
-      // Check if invite code is expired
-      const expiryDate = new Date(data.invite_expiry);
-      const now = new Date();
-      if (__DEV__) {
-        console.log('📅 Expiry date:', expiryDate.toISOString());
-        console.log('📅 Current date:', now.toISOString());
-      }
-      if (expiryDate < now) throw new Error('Invite code has expired');
-
-      // Check crew limit against subscription plan
-      const { data: subscription } = await supabase
-        .from('vessel_subscriptions')
-        .select('plan_tier, status')
-        .eq('vessel_id', data.id)
-        .in('status', ['active', 'trialing'])
-        .maybeSingle();
-
-      if (!subscription) {
-        throw new Error('This vessel does not have an active subscription. Ask the Captain to subscribe before crew can join.');
-      }
-
-      if (subscription) {
-        const maxCrew = PLAN_MAX_CREW[subscription.plan_tier] ?? Infinity;
-        if (maxCrew !== Infinity) {
-          const { count } = await supabase
-            .from('users')
-            .select('id', { count: 'exact', head: true })
-            .eq('vessel_id', data.id);
-          const currentCount = count ?? 0;
-          if (__DEV__) console.log(`👥 Crew count: ${currentCount}/${maxCrew}`);
-          if (currentCount >= maxCrew) {
-            throw new Error(
-              `This vessel has reached its crew limit of ${maxCrew}. The captain needs to upgrade their plan to add more crew.`
-            );
-          }
-        }
-      }
-
-      if (__DEV__) console.log('✅ Invite code is valid and not expired');
-      return data;
-    } catch (error: any) {
-      throw error;
-    }
+    if (__DEV__) console.log('🔍 Validating invite code in database:', inviteCode);
+    const { data, error } = await supabase.rpc('validate_vessel_invite_code', {
+      p_invite_code: inviteCode.trim().toUpperCase(),
+    });
+    if (error) throw new Error(error.message || 'Invalid invite code');
+    if (!data) throw new Error('Invalid invite code');
+    if (__DEV__) console.log('✅ Vessel found:', data.name, 'ID:', data.id);
+    return data as { id: string; name: string };
   }
 
   async joinVessel(userId: string, inviteCode: string) {
     try {
-      const { data: currentUserRow, error: currentUserError } = await supabase
-        .from('users')
-        .select('role, vessel_id')
-        .eq('id', userId)
-        .single();
-      if (currentUserError) throw currentUserError;
-
-      // A Captain/MOV can only leave a vessel if at least one other Captain/MOV
-      // remains there - never leave a vessel with zero people able to manage it.
-      if (currentUserRow?.role === 'CAPTAIN_MOV' && currentUserRow?.vessel_id) {
-        const { count, error: countError } = await supabase
-          .from('users')
-          .select('*', { count: 'exact', head: true })
-          .eq('vessel_id', currentUserRow.vessel_id)
-          .eq('role', 'CAPTAIN_MOV');
-        if (countError) throw countError;
-        if ((count ?? 0) <= 1) {
-          throw new Error(
-            'You are the only Captain/MOV on your current vessel. Promote another crew member to Captain/MOV in Crew Management before joining a new vessel.'
-          );
-        }
-      }
-
-      const vessel = await this.validateInviteCode(inviteCode);
-      if (!vessel) throw new Error('Invalid invite code');
-      const { error } = await supabase
-        .from('users')
-        .update({
-          vessel_id: vessel.id,
-          role: 'CREW',
-          vessel_joined_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', userId);
+      const { error } = await supabase.rpc('join_current_user_to_vessel', {
+        p_invite_code: inviteCode.trim().toUpperCase(),
+      });
       if (error) throw error;
-      try {
-        await vesselService.regenerateInviteCode(vessel.id);
-        if (__DEV__) console.log('🔄 Invite code regenerated for next crew member');
-      } catch (regenError) {
-        if (__DEV__) console.error('⚠️ Failed to regenerate invite code (non-fatal):', regenError);
-      }
       return await this.getUserProfile(userId);
     } catch (error: any) {
       const msg = error?.message?.toLowerCase() || '';
@@ -678,7 +565,8 @@ class AuthService {
         msg.includes('expired') ||
         msg.includes('crew limit');
       const isSoleCaptainError = msg.includes('only captain');
-      if (!isInviteCodeError && !isSoleCaptainError && __DEV__) console.error('Join vessel error:', error);
+      if (!isInviteCodeError && !isSoleCaptainError && __DEV__)
+        console.error('Join vessel error:', error);
       throw error;
     }
   }

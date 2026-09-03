@@ -8,6 +8,7 @@ const mockSignInWithPassword = jest.fn();
 const mockSignOut = jest.fn();
 const mockGetSession = jest.fn();
 const mockFrom = jest.fn();
+const mockRpc = jest.fn();
 const mockAuthOnAuthStateChange = jest.fn();
 
 jest.mock('../../src/services/supabase', () => ({
@@ -19,13 +20,18 @@ jest.mock('../../src/services/supabase', () => ({
       onAuthStateChange: (cb: unknown) => mockAuthOnAuthStateChange(cb),
     },
     from: (table: string) => mockFrom(table),
+    rpc: (...args: unknown[]) => mockRpc(...args),
   },
 }));
 
-// Mock vesselService (used for invite code regeneration)
+jest.mock('../../src/services/deviceAccess', () => ({
+  registerCurrentDevice: jest.fn().mockResolvedValue({ state: 'allowed', activeDeviceCount: 1 }),
+  releaseCurrentDevice: jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock('../../src/services/vessel', () => ({
   default: {
-    regenerateInviteCode: jest.fn().mockResolvedValue('NEW-CODE'),
+    createVessel: jest.fn().mockResolvedValue({ id: 'solo-vessel', name: 'Crew Account' }),
   },
 }));
 
@@ -62,33 +68,21 @@ describe('AuthService', () => {
       const vessel = {
         id: 'v1',
         name: 'Test Vessel',
-        invite_code: 'ABC123',
-        invite_expiry: new Date(Date.now() + 86400000).toISOString(),
       };
-      mockFrom.mockReturnValue({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        in: jest.fn().mockReturnThis(),
-        maybeSingle: jest.fn().mockResolvedValue({ data: vessel, error: null }),
-      });
+      mockRpc.mockResolvedValue({ data: vessel, error: null });
 
       const result = await authService.validateInviteCode('ABC123');
 
       expect(result).toEqual(vessel);
-      expect(mockFrom).toHaveBeenCalledWith('vessels');
+      expect(mockRpc).toHaveBeenCalledWith('validate_vessel_invite_code', {
+        p_invite_code: 'ABC123',
+      });
     });
 
     it('throws when invite code is expired', async () => {
-      const vessel = {
-        id: 'v1',
-        name: 'Test Vessel',
-        invite_code: 'EXPIRED',
-        invite_expiry: new Date(Date.now() - 86400000).toISOString(),
-      };
-      mockFrom.mockReturnValue({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest.fn().mockResolvedValue({ data: vessel, error: null }),
+      mockRpc.mockResolvedValue({
+        data: null,
+        error: { message: 'Invite code has expired' },
       });
 
       await expect(authService.validateInviteCode('EXPIRED')).rejects.toThrow(
@@ -97,11 +91,7 @@ describe('AuthService', () => {
     });
 
     it('throws when invite code not found', async () => {
-      mockFrom.mockReturnValue({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
-      });
+      mockRpc.mockResolvedValue({ data: null, error: null });
 
       await expect(authService.validateInviteCode('INVALID')).rejects.toThrow(
         'Invalid invite code'
@@ -109,18 +99,9 @@ describe('AuthService', () => {
     });
 
     it('throws when database returns error', async () => {
-      mockFrom.mockReturnValue({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest.fn().mockResolvedValue({
-          data: null,
-          error: { message: 'DB error' },
-        }),
-      });
+      mockRpc.mockResolvedValue({ data: null, error: { message: 'DB error' } });
 
-      await expect(authService.validateInviteCode('BAD')).rejects.toThrow(
-        'Invalid invite code'
-      );
+      await expect(authService.validateInviteCode('BAD')).rejects.toThrow('DB error');
     });
   });
 
@@ -131,9 +112,9 @@ describe('AuthService', () => {
         error: { message: 'Invalid login credentials' },
       });
 
-      await expect(
-        authService.signIn({ email: 'a@b.com', password: 'wrong' })
-      ).rejects.toThrow('Email Address or Password is Incorrect, Try Again.');
+      await expect(authService.signIn({ email: 'a@b.com', password: 'wrong' })).rejects.toThrow(
+        'Email Address or Password is Incorrect, Try Again.'
+      );
     });
 
     it('returns user and session on success', async () => {

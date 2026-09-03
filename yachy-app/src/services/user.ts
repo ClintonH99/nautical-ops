@@ -5,6 +5,7 @@
 
 import { supabase } from './supabase';
 import { User, Department, UserRole, ContractType, RotationGroup } from '../types';
+import { readFileBytesForUpload } from '../utils/fileUpload';
 
 export interface UpdateProfileData {
   name?: string;
@@ -343,14 +344,11 @@ class UserService {
    * Mirrors vesselService.uploadBannerImage - path: {userId}/avatar.jpg
    */
   async uploadProfilePhoto(userId: string, fileUri: string): Promise<string> {
-    const response = await fetch(fileUri);
-    const blob = await response.blob();
-    const arrayBuffer = await new Response(blob).arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
+    const fileBytes = await readFileBytesForUpload(fileUri);
 
     const { error } = await supabase.storage
       .from('profile-photos')
-      .upload(`${userId}/avatar.jpg`, uint8Array, {
+      .upload(`${userId}/avatar.jpg`, fileBytes, {
         contentType: 'image/jpeg',
         upsert: true,
       });

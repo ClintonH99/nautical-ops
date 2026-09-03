@@ -123,9 +123,11 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
         return updated;
       });
     } else if (activeField.type === 'work') {
-      activeField.edge === 'start' ? setWorkStart(timeStr) : setWorkEnd(timeStr);
+      if (activeField.edge === 'start') setWorkStart(timeStr);
+      else setWorkEnd(timeStr);
     } else if (activeField.type === 'lunch') {
-      activeField.edge === 'start' ? setLunchStart(timeStr) : setLunchEnd(timeStr);
+      if (activeField.edge === 'start') setLunchStart(timeStr);
+      else setLunchEnd(timeStr);
     }
 
     if (event.type === 'set' || event.type === undefined) setActiveField(null);

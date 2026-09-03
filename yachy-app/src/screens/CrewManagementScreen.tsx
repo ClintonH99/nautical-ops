@@ -48,18 +48,7 @@ export const CrewManagementScreen = ({ navigation }: any) => {
   const [watchKeepers, setWatchKeepers] = useState<WatchKeeperEntry[]>([]);
   const [watchKeeperPickerOpen, setWatchKeeperPickerOpen] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!canManageCrew) {
-        navigation.goBack();
-        return;
-      }
-
-      loadData();
-    }, [canManageCrew, navigation])
-  );
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!currentUser?.vesselId) return;
 
     try {
@@ -74,7 +63,18 @@ export const CrewManagementScreen = ({ navigation }: any) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentUser?.vesselId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!canManageCrew) {
+        navigation.goBack();
+        return;
+      }
+
+      loadData();
+    }, [canManageCrew, navigation, loadData])
+  );
 
   const loadCrew = async () => {
     if (!currentUser?.vesselId) return;
@@ -127,7 +127,7 @@ export const CrewManagementScreen = ({ navigation }: any) => {
       `${action === 'promote' ? 'Promote' : 'Demote'} ${crewMember.name}`,
       `${
         action === 'promote'
-          ? `Promote ${crewMember.name} to Head of Department (HOD)? They will have full management permissions.`
+          ? `Promote ${crewMember.name} to Head of Department (HOD)? They will receive the app permissions assigned to HODs.`
           : `Demote ${crewMember.name} to regular crew? They will lose HOD permissions.`
       }`,
       [

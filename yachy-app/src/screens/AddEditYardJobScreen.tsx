@@ -80,7 +80,7 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
         setLoading(false);
       }
     })();
-  }, [jobId]);
+  }, [jobId, user?.department]);
 
   const markedDates: Record<
     string,

@@ -45,13 +45,7 @@ export const RotationalGroupsScreen = ({ navigation }: any) => {
   const isMOV = currentUser?.role === 'CAPTAIN_MOV';
   const canEdit = isMOV; // HOD read-only, MOV can edit
 
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-    }, [])
-  );
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!currentUser?.vesselId) return;
     try {
       const [crew, groups] = await Promise.all([
@@ -66,7 +60,13 @@ export const RotationalGroupsScreen = ({ navigation }: any) => {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, [currentUser?.vesselId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
 
   const handleRefresh = async () => {
     setIsRefreshing(true);

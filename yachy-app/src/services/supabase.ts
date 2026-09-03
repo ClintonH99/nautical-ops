@@ -15,6 +15,8 @@ import 'react-native-url-polyfill/auto';
 export const SUPABASE_URL =
   process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key';
+const SUPABASE_PROJECT_REF = SUPABASE_URL.replace(/^https?:\/\//, '').split('.')[0];
+export const SUPABASE_AUTH_STORAGE_KEY = `sb-${SUPABASE_PROJECT_REF}-auth-token`;
 
 // Detect missing/placeholder credentials so UI can show actionable message
 const isPlaceholder =
@@ -31,7 +33,10 @@ if (__DEV__ && isPlaceholder) {
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     ...(Platform.OS !== 'web' ? { storage: AsyncStorage } : {}),
-    autoRefreshToken: true,
+    // Native refresh is controlled from RootNavigator using AppState. Leaving
+    // this enabled here makes Supabase refresh an expired persisted token while
+    // the app is still booting, before we can clear it cleanly.
+    autoRefreshToken: Platform.OS === 'web',
     persistSession: true,
     detectSessionInUrl: Platform.OS === 'web',
   },

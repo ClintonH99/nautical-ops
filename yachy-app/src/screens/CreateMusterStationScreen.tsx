@@ -267,7 +267,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
           value={musterStation}
           onChangeText={setMusterStation}
           placeholder="e.g. Sundeck"
-          placeholderTextColor={COLORS.textTertiary}
+          placeholderTextColor={themeColors.textSecondary}
         />
         <Text
           style={[
@@ -288,7 +288,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
               value={loc}
               onChangeText={(v) => setLoc(setMedicalChest, medicalChest, i, v)}
               placeholder="Location"
-              placeholderTextColor={COLORS.textTertiary}
+              placeholderTextColor={themeColors.textSecondary}
             />
             <TouchableOpacity onPress={() => removeLocation(setMedicalChest, medicalChest, i)}>
               <Text style={styles.remove}>✕</Text>
@@ -318,7 +318,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
               value={loc}
               onChangeText={(v) => setLoc(setGrabBag, grabBag, i, v)}
               placeholder="Location"
-              placeholderTextColor={COLORS.textTertiary}
+              placeholderTextColor={themeColors.textSecondary}
             />
             <TouchableOpacity onPress={() => removeLocation(setGrabBag, grabBag, i)}>
               <Text style={styles.remove}>✕</Text>
@@ -346,7 +346,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
           value={grabBagContents}
           onChangeText={setGrabBagContents}
           placeholder="e.g. Flares, EPIRB, SART, VHF batteries, medical kit, water"
-          placeholderTextColor={COLORS.textTertiary}
+          placeholderTextColor={themeColors.textSecondary}
           multiline
         />
 
@@ -369,7 +369,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
               value={loc}
               onChangeText={(v) => setLoc(setLifeRings, lifeRings, i, v)}
               placeholder="Location"
-              placeholderTextColor={COLORS.textTertiary}
+              placeholderTextColor={themeColors.textSecondary}
             />
             <TouchableOpacity onPress={() => removeLocation(setLifeRings, lifeRings, i)}>
               <Text style={styles.remove}>✕</Text>
@@ -398,7 +398,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
               ]}
               value={emergencySignals[k]}
               onChangeText={(v) => setEmergencySignals({ ...emergencySignals, [k]: v })}
-              placeholderTextColor={COLORS.textTertiary}
+              placeholderTextColor={themeColors.textSecondary}
             />
           </View>
         ))}
@@ -416,7 +416,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
                 value={c.roleName}
                 onChangeText={(v) => setCrew(i, 'roleName', v)}
                 placeholder="Role name"
-                placeholderTextColor={COLORS.textTertiary}
+                placeholderTextColor={themeColors.textSecondary}
               />
               <TouchableOpacity onPress={() => removeCrew(i)}>
                 <Text style={styles.remove}>✕ Remove</Text>
@@ -433,7 +433,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
                 value={c[f]}
                 onChangeText={(v) => setCrew(i, f, v)}
                 placeholder={CREW_DUTY_LABELS[f]}
-                placeholderTextColor={COLORS.textTertiary}
+                placeholderTextColor={themeColors.textSecondary}
               />
             ))}
           </View>

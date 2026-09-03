@@ -260,7 +260,7 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
               onChangeText={(v) => setItemAt(index, 'amount', v)}
               placeholder="#"
               keyboardType="decimal-pad"
-              placeholderTextColor={COLORS.textTertiary}
+              placeholderTextColor={themeColors.textSecondary}
               returnKeyType="next"
               onSubmitEditing={() => itemInputRefs.current[index]?.focus()}
             />
@@ -273,7 +273,7 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
               value={item.text}
               onChangeText={(v) => setItemAt(index, 'text', v)}
               placeholder="Item"
-              placeholderTextColor={COLORS.textTertiary}
+              placeholderTextColor={themeColors.textSecondary}
               returnKeyType="done"
               onSubmitEditing={() => {
                 if (index === items.length - 1) addItem();

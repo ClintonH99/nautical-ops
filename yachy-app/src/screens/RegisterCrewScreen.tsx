@@ -199,6 +199,7 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
               ]}
             >
               <Input
+                forceLight
                 label="Full Name"
                 placeholder="John Doe"
                 value={formData.name}
@@ -207,6 +208,7 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
               />
 
               <Input
+                forceLight
                 label="Email"
                 placeholder="your@email.com"
                 value={formData.email}
@@ -218,6 +220,7 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
               />
 
               <Input
+                forceLight
                 label="Password"
                 placeholder="Minimum 6 characters"
                 value={formData.password}
@@ -229,6 +232,7 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
               />
 
               <Input
+                forceLight
                 label="Confirm Password"
                 placeholder="Re-enter password"
                 value={formData.confirmPassword}
@@ -316,6 +320,7 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
               </View>
 
               <Input
+                forceLight
                 label="Position"
                 placeholder="e.g., Deckhand, Chief Stew, Engineer"
                 value={formData.position}
@@ -325,6 +330,7 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
 
               {/* Invite Code - REQUIRED for crew */}
               <Input
+                forceLight
                 label="Invite Code *"
                 placeholder="e.g., ABC12345"
                 value={formData.inviteCode}

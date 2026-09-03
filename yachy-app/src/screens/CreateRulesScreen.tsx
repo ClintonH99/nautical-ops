@@ -149,7 +149,7 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
           value={title}
           onChangeText={setTitle}
           placeholder="eg. Deck/Interior Team or Miami to Nassau"
-          placeholderTextColor={COLORS.textTertiary}
+          placeholderTextColor={themeColors.textSecondary}
         />
         <Text
           style={[
@@ -171,7 +171,7 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
               value={r}
               onChangeText={(v) => setRule(i, v)}
               placeholder="Enter rule"
-              placeholderTextColor={COLORS.textTertiary}
+              placeholderTextColor={themeColors.textSecondary}
               multiline
             />
             {rules.length > 1 && (

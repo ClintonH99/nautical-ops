@@ -54,27 +54,7 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
 
   const isCaptain = user?.role === 'CAPTAIN_MOV';
 
-  useEffect(() => {
-    if (!isCaptain) {
-      Alert.alert('Access Denied', 'Only the Captain can access vessel settings', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
-      return;
-    }
-    loadVessel();
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      if (!canAccessVesselManagement(user)) {
-        navigation.goBack();
-        return;
-      }
-      refetchSubscription();
-    }, [user, navigation, refetchSubscription])
-  );
-
-  const loadVessel = async () => {
+  const loadVessel = useCallback(async () => {
     if (!user?.vesselId) return;
     setIsLoading(true);
     try {
@@ -94,7 +74,27 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user?.vesselId]);
+
+  useEffect(() => {
+    if (!isCaptain) {
+      Alert.alert('Access Denied', 'Only the Captain can access vessel settings', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+      return;
+    }
+    loadVessel();
+  }, [isCaptain, loadVessel, navigation]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!canAccessVesselManagement(user)) {
+        navigation.goBack();
+        return;
+      }
+      refetchSubscription();
+    }, [user, navigation, refetchSubscription])
+  );
 
   const handleSaveName = async () => {
     if (!vesselName.trim()) {
@@ -378,12 +378,12 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                   <TextInput
                     style={[
                       styles.input,
-                      { backgroundColor: themeColors.background, color: themeColors.textPrimary },
+                      { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
                     ]}
                     value={vesselName}
                     onChangeText={setVesselName}
                     placeholder="Enter vessel name"
-                    placeholderTextColor={COLORS.textTertiary}
+                    placeholderTextColor={themeColors.textSecondary}
                     autoFocus
                   />
                   <View style={styles.actions}>
@@ -438,12 +438,12 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                   <TextInput
                     style={[
                       styles.input,
-                      { backgroundColor: themeColors.background, color: themeColors.textPrimary },
+                      { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
                     ]}
                     value={imoNumber}
                     onChangeText={setImoNumber}
                     placeholder="Enter IMO number"
-                    placeholderTextColor={COLORS.textTertiary}
+                    placeholderTextColor={themeColors.textSecondary}
                     autoFocus
                     keyboardType="number-pad"
                   />

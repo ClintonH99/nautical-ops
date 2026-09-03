@@ -1,17 +1,18 @@
-# Welcome Screen on App Open
+# Instant App Startup
 
 ## Rule
 
-The "Welcome to Nautical Ops" screen **must** display every time a user opens the app (cold start), regardless of whether they are a new or returning member.
+Users must reach usable app content as quickly as possible. A returning authenticated user must not be held on a timed Welcome screen, splash screen, or loading spinner before Home can render.
 
 ## Implementation
 
-- On app launch (cold start), the initial route must be the Welcome screen
-- After the welcome duration (~3 seconds), navigate based on auth state:
-  - Unauthenticated → Login screen
-  - Authenticated → Home (MainTabs) or CaptainWelcome (for captains without a vessel)
-- This applies only to cold start; returning from background does not re-show the welcome screen
+- Render a cached authenticated user immediately while refreshing their profile in the background.
+- Route unauthenticated users directly to Login.
+- Route authenticated users directly to Home (`MainTabs`).
+- Route a Captain/MOV without a vessel to `CaptainWelcome`.
+- Do not add an artificial startup delay.
+- Do not re-show the Welcome screen when returning from the background.
 
 ## Scope
 
-Applies to RootNavigator (initial route logic) and WelcomeScreen (navigation target based on auth state).
+Applies to `RootNavigator`, authentication bootstrap, and any splash/welcome loading logic.

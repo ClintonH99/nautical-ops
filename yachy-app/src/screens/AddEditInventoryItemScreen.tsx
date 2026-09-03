@@ -266,7 +266,7 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
                 onChangeText={(v) => setRowAt(index, 'amount', v)}
                 placeholder="#"
                 keyboardType="decimal-pad"
-                placeholderTextColor={COLORS.gray400}
+                placeholderTextColor={themeColors.textSecondary}
                 returnKeyType="next"
               />
               <TextInput
@@ -278,7 +278,7 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
                 value={row.item}
                 onChangeText={(v) => setRowAt(index, 'item', v)}
                 placeholder="Item"
-                placeholderTextColor={COLORS.gray400}
+                placeholderTextColor={themeColors.textSecondary}
                 returnKeyType="done"
                 onSubmitEditing={() => {
                   if (index === rows.length - 1) addRow();

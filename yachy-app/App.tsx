@@ -56,8 +56,11 @@ function AppContent() {
   );
 }
 
-// Wrap with Sentry for crash reporting (no-op when DSN not configured)
-export default Sentry.wrap(AppContent);
+// Sentry is deliberately disabled in Expo Go/development. Only wrap the app
+// after Sentry.init has run so development does not emit an initialization error.
+export default process.env.EXPO_PUBLIC_SENTRY_DSN && !__DEV__
+  ? Sentry.wrap(AppContent)
+  : AppContent;
 
 const styles = StyleSheet.create({
   configError: {

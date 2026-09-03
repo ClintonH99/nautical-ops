@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabase';
+import { readFileBytesForUpload } from '../utils/fileUpload';
 
 export interface CreateVesselData {
   name: string;
@@ -24,92 +25,30 @@ export interface Vessel {
 
 class VesselService {
   /**
-   * Generate a unique invite code
-   */
-  private generateInviteCode(): string {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed ambiguous characters
-    let code = '';
-    for (let i = 0; i < 8; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return code;
-  }
-
-  /**
-   * Check if invite code already exists
-   */
-  private async isInviteCodeUnique(code: string): Promise<boolean> {
-    try {
-      const { data, error } = await supabase
-        .from('vessels')
-        .select('id')
-        .eq('invite_code', code)
-        .maybeSingle();
-
-      if (error) throw error;
-      return !data; // Returns true if no vessel found with this code
-    } catch (error) {
-      console.error('Check invite code error:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Generate a unique invite code
-   */
-  private async generateUniqueInviteCode(): Promise<string> {
-    let code = this.generateInviteCode();
-    let attempts = 0;
-    const maxAttempts = 10;
-
-    while (attempts < maxAttempts) {
-      const isUnique = await this.isInviteCodeUnique(code);
-      if (isUnique) {
-        return code;
-      }
-      code = this.generateInviteCode();
-      attempts++;
-    }
-
-    throw new Error('Failed to generate unique invite code');
-  }
-
-  /**
-   * Create a new vessel
+   * Create and assign a vessel through a protected server function. The app
+   * never inserts a vessel or changes its own vessel/role directly.
    */
   async createVessel({ name, managementCompanyId, isSolo }: CreateVesselData): Promise<Vessel> {
     try {
-      // Generate unique invite code
-      const inviteCode = await this.generateUniqueInviteCode();
-
-      // Set expiry to 1 year from now
-      const inviteExpiry = new Date();
-      inviteExpiry.setFullYear(inviteExpiry.getFullYear() + 1);
-
-      const vesselData = {
-        name: name.trim(),
-        management_company_id: managementCompanyId || null,
-        invite_code: inviteCode,
-        invite_expiry: inviteExpiry.toISOString(),
-        is_solo: isSolo ?? false,
-      };
-
-      const { data, error } = await supabase
-        .from('vessels')
-        .insert([vesselData])
-        .select()
-        .single();
+      const { data, error } = isSolo
+        ? await supabase.rpc('create_solo_vessel_for_current_user')
+        : await supabase.rpc('create_captain_vessel', {
+            p_name: name.trim(),
+            p_management_company_id: managementCompanyId || null,
+          });
 
       if (error) throw error;
 
+      const row = data as any;
+
       return {
-        id: data.id,
-        name: data.name,
-        managementCompanyId: data.management_company_id,
-        inviteCode: data.invite_code,
-        inviteExpiry: data.invite_expiry,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
+        id: row.id,
+        name: row.name,
+        managementCompanyId: row.management_company_id,
+        inviteCode: row.invite_code ?? '',
+        inviteExpiry: row.invite_expiry ?? '',
+        createdAt: row.created_at ?? new Date().toISOString(),
+        updatedAt: row.updated_at ?? new Date().toISOString(),
       };
     } catch (error) {
       console.error('Create vessel error:', error);
@@ -126,9 +65,10 @@ class VesselService {
         .from('vessels')
         .select('*')
         .eq('id', vesselId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) return null;
 
       return {
         id: data.id,
@@ -151,24 +91,13 @@ class VesselService {
    */
   async regenerateInviteCode(vesselId: string): Promise<string> {
     try {
-      const newCode = await this.generateUniqueInviteCode();
+      const { data: newCode, error: codeError } = await supabase.rpc(
+        'regenerate_current_vessel_invite_code',
+        { p_vessel_id: vesselId }
+      );
+      if (codeError || !newCode) throw codeError ?? new Error('Failed to generate invite code');
 
-      // Extend expiry by 1 year
-      const newExpiry = new Date();
-      newExpiry.setFullYear(newExpiry.getFullYear() + 1);
-
-      const { error } = await supabase
-        .from('vessels')
-        .update({
-          invite_code: newCode,
-          invite_expiry: newExpiry.toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', vesselId);
-
-      if (error) throw error;
-
-      return newCode;
+      return newCode as string;
     } catch (error) {
       console.error('Regenerate invite code error:', error);
       throw error;
@@ -181,14 +110,11 @@ class VesselService {
    * Returns the public URL with cache-bust param (like profile photo) so the image refreshes.
    */
   async uploadBannerImage(vesselId: string, localUri: string): Promise<string> {
-    const response = await fetch(localUri);
-    const blob = await response.blob();
-    const arrayBuffer = await new Response(blob).arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
+    const fileBytes = await readFileBytesForUpload(localUri);
 
     const { error } = await supabase.storage
       .from('vessel-banners')
-      .upload(`${vesselId}/banner.jpg`, uint8Array, {
+      .upload(`${vesselId}/banner.jpg`, fileBytes, {
         contentType: 'image/jpeg',
         upsert: true,
       });
@@ -203,9 +129,7 @@ class VesselService {
    * Optional cacheBust param appends ?t= for cache busting (use after upload or on refetch).
    */
   getBannerPublicUrl(vesselId: string, cacheBust?: number): string {
-    const { data } = supabase.storage
-      .from('vessel-banners')
-      .getPublicUrl(`${vesselId}/banner.jpg`);
+    const { data } = supabase.storage.from('vessel-banners').getPublicUrl(`${vesselId}/banner.jpg`);
     const base = data.publicUrl;
     return cacheBust != null ? `${base}?t=${cacheBust}` : base;
   }

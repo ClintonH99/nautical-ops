@@ -33,7 +33,9 @@ export const InfoModal: React.FC<InfoModalProps> = ({ screenKey, content, autoSh
       try {
         const seen = await AsyncStorage.getItem('info_seen_' + screenKey);
         if (!seen) setVisible(true);
-      } catch {}
+      } catch {
+        // Info prompts are best-effort; storage failure must not block the screen.
+      }
     };
     check();
   }, [screenKey, autoShow]);
@@ -41,7 +43,9 @@ export const InfoModal: React.FC<InfoModalProps> = ({ screenKey, content, autoSh
   const handleClose = async () => {
     try {
       await AsyncStorage.setItem('info_seen_' + screenKey, 'true');
-    } catch {}
+    } catch {
+      // Closing the modal must still work if the seen-state cannot be persisted.
+    }
     setVisible(false);
   };
 
@@ -68,7 +72,14 @@ export const InfoModal: React.FC<InfoModalProps> = ({ screenKey, content, autoSh
               <View style={styles.featuresContainer}>
                 {content.features.map((feature, index) => (
                   <View key={index} style={styles.featureRow}>
-                    <Text style={[styles.bullet, { color: COLORS.primary }]}>{'\u2022'}</Text>
+                    <Text
+                      style={[
+                        styles.bullet,
+                        { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                      ]}
+                    >
+                      {'\u2022'}
+                    </Text>
                     <Text style={[styles.featureText, { color: themeColors.textPrimary }]}>
                       {feature}
                     </Text>

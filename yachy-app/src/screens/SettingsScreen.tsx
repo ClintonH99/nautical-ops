@@ -35,6 +35,8 @@ export const SettingsScreen = ({ navigation }: any) => {
   const themeColors = BACKGROUND_THEMES[backgroundTheme];
   const canDeptColors = canAccessDepartmentColorSettings(user);
   const canVesselAdmin = canAccessVesselManagement(user);
+  const displaysAsCaptain =
+    user?.role === 'CAPTAIN_MOV' || user?.position?.toLowerCase().includes('captain') === true;
   const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
   const profilePhotoUrl =
     user?.profilePhoto || (user?.id ? userService.getProfilePhotoUrl(user.id) : null);
@@ -51,7 +53,7 @@ export const SettingsScreen = ({ navigation }: any) => {
           if (fresh) setUser(fresh);
         });
       }
-    }, [user?.id, setUser])
+    }, [user?.id, user?.profilePhoto, setUser])
   );
 
   const handleDeleteAccount = () => {
@@ -294,7 +296,7 @@ export const SettingsScreen = ({ navigation }: any) => {
             </Text>
             <View style={styles.roleBadge}>
               <Text style={[styles.roleText, { textTransform: 'none' }]}>
-                {user?.role === 'CAPTAIN_MOV'
+                {displaysAsCaptain
                   ? 'MOV (Master of Vessel)'
                   : user?.role === 'HOD'
                     ? 'HOD (Head of Department)'

@@ -26,11 +26,24 @@
 5. **Upgrade warning:** When crew count reaches the plan's max (e.g. 5 crew on 1-5 plan), show a warning to upgrade. Display in Vessel Settings (Vessel Plans) and Crew Management.
 
 6. **Payment options:**
-   - **Activate Vessel Plan (mobile):** Captain taps **Activate Vessel Plan** on **Settings → Vessel Plans**. The app opens the system browser with a magic link so the user is signed in on **nautical-ops.com/pricing** to select tier, billing period, and pay (Paddle on the web).
-   - **Web:** Checkout and account management on nautical-ops.com.
+   - **Apple devices:** Subscriptions must use Apple In-App Purchase and Apple's App Store Server API. Do not route Apple-device subscription purchases through Paddle.
+   - **Android devices:** Subscriptions must use Google Play Billing and the Google Play Developer API. Do not route Android subscription purchases through Paddle.
+   - **Nautical Ops web app:** Reflect the vessel subscription purchased through Apple or Google, but do not process subscription payments on the web.
+   - **Fleet HQ website only:** Paddle is reserved exclusively for Fleet HQ. Nautical Ops must not call Paddle checkout or Paddle webhooks.
 
 7. **Create Vessel flow:** After vessel creation, do NOT show invite code. Direct Captain to Vessel Settings to choose a plan and pay. Primary CTA: "Go to Vessel Settings."
 
+8. **Failed renewal and grace period:** This applies only to a vessel that previously had a paid subscription and whose renewal payment was not received.
+   - Continue normal access during a **16-day renewal grace period**.
+   - A network or backend outage must never be interpreted as non-payment.
+   - After grace expires, Crew and HOD are signed out when the app opens and shown exactly: "You have been temporarily logged out from the vessel until the subscription has been paid, apologies for any inconvenience caused."
+   - Captain/MOV remains signed in but can access only Vessel Plans until payment is confirmed.
+   - Once payment is confirmed, Captain/MOV returns to Home automatically and Crew/HOD can sign in normally.
+   - Do not delete vessel data or remove vessel members because of non-payment.
+   - Provider webhooks must update subscription state in the background for existing and future subscribers.
+
+9. **Account device limit:** Every account may be registered on a maximum of **two active devices total**, across iOS, Android, and web. This is an account limit, not two devices per platform.
+
 ## Scope
 
-Applies to: VesselSettingsScreen, CreateVesselScreen, CrewManagementScreen, subscription service, Paddle (web) and auth-link Edge functions for app → web handoff.
+Applies to: VesselSettingsScreen, CreateVesselScreen, CrewManagementScreen, subscription service, Apple IAP/App Store Server functions, Google Play Billing/Developer API functions, and Nautical Ops web access checks. Paddle is outside this app's scope.

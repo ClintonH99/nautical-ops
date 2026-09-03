@@ -12,6 +12,7 @@ import {
   TextStyle,
 } from 'react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
+import { useThemeColors } from '../hooks/useThemeColors';
 
 interface ButtonProps {
   title: string;
@@ -38,12 +39,20 @@ export const Button: React.FC<ButtonProps> = ({
   style,
   textStyle,
 }) => {
+  const themeColors = useThemeColors();
   const variantKey = variant === 'outlineLight' ? 'outlineLight' : variant;
   const variantStyle: ViewStyle =
     variant === 'text' ? styles.textVariant : (styles[variantKey as keyof typeof styles] as ViewStyle);
   const textKey = `${variantKey}Text`;
   const buttonStyles: ViewStyle[] = [styles.button, variantStyle];
   const textStyles: TextStyle[] = [styles.baseText, styles[textKey as keyof typeof styles] as TextStyle];
+
+  if (themeColors.isDark && variant === 'outline') {
+    buttonStyles.push(styles.outlineDark);
+    textStyles.push(styles.outlineDarkText);
+  } else if (themeColors.isDark && variant === 'text') {
+    textStyles.push(styles.textDarkText);
+  }
 
   // Size variations
   if (size === 'small') {
@@ -84,7 +93,8 @@ export const Button: React.FC<ButtonProps> = ({
       {loading ? (
         <ActivityIndicator
           color={
-            variant === 'outlineLight'
+            variant === 'outlineLight' ||
+            (themeColors.isDark && (variant === 'outline' || variant === 'text'))
               ? COLORS.white
               : variant === 'outline' || variant === 'text'
                 ? COLORS.primary
@@ -139,6 +149,12 @@ const styles = StyleSheet.create({
   outlineText: {
     color: COLORS.primary,
   },
+  outlineDark: {
+    borderColor: COLORS.white,
+  },
+  outlineDarkText: {
+    color: COLORS.white,
+  },
   outlineLight: {
     backgroundColor: 'transparent',
     borderWidth: 2,
@@ -159,6 +175,9 @@ const styles = StyleSheet.create({
   textText: {
     color: COLORS.primary,
     fontWeight: '500',
+  },
+  textDarkText: {
+    color: COLORS.white,
   },
   // Sizes
   small: {

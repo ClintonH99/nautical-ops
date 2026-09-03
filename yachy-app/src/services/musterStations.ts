@@ -94,12 +94,14 @@ class MusterStationsService {
   }
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('muster_stations')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .select('id');
 
     if (error) throw error;
+    if (!data?.length) throw new Error('Muster station not found or you do not have permission.');
   }
 }
 

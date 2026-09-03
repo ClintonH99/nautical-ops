@@ -1,5 +1,5 @@
 ---
-description: Muster Station & Duties edit/delete permissions - HOD only
+description: Muster Station & Duties management permissions - HOD and Captain/MOV
 globs: **/MusterStation*.tsx,**/musterStations*.ts
 alwaysApply: false
 ---
@@ -8,12 +8,13 @@ alwaysApply: false
 
 ## Rule
 
-- **Create, Edit, and Delete** for Muster Station & Duties: **ONLY HOD** can perform these actions.
+- **Create, Edit, and Delete** for Muster Station & Duties: **HOD and Captain/MOV** can perform these actions.
 - Crew can view published muster stations and download PDFs.
 
 ## Implementation
 
-- HOD = `user?.role === 'HOD'`
-- Create button: only visible when `isHOD`
-- Edit and Delete buttons per muster station card: only visible when `isHOD`
-- CreateMusterStationScreen (create and edit): HOD guard; non-HOD sees "Only HODs can create or edit muster stations."
+- `canManage = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV'`
+- Create button: only visible when `canManage`
+- Edit and Delete buttons per muster station card: only visible when `canManage`
+- `CreateMusterStationScreen` uses the same guard.
+- Blocked Crew see: "Only HODs and Captain have access."

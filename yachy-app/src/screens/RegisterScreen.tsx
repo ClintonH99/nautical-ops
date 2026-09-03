@@ -11,8 +11,11 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Modal,
+  Pressable,
+  TouchableOpacity,
 } from 'react-native';
-import { Button, Input, ConsentCheckbox } from '../components';
+import { Button, Input, ConsentCheckbox, LabeledDropdown } from '../components';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { Department } from '../types';
 import authService from '../services/auth';
@@ -38,18 +41,15 @@ export const RegisterScreen = ({ navigation, route }: any) => {
     position: '',
     department: '' as Department | '',
     inviteCode: route.params?.inviteCode || '',
-    vesselId: route.params?.vesselId || '', // Hidden field for vessel creator
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>({});
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [confirmSentEmail, setConfirmSentEmail] = useState<string | null>(null);
+  const [departmentDropdownOpen, setDepartmentDropdownOpen] = useState(false);
 
   const setUser = useAuthStore((state) => state.setUser);
   const posthog = usePostHog();
-
-  // Check if user is creating their own vessel (came from CreateVessel screen)
-  const isVesselCreator = !!formData.vesselId;
 
   const updateField = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value });
@@ -123,7 +123,6 @@ export const RegisterScreen = ({ navigation, route }: any) => {
         position: formData.position,
         department: formData.department as string,
         inviteCode: formData.inviteCode,
-        vesselId: formData.vesselId || undefined,
       });
 
       if (user) {
@@ -144,13 +143,9 @@ export const RegisterScreen = ({ navigation, route }: any) => {
             role: user.role,
             department: formData.department,
             has_invite_code: !!formData.inviteCode,
-            is_vessel_creator: isVesselCreator,
           });
           setUser(user);
-          const roleMessage = formData.vesselId
-            ? 'Your vessel is ready! You are the Head of Department.'
-            : 'Welcome aboard!';
-          Alert.alert('Success', `Account created successfully! ${roleMessage}`);
+          Alert.alert('Success', 'Account created successfully! Welcome aboard!');
         }
       }
     } catch (error: any) {
@@ -187,7 +182,7 @@ export const RegisterScreen = ({ navigation, route }: any) => {
                 { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
               ]}
             >
-              {isVesselCreator ? 'Set up your captain account' : 'Join the crew'}
+              Join the crew
             </Text>
           </View>
 
@@ -261,63 +256,67 @@ export const RegisterScreen = ({ navigation, route }: any) => {
                   error={errors.position}
                 />
 
-                {/* Department Selection - simplified for now */}
+                {/* Department Selection */}
                 <View style={styles.departmentSection}>
-                  <Text style={[styles.label, { color: themeColors.textPrimary }]}>Department</Text>
-                  <View style={styles.departmentButtons}>
-                    {DEPARTMENTS.map((dept) => (
-                      <Button
-                        key={dept.value}
-                        title={dept.label}
-                        variant="outline"
-                        size="small"
-                        onPress={() => updateField('department', dept.value)}
-                        style={
-                          formData.department === dept.value
-                            ? { ...styles.departmentButton, ...styles.departmentButtonSelected }
-                            : styles.departmentButton
-                        }
-                      />
-                    ))}
-                  </View>
+                  <LabeledDropdown
+                    label="Department"
+                    value={
+                      DEPARTMENTS.find((dept) => dept.value === formData.department)?.label ??
+                      'Select department'
+                    }
+                    open={departmentDropdownOpen}
+                    onPress={() => setDepartmentDropdownOpen(true)}
+                    tightTop
+                  />
                   {errors.department && <Text style={styles.error}>{errors.department}</Text>}
                 </View>
 
-                {/* Only show invite code for vessel creators */}
-                {isVesselCreator && (
-                  <Input
-                    label="Invite Code"
-                    placeholder="Auto-generated for your vessel"
-                    value={formData.inviteCode}
-                    onChangeText={(value) => updateField('inviteCode', value)}
-                    autoCapitalize="characters"
-                    error={errors.inviteCode}
-                    editable={false}
-                  />
-                )}
-
-                {/* Info message for regular users */}
-                {!isVesselCreator && (
-                  <View style={styles.inviteCodeInfo}>
-                    <Text
-                      style={[
-                        styles.inviteCodeInfoText,
-                        { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                      ]}
+                <Modal visible={departmentDropdownOpen} transparent animationType="fade">
+                  <Pressable
+                    style={styles.modalBackdrop}
+                    onPress={() => setDepartmentDropdownOpen(false)}
+                  >
+                    <View
+                      style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+                      onStartShouldSetResponder={() => true}
                     >
-                      💡 You can join a vessel after creating your account
-                    </Text>
-                  </View>
-                )}
+                      {DEPARTMENTS.map((dept) => (
+                        <TouchableOpacity
+                          key={dept.value}
+                          style={[
+                            styles.modalItem,
+                            formData.department === dept.value && styles.modalItemSelected,
+                          ]}
+                          onPress={() => {
+                            updateField('department', dept.value);
+                            setDepartmentDropdownOpen(false);
+                          }}
+                        >
+                          <Text
+                            style={[
+                              styles.modalItemText,
+                              { color: themeColors.textPrimary },
+                              formData.department === dept.value && styles.modalItemTextSelected,
+                            ]}
+                          >
+                            {dept.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </Pressable>
+                </Modal>
 
-                {/* Show vessel creator badge */}
-                {isVesselCreator && (
-                  <View style={[styles.creatorBadge, { backgroundColor: themeColors.surface }]}>
-                    <Text style={styles.creatorBadgeText}>
-                      ⚓ Vessel Creator - You'll be assigned as Head of Department
-                    </Text>
-                  </View>
-                )}
+                <View style={styles.inviteCodeInfo}>
+                  <Text
+                    style={[
+                      styles.inviteCodeInfoText,
+                      { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                    ]}
+                  >
+                    💡 You can join a vessel after creating your account
+                  </Text>
+                </View>
 
                 <ConsentCheckbox
                   checked={acceptedTerms}
@@ -386,26 +385,38 @@ const styles = StyleSheet.create({
   form: {
     marginBottom: SPACING.lg,
   },
-  label: {
-    fontSize: FONTS.sm,
-    fontWeight: '600',
-    marginBottom: SPACING.sm,
-  },
   departmentSection: {
     marginBottom: SPACING.md,
   },
-  departmentButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
-  },
-  departmentButton: {
+  modalBackdrop: {
     flex: 1,
-    minWidth: '45%',
-    marginBottom: SPACING.sm,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.xl,
   },
-  departmentButtonSelected: {
-    borderWidth: 2,
+  modalBox: {
+    borderRadius: BORDER_RADIUS.lg,
+    overflow: 'hidden',
+    width: '100%',
+    maxWidth: 320,
+  },
+  modalItem: {
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  modalItemSelected: {
+    backgroundColor: COLORS.primaryLight + '22',
+  },
+  modalItemText: {
+    fontSize: FONTS.base,
+    fontWeight: '500',
+  },
+  modalItemTextSelected: {
+    color: COLORS.primary,
+    fontWeight: '700',
   },
   inviteCodeInfo: {
     backgroundColor: COLORS.primaryLight,

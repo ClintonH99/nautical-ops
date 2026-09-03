@@ -1,0 +1,12 @@
+---
+description: Ask the user to confirm whenever a request is genuinely unclear or uncertain
+alwaysApply: true
+---
+
+# Confirm Genuine Uncertainty
+
+- If a request has more than one materially different interpretation, ask the user which one they intend before changing code or external systems.
+- If required information cannot be established safely from the repository or other available evidence, ask rather than guessing.
+- Do not ask redundant questions when the user has already supplied the answer or the answer can be verified read-only.
+- Continue independent, clearly in-scope work while waiting whenever possible.
+

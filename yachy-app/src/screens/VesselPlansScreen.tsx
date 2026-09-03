@@ -54,7 +54,7 @@ import {
 
 export const VesselPlansScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
-  const { user } = useAuthStore();
+  const { user, captainPaymentRequired, setCaptainPaymentRequired } = useAuthStore();
   const posthog = usePostHog();
   const [selectedPlanTier, setSelectedPlanTier] = useState<PlanTierId>('1_5');
   const [selectedBillingPeriod, setSelectedBillingPeriod] = useState<BillingPeriodId>('monthly');
@@ -68,6 +68,7 @@ export const VesselPlansScreen = ({ navigation }: any) => {
   const {
     hasActiveSubscription,
     subscription,
+    isLoading: subscriptionLoading,
     refetch: refetchSubscription,
   } = useSubscriptionStatus(user?.vesselId ?? null);
 
@@ -75,11 +76,20 @@ export const VesselPlansScreen = ({ navigation }: any) => {
   const planAvailableViaIAP = isAvailableViaIAP(selectedPlanTier, selectedBillingPeriod);
 
   useEffect(() => {
+    if (captainPaymentRequired && hasActiveSubscription) {
+      setCaptainPaymentRequired(false);
+    }
+  }, [captainPaymentRequired, hasActiveSubscription, setCaptainPaymentRequired]);
+
+  useEffect(() => {
+    if (subscriptionLoading) return;
     posthog.capture('vessel_plans_viewed', {
-      has_active_subscription: false,
+      has_active_subscription: hasActiveSubscription,
       vessel_id: user?.vesselId ?? null,
     });
+  }, [hasActiveSubscription, posthog, subscriptionLoading, user?.vesselId]);
 
+  useEffect(() => {
     if (Platform.OS !== 'ios') return;
 
     let mounted = true;
@@ -129,7 +139,7 @@ export const VesselPlansScreen = ({ navigation }: any) => {
       cleanupListeners.current?.();
       endIAP();
     };
-  }, []);
+  }, [refetchSubscription, user?.vesselId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -157,7 +167,12 @@ export const VesselPlansScreen = ({ navigation }: any) => {
       Alert.alert('Timed Out', 'The purchase request took too long. Please try again.');
     }, 45000);
     try {
-      const result = await purchaseSubscription(productId);
+      if (!user?.vesselId) {
+        Alert.alert('Vessel Required', 'Create or join a vessel before choosing a plan.');
+        setIsProcessing(false);
+        return;
+      }
+      const result = await purchaseSubscription(productId, user.vesselId);
       const candidate: any = Array.isArray(result) ? result[0] : result;
       if (candidate && (candidate.transactionId || candidate.id) && user?.vesselId) {
         if (processingTimeout.current) clearTimeout(processingTimeout.current);
@@ -321,18 +336,30 @@ export const VesselPlansScreen = ({ navigation }: any) => {
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="chevron-back" size={28} color={themeColors.textPrimary} />
-        </TouchableOpacity>
+        {!captainPaymentRequired ? (
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="chevron-back" size={28} color={themeColors.textPrimary} />
+          </TouchableOpacity>
+        ) : null}
 
         <Text style={[styles.title, { color: themeColors.textPrimary }]}>Vessel Plans</Text>
         <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
           Select a billing period and crew tier for your vessel
         </Text>
+
+        {captainPaymentRequired ? (
+          <View style={styles.paymentNotice}>
+            <Ionicons name="alert-circle-outline" size={22} color={COLORS.danger} />
+            <Text style={styles.paymentNoticeText}>
+              Your vessel subscription payment is overdue. Access to the rest of the app will be
+              restored automatically after payment is confirmed.
+            </Text>
+          </View>
+        ) : null}
 
         {hasActiveSubscription ? (
           <View
@@ -474,6 +501,24 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sm,
     textAlign: 'center',
     marginBottom: SPACING.xl,
+  },
+  paymentNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: SPACING.sm,
+    padding: SPACING.md,
+    marginBottom: SPACING.lg,
+    borderWidth: 1,
+    borderColor: COLORS.danger,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: 'rgba(220, 38, 38, 0.08)',
+  },
+  paymentNoticeText: {
+    flex: 1,
+    color: COLORS.danger,
+    fontSize: FONTS.sm,
+    lineHeight: 20,
+    fontWeight: '600',
   },
   activeCard: {
     borderRadius: BORDER_RADIUS.lg,

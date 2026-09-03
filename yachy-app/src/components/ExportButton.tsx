@@ -27,11 +27,15 @@ interface ExportButtonProps {
 export const ExportButton: React.FC<ExportButtonProps> = ({
   active,
   onPress,
-  label = 'Export',
+  label = 'Export to PDF',
   busy = false,
 }) => {
   const themeColors = useThemeColors();
-  const tint = active ? themeColors.textSecondary : COLORS.primary;
+  const tint = active
+    ? themeColors.textSecondary
+    : themeColors.isDark
+      ? COLORS.white
+      : COLORS.primary;
 
   return (
     <TouchableOpacity

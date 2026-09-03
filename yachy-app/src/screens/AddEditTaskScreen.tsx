@@ -94,7 +94,7 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
         setLoading(false);
       }
     })();
-  }, [taskId]);
+  }, [taskId, user?.department]);
 
   const markedDates: Record<string, { selected?: boolean; selectedColor?: string }> = doneByDate
     ? { [doneByDate]: { selected: true, selectedColor: COLORS.primary } }

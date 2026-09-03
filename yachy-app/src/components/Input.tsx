@@ -44,6 +44,8 @@ export const Input: React.FC<InputProps> = ({
         ? themeColors.surface
         : COLORS.surface;
   const textColor = forceLight ? COLORS.black : isSearch ? COLORS.black : themeColors.textPrimary;
+  const accessoryColor = forceLight || isSearch ? COLORS.gray500 : themeColors.textSecondary;
+  const placeholderColor = forceLight || isSearch ? COLORS.gray500 : themeColors.textSecondary;
 
   const effectiveSecureTextEntry = showPasswordToggle ? !passwordVisible : secureTextEntry;
   const passwordToggleIcon = showPasswordToggle ? (
@@ -55,7 +57,7 @@ export const Input: React.FC<InputProps> = ({
       <Ionicons
         name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
         size={22}
-        color={themeColors.textSecondary}
+        color={accessoryColor}
       />
     </TouchableOpacity>
   ) : null;
@@ -87,7 +89,7 @@ export const Input: React.FC<InputProps> = ({
             isSearch && styles.inputSearch,
             inputStyle,
           ]}
-          placeholderTextColor={isSearch ? COLORS.gray500 : COLORS.gray400}
+          placeholderTextColor={placeholderColor}
           multiline={multiline}
           secureTextEntry={effectiveSecureTextEntry}
           {...textInputProps}

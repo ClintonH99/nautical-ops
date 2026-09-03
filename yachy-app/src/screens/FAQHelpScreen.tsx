@@ -137,7 +137,7 @@ export const FAQScreen = ({ navigation }: any) => {
             Can't find what you're looking for? Submit your question and we'll get back to you.
           </Text>
           <TextInput
-            style={[styles.input, { backgroundColor: themeColors.background, color: themeColors.textPrimary, borderColor: themeColors.isDark ? 'rgba(255,255,255,0.12)' : COLORS.border }]}
+            style={[styles.input, { backgroundColor: themeColors.surface, color: themeColors.textPrimary, borderColor: themeColors.isDark ? 'rgba(255,255,255,0.12)' : COLORS.border }]}
             placeholder="Type your question here..."
             placeholderTextColor={themeColors.textSecondary}
             value={question}

@@ -6,6 +6,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { useThemeColors } from '../hooks/useThemeColors';
 
 interface ConsentCheckboxProps {
   checked: boolean;
@@ -24,6 +25,9 @@ export const ConsentCheckbox = ({
   textColor = COLORS.textPrimary,
   error,
 }: ConsentCheckboxProps) => {
+  const themeColors = useThemeColors();
+  const linkColor = themeColors.isDark ? COLORS.white : COLORS.primary;
+
   return (
     <View style={styles.container}>
       <TouchableOpacity
@@ -37,7 +41,7 @@ export const ConsentCheckbox = ({
         <Text style={[styles.text, { color: textColor }]}>
           I agree to the{' '}
           <Text
-            style={styles.link}
+            style={[styles.link, { color: linkColor }]}
             onPress={(e) => {
               e.stopPropagation();
               onPressTerms?.();
@@ -47,7 +51,7 @@ export const ConsentCheckbox = ({
           </Text>
           {' '}and{' '}
           <Text
-            style={styles.link}
+            style={[styles.link, { color: linkColor }]}
             onPress={(e) => {
               e.stopPropagation();
               onPressPrivacy?.();

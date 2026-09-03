@@ -111,7 +111,12 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
   const exportWatchSchedulePdf = async (t: PublishedWatchTimetable) => {
     setExportingPdf(true);
     try {
-      const dateStr = formatLocalDateString(scheduleDateStr(t), { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+      const dateStr = formatLocalDateString(scheduleDateStr(t), {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      });
       const headerMeta = `
           <h1>Watch Schedule</h1>
           <p class="subtitle">${dateStr}</p>
@@ -194,7 +199,9 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to use Watch Schedule.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to use Watch Schedule.
+        </Text>
       </View>
     );
   }
@@ -206,14 +213,23 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={styles.content}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={loadPublished} colors={[COLORS.primary]} />
+          <RefreshControl
+            refreshing={loading}
+            onRefresh={loadPublished}
+            colors={[COLORS.primary]}
+          />
         }
       >
         {loading && publishedTimetables.length === 0 ? (
-          <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: SPACING.xl }} />
+          <ActivityIndicator
+            size="small"
+            color={COLORS.primary}
+            style={{ marginVertical: SPACING.xl }}
+          />
         ) : publishedTimetables.length === 0 ? (
           <Text style={[styles.empty, { color: themeColors.textSecondary }]}>
-            No Watch Schedules yet. Create a timetable in Create, generate it, then tap Export to add it here.
+            No Watch Schedules yet. Create a timetable in Create, generate it, then tap Export to
+            add it here.
           </Text>
         ) : (
           publishedTimetables.map((t) => (
@@ -224,14 +240,27 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
               activeOpacity={0.8}
             >
               <View style={styles.cardHeader}>
-                <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>{t.watchTitle}</Text>
+                <Text
+                  style={[styles.cardTitle, { color: themeColors.textPrimary }]}
+                  numberOfLines={1}
+                >
+                  {t.watchTitle}
+                </Text>
                 {isHOD && (
                   <View style={styles.cardHeaderActions}>
                     <TouchableOpacity
                       onPress={() => handleEdit(t)}
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                      <Text style={{ color: COLORS.primary, fontSize: FONTS.sm, fontWeight: '600' }}>Edit</Text>
+                      <Text
+                        style={{
+                          color: themeColors.isDark ? COLORS.white : COLORS.primary,
+                          fontSize: FONTS.sm,
+                          fontWeight: '600',
+                        }}
+                      >
+                        Edit
+                      </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => handleDelete(t)}
@@ -243,9 +272,23 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
                   </View>
                 )}
               </View>
-              <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>{formatLocalDateString(scheduleDateStr(t), { weekday: 'short', month: 'short', day: 'numeric' })}</Text>
-              {t.startLocation ? <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>From: {t.startLocation}</Text> : null}
-              {t.destination ? <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>To: {t.destination}</Text> : null}
+              <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>
+                {formatLocalDateString(scheduleDateStr(t), {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </Text>
+              {t.startLocation ? (
+                <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>
+                  From: {t.startLocation}
+                </Text>
+              ) : null}
+              {t.destination ? (
+                <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>
+                  To: {t.destination}
+                </Text>
+              ) : null}
               <TouchableOpacity
                 style={styles.cardExportBtn}
                 onPress={(e) => {
@@ -253,14 +296,26 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
                   exportWatchSchedulePdf(t);
                 }}
               >
-                <Ionicons name="download-outline" size={16} color={COLORS.primary} />
-                <Text style={[styles.cardExportText, { color: COLORS.primary }]}>Export to PDF</Text>
+                <Ionicons
+                  name="download-outline"
+                  size={16}
+                  color={themeColors.isDark ? COLORS.white : COLORS.primary}
+                />
+                <Text
+                  style={[
+                    styles.cardExportText,
+                    { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                  ]}
+                >
+                  Export to PDF
+                </Text>
               </TouchableOpacity>
-              <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>Start: {t.startTime}</Text>
+              <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>
+                Start: {t.startTime}
+              </Text>
             </TouchableOpacity>
           ))
         )}
-
       </ScrollView>
     </View>
   );
@@ -278,11 +333,22 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     marginBottom: SPACING.md,
   },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.xs },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.xs,
+  },
   cardHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
   cardTitle: { fontSize: FONTS.lg, fontWeight: '600', flex: 1 },
   cardMeta: { fontSize: FONTS.sm, marginTop: SPACING.xs },
-  cardExportBtn: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, marginTop: SPACING.sm, alignSelf: 'flex-start' },
+  cardExportBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    marginTop: SPACING.sm,
+    alignSelf: 'flex-start',
+  },
   cardExportText: { fontSize: FONTS.sm, fontWeight: '600' },
   viewModal: { flex: 1 },
   viewModalContent: { paddingBottom: SIZES.bottomScrollPadding },
@@ -296,12 +362,33 @@ const styles = StyleSheet.create({
   slotCrew: { fontSize: FONTS.base, fontWeight: '600' },
   slotRole: { fontSize: FONTS.sm, marginTop: 2 },
   slotTime: { fontSize: FONTS.sm, color: COLORS.primary, fontWeight: '600', marginTop: SPACING.xs },
-  viewActions: { padding: SPACING.lg, borderTopWidth: 1, borderTopColor: COLORS.border, gap: SPACING.sm },
-  exportBtn: { padding: SPACING.md, backgroundColor: COLORS.primary, borderRadius: BORDER_RADIUS.md, alignItems: 'center' },
+  viewActions: {
+    padding: SPACING.lg,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    gap: SPACING.sm,
+  },
+  exportBtn: {
+    padding: SPACING.md,
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+  },
   exportBtnText: { fontSize: FONTS.base, fontWeight: '600', color: COLORS.white },
-  editBtn: { padding: SPACING.md, backgroundColor: COLORS.primary, borderRadius: BORDER_RADIUS.md, alignItems: 'center', opacity: 0.9 },
+  editBtn: {
+    padding: SPACING.md,
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    opacity: 0.9,
+  },
   editBtnText: { fontSize: FONTS.base, fontWeight: '600', color: COLORS.white },
-  deleteBtn: { padding: SPACING.md, backgroundColor: '#dc2626', borderRadius: BORDER_RADIUS.md, alignItems: 'center' },
+  deleteBtn: {
+    padding: SPACING.md,
+    backgroundColor: '#dc2626',
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+  },
   deleteBtnText: { fontSize: FONTS.base, fontWeight: '600', color: COLORS.white },
   closeBtn: { padding: SPACING.sm, alignItems: 'center' },
   closeBtnText: { fontSize: FONTS.base },

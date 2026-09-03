@@ -308,7 +308,7 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
           value={title}
           onChangeText={setTitle}
           placeholder="Safety Equipment Locations"
-          placeholderTextColor={COLORS.textTertiary}
+          placeholderTextColor={themeColors.textSecondary}
         />
         <View style={[styles.addSection, { borderColor: themeColors.surfaceAlt }]}>
           <Text
@@ -329,7 +329,7 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
               value={newCategoryName}
               onChangeText={setNewCategoryName}
               placeholder="e.g. Safety harnesses"
-              placeholderTextColor={COLORS.textTertiary}
+              placeholderTextColor={themeColors.textSecondary}
               onSubmitEditing={addEquipmentType}
             />
             <Button
@@ -366,12 +366,12 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
                     style={[
                       styles.input,
                       styles.flex,
-                      { backgroundColor: themeColors.background, color: themeColors.textPrimary },
+                      { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
                     ]}
                     value={item.location}
                     onChangeText={(v) => setLoc(key, i, v)}
                     placeholder="Location"
-                    placeholderTextColor={COLORS.textTertiary}
+                    placeholderTextColor={themeColors.textSecondary}
                   />
                   <TouchableOpacity onPress={() => remLoc(key, i)}>
                     <Text style={styles.rm}>✕</Text>
