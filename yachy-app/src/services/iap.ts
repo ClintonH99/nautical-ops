@@ -108,6 +108,57 @@ export async function restoreIAPPurchases(): Promise<void> {
   }
 }
 
+export interface RestoreIAPPurchasesResult {
+  success: boolean;
+  error?: string;
+}
+
+/**
+ * Restore and server-verify an active Nautical Ops subscription.
+ *
+ * expo-iap's restorePurchases() only refreshes StoreKit. It does not return
+ * purchases and it deliberately does not publish them to the purchase
+ * listener, so callers must query and verify the restored transactions before
+ * telling the customer that restoration succeeded.
+ */
+export async function restoreAndActivateIAPPurchases(
+  vesselId: string
+): Promise<RestoreIAPPurchasesResult> {
+  try {
+    await restorePurchases();
+    const purchases = await getAvailablePurchases({
+      alsoPublishToEventListenerIOS: false,
+      onlyIncludeActiveItemsIOS: true,
+    });
+    const validProductIds = new Set(getAllAppleProductIds());
+    const appPurchases = (purchases ?? []).filter((purchase) =>
+      validProductIds.has(purchase.productId)
+    );
+
+    if (appPurchases.length === 0) {
+      return {
+        success: false,
+        error: 'No active Nautical Ops subscription was found for this Apple ID.',
+      };
+    }
+
+    let lastError = 'The restored subscription could not be verified.';
+    for (const purchase of appPurchases) {
+      const result = await verifyAndActivateIAPPurchase(purchase, vesselId);
+      if (result.success) return { success: true };
+      if (result.error) lastError = result.error;
+    }
+
+    return { success: false, error: lastError };
+  } catch (err) {
+    if (__DEV__) console.warn('[IAP] restore and activation error:', err);
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Could not restore purchases. Please try again.',
+    };
+  }
+}
+
 /**
  * Verify a purchase with our Supabase Edge Function, which calls
  * Apple's App Store Server API directly using its own signed JWT
@@ -143,11 +194,17 @@ export async function verifyAndActivateIAPPurchase(
       },
     });
 
+    let timeout: ReturnType<typeof setTimeout> | undefined;
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Verification request timed out')), 25000);
+      timeout = setTimeout(() => reject(new Error('Verification request timed out')), 25000);
     });
 
-    const { data, error: invokeError } = await Promise.race([invokePromise, timeoutPromise]);
+    const { data, error: invokeError } = await Promise.race([
+      invokePromise,
+      timeoutPromise,
+    ]).finally(() => {
+      if (timeout) clearTimeout(timeout);
+    });
     const result = data as { error?: string } | null;
 
     if (invokeError) {

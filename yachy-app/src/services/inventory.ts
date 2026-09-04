@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabase';
+import { requireAffectedRows } from './mutationResult';
 import { Department } from '../types';
 
 export interface InventoryItemRow {
@@ -33,7 +34,13 @@ export interface CreateInventoryItemInput {
   lastEditedByName?: string;
 }
 
-const ALLOWED_DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
+const ALLOWED_DEPARTMENTS: Department[] = [
+  'BRIDGE',
+  'ENGINEERING',
+  'EXTERIOR',
+  'INTERIOR',
+  'GALLEY',
+];
 
 /** Ensure department matches DB check constraint inventory_items_department_check. */
 function normalizeDepartment(dept: string | undefined): Department {
@@ -129,7 +136,8 @@ class InventoryService {
     }
     if (updates.description !== undefined) payload.description = updates.description.trim();
     if (updates.location !== undefined) payload.location = updates.location.trim();
-    if (updates.department !== undefined) payload.department = normalizeDepartment(updates.department);
+    if (updates.department !== undefined)
+      payload.department = normalizeDepartment(updates.department);
     if (updates.items !== undefined) {
       payload.items = updates.items
         .filter((row) => row.amount.trim() || row.item.trim())
@@ -147,11 +155,12 @@ class InventoryService {
   }
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('inventory_items')
       .delete()
-      .eq('id', id);
-    if (error) throw error;
+      .eq('id', id)
+      .select('id');
+    requireAffectedRows(data, error, 'Deleting the inventory item');
   }
 
   private mapRow(row: Record<string, unknown>): InventoryItem {

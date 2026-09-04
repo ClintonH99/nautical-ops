@@ -1,22 +1,15 @@
-# Trip Insert Push Trigger (Alternative to Dashboard Webhook)
+# Deprecated Trip Trigger Instructions
 
-If you prefer to set up the webhook via SQL instead of the Dashboard, run this migration.
+Do not use the old SQL trigger. It required a privileged key to be stored as
+plain text in a database function and is intentionally disabled in the repo.
 
-**If you already created the webhook in the Dashboard:** Do NOT run this – you’d get duplicate notifications.
+The production project already has a Dashboard Database Webhook named
+`Trip created → push` for `trips` inserts.
 
 ## Steps
 
-1. **Enable pg_net** (if not already):
-   - Supabase Dashboard → **Database** → **Extensions**
-   - Search for `pg_net` → Enable
-
-2. **Get your anon key**:
-   - Dashboard → **Settings** → **API** → copy **anon public** key
-
-3. **Run the migration**:
-   - Dashboard → **SQL Editor** → New query
-   - Open `supabase/migrations/ADD_TRIP_INSERT_WEBHOOK_TRIGGER.sql`
-   - Replace `YOUR_ANON_KEY` with your anon key (the whole string between the quotes)
-   - Run the query
-
-4. **Test**: Create a new trip in the app. You should get a push notification within a few seconds.
+1. Supabase Dashboard → **Integrations** → **Database Webhooks** → **Webhooks**.
+2. Edit `Trip created → push`.
+3. Confirm it targets the `send-trip-push` Edge Function using POST.
+4. Confirm **Add auth header with service key** is configured.
+5. Create a trip in the app and confirm that the push arrives.

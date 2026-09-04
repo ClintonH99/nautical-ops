@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabase';
+import { requireAffectedRows } from './mutationResult';
 import { VesselTask, TaskCategory, TaskRecurring, Department } from '../types';
 
 export interface CreateVesselTaskData {
@@ -95,9 +96,12 @@ class VesselTasksService {
       if (input.completedByName !== undefined)
         payload.completed_by_name = input.completedByName || null;
 
-      const { error } = await supabase.from('vessel_tasks').update(payload).eq('id', taskId);
-
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from('vessel_tasks')
+        .update(payload)
+        .eq('id', taskId)
+        .select('id');
+      requireAffectedRows(data, error, 'Updating the task');
     } catch (error) {
       console.error('Update vessel task error:', error);
       throw error;
@@ -106,9 +110,12 @@ class VesselTasksService {
 
   async delete(taskId: string): Promise<void> {
     try {
-      const { error } = await supabase.from('vessel_tasks').delete().eq('id', taskId);
-
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from('vessel_tasks')
+        .delete()
+        .eq('id', taskId)
+        .select('id');
+      requireAffectedRows(data, error, 'Deleting the task');
     } catch (error) {
       console.error('Delete vessel task error:', error);
       throw error;

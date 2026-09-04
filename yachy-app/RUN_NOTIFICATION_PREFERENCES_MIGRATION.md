@@ -1,8 +1,10 @@
 # Notification Preferences
 
-To use **notification preferences** (choosing what to receive), add the column to Supabase:
+Notification preferences are already part of the production schema. For a clean
+local or test database:
 
-1. Open **Supabase Dashboard** → your project → **SQL Editor**.
-2. Run: **`supabase/migrations/ADD_USER_NOTIFICATION_PREFERENCES.sql`**.
+1. Apply `supabase/migrations/20260213000000_PRODUCTION_SCHEMA_BASELINE.sql`.
+2. Apply the remaining timestamped migrations in filename order.
 
-After this, the "What to receive" toggles will save and load correctly.
+The old incremental script is retained under `supabase/legacy-migrations/` for
+historical reference only. Do not run it individually against production.

@@ -19,26 +19,6 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 );
 
-async function createSoloVessel(): Promise<string> {
-  const code = Math.random().toString(36).slice(2, 10).toUpperCase();
-  const expiry = new Date();
-  expiry.setFullYear(expiry.getFullYear() + 1);
-  const { data, error } = await supabase
-    .from('vessels')
-    .insert([
-      {
-        name: 'Crew Account',
-        invite_code: code,
-        invite_expiry: expiry.toISOString(),
-        is_solo: true,
-      },
-    ])
-    .select()
-    .single();
-  if (error || !data) throw new Error('Could not create solo vessel');
-  return data.id;
-}
-
 async function cleanupStorage(bucket: string, vesselId: string) {
   const { data: files } = await supabase.storage.from(bucket).list(vesselId);
   if (files?.length) {
@@ -56,13 +36,13 @@ Deno.serve(async (req) => {
   }
   try {
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
+    if (!authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' },
       });
     }
-    const token = authHeader.replace('Bearer ', '');
+    const token = authHeader.slice(7);
     const {
       data: { user },
       error: authError,
@@ -74,67 +54,28 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: callerRow } = await supabase
-      .from('users')
-      .select('role, vessel_id')
-      .eq('id', user.id)
-      .single();
-
-    if (!callerRow?.vessel_id || callerRow.role !== 'CAPTAIN_MOV') {
-      return new Response(JSON.stringify({ error: 'Only the Captain/MOV can delete a vessel' }), {
-        status: 403,
+    const { data, error } = await supabase.rpc('admin_delete_current_vessel', {
+      p_user_id: user.id,
+    });
+    if (error || !data) {
+      const message = error?.message || 'Could not delete vessel';
+      const isLegacyBilling = message.includes('legacy billing record');
+      const isUnauthorized = message.includes('Only the Captain/MOV');
+      return new Response(JSON.stringify({ error: message }), {
+        status: isLegacyBilling ? 409 : isUnauthorized ? 403 : 500,
         headers: { 'Content-Type': 'application/json' },
       });
     }
-    const vesselId = callerRow.vessel_id;
 
-    const { data: subscription } = await supabase
-      .from('vessel_subscriptions')
-      .select('paddle_subscription_id, payment_provider')
-      .eq('vessel_id', vesselId)
-      .maybeSingle();
-
-    if (subscription?.paddle_subscription_id) {
-      return new Response(
-        JSON.stringify({
-          error:
-            'This vessel has a legacy billing record. Contact support@nautical-ops.com so billing can be cancelled safely before the vessel is deleted.',
-        }),
-        { status: 409, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const cancellationProvider =
-      subscription?.payment_provider === 'apple' || subscription?.payment_provider === 'google'
-        ? subscription.payment_provider
-        : null;
-
-    const { data: crewToMove } = await supabase
-      .from('users')
-      .select('id')
-      .eq('vessel_id', vesselId);
-
-    for (const person of crewToMove ?? []) {
-      const newVesselId = await createSoloVessel();
-      await supabase
-        .from('users')
-        .update({ vessel_id: newVesselId, role: 'CREW' })
-        .eq('id', person.id);
-    }
+    const result = data as {
+      deleted_vessel_id: string;
+      cancellation_provider: 'apple' | 'google' | null;
+    };
+    const vesselId = result.deleted_vessel_id;
+    const cancellationProvider = result.cancellation_provider;
 
     await cleanupStorage('vessel-banners', vesselId);
     await cleanupStorage('contracts', vesselId);
-
-    const { error: vesselDeleteError } = await supabase.from('vessels').delete().eq('id', vesselId);
-    if (vesselDeleteError) {
-      console.error('delete-vessel: vessel delete failed', vesselDeleteError);
-      return new Response(
-        JSON.stringify({
-          error: 'Could not delete vessel. Please contact support@nautical-ops.com',
-        }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
 
     return new Response(
       JSON.stringify({
@@ -149,9 +90,9 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     console.error('delete-vessel: uncaught error', err);
-    return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: 'Could not delete vessel' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 });

@@ -601,8 +601,7 @@ $$;
 
 REVOKE ALL ON FUNCTION public.get_vessel_subscription_entitlement(UUID) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_vessel_subscription_entitlement(UUID) TO authenticated;
-REVOKE SELECT ON public.vessel_subscriptions FROM authenticated;
-GRANT SELECT ON public.vessel_subscriptions TO anon, authenticated;
+REVOKE SELECT ON public.vessel_subscriptions FROM anon, authenticated;
 
 CREATE OR REPLACE FUNCTION public.current_user_can_manage_rest_entry(
   target_user_id UUID,

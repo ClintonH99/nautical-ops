@@ -6,6 +6,7 @@
  */
 
 import { supabase } from './supabase';
+import { requireAffectedRows } from './mutationResult';
 
 export interface WatchKeeperEntry {
   userId: string;
@@ -21,22 +22,26 @@ export async function getWatchKeepers(vesselId: string): Promise<WatchKeeperEntr
   if (!rows || rows.length === 0) return [];
 
   const userIds = rows.map((r) => r.user_id);
-  const { data: users } = await supabase
-    .from('users')
-    .select('id, name')
-    .in('id', userIds);
+  const { data: users } = await supabase.from('users').select('id, name').in('id', userIds);
 
   return (users ?? []).map((u) => ({ userId: u.id, userName: u.name }));
 }
 
 export async function addWatchKeeper(vesselId: string, userId: string): Promise<void> {
-  const { error } = await supabase.from('watch_keepers').insert({ vessel_id: vesselId, user_id: userId });
+  const { error } = await supabase
+    .from('watch_keepers')
+    .insert({ vessel_id: vesselId, user_id: userId });
   if (error) throw error;
 }
 
 export async function removeWatchKeeper(vesselId: string, userId: string): Promise<void> {
-  const { error } = await supabase.from('watch_keepers').delete().eq('vessel_id', vesselId).eq('user_id', userId);
-  if (error) throw error;
+  const { data, error } = await supabase
+    .from('watch_keepers')
+    .delete()
+    .eq('vessel_id', vesselId)
+    .eq('user_id', userId)
+    .select('id');
+  requireAffectedRows(data, error, 'Removing the watch keeper');
 }
 
 export async function isWatchKeeper(vesselId: string, userId: string): Promise<boolean> {

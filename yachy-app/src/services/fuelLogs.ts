@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabase';
+import { requireAffectedRows } from './mutationResult';
 import { FuelLog } from '../types';
 
 export interface CreateFuelLogData {
@@ -60,11 +61,7 @@ class FuelLogsService {
 
   async getById(id: string): Promise<FuelLog | null> {
     try {
-      const { data, error } = await supabase
-        .from('fuel_logs')
-        .select('*')
-        .eq('id', id)
-        .single();
+      const { data, error } = await supabase.from('fuel_logs').select('*').eq('id', id).single();
 
       if (error) throw error;
       return data ? this.mapRow(data) : null;
@@ -77,16 +74,18 @@ class FuelLogsService {
   async create(input: CreateFuelLogData): Promise<FuelLog> {
     const { data, error } = await supabase
       .from('fuel_logs')
-      .insert([{
-        vessel_id: input.vesselId,
-        location_of_refueling: input.locationOfRefueling.trim() || null,
-        log_date: input.logDate,
-        log_time: input.logTime,
-        amount_of_fuel: input.amountOfFuel,
-        price_per_gallon: input.pricePerGallon,
-        total_price: input.totalPrice,
-        created_by_name: input.createdByName,
-      }])
+      .insert([
+        {
+          vessel_id: input.vesselId,
+          location_of_refueling: input.locationOfRefueling.trim() || null,
+          log_date: input.logDate,
+          log_time: input.logTime,
+          amount_of_fuel: input.amountOfFuel,
+          price_per_gallon: input.pricePerGallon,
+          total_price: input.totalPrice,
+          created_by_name: input.createdByName,
+        },
+      ])
       .select()
       .single();
 
@@ -96,28 +95,25 @@ class FuelLogsService {
 
   async update(id: string, input: UpdateFuelLogData): Promise<void> {
     const patch: Record<string, any> = {};
-    if (input.locationOfRefueling !== undefined) patch.location_of_refueling = input.locationOfRefueling.trim() || null;
+    if (input.locationOfRefueling !== undefined)
+      patch.location_of_refueling = input.locationOfRefueling.trim() || null;
     if (input.logDate !== undefined) patch.log_date = input.logDate;
     if (input.logTime !== undefined) patch.log_time = input.logTime;
     if (input.amountOfFuel !== undefined) patch.amount_of_fuel = input.amountOfFuel;
     if (input.pricePerGallon !== undefined) patch.price_per_gallon = input.pricePerGallon;
     if (input.totalPrice !== undefined) patch.total_price = input.totalPrice;
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('fuel_logs')
       .update(patch)
-      .eq('id', id);
-
-    if (error) throw error;
+      .eq('id', id)
+      .select('id');
+    requireAffectedRows(data, error, 'Updating the fuel log');
   }
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('fuel_logs')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
+    const { data, error } = await supabase.from('fuel_logs').delete().eq('id', id).select('id');
+    requireAffectedRows(data, error, 'Deleting the fuel log');
   }
 }
 

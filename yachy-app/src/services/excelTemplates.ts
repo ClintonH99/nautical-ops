@@ -23,13 +23,19 @@ function bytesToBase64(bytes: Uint8Array): string {
     const b1 = bytes[i] ?? 0;
     const b2 = i + 1 < bytes.length ? bytes[i + 1]! : 0;
     const b3 = i + 2 < bytes.length ? bytes[i + 2]! : 0;
-    out += key[b1 >> 2] + key[((b1 & 3) << 4) | (b2 >> 4)] + key[((b2 & 15) << 2) | (b3 >> 6)] + key[b3 & 63];
+    out +=
+      key[b1 >> 2] +
+      key[((b1 & 3) << 4) | (b2 >> 4)] +
+      key[((b2 & 15) << 2) | (b3 >> 6)] +
+      key[b3 & 63];
   }
   const pad = bytes.length % 3;
   return out + (pad === 1 ? '==' : pad === 2 ? '=' : '');
 }
 
 export type TemplateType = 'tasks' | 'maintenance' | 'yard' | 'inventory';
+export const MAX_IMPORT_FILE_BYTES = 10 * 1024 * 1024;
+export const MAX_IMPORT_ROWS = 5000;
 
 // --- TASKS TEMPLATE ---
 const TASKS_HEADERS = [
@@ -67,12 +73,7 @@ const YARD_HEADERS = [
 
 // --- INVENTORY TEMPLATE ---
 // One row per inventory entry. Department is inferred from the sheet/tab name.
-const INVENTORY_HEADERS = [
-  'Title',
-  'Location',
-  'Description',
-  'Amount 1', 'Item 1',
-];
+const INVENTORY_HEADERS = ['Title', 'Location', 'Description', 'Amount 1', 'Item 1'];
 
 const INFO_DUMP_EXPLANATION =
   'This page is for dropping all your information here. You can then copy and paste into the respective category tabs.';
@@ -93,7 +94,9 @@ function normalizeDateForImport(raw: string | null | undefined): string | null {
 }
 
 /** Only allow DB values '7_DAYS' | '14_DAYS' | '30_DAYS' or null (empty/invalid -> null). */
-function normalizeRecurringForImport(raw: string | null | undefined): (typeof VALID_RECURRING)[number] | null {
+function normalizeRecurringForImport(
+  raw: string | null | undefined
+): (typeof VALID_RECURRING)[number] | null {
   const s = (raw ?? '').trim().toUpperCase().replace(/\s+/g, '_');
   if (!s) return null;
   const v = s as (typeof VALID_RECURRING)[number];
@@ -119,9 +122,42 @@ function createSheetWithHeaders(headers: string[], exampleRow?: string[]): XLSX.
 function createTasksWorkbook(): XLSX.WorkBook {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, createInfoDumpSheet(), 'Info Dump');
-  XLSX.utils.book_append_sheet(wb, createSheetWithHeaders(TASKS_HEADERS, ['GALLEY', 'DAILY', 'Example daily task', 'Optional notes', '2025-12-31', '']), 'Daily');
-  XLSX.utils.book_append_sheet(wb, createSheetWithHeaders(TASKS_HEADERS, ['EXTERIOR', 'WEEKLY', 'Example weekly task', 'Optional notes', '2025-12-31', '7_DAYS']), 'Weekly');
-  XLSX.utils.book_append_sheet(wb, createSheetWithHeaders(TASKS_HEADERS, ['ENGINEERING', 'MONTHLY', 'Example monthly task', 'Optional notes', '2025-12-31', '30_DAYS']), 'Monthly');
+  XLSX.utils.book_append_sheet(
+    wb,
+    createSheetWithHeaders(TASKS_HEADERS, [
+      'GALLEY',
+      'DAILY',
+      'Example daily task',
+      'Optional notes',
+      '2025-12-31',
+      '',
+    ]),
+    'Daily'
+  );
+  XLSX.utils.book_append_sheet(
+    wb,
+    createSheetWithHeaders(TASKS_HEADERS, [
+      'EXTERIOR',
+      'WEEKLY',
+      'Example weekly task',
+      'Optional notes',
+      '2025-12-31',
+      '7_DAYS',
+    ]),
+    'Weekly'
+  );
+  XLSX.utils.book_append_sheet(
+    wb,
+    createSheetWithHeaders(TASKS_HEADERS, [
+      'ENGINEERING',
+      'MONTHLY',
+      'Example monthly task',
+      'Optional notes',
+      '2025-12-31',
+      '30_DAYS',
+    ]),
+    'Monthly'
+  );
   return wb;
 }
 
@@ -166,22 +202,18 @@ function createYardWorkbook(): XLSX.WorkBook {
 }
 
 const INVENTORY_DEPARTMENTS: { label: string }[] = [
-  { label: 'Bridge'      },
+  { label: 'Bridge' },
   { label: 'Engineering' },
-  { label: 'Exterior'    },
-  { label: 'Interior'    },
-  { label: 'Galley'      },
+  { label: 'Exterior' },
+  { label: 'Interior' },
+  { label: 'Galley' },
 ];
 
 function createInventoryWorkbook(): XLSX.WorkBook {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, createInfoDumpSheet(), 'Info Dump');
   for (const dept of INVENTORY_DEPARTMENTS) {
-    XLSX.utils.book_append_sheet(
-      wb,
-      createSheetWithHeaders(INVENTORY_HEADERS),
-      dept.label
-    );
+    XLSX.utils.book_append_sheet(wb, createSheetWithHeaders(INVENTORY_HEADERS), dept.label);
   }
   return wb;
 }
@@ -268,19 +300,34 @@ export interface ParseResult<T> {
 
 export function parseTasksFile(uri: string): Promise<ParseResult<ParsedTask>> {
   return parseFile(uri, 'tasks', (row, rowNum, headerMap) => {
-    const deptRaw = (headerMap['Department (BRIDGE/ENGINEERING/EXTERIOR/INTERIOR/GALLEY)'] ?? headerMap['Department'] ?? '').trim().toUpperCase();
-    const category = (headerMap['Category (DAILY/WEEKLY/MONTHLY)'] ?? headerMap['Category'] ?? '').trim().toUpperCase();
+    const deptRaw = (
+      headerMap['Department (BRIDGE/ENGINEERING/EXTERIOR/INTERIOR/GALLEY)'] ??
+      headerMap['Department'] ??
+      ''
+    )
+      .trim()
+      .toUpperCase();
+    const category = (headerMap['Category (DAILY/WEEKLY/MONTHLY)'] ?? headerMap['Category'] ?? '')
+      .trim()
+      .toUpperCase();
     const title = (headerMap['Title'] ?? '').trim();
     if (!title) return null;
     const validCategories = ['DAILY', 'WEEKLY', 'MONTHLY'];
     if (category && !validCategories.includes(category)) {
       throw new Error(`Invalid category "${category}". Use DAILY, WEEKLY, or MONTHLY.`);
     }
-    const department = deptRaw && VALID_DEPARTMENTS.includes(deptRaw as (typeof VALID_DEPARTMENTS)[number])
-      ? deptRaw
-      : 'INTERIOR';
-    const doneByDateRaw = (headerMap['Done By Date (YYYY-MM-DD)'] ?? headerMap['Done By Date'] ?? '').trim() || null;
-    const recurringRaw = (headerMap['Recurring (7_DAYS/14_DAYS/30_DAYS or leave blank)'] ?? headerMap['Recurring'] ?? '').trim() || null;
+    const department =
+      deptRaw && VALID_DEPARTMENTS.includes(deptRaw as (typeof VALID_DEPARTMENTS)[number])
+        ? deptRaw
+        : 'INTERIOR';
+    const doneByDateRaw =
+      (headerMap['Done By Date (YYYY-MM-DD)'] ?? headerMap['Done By Date'] ?? '').trim() || null;
+    const recurringRaw =
+      (
+        headerMap['Recurring (7_DAYS/14_DAYS/30_DAYS or leave blank)'] ??
+        headerMap['Recurring'] ??
+        ''
+      ).trim() || null;
     return {
       department,
       category: category || 'DAILY',
@@ -315,10 +362,23 @@ export function parseYardFile(uri: string): Promise<ParseResult<ParsedYardJob>> 
   return parseFile(uri, 'yard', (row, rowNum, headerMap) => {
     const jobTitle = (headerMap['Job Title'] ?? '').trim();
     if (!jobTitle) throw new Error('Job Title is required.');
-    const deptRaw = (headerMap['Department (BRIDGE/ENGINEERING/EXTERIOR/INTERIOR/GALLEY)'] ?? headerMap['Department'] ?? '').trim().toUpperCase();
-    const department = deptRaw && VALID_DEPARTMENTS.includes(deptRaw as (typeof VALID_DEPARTMENTS)[number]) ? deptRaw : undefined;
-    const startDate = normalizeDateForImport(headerMap['Start Date (YYYY-MM-DD)'] ?? headerMap['Start Date'] ?? '');
-    const endDate = normalizeDateForImport(headerMap['End Date (YYYY-MM-DD)'] ?? headerMap['End Date'] ?? '');
+    const deptRaw = (
+      headerMap['Department (BRIDGE/ENGINEERING/EXTERIOR/INTERIOR/GALLEY)'] ??
+      headerMap['Department'] ??
+      ''
+    )
+      .trim()
+      .toUpperCase();
+    const department =
+      deptRaw && VALID_DEPARTMENTS.includes(deptRaw as (typeof VALID_DEPARTMENTS)[number])
+        ? deptRaw
+        : undefined;
+    const startDate = normalizeDateForImport(
+      headerMap['Start Date (YYYY-MM-DD)'] ?? headerMap['Start Date'] ?? ''
+    );
+    const endDate = normalizeDateForImport(
+      headerMap['End Date (YYYY-MM-DD)'] ?? headerMap['End Date'] ?? ''
+    );
     if (!startDate) throw new Error('Start Date is required.');
     if (!endDate) throw new Error('End Date is required.');
     return {
@@ -384,7 +444,12 @@ function getDataSheetNames(type: TemplateType): string[] {
 async function parseFile<T>(
   uri: string,
   type: TemplateType,
-  mapRow: (row: string[], rowNum: number, headerMap: Record<string, string>, sheetName: string) => T | null
+  mapRow: (
+    row: string[],
+    rowNum: number,
+    headerMap: Record<string, string>,
+    sheetName: string
+  ) => T | null
 ): Promise<ParseResult<T>> {
   const success: T[] = [];
   const errors: { row: number; message: string }[] = [];
@@ -393,6 +458,13 @@ async function parseFile<T>(
     const base64 = await FileSystem.readAsStringAsync(uri, {
       encoding: 'base64',
     });
+    const maximumBase64Length = Math.ceil(MAX_IMPORT_FILE_BYTES / 3) * 4 + 4;
+    if (base64.length > maximumBase64Length) {
+      return {
+        success: [],
+        errors: [{ row: 0, message: 'The spreadsheet is larger than the 10 MB import limit.' }],
+      };
+    }
     const workbook = XLSX.read(base64, { type: 'base64' });
     const allSheetNames = workbook.SheetNames;
     const wantedNames = getDataSheetNames(type);
@@ -412,6 +484,22 @@ async function parseFile<T>(
     let globalRow = 0;
     for (const sheetName of sheetsToRead) {
       const sheet = workbook.Sheets[sheetName];
+      const sheetRange = sheet?.['!ref'];
+      if (sheetRange) {
+        const decodedRange = XLSX.utils.decode_range(sheetRange);
+        const sheetDataRowCount = Math.max(0, decodedRange.e.r - decodedRange.s.r);
+        if (globalRow + sheetDataRowCount > MAX_IMPORT_ROWS) {
+          return {
+            success: [],
+            errors: [
+              {
+                row: 0,
+                message: `The spreadsheet exceeds the ${MAX_IMPORT_ROWS}-row import limit.`,
+              },
+            ],
+          };
+        }
+      }
       const rows: unknown[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
       if (rows.length < 2) continue;
 

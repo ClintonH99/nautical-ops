@@ -83,16 +83,17 @@ A `.cursor/rules/date-time-picker.mdc` Cursor rule was created. All future date/
 
 ---
 
-## 3. Supabase Migrations Still To Run
+## 3. Supabase Schema Baseline
 
-If starting fresh or testing on a new Supabase project, run these SQL files in the Supabase SQL Editor (in order):
+The current production `public` schema is captured in:
 
-1. `supabase/migrations/CREATE_GENERAL_WASTE_LOGS_TABLE.sql`
-2. `supabase/migrations/CREATE_FUEL_LOGS_TABLE.sql`
-3. `supabase/migrations/CREATE_PUMP_OUT_LOGS_TABLE.sql`
-4. `supabase/migrations/ADD_SHOPPING_LIST_TYPE.sql` (if using Shopping List)
+1. `supabase/migrations/20260213000000_PRODUCTION_SCHEMA_BASELINE.sql`
+2. The remaining timestamped migrations, applied in filename order
 
-All three tables use RLS with a policy allowing authenticated users to SELECT/INSERT/UPDATE/DELETE their own vessel's rows via `vessel_id`.
+The 41 old untimestamped scripts were ignored by Supabase CLI and now live in
+`supabase/legacy-migrations/` for historical reference only. Do not run those
+scripts individually against production. The baseline is schema-only and
+contains no customer rows or webhook credentials.
 
 ---
 
@@ -137,6 +138,8 @@ src/
   navigation/
     RootNavigator.tsx                  — All seven new screens registered
 supabase/migrations/
+    20260213000000_PRODUCTION_SCHEMA_BASELINE.sql
+supabase/legacy-migrations/
     CREATE_GENERAL_WASTE_LOGS_TABLE.sql
     CREATE_FUEL_LOGS_TABLE.sql
     CREATE_PUMP_OUT_LOGS_TABLE.sql

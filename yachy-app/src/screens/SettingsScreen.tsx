@@ -59,7 +59,7 @@ export const SettingsScreen = ({ navigation }: any) => {
   const handleDeleteAccount = () => {
     Alert.alert(
       'Delete Account',
-      'This will permanently delete your account and remove you from your vessel. This cannot be undone.',
+      "This permanently deletes your account and removes you from your vessel. It does not cancel an Apple App Store or Google Play subscription; cancel that in your device's subscription settings first. This cannot be undone.",
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -77,11 +77,16 @@ export const SettingsScreen = ({ navigation }: any) => {
                 headers: { Authorization: `Bearer ${accessToken}` },
               });
               if (error || data?.error) {
-                const msg = data?.error || 'Could not delete account. Please contact support@nautical-ops.com';
+                const msg =
+                  data?.error ||
+                  'Could not delete account. Please contact support@nautical-ops.com';
                 if (msg.includes('only Captain/MOV')) {
-                  Alert.alert('You\'re the only Captain', msg, [
+                  Alert.alert("You're the only Captain", msg, [
                     { text: 'Cancel', style: 'cancel' },
-                    { text: 'Go to Crew Management', onPress: () => navigation.navigate('CrewManagement') },
+                    {
+                      text: 'Go to Crew Management',
+                      onPress: () => navigation.navigate('CrewManagement'),
+                    },
                   ]);
                 } else {
                   Alert.alert('Error', msg);
@@ -91,7 +96,10 @@ export const SettingsScreen = ({ navigation }: any) => {
               logout();
               await authService.signOut();
             } catch {
-              Alert.alert('Error', 'Could not delete account. Please contact support@nautical-ops.com');
+              Alert.alert(
+                'Error',
+                'Could not delete account. Please contact support@nautical-ops.com'
+              );
             }
           },
         },
@@ -333,9 +341,7 @@ export const SettingsScreen = ({ navigation }: any) => {
                         style={[
                           styles.settingsLabel,
                           {
-                            color: (item as any).destructive
-                              ? '#ef4444'
-                              : themeColors.textPrimary,
+                            color: (item as any).destructive ? '#ef4444' : themeColors.textPrimary,
                           },
                         ]}
                       >

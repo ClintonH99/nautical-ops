@@ -1,0 +1,7 @@
+-- HISTORICAL SCRIPT: retained for reference; do not run as an active migration.
+-- DEPRECATED — DO NOT RUN.
+--
+-- The production trip notification uses a Supabase Dashboard Database Webhook
+-- with "Add auth header with service key" enabled. The former SQL template
+-- embedded an API key in a database function and is intentionally disabled.
+-- See TRIP_PUSH_NOTIFICATIONS_SETUP.md.

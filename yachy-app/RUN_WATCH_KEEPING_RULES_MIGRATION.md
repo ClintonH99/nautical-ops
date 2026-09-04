@@ -1,8 +1,10 @@
 # Watch Keeping Rules table
 
-To use **Watch Keeping Rules** (edit by HODs, view by crew), create the table in Supabase:
+Watch Keeping Rules are already part of the production schema. For a clean local
+or test database:
 
-1. Open **Supabase Dashboard** → your project → **SQL Editor**.
-2. Run the migration: **`supabase/migrations/CREATE_WATCH_KEEPING_RULES_TABLE.sql`**.
+1. Apply `supabase/migrations/20260213000000_PRODUCTION_SCHEMA_BASELINE.sql`.
+2. Apply the remaining timestamped migrations in filename order.
 
-After this, the Watch Keeping hub will load and save rules per vessel.
+The old incremental script is retained under `supabase/legacy-migrations/` for
+historical reference only. Do not run it individually against production.

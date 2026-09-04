@@ -2,20 +2,20 @@
 
 ## Rule
 
-1. **Captain pays, crew joins free:** The Captain (HOD) is liable for subscription fees. Crew members join under the captain's membership at no additional cost.
+1. **Captain pays, crew joins free:** The Captain/MOV is liable for subscription fees. Crew members and HODs join under the captain's vessel subscription at no additional cost.
 
 2. **Gate before invite code:** The Captain must select and pay for a vessel plan before accessing the invite code. The Invite Code section in Vessel Settings is gated until an active subscription exists.
 
 3. **Plan tiers (crew size, inclusive lower bound):**
 
-   | Tier   | Crew Range | Monthly Price |
-   |--------|------------|---------------|
-   | 1-5    | 1-5        | $79.99        |
-   | 6-10   | 6-10       | $89.99        |
-   | 11-15  | 11-15      | $119.99       |
-   | 16-25  | 16-25      | $149.99       |
-   | 26-40  | 26-40      | $199.99       |
-   | 40+    | 41+        | $249.99       |
+   | Tier  | Crew Range | Monthly Price |
+   | ----- | ---------- | ------------- |
+   | 1-5   | 1-5        | $79.99        |
+   | 6-10  | 6-10       | $89.99        |
+   | 11-15 | 11-15      | $119.99       |
+   | 16-25 | 16-25      | $149.99       |
+   | 26-40 | 26-40      | $199.99       |
+   | 40+   | 41+        | $249.99       |
 
 4. **Billing periods and discounts:**
    - Monthly: no discount

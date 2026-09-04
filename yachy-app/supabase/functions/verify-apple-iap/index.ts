@@ -98,13 +98,13 @@ Deno.serve(async (req) => {
   }
   try {
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
+    if (!authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' },
       });
     }
-    const token = authHeader.replace('Bearer ', '');
+    const token = authHeader.slice(7);
     const {
       data: { user },
       error: authError,
@@ -117,9 +117,7 @@ Deno.serve(async (req) => {
     }
 
     const { transactionId, vesselId } = await req.json();
-    console.log('verify-apple-iap: request received', { transactionId, vesselId, userId: user.id });
     if (!transactionId || !vesselId) {
-      console.error('verify-apple-iap: missing required fields', { transactionId, vesselId });
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
@@ -137,7 +135,7 @@ Deno.serve(async (req) => {
       callerRow.vessel_id !== vesselId ||
       callerRow.role !== 'CAPTAIN_MOV'
     ) {
-      console.error('verify-apple-iap: not authorized', { callerError, callerRow, vesselId });
+      console.error('verify-apple-iap: caller is not authorized for the requested vessel');
       return new Response(
         JSON.stringify({ error: 'Not authorized to activate a subscription for this vessel' }),
         { status: 403, headers: { 'Content-Type': 'application/json' } }
@@ -145,20 +143,17 @@ Deno.serve(async (req) => {
     }
 
     const jwt = await generateAppleJWT();
-    console.log('verify-apple-iap: generated Apple JWT, length', jwt.length);
     const appleResult = await fetchAppleTransaction(transactionId, jwt);
     if (!appleResult) {
       console.error(
         'verify-apple-iap: Apple did not return a valid transaction for',
-        transactionId
+        'requested transaction'
       );
       return new Response(JSON.stringify({ error: 'Apple could not verify this transaction' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
-    console.log('verify-apple-iap: Apple responded successfully');
-
     const payload = decodeJwt(appleResult.signedTransactionInfo) as Record<string, unknown>;
     if (payload.bundleId !== BUNDLE_ID) {
       console.error('verify-apple-iap: bundle ID mismatch', payload.bundleId);
@@ -252,41 +247,28 @@ Deno.serve(async (req) => {
       }
     }
 
-    const { error: upsertError } = await supabase.from('vessel_subscriptions').upsert(
-      {
-        vessel_id: vesselId,
-        plan_tier: plan.planTierId,
-        billing_period: plan.billingPeriodId,
-        status: 'active',
-        payment_provider: 'apple',
-        apple_original_transaction_id: originalTransactionId,
-        apple_latest_transaction_id: latestTransactionId,
-        current_period_start: periodStart,
-        current_period_end: periodEnd,
-        grace_period_end: null,
-        billing_retry_started_at: null,
-        last_verified_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'vessel_id' }
-    );
+    const { error: activationError } = await supabase.rpc('admin_record_apple_subscription', {
+      p_vessel_id: vesselId,
+      p_plan_tier: plan.planTierId,
+      p_billing_period: plan.billingPeriodId,
+      p_status: 'active',
+      p_original_transaction_id: originalTransactionId,
+      p_latest_transaction_id: latestTransactionId,
+      p_current_period_start: periodStart,
+      p_current_period_end: periodEnd,
+      p_grace_period_end: null,
+      p_billing_retry_started_at: null,
+      p_verified_at: new Date().toISOString(),
+      p_pending_purchase_id: pendingPurchaseId,
+      p_pending_user_id: pendingPurchaseId ? user.id : null,
+    });
 
-    if (upsertError) {
-      console.error('verify-apple-iap upsert error:', upsertError);
+    if (activationError) {
+      console.error('verify-apple-iap activation failed:', activationError.code);
       return new Response(JSON.stringify({ error: 'Failed to activate subscription' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
       });
-    }
-
-    if (pendingPurchaseId) {
-      const { error: consumeError } = await supabase
-        .from('pending_subscription_purchases')
-        .update({ consumed_at: new Date().toISOString() })
-        .eq('id', pendingPurchaseId)
-        .is('consumed_at', null);
-      if (consumeError)
-        console.error('verify-apple-iap: could not consume purchase token', consumeError);
     }
 
     return new Response(JSON.stringify({ success: true }), {
@@ -298,9 +280,9 @@ Deno.serve(async (req) => {
       'verify-apple-iap: uncaught error',
       err instanceof Error ? { name: err.name, message: err.message, stack: err.stack } : err
     );
-    return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: 'Verification failed' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 });

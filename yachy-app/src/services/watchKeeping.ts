@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabase';
+import { requireAffectedRows } from './mutationResult';
 
 export interface TimetableSlot {
   crewId: string;
@@ -65,7 +66,11 @@ class WatchKeepingService {
     }
   }
 
-  async upsertRules(vesselId: string, content: string, updatedBy?: string): Promise<WatchKeepingRules> {
+  async upsertRules(
+    vesselId: string,
+    content: string,
+    updatedBy?: string
+  ): Promise<WatchKeepingRules> {
     const { data, error } = await supabase
       .from('watch_keeping_rules')
       .upsert(
@@ -176,12 +181,12 @@ class WatchKeepingService {
   }
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('watch_keeping_timetables')
       .delete()
-      .eq('id', id);
-
-    if (error) throw error;
+      .eq('id', id)
+      .select('id');
+    requireAffectedRows(data, error, 'Deleting the watch timetable');
   }
 
   async getById(id: string): Promise<PublishedWatchTimetable | null> {

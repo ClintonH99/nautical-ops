@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabase';
+import { requireAffectedRows } from './mutationResult';
 import { PumpOutLog, DischargeType } from '../types';
 
 export interface CreatePumpOutLogData {
@@ -80,17 +81,19 @@ class PumpOutLogsService {
   async create(input: CreatePumpOutLogData): Promise<PumpOutLog> {
     const { data, error } = await supabase
       .from('pump_out_logs')
-      .insert([{
-        vessel_id: input.vesselId,
-        discharge_type: input.dischargeType,
-        pumpout_service_name: input.pumpoutServiceName.trim() || null,
-        location: input.location.trim() || null,
-        amount_in_gallons: input.amountInGallons,
-        description: input.description.trim() || null,
-        log_date: input.logDate,
-        log_time: input.logTime,
-        created_by_name: input.createdByName,
-      }])
+      .insert([
+        {
+          vessel_id: input.vesselId,
+          discharge_type: input.dischargeType,
+          pumpout_service_name: input.pumpoutServiceName.trim() || null,
+          location: input.location.trim() || null,
+          amount_in_gallons: input.amountInGallons,
+          description: input.description.trim() || null,
+          log_date: input.logDate,
+          log_time: input.logTime,
+          created_by_name: input.createdByName,
+        },
+      ])
       .select()
       .single();
 
@@ -101,28 +104,25 @@ class PumpOutLogsService {
   async update(id: string, input: UpdatePumpOutLogData): Promise<void> {
     const patch: Record<string, any> = {};
     if (input.dischargeType !== undefined) patch.discharge_type = input.dischargeType;
-    if (input.pumpoutServiceName !== undefined) patch.pumpout_service_name = input.pumpoutServiceName.trim() || null;
+    if (input.pumpoutServiceName !== undefined)
+      patch.pumpout_service_name = input.pumpoutServiceName.trim() || null;
     if (input.location !== undefined) patch.location = input.location.trim() || null;
     if (input.amountInGallons !== undefined) patch.amount_in_gallons = input.amountInGallons;
     if (input.description !== undefined) patch.description = input.description.trim() || null;
     if (input.logDate !== undefined) patch.log_date = input.logDate;
     if (input.logTime !== undefined) patch.log_time = input.logTime;
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('pump_out_logs')
       .update(patch)
-      .eq('id', id);
-
-    if (error) throw error;
+      .eq('id', id)
+      .select('id');
+    requireAffectedRows(data, error, 'Updating the pump-out log');
   }
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('pump_out_logs')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
+    const { data, error } = await supabase.from('pump_out_logs').delete().eq('id', id).select('id');
+    requireAffectedRows(data, error, 'Deleting the pump-out log');
   }
 }
 

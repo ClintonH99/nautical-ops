@@ -46,11 +46,12 @@ import {
   endIAP,
   fetchIAPProducts,
   purchaseSubscription,
-  restoreIAPPurchases,
+  restoreAndActivateIAPPurchases,
   setupIAPListeners,
   verifyAndActivateIAPPurchase,
   type IAPProduct,
 } from '../services/iap';
+import type { Purchase } from 'expo-iap';
 
 export const VesselPlansScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -59,11 +60,13 @@ export const VesselPlansScreen = ({ navigation }: any) => {
   const [selectedPlanTier, setSelectedPlanTier] = useState<PlanTierId>('1_5');
   const [selectedBillingPeriod, setSelectedBillingPeriod] = useState<BillingPeriodId>('monthly');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [_iapProducts, setIapProducts] = useState<IAPProduct[]>([]);
+  const [iapProducts, setIapProducts] = useState<IAPProduct[]>([]);
   const [iapReady, setIapReady] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const cleanupListeners = useRef<(() => void) | null>(null);
   const processingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const purchaseVerificationInFlight = useRef(new Map<string, Promise<boolean>>());
+  const verifiedTransactionIds = useRef(new Set<string>());
 
   const {
     hasActiveSubscription,
@@ -74,6 +77,67 @@ export const VesselPlansScreen = ({ navigation }: any) => {
 
   const currentPlan = subscription ? getPlanTier(subscription.planTier) : null;
   const planAvailableViaIAP = isAvailableViaIAP(selectedPlanTier, selectedBillingPeriod);
+
+  const getStorePrice = useCallback(
+    (planTierId: PlanTierId, billingPeriodId: BillingPeriodId) => {
+      const productId = getAppleProductId(planTierId, billingPeriodId);
+      const storeProduct = productId
+        ? iapProducts.find((product) => product.id === productId)
+        : undefined;
+      const periodSuffix: Record<BillingPeriodId, string> = {
+        monthly: '/ month',
+        '3_months': '/ 3 months',
+        '6_months': '/ 6 months',
+        '12_months': '/ year',
+      };
+
+      if (storeProduct?.displayPrice) {
+        return {
+          displayMonthly: `${storeProduct.displayPrice} ${periodSuffix[billingPeriodId]}`,
+          displayTotal: storeProduct.displayPrice,
+          savingsPercent: 0,
+        };
+      }
+
+      return getPrice(planTierId, billingPeriodId);
+    },
+    [iapProducts]
+  );
+
+  const handleDeliveredPurchase = useCallback(
+    async (purchase: Purchase): Promise<boolean> => {
+      const transactionId = purchase.transactionId ?? purchase.id;
+      if (!transactionId || !user?.vesselId) return false;
+      if (verifiedTransactionIds.current.has(transactionId)) return true;
+
+      const existing = purchaseVerificationInFlight.current.get(transactionId);
+      if (existing) return existing;
+
+      const verification = (async () => {
+        const result = await verifyAndActivateIAPPurchase(purchase, user.vesselId!);
+        if (result.success) {
+          verifiedTransactionIds.current.add(transactionId);
+          await refetchSubscription();
+          Alert.alert('Success', 'Your subscription is now active. Welcome to Nautical Ops!');
+          return true;
+        }
+
+        Alert.alert(
+          'Purchase Error',
+          result.error ?? 'Could not activate subscription. Please contact support.'
+        );
+        return false;
+      })().finally(() => {
+        purchaseVerificationInFlight.current.delete(transactionId);
+        if (processingTimeout.current) clearTimeout(processingTimeout.current);
+        setIsProcessing(false);
+      });
+
+      purchaseVerificationInFlight.current.set(transactionId, verification);
+      return verification;
+    },
+    [refetchSubscription, user?.vesselId]
+  );
 
   useEffect(() => {
     if (captainPaymentRequired && hasActiveSubscription) {
@@ -106,18 +170,7 @@ export const VesselPlansScreen = ({ navigation }: any) => {
         }
         if (!mounted) return;
         cleanupListeners.current = setupIAPListeners(
-          async (purchase) => {
-            if (!user?.vesselId) return;
-            const result = await verifyAndActivateIAPPurchase(purchase, user.vesselId);
-            if (result.success) {
-              await refetchSubscription();
-              Alert.alert('Success', 'Your subscription is now active. Welcome to Nautical Ops!');
-            } else {
-              Alert.alert('Purchase Error', result.error ?? 'Could not activate subscription. Please contact support.');
-            }
-            if (processingTimeout.current) clearTimeout(processingTimeout.current);
-            setIsProcessing(false);
-          },
+          (purchase) => void handleDeliveredPurchase(purchase),
           (error) => {
             if (processingTimeout.current) clearTimeout(processingTimeout.current);
             if ((error as any).code !== 'E_USER_CANCELLED') {
@@ -139,7 +192,7 @@ export const VesselPlansScreen = ({ navigation }: any) => {
       cleanupListeners.current?.();
       endIAP();
     };
-  }, [refetchSubscription, user?.vesselId]);
+  }, [handleDeliveredPurchase]);
 
   useFocusEffect(
     useCallback(() => {
@@ -175,15 +228,7 @@ export const VesselPlansScreen = ({ navigation }: any) => {
       const result = await purchaseSubscription(productId, user.vesselId);
       const candidate: any = Array.isArray(result) ? result[0] : result;
       if (candidate && (candidate.transactionId || candidate.id) && user?.vesselId) {
-        if (processingTimeout.current) clearTimeout(processingTimeout.current);
-        const verifyResult = await verifyAndActivateIAPPurchase(candidate, user.vesselId);
-        if (verifyResult.success) {
-          await refetchSubscription();
-          Alert.alert('Success', 'Your subscription is now active. Welcome to Nautical Ops!');
-        } else {
-          Alert.alert('Purchase Error', verifyResult.error ?? 'Could not activate subscription. Please contact support.');
-        }
-        setIsProcessing(false);
+        await handleDeliveredPurchase(candidate as Purchase);
       }
       // If no usable purchase in the result, fall through to let the
       // purchase listener (set up in useEffect) or the timeout handle it.
@@ -194,13 +239,22 @@ export const VesselPlansScreen = ({ navigation }: any) => {
   };
 
   const handleRestorePurchases = async () => {
+    if (!user?.vesselId) {
+      Alert.alert('Vessel Required', 'Create or join a vessel before restoring a subscription.');
+      return;
+    }
     setIsRestoring(true);
     try {
-      await restoreIAPPurchases();
+      const result = await restoreAndActivateIAPPurchases(user.vesselId);
+      if (!result.success) {
+        Alert.alert(
+          'Restore Failed',
+          result.error ?? 'Could not restore purchases. Please try again.'
+        );
+        return;
+      }
       await refetchSubscription();
-      Alert.alert('Restore Complete', 'Your purchases have been restored.');
-    } catch {
-      Alert.alert('Restore Failed', 'Could not restore purchases. Please try again.');
+      Alert.alert('Restore Complete', 'Your active subscription has been restored.');
     } finally {
       setIsRestoring(false);
     }
@@ -247,7 +301,7 @@ export const VesselPlansScreen = ({ navigation }: any) => {
   const renderPlanCard = (planId: PlanTierId) => {
     const plan = PLAN_TIERS.find((p) => p.id === planId);
     if (!plan) return null;
-    const price = getPrice(planId, selectedBillingPeriod);
+    const price = getStorePrice(planId, selectedBillingPeriod);
     const isSelected = selectedPlanTier === planId;
     const available = isAvailableViaIAP(planId, selectedBillingPeriod);
     return (
@@ -272,7 +326,10 @@ export const VesselPlansScreen = ({ navigation }: any) => {
         ]}
         onPress={() => {
           if (!available) {
-            Alert.alert('Not Available', 'This plan is not available for the selected billing period.');
+            Alert.alert(
+              'Not Available',
+              'This plan is not available for the selected billing period.'
+            );
             return;
           }
           setSelectedPlanTier(planId);
@@ -296,7 +353,9 @@ export const VesselPlansScreen = ({ navigation }: any) => {
                 )}
               </>
             ) : (
-              <Text style={[styles.planPrice, { color: themeColors.textSecondary, fontSize: FONTS.sm }]}>
+              <Text
+                style={[styles.planPrice, { color: themeColors.textSecondary, fontSize: FONTS.sm }]}
+              >
                 Not available for this period
               </Text>
             )}
@@ -402,9 +461,7 @@ export const VesselPlansScreen = ({ navigation }: any) => {
             <Text style={[styles.sectionLabel, { color: themeColors.textSecondary }]}>
               BILLING PERIOD
             </Text>
-            <View style={styles.billingList}>
-              {BILLING_PERIODS.map(renderBillingRow)}
-            </View>
+            <View style={styles.billingList}>{BILLING_PERIODS.map(renderBillingRow)}</View>
 
             <Text style={[styles.sectionLabel, { color: themeColors.textSecondary }]}>
               CREW SIZE
@@ -414,7 +471,9 @@ export const VesselPlansScreen = ({ navigation }: any) => {
 
             <View style={styles.actions}>
               <Button
-                title={isProcessing ? 'Processing...' : !iapReady ? 'Loading Plans...' : 'Subscribe Now'}
+                title={
+                  isProcessing ? 'Processing...' : !iapReady ? 'Loading Plans...' : 'Subscribe Now'
+                }
                 onPress={handleApplePurchase}
                 disabled={isProcessing || !iapReady || !planAvailableViaIAP}
                 loading={isProcessing}
@@ -440,18 +499,31 @@ export const VesselPlansScreen = ({ navigation }: any) => {
             <Text style={[styles.cancellationText, { color: themeColors.textSecondary }]}>
               Payment will be charged to your Apple ID account at confirmation of purchase. Your
               subscription automatically renews unless auto-renew is turned off at least 24 hours
-              before the end of the current period. Your account will be charged for renewal
-              within 24 hours prior to the end of the current period, at the price of the selected
-              plan. You can manage your subscription and turn off auto-renewal at any time in your
-              Apple ID Account Settings.
+              before the end of the current period. Your account will be charged for renewal within
+              24 hours prior to the end of the current period, at the price of the selected plan.
+              You can manage your subscription and turn off auto-renewal at any time in your Apple
+              ID Account Settings.
             </Text>
             <View style={styles.legalLinksRow}>
               <TouchableOpacity onPress={() => navigation.navigate('PrivacyPolicy')}>
-                <Text style={[styles.legalLinkText, { color: COLORS.primary }]}>Privacy Policy</Text>
+                <Text style={[styles.legalLinkText, { color: COLORS.primary }]}>
+                  Privacy Policy
+                </Text>
               </TouchableOpacity>
-              <Text style={[styles.legalLinkDivider, { color: themeColors.textSecondary }]}> · </Text>
-              <TouchableOpacity onPress={() => Linking.openURL('https://www.apple.com/legal/internet-services/itunes/dev/stdeula/')}>
-                <Text style={[styles.legalLinkText, { color: COLORS.primary }]}>Terms of Use (EULA)</Text>
+              <Text style={[styles.legalLinkDivider, { color: themeColors.textSecondary }]}>
+                {' '}
+                ·{' '}
+              </Text>
+              <TouchableOpacity
+                onPress={() =>
+                  Linking.openURL(
+                    'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/'
+                  )
+                }
+              >
+                <Text style={[styles.legalLinkText, { color: COLORS.primary }]}>
+                  Terms of Use (EULA)
+                </Text>
               </TouchableOpacity>
             </View>
           </>

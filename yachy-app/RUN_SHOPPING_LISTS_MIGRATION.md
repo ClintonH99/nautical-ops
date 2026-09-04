@@ -1,10 +1,10 @@
 # Shopping Lists table
 
-To use **Shopping List** (General Shopping and Trip Shopping, each with department filters), create the table in Supabase:
+Shopping Lists are already part of the production schema. For a clean local or
+test database, use the timestamped production baseline and later migrations:
 
-1. Open **Supabase Dashboard** → your project → **SQL Editor**.
-2. Run the migration: **`supabase/migrations/CREATE_SHOPPING_LISTS_TABLE.sql`**.
-3. Run the migration: **`supabase/migrations/ADD_SHOPPING_LIST_TYPE.sql`** (adds list_type column).
-4. Run the migration: **`supabase/migrations/ADD_SHOPPING_LIST_IS_MASTER.sql`** (adds is_master for Trip Shopping persistent board).
+1. Apply `supabase/migrations/20260213000000_PRODUCTION_SCHEMA_BASELINE.sql`.
+2. Apply the remaining timestamped migrations in filename order.
 
-After this, the Shopping List screen will load and save lists per vessel.
+The old shopping-list scripts are retained under `supabase/legacy-migrations/`
+for historical reference only. Do not run them individually against production.

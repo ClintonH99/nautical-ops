@@ -13,6 +13,11 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 );
 
+function isTrustedInternalRequest(req: Request): boolean {
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  return !!serviceRoleKey && req.headers.get('Authorization') === `Bearer ${serviceRoleKey}`;
+}
+
 interface TripRecord {
   id: string;
   vessel_id: string;
@@ -96,6 +101,19 @@ function formatTripType(type: string): string {
 }
 
 Deno.serve(async (req) => {
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+  if (!isTrustedInternalRequest(req)) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
     // Cron sends POST with { type: "reminders" }
     const body = await req.json();
@@ -130,33 +148,36 @@ Deno.serve(async (req) => {
       }
 
       const result = await sendToExpo(allMessages);
-      return new Response(
-        JSON.stringify({ sent: allMessages.length, result }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ sent: allMessages.length, result }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     // Database Webhook payload (trips INSERT)
     const payload = body as WebhookPayload;
     if (payload?.table !== 'trips' || payload?.type !== 'INSERT' || !payload?.record) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid payload: expected trips INSERT' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Invalid payload: expected trips INSERT' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     const trip = payload.record;
     const users = await getVesselUsersWithTripsEnabled(trip.vessel_id);
     const messages = users
       .filter((u: any) => u.push_token)
-      .map((u: any) => ({ to: u.push_token, title: `New trip: ${trip.title}`, body: `Urgent: ${formatTripType(trip.type)} trip added. ${trip.start_date} – ${trip.end_date}. Tap to view.` }));
+      .map((u: any) => ({
+        to: u.push_token,
+        title: `New trip: ${trip.title}`,
+        body: `Urgent: ${formatTripType(trip.type)} trip added. ${trip.start_date} – ${trip.end_date}. Tap to view.`,
+      }));
 
-    console.log('Trip insert:', {
+    console.log('Trip notification prepared:', {
       tripId: trip.id,
       vesselId: trip.vessel_id,
       usersFound: users.length,
       messagesToSend: messages.length,
-      pushTokens: users.map((u: any) => (u.push_token ? u.push_token.slice(0, 30) + '...' : null)),
     });
 
     const result = await sendToExpo(messages);
@@ -170,9 +191,9 @@ Deno.serve(async (req) => {
     );
   } catch (e) {
     console.error('send-trip-push error:', e);
-    return new Response(
-      JSON.stringify({ error: String(e) }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: 'Could not send trip notifications' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 });

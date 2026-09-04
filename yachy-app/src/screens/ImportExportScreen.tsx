@@ -4,13 +4,7 @@
  */
 
 import React, { useState, useLayoutEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
@@ -21,6 +15,7 @@ import yardJobsService from '../services/yardJobs';
 import tripsService from '../services/trips';
 import {
   downloadTemplate,
+  MAX_IMPORT_FILE_BYTES,
   parseTasksFile,
   parseMaintenanceFile,
   parseYardFile,
@@ -30,17 +25,16 @@ import {
 import { Button, PageHeader } from '../components';
 import inventoryService from '../services/inventory';
 
-
 const IMPORT_EXPORT_INFO = {
-            title: 'Import / Export',
-            description: 'Move vessel data in and out of the app.',
-            features: [
-              'Export vessel data for backup or sharing',
-              'Import data into the app',
-              'Keep records portable between devices',
-              'Transfer information when handing over',
-            ],
-          };
+  title: 'Import / Export',
+  description: 'Move vessel data in and out of the app.',
+  features: [
+    'Export vessel data for backup or sharing',
+    'Import data into the app',
+    'Keep records portable between devices',
+    'Transfer information when handing over',
+  ],
+};
 
 export const ImportExportScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -75,16 +69,19 @@ export const ImportExportScreen = ({ navigation }: any) => {
 
       if (result.canceled) return;
 
-      const uri = result.assets[0].uri;
+      const selectedFile = result.assets[0];
+      if (selectedFile.size && selectedFile.size > MAX_IMPORT_FILE_BYTES) {
+        Alert.alert('File too large', 'Choose an Excel spreadsheet smaller than 10 MB.');
+        return;
+      }
+
+      const uri = selectedFile.uri;
       setImporting(type);
 
       if (type === 'tasks') {
         const { success, errors } = await parseTasksFile(uri);
         if (success.length === 0 && errors.length > 0) {
-          Alert.alert(
-            'Import failed',
-            errors.map((e) => `Row ${e.row}: ${e.message}`).join('\n')
-          );
+          Alert.alert('Import failed', errors.map((e) => `Row ${e.row}: ${e.message}`).join('\n'));
           return;
         }
         let imported = 0;
@@ -93,7 +90,12 @@ export const ImportExportScreen = ({ navigation }: any) => {
             await vesselTasksService.create({
               vesselId,
               category: row.category as 'DAILY' | 'WEEKLY' | 'MONTHLY',
-              department: (row.department || user?.department || 'INTERIOR') as 'BRIDGE' | 'ENGINEERING' | 'EXTERIOR' | 'INTERIOR' | 'GALLEY',
+              department: (row.department || user?.department || 'INTERIOR') as
+                | 'BRIDGE'
+                | 'ENGINEERING'
+                | 'EXTERIOR'
+                | 'INTERIOR'
+                | 'GALLEY',
               title: row.title,
               notes: row.notes,
               doneByDate: row.doneByDate || undefined,
@@ -110,10 +112,7 @@ export const ImportExportScreen = ({ navigation }: any) => {
       } else if (type === 'maintenance') {
         const { success, errors } = await parseMaintenanceFile(uri);
         if (success.length === 0 && errors.length > 0) {
-          Alert.alert(
-            'Import failed',
-            errors.map((e) => `Row ${e.row}: ${e.message}`).join('\n')
-          );
+          Alert.alert('Import failed', errors.map((e) => `Row ${e.row}: ${e.message}`).join('\n'));
           return;
         }
         let imported = 0;
@@ -141,10 +140,7 @@ export const ImportExportScreen = ({ navigation }: any) => {
       } else if (type === 'yard') {
         const { success, errors } = await parseYardFile(uri);
         if (success.length === 0 && errors.length > 0) {
-          Alert.alert(
-            'Import failed',
-            errors.map((e) => `Row ${e.row}: ${e.message}`).join('\n')
-          );
+          Alert.alert('Import failed', errors.map((e) => `Row ${e.row}: ${e.message}`).join('\n'));
           return;
         }
         let imported = 0;
@@ -158,7 +154,12 @@ export const ImportExportScreen = ({ navigation }: any) => {
               startDate: row.startDate,
               endDate: row.endDate,
               notes: row.jobDescription,
-              department: (row.department || user?.department || 'INTERIOR') as 'BRIDGE' | 'ENGINEERING' | 'EXTERIOR' | 'INTERIOR' | 'GALLEY',
+              department: (row.department || user?.department || 'INTERIOR') as
+                | 'BRIDGE'
+                | 'ENGINEERING'
+                | 'EXTERIOR'
+                | 'INTERIOR'
+                | 'GALLEY',
               yardLocation: row.yardLocation,
               contractorCompanyName: row.contractorCompanyName,
               contactDetails: row.contactDetails,
@@ -174,10 +175,7 @@ export const ImportExportScreen = ({ navigation }: any) => {
       } else if (type === 'inventory') {
         const { success, errors } = await parseInventoryFile(uri);
         if (success.length === 0 && errors.length > 0) {
-          Alert.alert(
-            'Import failed',
-            errors.map((e) => `Row ${e.row}: ${e.message}`).join('\n')
-          );
+          Alert.alert('Import failed', errors.map((e) => `Row ${e.row}: ${e.message}`).join('\n'));
           return;
         }
         const VALID_DEPTS = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
@@ -198,8 +196,13 @@ export const ImportExportScreen = ({ navigation }: any) => {
             });
             imported++;
           } catch (e: any) {
-            console.error('Import inventory error — row data:', { dept: safeDept, title: row.title }, e);
-            const isConstraintError = e?.code === '23514' || e?.message?.includes('department_check');
+            console.error(
+              'Import inventory error — row data:',
+              { dept: safeDept, title: row.title },
+              e
+            );
+            const isConstraintError =
+              e?.code === '23514' || e?.message?.includes('department_check');
             const msg = isConstraintError
               ? `Department "${safeDept}" rejected by database. Run FIX_INVENTORY_DEPARTMENT_CONSTRAINT.sql in Supabase.`
               : (e as Error).message;
@@ -244,7 +247,9 @@ export const ImportExportScreen = ({ navigation }: any) => {
       </Text>
       <Text style={[styles.sectionDesc, { color: themeColors.textSecondary }]}>{description}</Text>
       {!vesselId && (
-        <Text style={[styles.vesselNote, { color: themeColors.textSecondary }]}>Join a vessel to import data.</Text>
+        <Text style={[styles.vesselNote, { color: themeColors.textSecondary }]}>
+          Join a vessel to import data.
+        </Text>
       )}
       <View style={styles.actions}>
         <Button
@@ -273,7 +278,8 @@ export const ImportExportScreen = ({ navigation }: any) => {
       <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]}>
         <View style={styles.content}>
           <Text style={[styles.intro, { color: themeColors.textSecondary }]}>
-            Download a template, fill it with your data in Excel or Google Sheets, then import it here.
+            Download a template, fill it with your data in Excel or Google Sheets, then import it
+            here.
           </Text>
 
           <TemplateSection
@@ -296,12 +302,17 @@ export const ImportExportScreen = ({ navigation }: any) => {
           />
 
           <View style={[styles.section, { backgroundColor: themeColors.surface }]}>
-            <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>📦 Inventory</Text>
+            <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+              📦 Inventory
+            </Text>
             <Text style={[styles.sectionDesc, { color: themeColors.textSecondary }]}>
-              Download a template, fill it with your inventory items, then import it here. You can also export all current inventory to PDF.
+              Download a template, fill it with your inventory items, then import it here. You can
+              also export all current inventory to PDF.
             </Text>
             {!vesselId && (
-              <Text style={[styles.vesselNote, { color: themeColors.textSecondary }]}>Join a vessel to import or export inventory.</Text>
+              <Text style={[styles.vesselNote, { color: themeColors.textSecondary }]}>
+                Join a vessel to import or export inventory.
+              </Text>
             )}
             <View style={styles.actions}>
               <Button

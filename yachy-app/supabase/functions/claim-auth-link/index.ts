@@ -14,7 +14,6 @@ function corsHeaders(req: Request, extra: Record<string, string> = {}): Record<s
   const origin = req.headers.get('Origin') || '';
   const allowed =
     ALLOWED_ORIGINS.includes(origin) ||
-    (origin.endsWith('.vercel.app') && origin.startsWith('https://')) ||
     origin.startsWith('http://localhost:') ||
     origin.startsWith('http://127.0.0.1:');
   const allowOrigin = allowed && origin ? origin : ALLOWED_ORIGINS[0];
@@ -72,35 +71,18 @@ Deno.serve(async (req) => {
     if (userError || !user?.email) {
       return new Response(JSON.stringify({ error: 'Invalid session' }), {
         status: 401,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: corsHeaders(req, { 'Content-Type': 'application/json' }),
       });
     }
     const body = (await req.json()) as { code?: string; redirect_to?: string };
-    const code = body?.code;
-    if (!code || typeof code !== 'string') {
-      return new Response(JSON.stringify({ error: 'Missing code' }), {
+    const code = typeof body?.code === 'string' ? body.code.trim().toUpperCase() : '';
+    if (!/^[A-HJ-NP-Z2-9]{12}$/.test(code)) {
+      return new Response(JSON.stringify({ error: 'Invalid code' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: corsHeaders(req, { 'Content-Type': 'application/json' }),
       });
     }
     const redirectTo = resolveRedirectTo(body.redirect_to);
-    const { data: row } = await supabaseAdmin
-      .from('auth_links')
-      .select('expires_at')
-      .eq('code', code)
-      .single();
-    if (!row) {
-      return new Response(JSON.stringify({ error: 'Invalid or expired code' }), {
-        status: 400,
-        headers: corsHeaders(req, { 'Content-Type': 'application/json' }),
-      });
-    }
-    if (new Date(row.expires_at) < new Date()) {
-      return new Response(JSON.stringify({ error: 'Code expired' }), {
-        status: 400,
-        headers: corsHeaders(req, { 'Content-Type': 'application/json' }),
-      });
-    }
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email: user.email,
@@ -114,14 +96,24 @@ Deno.serve(async (req) => {
       });
     }
     const actionLink = String(linkData.properties.action_link).trim();
-    await supabaseAdmin.from('auth_links').update({ action_link: actionLink }).eq('code', code);
+    const { data: claimed, error: claimError } = await supabaseAdmin.rpc('admin_claim_auth_link', {
+      p_code: code,
+      p_action_link: actionLink,
+    });
+    if (claimError) throw claimError;
+    if (!claimed) {
+      return new Response(JSON.stringify({ error: 'Invalid, expired, or already claimed code' }), {
+        status: 400,
+        headers: corsHeaders(req, { 'Content-Type': 'application/json' }),
+      });
+    }
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: corsHeaders(req, { 'Content-Type': 'application/json' }),
     });
   } catch (e) {
     console.error('claim-auth-link:', e);
-    return new Response(JSON.stringify({ error: String(e) }), {
+    return new Response(JSON.stringify({ error: 'Could not complete QR sign-in' }), {
       status: 500,
       headers: corsHeaders(req, { 'Content-Type': 'application/json' }),
     });

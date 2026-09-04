@@ -5,6 +5,7 @@
  * optional day/night note - all free text, per-vessel design choice.
  */
 import { supabase } from './supabase';
+import { requireAffectedRows } from './mutationResult';
 import { Department } from '../types';
 
 export interface UniformEntry {
@@ -51,11 +52,7 @@ const uniformsService = {
   },
 
   async getById(id: string): Promise<Uniform | null> {
-    const { data, error } = await supabase
-      .from('uniforms')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
+    const { data, error } = await supabase.from('uniforms').select('*').eq('id', id).maybeSingle();
     if (error) throw error;
     return data ? mapRow(data) : null;
   },
@@ -69,24 +66,29 @@ const uniformsService = {
   }): Promise<Uniform> {
     const { data, error } = await supabase
       .from('uniforms')
-      .insert([{
-        vessel_id: input.vesselId,
-        label: input.label,
-        department: input.department,
-        entries: input.entries,
-        created_by: input.createdBy || null,
-      }])
+      .insert([
+        {
+          vessel_id: input.vesselId,
+          label: input.label,
+          department: input.department,
+          entries: input.entries,
+          created_by: input.createdBy || null,
+        },
+      ])
       .select()
       .single();
     if (error) throw error;
     return mapRow(data);
   },
 
-  async update(id: string, input: {
-    label: string;
-    department: Department;
-    entries: UniformEntry[];
-  }): Promise<Uniform> {
+  async update(
+    id: string,
+    input: {
+      label: string;
+      department: Department;
+      entries: UniformEntry[];
+    }
+  ): Promise<Uniform> {
     const { data, error } = await supabase
       .from('uniforms')
       .update({
@@ -103,8 +105,8 @@ const uniformsService = {
   },
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase.from('uniforms').delete().eq('id', id);
-    if (error) throw error;
+    const { data, error } = await supabase.from('uniforms').delete().eq('id', id).select('id');
+    requireAffectedRows(data, error, 'Deleting the uniform record');
   },
 };
 

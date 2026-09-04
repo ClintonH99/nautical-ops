@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabase';
+import { requireAffectedRows } from './mutationResult';
 import { MaintenanceLog } from '../types';
 
 export interface CreateMaintenanceLogData {
@@ -81,20 +82,25 @@ class MaintenanceLogsService {
         updated_at: new Date().toISOString(),
       };
       if (input.equipment !== undefined) payload.equipment = input.equipment.trim();
-      if (input.portStarboardNa !== undefined) payload.port_starboard_na = input.portStarboardNa?.trim() || null;
-      if (input.serialNumber !== undefined) payload.serial_number = input.serialNumber?.trim() || null;
-      if (input.hoursOfService !== undefined) payload.hours_of_service = input.hoursOfService?.trim() || null;
-      if (input.hoursAtNextService !== undefined) payload.hours_at_next_service = input.hoursAtNextService?.trim() || null;
-      if (input.whatServiceDone !== undefined) payload.what_service_done = input.whatServiceDone?.trim() || null;
+      if (input.portStarboardNa !== undefined)
+        payload.port_starboard_na = input.portStarboardNa?.trim() || null;
+      if (input.serialNumber !== undefined)
+        payload.serial_number = input.serialNumber?.trim() || null;
+      if (input.hoursOfService !== undefined)
+        payload.hours_of_service = input.hoursOfService?.trim() || null;
+      if (input.hoursAtNextService !== undefined)
+        payload.hours_at_next_service = input.hoursAtNextService?.trim() || null;
+      if (input.whatServiceDone !== undefined)
+        payload.what_service_done = input.whatServiceDone?.trim() || null;
       if (input.notes !== undefined) payload.notes = input.notes?.trim() || null;
       if (input.serviceDoneBy !== undefined) payload.service_done_by = input.serviceDoneBy.trim();
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('maintenance_logs')
         .update(payload)
-        .eq('id', logId);
-
-      if (error) throw error;
+        .eq('id', logId)
+        .select('id');
+      requireAffectedRows(data, error, 'Updating the maintenance log');
     } catch (error) {
       console.error('Update maintenance log error:', error);
       throw error;
@@ -103,12 +109,12 @@ class MaintenanceLogsService {
 
   async delete(logId: string): Promise<void> {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('maintenance_logs')
         .delete()
-        .eq('id', logId);
-
-      if (error) throw error;
+        .eq('id', logId)
+        .select('id');
+      requireAffectedRows(data, error, 'Deleting the maintenance log');
     } catch (error) {
       console.error('Delete maintenance log error:', error);
       throw error;

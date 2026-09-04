@@ -14,7 +14,6 @@ function corsHeaders(req: Request, extra: Record<string, string> = {}): Record<s
   const origin = req.headers.get('Origin') || '';
   const allowed =
     ALLOWED_ORIGINS.includes(origin) ||
-    (origin.endsWith('.vercel.app') && origin.startsWith('https://')) ||
     origin.startsWith('http://localhost:') ||
     origin.startsWith('http://127.0.0.1:');
   const allowOrigin = allowed && origin ? origin : ALLOWED_ORIGINS[0];
@@ -43,40 +42,38 @@ Deno.serve(async (req) => {
     });
   }
   try {
-    const { code } = (await req.json()) as { code?: string };
-    if (!code || typeof code !== 'string') {
-      return new Response(JSON.stringify({ error: 'Missing code' }), {
+    const body = (await req.json()) as { code?: string };
+    const code = typeof body.code === 'string' ? body.code.trim().toUpperCase() : '';
+    if (!/^[A-HJ-NP-Z2-9]{12}$/.test(code)) {
+      return new Response(JSON.stringify({ error: 'Invalid code' }), {
         status: 400,
         headers: corsHeaders(req, { 'Content-Type': 'application/json' }),
       });
     }
-    const { data: row } = await supabase
-      .from('auth_links')
-      .select('action_link, expires_at')
-      .eq('code', code)
-      .single();
-    const actionLink = typeof row?.action_link === 'string' ? row.action_link.trim() : '';
-    if (!row || !actionLink) {
+    const { data, error } = await supabase.rpc('admin_consume_auth_link', { p_code: code });
+    if (error) throw error;
+    if (data?.status === 'pending') {
       return new Response(JSON.stringify({ status: 'pending' }), {
         status: 200,
         headers: corsHeaders(req, { 'Content-Type': 'application/json' }),
       });
     }
-    if (new Date(row.expires_at) < new Date()) {
-      await supabase.from('auth_links').delete().eq('code', code);
+    if (data?.status === 'expired') {
       return new Response(JSON.stringify({ error: 'Expired' }), {
         status: 400,
         headers: corsHeaders(req, { 'Content-Type': 'application/json' }),
       });
     }
-    await supabase.from('auth_links').delete().eq('code', code);
-    return new Response(JSON.stringify({ action_link: actionLink }), {
+    if (data?.status !== 'ready' || typeof data.action_link !== 'string') {
+      throw new Error('Unexpected auth-link response');
+    }
+    return new Response(JSON.stringify({ action_link: data.action_link }), {
       status: 200,
       headers: corsHeaders(req, { 'Content-Type': 'application/json' }),
     });
   } catch (e) {
     console.error('get-auth-link:', e);
-    return new Response(JSON.stringify({ error: String(e) }), {
+    return new Response(JSON.stringify({ error: 'Could not check sign-in status' }), {
       status: 500,
       headers: corsHeaders(req, { 'Content-Type': 'application/json' }),
     });

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Hard rules
 
-- **`CAPTAIN_MOV` and `HOD` are separate, distinct roles — never conflate them.** Check which role(s) each feature actually needs. A grep for `CAPTAIN_MOV` shows where role variables are *declared*, not where they are *enforced*; several screens declare `isHOD` and no longer use it. Verify actual usage in the render/guard path before making any claim about permissions.
+- **`CAPTAIN_MOV` and `HOD` are separate, distinct roles — never conflate them.** Check which role(s) each feature actually needs. A grep for `CAPTAIN_MOV` shows where role variables are _declared_, not where they are _enforced_; several screens declare `isHOD` and no longer use it. Verify actual usage in the render/guard path before making any claim about permissions.
 - **The only correct project root is `~/Desktop/Nautical Ops/nautical-ops/`.** Never read from or write to the sibling `~/Desktop/Nautical Ops/Yachy App/` — a stale copy and a recurring source of errors. Both now live under the same parent, so a relative search from `~/Desktop/Nautical Ops/` returns `yachy-app/` twice; always confirm which one you are in.
 - **`.DS_Store` is deliberately left unstaged.** Never commit it, and never `git add -A` / `git add .` without checking what it sweeps in.
 - **Fleet HQ (fleethq.nautical-ops.com) is a separate Vercel project in a separate repo.** Do not conflate it with the marketing site served from this repo.
@@ -62,14 +62,14 @@ A husky pre-commit hook runs `lint-staged` (prettier + eslint --fix on staged fi
 
 `.cursor/rules/*.mdc` at the repo root and in `yachy-app/` carry additional binding rules, notably:
 
-- **Post-login routing**: anyone with `user.vesselId` goes straight to Home (`MainTabs`). `CaptainWelcome` / `CreateVessel` is *only* for a captain with no vessel yet. Never route a user who has a `vesselId` into the vessel-creation flow.
-- **Permissions**: `CAPTAIN_MOV` has full add / edit / delete access to everything in the app, with no restrictions anywhere, and is never excluded by any rule here. The HOD-only rules constrain crew and HODs, never the captain: Muster Stations are HOD-only for create/edit/delete, and department pre-departure checklists are HOD-only. The Captain's own checklist (`department === null`) is Captain-only — that one excludes HODs, not the captain.
+- **Post-login routing**: anyone with `user.vesselId` goes straight to Home (`MainTabs`). `CaptainWelcome` / `CreateVessel` is _only_ for a captain with no vessel yet. Never route a user who has a `vesselId` into the vessel-creation flow.
+- **Permissions**: `CAPTAIN_MOV` has full add / edit / delete access to everything in the app, with no restrictions anywhere, and is never excluded by any rule here. A feature described as HOD-managed must also allow the Captain/MOV. Both HOD and Captain/MOV can create, edit and delete all Muster Stations and all pre-departure checklists, including the Captain/All Departments checklist (`department === null`). Crew can view and use published records but cannot manage them.
 - **Date/time pickers**: `@react-native-community/datetimepicker` with `display="compact"` on iOS (no show/hide state) and a trigger + `display="default"` dialog on Android. Never `inline` or `spinner` on iOS; don't combine `is24Hour` with `compact`.
 - Web and native share one Supabase account and the same email/password sign-in.
 
 ## Architecture
 
-**Entry**: `index.ts` → `App.tsx` (Sentry wrap, gesture root, decorative font load that deliberately does *not* block render, a hard stop if Supabase env vars are missing) → `src/navigation/RootNavigator.tsx`.
+**Entry**: `index.ts` → `App.tsx` (Sentry wrap, gesture root, decorative font load that deliberately does _not_ block render, a hard stop if Supabase env vars are missing) → `src/navigation/RootNavigator.tsx`.
 
 **Navigation** is one native-stack navigator whose contents are swapped wholesale by `isAuthenticated`, keyed so the stack remounts on auth change. There are no per-feature navigators; every screen is registered flat in `RootNavigator`, plus a bottom-tab navigator (`MainTabsNavigator`) for Home / Categories / Profile. Adding a screen means: create it in `src/screens/`, export from `src/screens/index.ts`, register a `Stack.Screen`, and — if it should be linkable on web — add a path to `APP_SCREEN_PATHS` (or `AUTH_SCREEN_PATHS`).
 
@@ -95,7 +95,7 @@ Web deep linking is built by `createWebLinkingConfig`, which keeps **two separat
 
 ## Backend (Supabase)
 
-- **Migrations** in `yachy-app/supabase/migrations/` are ad-hoc SQL files (mostly `CREATE_*`/`ADD_*` names, not timestamped) that are applied **by hand in the Supabase SQL editor**. Most have a matching `RUN_*.md` at `yachy-app/`'s root with paste-ready SQL. When adding a column, add the migration file *and* update the service mapper and the type.
+- **Migrations** in `yachy-app/supabase/migrations/` are active, timestamped Supabase migrations. A schema-only production baseline provides the clean-install starting point, followed by later migrations in filename order. The old untimestamped `CREATE_*`/`ADD_*` scripts live in `supabase/legacy-migrations/` for reference only and must not be applied individually. Never use `supabase db push --include-all` against production because production already contains the baseline schema. When adding a column, add a valid timestamped migration and update the service mapper and type.
 - **Edge functions** in `yachy-app/supabase/functions/` (Deno) cover the things the client must not do: account/vessel deletion, leaving vessels, email and push delivery, Apple IAP verification and subscription notifications, and the QR/auth-link flow. They are excluded from the app's `tsconfig.json`.
 - Subscription payments are platform-native: Apple IAP on iOS and Google Play Billing on Android. Nautical Ops web reflects the resulting entitlement but does not process payments. Paddle is reserved exclusively for the separate Fleet HQ website. All active providers land in `vessel_subscriptions`. `RootNavigator` enforces the 16-day renewal-grace policy and restricts access only after provider-confirmed non-payment.
 

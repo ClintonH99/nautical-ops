@@ -14,42 +14,47 @@ Read alongside `CLAUDE.md` (rules and architecture). This document covers curren
 
 A stale duplicate sits at `~/Desktop/Nautical Ops/Yachy App/`, pointing at the same GitHub remote. Because both live under the same parent, a relative search from `~/Desktop/Nautical Ops/` returns `yachy-app/` **twice**. Confirm which you are in with `git -C <path> rev-parse --show-toplevel`.
 
-| Directory | Remote | What it is |
-|---|---|---|
-| `nautical-ops/` | `ClintonH99/nautical-ops` | **The app** |
-| `nautical-ops-admin/` | `ClintonH99/nautical-ops-admin` | Static admin site + Vercel functions |
+| Directory                | Remote                             | What it is                                |
+| ------------------------ | ---------------------------------- | ----------------------------------------- |
+| `nautical-ops/`          | `ClintonH99/nautical-ops`          | **The app**                               |
+| `nautical-ops-admin/`    | `ClintonH99/nautical-ops-admin`    | Static admin site + Vercel functions      |
 | `nautical-ops-fleet-hq/` | `ClintonH99/nautical-ops-fleet-hq` | Separate product, separate Vercel project |
-| `nautical-ops-website/` | `ClintonH99/nautical-ops-website` | Marketing site |
-| `nautical-ops-images/` | none | Assets, not a repo |
-| `Yachy App/` | same as app | **Stale duplicate — do not touch** |
+| `nautical-ops-website/`  | `ClintonH99/nautical-ops-website`  | Marketing site                            |
+| `nautical-ops-images/`   | none                               | Assets, not a repo                        |
+| `Yachy App/`             | same as app                        | **Stale duplicate — do not touch**        |
 
-An empty `~/Desktop/nautical-ops/` (lowercase) also exists, containing only `.claude/`. A shell started there fails every command with `ENOENT ... posix_spawn '/bin/sh'` — that error means *the working directory is gone*, not that the shell is broken. It cost an hour on 2026-08-20.
+An empty `~/Desktop/nautical-ops/` (lowercase) also exists, containing only `.claude/`. A shell started there fails every command with `ENOENT ... posix_spawn '/bin/sh'` — that error means _the working directory is gone_, not that the shell is broken. It cost an hour on 2026-08-20.
 
 ---
 
 ## 2. Size and health
 
-| | |
-|---|---|
-| Screens | **83** |
-| Components | 17 |
-| Services | 31 |
-| PDF utils | 13 |
-| Source lines | ~44,000 |
-| **Test files** | **1** |
-| Migrations | 42 |
-| Edge functions | 11 |
-| ADMIN rule files | 30 |
-| `.cursor/rules` files | 8 |
-| Loose `.md` in `yachy-app/` | **61** |
+|                             |         |
+| --------------------------- | ------- |
+| Screens                     | **83**  |
+| Components                  | 17      |
+| Services                    | 31      |
+| PDF utils                   | 13      |
+| Source lines                | ~44,000 |
+| **Test files**              | **7**   |
+| Active migrations           | 11      |
+| Historical SQL scripts      | 41      |
+| Edge functions              | 11      |
+| ADMIN rule files            | 30      |
+| `.cursor/rules` files       | 8       |
+| Loose `.md` in `yachy-app/` | **61**  |
 
 **Typecheck: 3 errors**, all pre-existing:
+
 - `AddEditUniformScreen.tsx` — invalid `Size` key in `StyleSheet.create`. Cosmetic.
 - `iap.ts` ×2 — `fetchProducts` can return `null` but is typed `Product[]`; `PurchaseError` imported from two module paths giving two type identities. **This is the payments file.**
 
 **Lint: 2 errors, 317 warnings.** Both errors are empty `catch {}` in `InfoModal.tsx`. Warnings are mostly unused imports and `any`.
 
-**Tests: 10 passing in 1 file** (`__tests__/services/auth.test.ts`) for 44,000 lines. The `validateInviteCode` test passes partly by accident — its mock returns a vessel where a subscription is expected, so `plan_tier` is undefined and the crew-limit branch never runs.
+**Tests: 42 passing across 7 files.** Coverage now includes authentication,
+subscription gating, Apple IAP handling, account/device access, spreadsheet
+import bounds, and native/web file uploads. This is still not complete coverage
+for an app of this size.
 
 **Biggest files:** `AddEditMaintenanceLogScreen` 1050, `ProfileScreen` 1026, `MaintenanceLogScreen` 904, `CreateWatchTimetableScreen` 852, `CrewManagementScreen` 808, `auth.ts` 721.
 
@@ -57,11 +62,16 @@ An empty `~/Desktop/nautical-ops/` (lowercase) also exists, containing only `.cl
 
 ## 3. Known defects — unfixed
 
-**`vessel-banners` storage bucket does not exist.** Verified: `404 NoSuchBucket`. `ADMIN/Rules/DEFAULT_VESSEL_BANNER.md` requires the default banner uploaded there on vessel creation, so that upload fails on every signup. Invisible because `HomeScreen` falls back to the bundled asset. **Fix: create the bucket (public) in Supabase. No code change.**
+**Resolved in production: `vessel-banners` exists.** The live metadata audit on
+2026-09-03 confirmed `vessel-banners` and `profile-photos` are public buckets.
+Their legacy write policies are too broad; the working-tree storage migration
+restricts profile writes to the owner and banner writes to the vessel Captain.
 
 **Resolved in the working tree: React Native local-file uploads could hang forever.** The old `fetch(uri).blob() -> Response(blob).arrayBuffer()` path behaved differently in Expo Go and TestFlight. Vessel-banner and profile-photo uploads now share `utils/fileUpload.ts`: native builds read bytes through Expo FileSystem, while web keeps its supported fetch path. Three regression tests cover native, web, and unreadable-file behavior. The live `vessel-banners` bucket is still required separately.
 
-**Supabase reports success for writes affecting zero rows.** A `PATCH`/`DELETE` silently refused by RLS returns `200`/`204` with an empty array and **no error**. Verified directly. Every delete handler here checks `error`, which stays `null`. Nothing checks affected-row counts.
+**Resolved in the working tree: silent zero-row writes.** Update/delete
+services now request affected IDs and throw when RLS or a stale ID changes zero
+rows, instead of showing false success.
 
 **Subscription gate implemented in the working tree.** `RootNavigator` now enforces provider-confirmed renewal failure after the 16-day grace period while failing open for connectivity/backend uncertainty. The migration and provider notification function are not deployed yet.
 
@@ -72,6 +82,7 @@ An empty `~/Desktop/nautical-ops/` (lowercase) also exists, containing only `.cl
 Update after the original handover: the six violations below were approved for correction. Export labels and dark-mode styling, Profile/Register department dropdowns, and the instant-startup rule are now being brought into alignment; verify the current Git diff and latest commit before treating them as released.
 
 Resolution implemented in the working tree:
+
 - Shared PDF controls now say **Export to PDF**, including selected-item counts.
 - Shared Export and Edit-color pills use white text and borders in Night mode.
 - Hand-written Edit controls in Watch Duties, Watch Schedule, Watch Schedule Detail, and Maintenance Log use white in Night mode.
@@ -79,6 +90,7 @@ Resolution implemented in the working tree:
 - `WELCOME_SCREEN_ON_APP_OPEN.md` now records the approved instant-startup behaviour instead of requiring an artificial three-second delay.
 
 Next dark-mode audit findings (not fixed in this change):
+
 - The shared `Input` component uses `COLORS.gray400` for ordinary placeholders in Night mode instead of `themeColors.textSecondary`.
 - Nine form screens contain custom inputs with hardcoded gray/tertiary placeholder colours.
 - Profile, Vessel Settings, Add/Edit Uniform, FAQ Help, Add/Edit Maintenance, and parts of Create Safety Equipment use `themeColors.background` for custom form inputs where `DARK_MODE_TEXT_BOXES.md` requires `themeColors.surface`.
@@ -87,10 +99,10 @@ Next dark-mode audit findings (not fixed in this change):
 `ADMIN/` is the documented source of truth and **wins over existing code** (`.cursor/rules/admin-reference.mdc` makes this binding). All 30 rule statements were read. Six confirmed violations:
 
 **1. Export buttons say the wrong thing — introduced 2026-08-22.**
-`DARK_MODE_EXPORT_PDF.md`: *"All PDF export buttons must say **Export to PDF**"*. The shared `ExportButton` renders `⤓ Export`. Affects **14+ screens**.
+`DARK_MODE_EXPORT_PDF.md`: _"All PDF export buttons must say **Export to PDF**"_. The shared `ExportButton` renders `⤓ Export`. Affects **14+ screens**.
 
 **2. Export buttons are the wrong colour in Dark Mode — introduced 2026-08-22.**
-Same rule: *"In Dark Mode: button text and border must be **white**"*. `ExportButton` uses `COLORS.primary` (navy) in both themes.
+Same rule: _"In Dark Mode: button text and border must be **white**"_. `ExportButton` uses `COLORS.primary` (navy) in both themes.
 
 **3. `PillButton` likewise — introduced 2026-08-22.**
 `DARK_MODE_EDIT_BUTTONS.md`: buttons saying "Edit" (including "Edit colors") must be white in Dark Mode. `PillButton` defaults to `COLORS.primary` regardless of theme. Used for "Edit colors" on four trip screens.
@@ -126,22 +138,22 @@ Also binding, at repo root and in `yachy-app/`: `.cursor/rules/` — `admin-refe
 
 ---
 
-## 6. Edge functions (10 active)
+## 6. Edge functions (11 live, including 2 obsolete)
 
-| Function | Purpose |
-|---|---|
-| `verify-apple-iap` | Verify Apple IAP via App Store Server API |
+| Function                     | Purpose                                                              |
+| ---------------------------- | -------------------------------------------------------------------- |
+| `verify-apple-iap`           | Verify Apple IAP via App Store Server API                            |
 | `apple-subscription-webhook` | Refresh Apple subscription state from App Store Server Notifications |
-| `delete-account` | Delete a user account entirely |
-| `delete-vessel` | Delete a vessel (Captain/MOV only) |
-| `leave-vessel` | Leave a vessel without deleting it |
-| `send-welcome-email` | Welcome/subscription emails via Resend |
-| `send-trip-push` | Trip push notifications |
-| `create-auth-code` | One-time auth code for QR sign-in |
-| `claim-auth-link` | Claim an auth code with the app session |
-| `get-auth-link` | Web polls this for the action link; one-time use |
+| `delete-account`             | Delete a user account entirely                                       |
+| `delete-vessel`              | Delete a vessel (Captain/MOV only)                                   |
+| `leave-vessel`               | Leave a vessel without deleting it                                   |
+| `send-welcome-email`         | Welcome/subscription emails via Resend                               |
+| `send-trip-push`             | Trip push notifications                                              |
+| `create-auth-code`           | One-time auth code for QR sign-in                                    |
+| `claim-auth-link`            | Claim an auth code with the app session                              |
+| `get-auth-link`              | Web polls this for the action link; one-time use                     |
 
-Deno, excluded from the app's `tsconfig`. The payment functions have now been audited. The approved payment split is Apple IAP on iOS and Google Play Billing on Android; Nautical Ops web is access-only. Paddle is reserved exclusively for the separate Fleet HQ website. The old Nautical Ops Paddle checkout and webhook sources were removed, while historical database columns/migrations were preserved for safe compatibility.
+Deno, excluded from the app's `tsconfig`. The payment functions have now been audited. The approved payment split is Apple IAP on iOS and Google Play Billing on Android; Nautical Ops web is access-only. Paddle is reserved exclusively for the separate Fleet HQ website. The old Nautical Ops Paddle checkout and webhook sources and live deployments still exist for compatibility. They are obsolete for this app and require a separate approved production cleanup after confirming no legacy billing remains.
 
 ---
 
@@ -152,6 +164,7 @@ Verify with `git log --oneline --since=2026-08-21`.
 **Monitoring — was entirely non-functional.** Sentry and PostHog were coded correctly but their keys lived only in gitignored `.env.local`, which EAS never uploads, so every build ran with both silently disabled. Keys now in `eas.json` (preview + production); `SENTRY_AUTH_TOKEN` in EAS's encrypted store for source maps. **Verified receiving** via a test event. **Not verified** from a real device.
 
 **Bug fixes**
+
 - IAP purchase listener never fired — guarded on `purchase.transactionReceipt`, absent in expo-iap 4.3.1. Normal purchases unaffected; interrupted ones were charged without activating. **Untested on device.**
 - PostHog never called `reset()` on logout — shared-device attribution bug.
 - Signatures opened the wrong tab (`'drawn'` vs `'draw'`).
@@ -159,6 +172,7 @@ Verify with `git log --oneline --since=2026-08-21`.
 - Captain signup hang (section 3).
 
 **Behaviour**
+
 - Trips and yard periods opened to all crew.
 - Nine access messages said "Only HODs" where code allowed HOD **or** Captain. `isHOD` renamed to `canManageTrips` / `canEditTripColors`.
 
@@ -170,7 +184,7 @@ Verify with `git log --oneline --since=2026-08-21`.
 
 ## 8. Traps that have bitten
 
-**`eas submit --latest` means latest *finished*, not latest started.** Submitting mid-build silently grabs the previous binary. Happened three times. Always confirm with `eas build:list` first.
+**`eas submit --latest` means latest _finished_, not latest started.** Submitting mid-build silently grabs the previous binary. Happened three times. Always confirm with `eas build:list` first.
 
 **EAS builds from committed git state.** Uncommitted work isn't in the binary.
 
@@ -197,12 +211,12 @@ Currently **v1.1.3, build 45**, in TestFlight. Credentials on EAS (ASC API key `
 
 Admin site: Vercel, `vercel.json` v2, catch-all `/(.*)` must stay last, single shared password via `x-admin-password`, no rate limiting.
 
-| Credential | Prefix | Lives in | Job |
-|---|---|---|---|
-| Sentry DSN | `https://b423…` | `eas.json` | Sends errors out. Write-only |
-| `SENTRY_AUTH_TOKEN` | `sntrys_` | EAS encrypted store | Source map upload |
-| `SENTRY_READ_TOKEN` | `sntryu_` | admin `.env.local` + Vercel | Admin dashboard reads |
-| `POSTHOG_PROJECT_TOKEN` | `phc_` | `eas.json` | Analytics. Public write key |
+| Credential              | Prefix          | Lives in                    | Job                          |
+| ----------------------- | --------------- | --------------------------- | ---------------------------- |
+| Sentry DSN              | `https://b423…` | `eas.json`                  | Sends errors out. Write-only |
+| `SENTRY_AUTH_TOKEN`     | `sntrys_`       | EAS encrypted store         | Source map upload            |
+| `SENTRY_READ_TOKEN`     | `sntryu_`       | admin `.env.local` + Vercel | Admin dashboard reads        |
+| `POSTHOG_PROJECT_TOKEN` | `phc_`          | `eas.json`                  | Analytics. Public write key  |
 
 Unprefixed vars reach the app via `app.config.js` → `extra` → `expo-constants`. Anything in `extra` ships inside the binary and is readable — publishable keys only. Real secrets go in Supabase Edge Function secrets.
 
@@ -225,7 +239,7 @@ Across five builds, none of these has been exercised:
 The boundary of what this document can be trusted on:
 
 - **~63 of the 83 screens** have not been read in any depth — only touched by scripted edits
-- **All 42 migrations** unread. Whether they are all applied is unknown; they are applied by hand in the Supabase SQL editor
+- The 41 historical untimestamped SQL scripts are retained for reference but are not active migrations. The production schema baseline and all later timestamped public-schema migrations were read and replayed in a clean disposable database.
 - **All 11 edge functions** unread beyond header comments — including all three payment functions
 - **The database schema** is unknown beyond `users`, `vessels`, `vessel_subscriptions`, and tables glimpsed through services
 - **25 of 30 ADMIN rules** were read as one-line statements only, not compared against the code
@@ -278,25 +292,77 @@ This section records findings from the continued audit and their current working
 - **Resolved in the working tree:** Captain/MOV and HOD can create, edit, and delete all Muster Stations and all pre-departure checklists, including the All Departments checklist. The `.cursor` rules now match this policy, and a new always-applied Captain full-access rule prevents future HOD-only regressions.
 - Safety Equipment screen guards match its HOD/Captain/Crew matrix.
 - **Resolved in the working tree:** Profile and Settings display MOV when either the secure role is `CAPTAIN_MOV` or a legacy profile position contains `captain`. Access control continues to use the role, not editable display text.
-- **Partially resolved in the working tree:** a migration now adds the missing Muster Station table definition and enforces read access for vessel members plus write access for HOD/Captain on Muster Stations and pre-departure checklists. It has not been deployed to the live Supabase project.
+- **Deployed but not activated:** the role, subscription, device and server-enforcement migrations are present in production. The strict server-enforcement switch remains off until a compatible build is released and tested, preventing older installed builds from being locked out.
 - **Remaining:** other checked-in RLS policies generally enforce vessel membership only, not feature-specific roles. Their product permissions must be confirmed before tightening them.
-- **Remaining:** eighteen client-used database tables have no checked-in creation migration: `app_updates`, `department_signers`, `faqs`, `notes`, `rest_entries`, `rules`, `safety_equipment`, `uniforms`, `user_questions`, `user_signatures`, `users`, `vessels`, `watch_assignments`, `watch_duty_completions`, `watch_duty_groups`, `watch_duty_items`, `watch_duty_rules`, and `watch_keepers`. The `profile-photos` and `vessel-banners` storage buckets also have no complete creation migration. Their live RLS cannot be verified from Git.
+- **Resolved in the working tree:** the production `public` schema is captured in a schema-only baseline with no customer rows or webhook credentials. It includes the previously missing client-used tables and passed a clean PostgreSQL replay followed by every timestamped migration. The 41 old untimestamped SQL files were moved to `supabase/legacy-migrations/` because Supabase CLI silently skipped them. Storage remains covered by its dedicated timestamped migration and separate policy test.
 
 ### Subscriptions and payments
 
 - **Resolved in the working tree:** one payment architecture is now documented consistently: Apple IAP on iOS, Google Play Billing on Android, no payment processing in Nautical Ops web, and Paddle only in Fleet HQ.
 - **Resolved in the working tree:** the renewal gate now gives all users normal access through a 16-day grace period; after provider-confirmed expiry, Crew/HOD are signed out and Captain/MOV is restricted to Vessel Plans until payment is confirmed. Connectivity failures fail open.
 - **Resolved in the working tree:** Apple transactions are bound to a vessel, bundle/expiry checks are performed server-side, and App Store Server Notifications can refresh renewal state in the background.
-- **Remaining deployment:** the new subscription migration, Apple webhook, Apple server secrets, and App Store notification URL have not been deployed/configured against production.
+- **Production foundation verified:** the subscription/security migrations are deployed; `verify-apple-iap`, `apple-subscription-webhook`, and `delete-vessel` are active; the Apple secrets and App Store notification URL are configured; and Apple Billing Grace Period is set to 16 days for Production and Sandbox.
+- **Resolved in the working tree:** sign-out is local to the current device, Apple restore now verifies restored transactions server-side before reporting success, duplicate StoreKit callbacks are deduplicated, and plans display the App Store's localized price rather than a hardcoded USD value.
+- **Verified locally:** 42 unit tests pass. The exact production migrations also passed a disposable PostgreSQL test covering the two-device cap, renewal grace, Captain payment recovery access, Crew lockout, normal-data lockout, stale-provider fail-open handling, and revocation.
+- **Remaining rollout:** build and test a compatible iOS release, make it available to all users, and only then enable strict server enforcement. It is currently confirmed off in production.
 - **Remaining Android implementation:** Google Play subscriptions/base plans, exact product IDs, service-account credentials, server verification, and Real-time Developer Notifications are not yet configured. No IDs will be guessed.
-- **Remaining legacy cleanup:** historical Paddle database columns/migrations remain intentionally. If old Paddle subscriptions exist in production, their disposition must be confirmed before data or live functions are removed.
-- The rule lists 5%, 8%, and 10% multi-month discounts; code sets every `discountPercent` to zero. The 11–15 monthly price is `$119.99` in the rule and `$119.00` in code.
-- Payment-access unit tests now cover entitlement, grace, confirmed non-payment, stale provider data, malformed dates, and never-subscribed vessels. Provider webhook integration tests still need to be added.
+- **Remaining legacy cleanup:** historical Paddle database columns/migrations remain intentionally. The obsolete `create-paddle-checkout` and `paddle-webhook` functions and Paddle secrets are also still active in the Nautical Ops Supabase project. Their removal requires explicit production approval and confirmation that no legacy vessel still depends on them.
+- **Pricing decision required:** the rule lists 5%, 8%, and 10% multi-month discounts, while code labels every `discountPercent` as zero. The 11–15 monthly price is `$119.99` in the rule and `$119.00` in code/App Store Connect. App Store Connect also currently shows a free-first-month introductory offer for this product. Runtime display now uses StoreKit's authoritative localized price, but the commercial terms and documentation still need the owner's decision.
+- Provider webhook integration tests still need to be added.
+
+### Dependency security
+
+- **Resolved in the working tree:** SheetJS was upgraded from the vulnerable npm release `xlsx@0.18.5` to the official patched `xlsx@0.20.3` package distributed by SheetJS. Spreadsheet imports now stop before parsing files larger than 10 MB or 5,000 rows.
+- **Resolved in the working tree:** `eas-cli` was updated to 23.2.0, and patched `shell-quote`/`tar` overrides remove all critical npm advisories. Expo SDK 54 dependencies still match Expo's expected versions.
+- **Remaining:** npm reports 42 low/moderate/high advisories, all transitive. Several are in EAS CLI/build tooling; the runtime Metro advisories require an Expo 57 upgrade. npm's proposed `--force` repair would introduce breaking downgrades/upgrades and must not be used in this release.
 
 ### Verification after the fixes
 
 - `npm run typecheck`: passes with zero errors.
-- `npm test -- --runInBand --detectOpenHandles`: all 13 tests pass; no open handle is reported in diagnostic mode.
+- `npm test -- --runInBand`: all 42 tests pass across seven suites.
 - `npm run lint -- --quiet`: passes with zero errors after including Node `.mjs` build scripts in the ESLint configuration. The broader lint run still reports 342 warnings.
-- `npx expo install --check`: dependencies match the local Expo SDK 54 map; the check ran offline, so Expo warned that registry validation was unavailable.
+- `npx expo install --check`: dependencies match Expo SDK 54's expected versions using the online registry check.
+- `npx expo export --platform ios`: all 2,687 modules bundle successfully into the production iOS export.
+- `npm audit --audit-level=critical`: passes with zero critical advisories.
 - `git diff --check`: passes.
+
+### Data integrity and backend security
+
+- **Resolved in the working tree:** client updates/deletes now detect database
+  writes that affected zero rows instead of reporting success after RLS denial
+  or a stale record ID.
+- **Resolved in the working tree:** vessel leave/delete and account-deletion
+  preparation are database transactions. Partial moves no longer strand users
+  between vessels, and account deletion correctly allows one Captain to leave
+  when another Captain remains.
+- **Resolved in the working tree:** an Apple purchase token is consumed in the
+  same transaction that records the subscription. Concurrent verification
+  cannot reuse one token for another transaction chain.
+- **Resolved in the working tree:** QR codes use cryptographic randomness and
+  claim/consume links atomically. Arbitrary Vercel preview origins are no longer
+  trusted, malformed codes are rejected, and raw server errors are not returned.
+- **Resolved in the working tree:** trip-push and welcome-email handlers require
+  a server credential. Welcome-email user/vessel strings are HTML-escaped, and
+  push logs no longer reveal token prefixes.
+- **Verified:** all database transaction and privilege cases pass in a
+  disposable PostgreSQL 15 container, including rollback behavior, sole-Captain
+  safeguards, Paddle blocking, one-time QR use, one-time Apple token use, and
+  denial of privileged RPCs to anon/authenticated roles.
+- **Production check:** all three Database Webhooks use a service credential.
+  No live setting was changed. The new migrations/functions remain undeployed
+  and must follow the order in `docs/SECURITY_ENFORCEMENT_ROLLOUT.md`.
+- **Live storage finding:** profile-photo and vessel-banner writes were open to
+  every authenticated account regardless of path ownership. A verified
+  migration now limits profile writes to the matching user folder, banner
+  writes to the matching vessel Captain, and both buckets to 10 MB objects.
+  This migration was applied directly to production on 2026-09-04; all policy,
+  helper-permission and size-limit metadata checks passed afterward. A normal
+  user/Captain upload-and-delete smoke test remains part of rollout QA.
+- **Dependency audit:** the SDK 54 dependency set passes Expo's compatibility
+  check and the app has no critical npm advisory. Remaining inherited
+  high/moderate advisories require a breaking Expo SDK upgrade; do not run the
+  automated forced downgrade/upgrade suggested by npm.
+- **Staged subscription privacy fix:** clean installs now deny app clients
+  direct reads of `vessel_subscriptions`; the app uses a safe RPC projection
+  that omits Apple/Google transaction identifiers. Production must make the
+  same `REVOKE SELECT` change only after the compatible app version is released.

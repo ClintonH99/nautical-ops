@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabase';
+import { requireAffectedRows } from './mutationResult';
 
 export interface Rule {
   id: string;
@@ -36,20 +37,23 @@ class RulesService {
   }
 
   async getById(id: string): Promise<Rule | null> {
-    const { data, error } = await supabase
-      .from('rules')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const { data, error } = await supabase.from('rules').select('*').eq('id', id).single();
 
     if (error || !data) return null;
     return this.mapRow(data);
   }
 
-  async create(vesselId: string, title: string, rules: string[], createdBy?: string): Promise<Rule> {
+  async create(
+    vesselId: string,
+    title: string,
+    rules: string[],
+    createdBy?: string
+  ): Promise<Rule> {
     const { data: row, error } = await supabase
       .from('rules')
-      .insert([{ vessel_id: vesselId, title, data: { title, rules }, created_by: createdBy || null }])
+      .insert([
+        { vessel_id: vesselId, title, data: { title, rules }, created_by: createdBy || null },
+      ])
       .select()
       .single();
 
@@ -70,12 +74,8 @@ class RulesService {
   }
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('rules')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
+    const { data, error } = await supabase.from('rules').delete().eq('id', id).select('id');
+    requireAffectedRows(data, error, 'Deleting the rule');
   }
 }
 

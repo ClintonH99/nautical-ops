@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabase';
+import { requireAffectedRows } from './mutationResult';
 
 export type SafetyEquipmentCategories = {
   fireExtinguishers: string[];
@@ -31,7 +32,13 @@ export interface SafetyItem {
 
 export function normalizeSafetyItem(raw: string | SafetyItem): SafetyItem {
   if (typeof raw === 'string') {
-    return { location: raw, lastChecked: null, lastCheckedNA: false, expiryDate: null, expiryDateNA: false };
+    return {
+      location: raw,
+      lastChecked: null,
+      lastCheckedNA: false,
+      expiryDate: null,
+      expiryDateNA: false,
+    };
   }
   return {
     location: raw.location ?? '',
@@ -118,9 +125,12 @@ class SafetyEquipmentService {
   }
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase.from('safety_equipment').delete().eq('id', id);
-
-    if (error) throw error;
+    const { data, error } = await supabase
+      .from('safety_equipment')
+      .delete()
+      .eq('id', id)
+      .select('id');
+    requireAffectedRows(data, error, 'Deleting the safety equipment record');
   }
 }
 

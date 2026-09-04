@@ -8,6 +8,7 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { supabase } from './supabase';
+import { requireAffectedRows } from './mutationResult';
 
 // Show notifications when app is in foreground
 Notifications.setNotificationHandler({
@@ -73,21 +74,21 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
 }
 
 export async function savePushToken(userId: string, token: string): Promise<void> {
-  const { error } = await supabase.from('users').update({ push_token: token }).eq('id', userId);
-
-  if (error) {
-    if (__DEV__) console.error('Save push token error:', error);
-    throw error;
-  }
+  const { data, error } = await supabase
+    .from('users')
+    .update({ push_token: token })
+    .eq('id', userId)
+    .select('id');
+  requireAffectedRows(data, error, 'Saving the push token');
 }
 
 export async function clearPushToken(userId: string): Promise<void> {
-  const { error } = await supabase.from('users').update({ push_token: null }).eq('id', userId);
-
-  if (error) {
-    if (__DEV__) console.error('Clear push token error:', error);
-    throw error;
-  }
+  const { data, error } = await supabase
+    .from('users')
+    .update({ push_token: null })
+    .eq('id', userId)
+    .select('id');
+  requireAffectedRows(data, error, 'Clearing the push token');
 }
 
 export async function getNotificationPreferences(userId: string): Promise<Record<string, boolean>> {
@@ -124,13 +125,10 @@ export async function saveNotificationPreference(
   const prefs = (current?.notification_preferences ?? {}) as Record<string, boolean>;
   const updated = { ...prefs, [key]: enabled };
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('users')
     .update({ notification_preferences: updated })
-    .eq('id', userId);
-
-  if (error) {
-    if (__DEV__) console.error('Save notification preference error:', error);
-    throw error;
-  }
+    .eq('id', userId)
+    .select('id');
+  requireAffectedRows(data, error, 'Saving the notification preference');
 }

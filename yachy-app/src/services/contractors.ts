@@ -3,6 +3,7 @@
  */
 
 import { supabase } from './supabase';
+import { requireAffectedRows } from './mutationResult';
 import { Department } from '../types';
 
 export interface ContractorContact {
@@ -129,8 +130,8 @@ class ContractorsService {
   }
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase.from('contractors').delete().eq('id', id);
-    if (error) throw error;
+    const { data, error } = await supabase.from('contractors').delete().eq('id', id).select('id');
+    requireAffectedRows(data, error, 'Deleting the contractor');
   }
 
   private mapRow(row: Record<string, unknown>): Contractor {
@@ -138,7 +139,9 @@ class ContractorsService {
     return {
       id: row.id as string,
       vesselId: row.vessel_id as string,
-      department: (['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'].includes(dept) ? dept : 'INTERIOR') as Department,
+      department: (['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'].includes(dept)
+        ? dept
+        : 'INTERIOR') as Department,
       companyName: row.company_name as string,
       companyAddress: (row.company_address as string) ?? '',
       knownFor: (row.known_for as string) ?? '',

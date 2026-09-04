@@ -6,11 +6,12 @@
  */
 
 import { supabase } from './supabase';
+import { requireAffectedRows } from './mutationResult';
 import { getSignatureForUser, UserSignature } from './signatures';
 
 export interface RestPeriod {
   start: string; // "HH:MM"
-  end: string;   // "HH:MM"
+  end: string; // "HH:MM"
 }
 
 export interface RestEntry {
@@ -108,7 +109,11 @@ function buildTimeline(
   return intervals;
 }
 
-function restInWindow(intervals: TimelineInterval[], windowStart: number, windowEnd: number): number {
+function restInWindow(
+  intervals: TimelineInterval[],
+  windowStart: number,
+  windowEnd: number
+): number {
   let total = 0;
   for (const iv of intervals) {
     const overlapStart = Math.max(iv.startMin, windowStart);
@@ -132,7 +137,12 @@ function minRestInAnyWindow(
 ): number {
   const candidates = new Set<number>([rangeStart, rangeEnd]);
   for (const iv of intervals) {
-    for (const point of [iv.startMin, iv.endMin, iv.startMin - windowSizeMinutes, iv.endMin - windowSizeMinutes]) {
+    for (const point of [
+      iv.startMin,
+      iv.endMin,
+      iv.startMin - windowSizeMinutes,
+      iv.endMin - windowSizeMinutes,
+    ]) {
       if (point >= rangeStart && point <= rangeEnd) candidates.add(point);
     }
   }
@@ -173,13 +183,24 @@ export function checkRollingCompliance(
   // Windows are checked BACKWARD from this date (ending during it), not
   // forward — compliance can only be judged on rest that has actually
   // happened, not on future days that haven't been entered yet.
-  const minRest24hMin = minRestInAnyWindow(intervals, dayStartMin - 24 * 60, dayEndMin - 24 * 60, 24 * 60);
-  const minRest7dMin = minRestInAnyWindow(intervals, dayStartMin - 7 * 24 * 60, dayEndMin - 7 * 24 * 60, 7 * 24 * 60);
+  const minRest24hMin = minRestInAnyWindow(
+    intervals,
+    dayStartMin - 24 * 60,
+    dayEndMin - 24 * 60,
+    24 * 60
+  );
+  const minRest7dMin = minRestInAnyWindow(
+    intervals,
+    dayStartMin - 7 * 24 * 60,
+    dayEndMin - 7 * 24 * 60,
+    7 * 24 * 60
+  );
 
   // A brand-new record won't have 7 days of history yet — that's expected,
   // not a violation, so the 7-day check is skipped until there's enough
   // history to actually evaluate it.
-  const daysOfHistory = Math.round((target.getTime() - referenceDate.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+  const daysOfHistory =
+    Math.round((target.getTime() - referenceDate.getTime()) / (24 * 60 * 60 * 1000)) + 1;
   const has7DaysHistory = daysOfHistory >= 7;
 
   let maxGapMin = 0;
@@ -246,7 +267,6 @@ export async function saveEntry(entry: RestEntry): Promise<RestEntry> {
 }
 
 export async function submitWeekForConfirmation(userId: string, dates: string[]): Promise<void> {
-  console.log('DEBUG submit userId:', userId, 'dates:', dates);
   const { error, data } = await supabase
     .from('rest_entries')
     .update({ status: 'pending_confirmation' })
@@ -254,25 +274,24 @@ export async function submitWeekForConfirmation(userId: string, dates: string[])
     .in('date', dates)
     .select();
 
-  console.log('DEBUG submit result — error:', JSON.stringify(error), 'data:', JSON.stringify(data));
-  if (error) throw error;
+  requireAffectedRows(data, error, 'Submitting the rest entries');
 }
 
 export async function confirmEntry(entryId: string, confirmedByUserId: string): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('rest_entries')
     .update({
       status: 'confirmed',
       confirmed_by: confirmedByUserId,
       confirmed_at: new Date().toISOString(),
     })
-    .eq('id', entryId);
-
-  if (error) throw error;
+    .eq('id', entryId)
+    .select('id');
+  requireAffectedRows(data, error, 'Confirming the rest entry');
 }
 
 export const DEPARTMENTS = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'] as const;
-export type Department = typeof DEPARTMENTS[number];
+export type Department = (typeof DEPARTMENTS)[number];
 
 export interface DepartmentSigner {
   department: Department;
@@ -289,10 +308,7 @@ export async function getDepartmentSigners(vesselId: string): Promise<Department
   if (!rows || rows.length === 0) return [];
 
   const userIds = rows.map((r) => r.signer_user_id);
-  const { data: users } = await supabase
-    .from('users')
-    .select('id, name')
-    .in('id', userIds);
+  const { data: users } = await supabase.from('users').select('id, name').in('id', userIds);
 
   const nameMap = new Map((users ?? []).map((u) => [u.id, u.name]));
 
@@ -311,13 +327,17 @@ export async function setDepartmentSigner(
   const { error } = await supabase
     .from('department_signers')
     .upsert(
-      { vessel_id: vesselId, department, signer_user_id: signerUserId, updated_at: new Date().toISOString() },
+      {
+        vessel_id: vesselId,
+        department,
+        signer_user_id: signerUserId,
+        updated_at: new Date().toISOString(),
+      },
       { onConflict: 'vessel_id,department' }
     );
 
   if (error) throw error;
 }
-
 
 export interface DayReviewEntry {
   userId: string;
@@ -341,7 +361,11 @@ function toDateStr(d: Date): string {
 // Builds a per-day review of every crew member's rest status for a given
 // month, most recent day first. Days beyond today are excluded since
 // nothing is due yet. Used by the Captain's "Rest to be Confirmed" queue.
-export async function getMonthReview(vesselId: string, year: number, month: number): Promise<DayReview[]> {
+export async function getMonthReview(
+  vesselId: string,
+  year: number,
+  month: number
+): Promise<DayReview[]> {
   const startDate = new Date(year, month - 1, 1);
   const lastDayOfMonth = new Date(year, month, 0);
   const today = new Date();
@@ -392,12 +416,21 @@ export async function getMonthReview(vesselId: string, year: number, month: numb
           violations = rolling.violations;
         }
       }
-      return { userId: c.id, userName: c.name, department: c.department as Department, status, compliant, violations };
+      return {
+        userId: c.id,
+        userName: c.name,
+        department: c.department as Department,
+        status,
+        compliant,
+        violations,
+      };
     });
     // Only count dates within the actual requested month for needsAttention/
     // display — the padding days before it exist purely for rolling context.
     if (dateStr >= monthStartStr) {
-      const needsAttention = dayEntries.some((e) => e.status !== 'confirmed' || e.compliant === false);
+      const needsAttention = dayEntries.some(
+        (e) => e.status !== 'confirmed' || e.compliant === false
+      );
       days.push({ date: dateStr, entries: dayEntries, needsAttention });
     }
   }
@@ -448,7 +481,6 @@ export async function confirmEntryForUser(
   await saveEntry(entry);
 }
 
-
 // Determines whether the logged-in user has manager-level access to edit
 // or confirm a specific crew member's rest entries: either they are the
 // vessel's Captain (always has access), or they are the assigned signer
@@ -479,7 +511,6 @@ export async function canManageRestFor(
   return signer?.signer_user_id === viewerUserId;
 }
 
-
 // Returns which departments a user can review rest entries for: the
 // Captain can review every department ('ALL'), while a department signer
 // can only review the department(s) they've been assigned to (possibly
@@ -500,7 +531,6 @@ export async function getManagedDepartments(
 
   return (data ?? []).map((d) => d.department as Department);
 }
-
 
 export interface PdfDayRow {
   date: string;
@@ -532,7 +562,12 @@ function minutesToHHMM(totalMinutes: number): string {
 // Builds 24 hourly work/rest marks for one day from work_start/work_end,
 // excluding the lunch period (lunch is neither work nor rest on the form,
 // left blank same as rest).
-function buildHourMarks(workStart: string | null, workEnd: string | null, lunchStart: string | null, lunchEnd: string | null): boolean[] {
+function buildHourMarks(
+  workStart: string | null,
+  workEnd: string | null,
+  lunchStart: string | null,
+  lunchEnd: string | null
+): boolean[] {
   const marks = new Array(24).fill(false);
   if (!workStart || !workEnd) return marks;
 
@@ -560,7 +595,11 @@ function buildHourMarks(workStart: string | null, workEnd: string | null, lunchS
 // Assembles everything needed to render one crew member's month on the
 // Hours of Work and Rest PDF: header info, per-day hour marks, and the
 // real rolling 24h/7d compliance figures for each date.
-export async function getMonthDataForPdf(userId: string, year: number, month: number): Promise<PdfMonthData | null> {
+export async function getMonthDataForPdf(
+  userId: string,
+  year: number,
+  month: number
+): Promise<PdfMonthData | null> {
   const { data: user } = await supabase
     .from('users')
     .select('name, position, vessel_id')
@@ -613,13 +652,18 @@ export async function getMonthDataForPdf(userId: string, year: number, month: nu
 
   const { data: entries } = await supabase
     .from('rest_entries')
-    .select('date, rest_periods, work_start, work_end, lunch_start, lunch_end, status, confirmed_by, comment')
+    .select(
+      'date, rest_periods, work_start, work_end, lunch_start, lunch_end, status, confirmed_by, comment'
+    )
     .eq('user_id', userId)
     .gte('date', toDateStr(paddedStart))
     .lte('date', toDateStr(effectiveEnd));
 
   const entryMap = new Map((entries ?? []).map((e) => [e.date, e]));
-  const historyForRolling = (entries ?? []).map((e) => ({ date: e.date, rest_periods: e.rest_periods || [] }));
+  const historyForRolling = (entries ?? []).map((e) => ({
+    date: e.date,
+    rest_periods: e.rest_periods || [],
+  }));
 
   const days: PdfDayRow[] = [];
   let lastConfirmedBy: string | null = null;
@@ -641,7 +685,12 @@ export async function getMonthDataForPdf(userId: string, year: number, month: nu
 
     days.push({
       date: dateStr,
-      hourMarks: buildHourMarks(entry?.work_start ?? null, entry?.work_end ?? null, entry?.lunch_start ?? null, entry?.lunch_end ?? null),
+      hourMarks: buildHourMarks(
+        entry?.work_start ?? null,
+        entry?.work_end ?? null,
+        entry?.lunch_start ?? null,
+        entry?.lunch_end ?? null
+      ),
       restHoursToday: minutesToHHMM(restMinutesToday),
       restIn24h: minutesToHHMM(rolling.minRestIn24h * 60),
       restIn7d: minutesToHHMM(rolling.minRestIn7Days * 60),

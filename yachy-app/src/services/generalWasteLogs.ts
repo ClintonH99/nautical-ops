@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabase';
+import { requireAffectedRows } from './mutationResult';
 import { GeneralWasteLog, WeightUnit } from '../types';
 
 export interface CreateGeneralWasteLogData {
@@ -108,15 +109,21 @@ class GeneralWasteLogsService {
     if (input.weight !== undefined) patch.weight = input.weight;
     if (input.weightUnit !== undefined) patch.weight_unit = input.weightUnit;
 
-    const { error } = await supabase.from('general_waste_logs').update(patch).eq('id', id);
-
-    if (error) throw error;
+    const { data, error } = await supabase
+      .from('general_waste_logs')
+      .update(patch)
+      .eq('id', id)
+      .select('id');
+    requireAffectedRows(data, error, 'Updating the waste log');
   }
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase.from('general_waste_logs').delete().eq('id', id);
-
-    if (error) throw error;
+    const { data, error } = await supabase
+      .from('general_waste_logs')
+      .delete()
+      .eq('id', id)
+      .select('id');
+    requireAffectedRows(data, error, 'Deleting the waste log');
   }
 }
 

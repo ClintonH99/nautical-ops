@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabase';
+import { requireAffectedRows } from './mutationResult';
 import { Department } from '../types';
 
 export interface ShoppingListItem {
@@ -40,7 +41,10 @@ function normalizeItems(raw: unknown): ShoppingListItem[] {
   if (!Array.isArray(raw)) return [];
   return raw.map((entry) => {
     if (entry && typeof entry === 'object' && 'text' in entry && 'checked' in entry) {
-      return { text: String((entry as ShoppingListItem).text), checked: Boolean((entry as ShoppingListItem).checked) };
+      return {
+        text: String((entry as ShoppingListItem).text),
+        checked: Boolean((entry as ShoppingListItem).checked),
+      };
     }
     return { text: String(entry), checked: false };
   });
@@ -66,7 +70,11 @@ class ShoppingListsService {
   async create(input: CreateShoppingListInput): Promise<ShoppingList> {
     const items = input.items
       .filter((item) => item.text.trim().length > 0)
-      .map((item) => ({ text: item.text.trim(), amount: item.amount?.trim(), checked: item.checked }));
+      .map((item) => ({
+        text: item.text.trim(),
+        amount: item.amount?.trim(),
+        checked: item.checked,
+      }));
     const { data, error } = await supabase
       .from('shopping_lists')
       .insert([
@@ -87,13 +95,20 @@ class ShoppingListsService {
     return this.mapRow(data);
   }
 
-  async update(id: string, updates: { title?: string; items?: ShoppingListItem[] }): Promise<ShoppingList> {
+  async update(
+    id: string,
+    updates: { title?: string; items?: ShoppingListItem[] }
+  ): Promise<ShoppingList> {
     const payload: Record<string, unknown> = {};
     if (updates.title !== undefined) payload.title = updates.title.trim();
     if (updates.items !== undefined) {
       payload.items = updates.items
         .filter((item) => item.text.trim().length > 0)
-        .map((item) => ({ text: item.text.trim(), amount: item.amount?.trim(), checked: item.checked }));
+        .map((item) => ({
+          text: item.text.trim(),
+          amount: item.amount?.trim(),
+          checked: item.checked,
+        }));
     }
 
     const { data, error } = await supabase
@@ -108,8 +123,12 @@ class ShoppingListsService {
   }
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase.from('shopping_lists').delete().eq('id', id);
-    if (error) throw error;
+    const { data, error } = await supabase
+      .from('shopping_lists')
+      .delete()
+      .eq('id', id)
+      .select('id');
+    requireAffectedRows(data, error, 'Deleting the shopping list');
   }
 
   async getMasterTripLists(vesselId: string): Promise<ShoppingList[]> {

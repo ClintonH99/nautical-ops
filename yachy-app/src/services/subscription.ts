@@ -55,6 +55,11 @@ const mapSubscription = (data: any): VesselSubscription => ({
 export function resolveSubscriptionAccess(data: any, now = Date.now()): VesselSubscriptionAccess {
   if (!data) return { state: 'never_subscribed', subscription: null };
 
+  const validStatuses = new Set(['active', 'past_due', 'canceled', 'trialing', 'revoked']);
+  if (!validStatuses.has(data.status)) {
+    return { state: 'unavailable', subscription: null };
+  }
+
   const subscription = mapSubscription(data);
   const paidThrough = new Date(subscription.currentPeriodEnd).getTime();
 

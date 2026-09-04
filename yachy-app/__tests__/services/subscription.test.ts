@@ -105,6 +105,12 @@ describe('resolveSubscriptionAccess', () => {
       'unavailable'
     );
   });
+
+  it('does not interpret an unknown provider status as non-payment', () => {
+    expect(resolveSubscriptionAccess(row({ status: 'new-provider-state' }), NOW).state).toBe(
+      'unavailable'
+    );
+  });
 });
 
 describe('getVesselSubscriptionAccess', () => {

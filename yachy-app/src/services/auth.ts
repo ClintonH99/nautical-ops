@@ -453,7 +453,10 @@ class AuthService {
   async signOut() {
     try {
       await releaseCurrentDevice();
-      const { error } = await supabase.auth.signOut();
+      // Sign out only this session. The account is deliberately allowed on
+      // two devices, so signing out on one device must not invalidate the
+      // other device's Supabase session.
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
       if (error) throw error;
     } catch (error) {
       if (__DEV__) console.error('Sign out error:', error);

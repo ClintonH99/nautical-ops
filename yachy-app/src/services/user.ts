@@ -6,6 +6,7 @@
 import { supabase } from './supabase';
 import { User, Department, UserRole, ContractType, RotationGroup } from '../types';
 import { readFileBytesForUpload } from '../utils/fileUpload';
+import { requireAffectedRows } from './mutationResult';
 
 export interface UpdateProfileData {
   name?: string;
@@ -29,18 +30,13 @@ class UserService {
       if (data.department) updateData.department = data.department;
       if (data.profilePhoto !== undefined) updateData.profile_photo = data.profilePhoto;
 
-      const { error } = await supabase.from('users').update(updateData).eq('id', userId);
-
-      if (error) throw error;
-
-      // Fetch and return updated profile
-      const { data: userData, error: fetchError } = await supabase
+      const { data: userData, error } = await supabase
         .from('users')
-        .select('*')
+        .update(updateData)
         .eq('id', userId)
+        .select('*')
         .single();
-
-      if (fetchError) throw fetchError;
+      if (error) throw error;
 
       // Map snake_case to camelCase
       return {
@@ -125,16 +121,16 @@ class UserService {
    */
   async removeCrewMember(userId: string): Promise<void> {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('users')
         .update({
           vessel_id: null,
           vessel_joined_at: null,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', userId);
-
-      if (error) throw error;
+        .eq('id', userId)
+        .select('id');
+      requireAffectedRows(data, error, 'Removing the crew member');
     } catch (error) {
       console.error('Remove crew member error:', error);
       throw error;
@@ -146,15 +142,15 @@ class UserService {
    */
   async updateUserRole(userId: string, role: UserRole): Promise<void> {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('users')
         .update({
           role,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', userId);
-
-      if (error) throw error;
+        .eq('id', userId)
+        .select('id');
+      requireAffectedRows(data, error, 'Updating the crew role');
     } catch (error) {
       console.error('Update user role error:', error);
       throw error;
@@ -167,15 +163,15 @@ class UserService {
    */
   async updateRotationGroup(userId: string, groupId: string | null): Promise<void> {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('users')
         .update({
           rotation_group_id: groupId,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', userId);
-
-      if (error) throw error;
+        .eq('id', userId)
+        .select('id');
+      requireAffectedRows(data, error, 'Updating the rotation group');
     } catch (error) {
       console.error('Update rotation group error:', error);
       throw error;
@@ -241,9 +237,12 @@ class UserService {
    */
   async updateRotationGroupName(groupId: string, name: string): Promise<void> {
     try {
-      const { error } = await supabase.from('rotation_groups').update({ name }).eq('id', groupId);
-
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from('rotation_groups')
+        .update({ name })
+        .eq('id', groupId)
+        .select('id');
+      requireAffectedRows(data, error, 'Renaming the rotation group');
     } catch (error) {
       console.error('Update rotation group name error:', error);
       throw error;
@@ -281,9 +280,12 @@ class UserService {
    */
   async deleteRotationGroup(groupId: string): Promise<void> {
     try {
-      const { error } = await supabase.from('rotation_groups').delete().eq('id', groupId);
-
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from('rotation_groups')
+        .delete()
+        .eq('id', groupId)
+        .select('id');
+      requireAffectedRows(data, error, 'Deleting the rotation group');
     } catch (error) {
       console.error('Delete rotation group error:', error);
       throw error;
@@ -295,15 +297,15 @@ class UserService {
    */
   async updateContractType(userId: string, contractType: ContractType): Promise<void> {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('users')
         .update({
           contract_type: contractType,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', userId);
-
-      if (error) throw error;
+        .eq('id', userId)
+        .select('id');
+      requireAffectedRows(data, error, 'Updating the contract type');
     } catch (error) {
       console.error('Update contract type error:', error);
       throw error;
@@ -315,15 +317,15 @@ class UserService {
    */
   async updatePosition(userId: string, position: string): Promise<void> {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('users')
         .update({
           position,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', userId);
-
-      if (error) throw error;
+        .eq('id', userId)
+        .select('id');
+      requireAffectedRows(data, error, 'Updating the crew position');
     } catch (error) {
       console.error('Update position error:', error);
       throw error;

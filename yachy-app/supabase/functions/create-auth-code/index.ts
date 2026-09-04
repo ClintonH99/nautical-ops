@@ -13,9 +13,10 @@ const ALLOWED_ORIGINS = [
 
 function corsHeaders(req: Request, extra: Record<string, string> = {}): Record<string, string> {
   const origin = req.headers.get('Origin') || '';
-  const allowed = ALLOWED_ORIGINS.includes(origin)
-    || (origin.endsWith('.vercel.app') && origin.startsWith('https://'))
-    || (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:'));
+  const allowed =
+    ALLOWED_ORIGINS.includes(origin) ||
+    origin.startsWith('http://localhost:') ||
+    origin.startsWith('http://127.0.0.1:');
   const allowOrigin = allowed && origin ? origin : ALLOWED_ORIGINS[0];
   return { 'Access-Control-Allow-Origin': allowOrigin, ...extra };
 }
@@ -31,10 +32,12 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 const rateLimitMap = new Map<string, number[]>();
 
 function getRateLimitKey(req: Request): string {
-  return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    || req.headers.get('cf-connecting-ip')
-    || req.headers.get('Origin')
-    || 'unknown';
+  return (
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    req.headers.get('cf-connecting-ip') ||
+    req.headers.get('Origin') ||
+    'unknown'
+  );
 }
 
 function isRateLimited(key: string): boolean {
@@ -49,17 +52,28 @@ function isRateLimited(key: string): boolean {
 
 function randomCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const randomBytes = new Uint8Array(12);
+  crypto.getRandomValues(randomBytes);
   let s = '';
-  for (let i = 0; i < 12; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  for (const byte of randomBytes) s += chars[byte % chars.length];
   return s;
 }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: corsHeaders(req, { 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' }) });
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders(req, {
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      }),
+    });
   }
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: corsHeaders(req, { 'Content-Type': 'application/json' }) });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: corsHeaders(req, { 'Content-Type': 'application/json' }),
+    });
   }
   const rateKey = getRateLimitKey(req);
   if (isRateLimited(rateKey)) {
@@ -72,22 +86,27 @@ Deno.serve(async (req) => {
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 5);
     let code = randomCode();
-    let attempts = 0;
-    while (attempts < 5) {
-      const { error } = await supabase.from('auth_links').insert({ code, expires_at: expiresAt.toISOString() });
-      if (!error) break;
+    let inserted = false;
+    for (let attempts = 0; attempts < 5; attempts++) {
+      const { error } = await supabase
+        .from('auth_links')
+        .insert({ code, expires_at: expiresAt.toISOString() });
+      if (!error) {
+        inserted = true;
+        break;
+      }
       if (error.code === '23505') {
         code = randomCode();
-        attempts++;
       } else throw error;
     }
+    if (!inserted) throw new Error('Could not allocate a unique sign-in code');
     return new Response(JSON.stringify({ code }), {
       status: 200,
       headers: corsHeaders(req, { 'Content-Type': 'application/json' }),
     });
   } catch (e) {
     console.error('create-auth-code:', e);
-    return new Response(JSON.stringify({ error: String(e) }), {
+    return new Response(JSON.stringify({ error: 'Could not create a sign-in code' }), {
       status: 500,
       headers: corsHeaders(req, { 'Content-Type': 'application/json' }),
     });

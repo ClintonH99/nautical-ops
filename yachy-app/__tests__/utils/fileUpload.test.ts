@@ -5,6 +5,7 @@
 
 const mockBytes = jest.fn();
 const mockFile = jest.fn();
+let mockFileSize: number | undefined;
 
 jest.mock('expo-file-system', () => ({
   File: class MockFile {
@@ -18,6 +19,10 @@ jest.mock('expo-file-system', () => ({
     bytes() {
       return mockBytes(this.uri);
     }
+
+    get size() {
+      return mockFileSize;
+    }
   },
 }));
 jest.mock('react-native', () => ({ Platform: { OS: 'ios' } }));
@@ -30,6 +35,7 @@ describe('readFileBytesForUpload', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    mockFileSize = undefined;
     Platform.OS = 'ios';
     global.fetch = originalFetch;
   });
@@ -49,6 +55,7 @@ describe('readFileBytesForUpload', () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       status: 200,
+      headers: { get: jest.fn().mockReturnValue(null) },
       arrayBuffer: jest.fn().mockResolvedValue(arrayBuffer),
     });
 
@@ -56,6 +63,29 @@ describe('readFileBytesForUpload', () => {
       new Uint8Array([4, 5, 6])
     );
     expect(mockFile).not.toHaveBeenCalled();
+  });
+
+  it('rejects a native image larger than 10 MB before reading it', async () => {
+    mockFileSize = 10 * 1024 * 1024 + 1;
+
+    await expect(readFileBytesForUpload('file:///huge.jpg')).rejects.toThrow(
+      'Selected image must be smaller than 10 MB.'
+    );
+    expect(mockBytes).not.toHaveBeenCalled();
+  });
+
+  it('rejects an oversized web image after reading when length is unavailable', async () => {
+    Platform.OS = 'web';
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: jest.fn().mockReturnValue(null) },
+      arrayBuffer: jest.fn().mockResolvedValue(new ArrayBuffer(10 * 1024 * 1024 + 1)),
+    });
+
+    await expect(readFileBytesForUpload('blob:https://example.com/huge')).rejects.toThrow(
+      'Selected image must be smaller than 10 MB.'
+    );
   });
 
   it('rejects an unreadable web picker URI', async () => {

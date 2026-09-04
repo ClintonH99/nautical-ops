@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabase';
+import { requireAffectedRows } from './mutationResult';
 import { readFileBytesForUpload } from '../utils/fileUpload';
 
 export interface CreateVesselData {
@@ -139,15 +140,15 @@ class VesselService {
    */
   async updateVesselName(vesselId: string, name: string): Promise<void> {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('vessels')
         .update({
           name: name.trim(),
           updated_at: new Date().toISOString(),
         })
-        .eq('id', vesselId);
-
-      if (error) throw error;
+        .eq('id', vesselId)
+        .select('id');
+      requireAffectedRows(data, error, 'Updating the vessel name');
     } catch (error) {
       console.error('Update vessel name error:', error);
       throw error;
@@ -156,14 +157,15 @@ class VesselService {
 
   async updateVesselImo(vesselId: string, imoNumber: string): Promise<void> {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('vessels')
         .update({
           imo_number: imoNumber.trim(),
           updated_at: new Date().toISOString(),
         })
-        .eq('id', vesselId);
-      if (error) throw error;
+        .eq('id', vesselId)
+        .select('id');
+      requireAffectedRows(data, error, 'Updating the vessel IMO number');
     } catch (error) {
       console.error('Update vessel IMO error:', error);
       throw error;

@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabase';
+import { requireAffectedRows } from './mutationResult';
 import { Trip, TripType, Department } from '../types';
 
 export interface CreateTripData {
@@ -84,7 +85,9 @@ class TripsService {
 
   async createTrip(input: CreateTripData): Promise<Trip> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from('trips')
         .insert([
@@ -124,16 +127,19 @@ class TripsService {
       if (input.endDate !== undefined) payload.end_date = input.endDate;
       if (input.notes !== undefined) payload.notes = input.notes?.trim() || null;
       if (input.department !== undefined) payload.department = input.department ?? null;
-      if (input.yardLocation !== undefined) payload.yard_location = input.yardLocation?.trim() || null;
-      if (input.contractorCompanyName !== undefined) payload.contractor_company_name = input.contractorCompanyName?.trim() || null;
-      if (input.contactDetails !== undefined) payload.contact_details = input.contactDetails?.trim() || null;
+      if (input.yardLocation !== undefined)
+        payload.yard_location = input.yardLocation?.trim() || null;
+      if (input.contractorCompanyName !== undefined)
+        payload.contractor_company_name = input.contractorCompanyName?.trim() || null;
+      if (input.contactDetails !== undefined)
+        payload.contact_details = input.contactDetails?.trim() || null;
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('trips')
         .update(payload)
-        .eq('id', tripId);
-
-      if (error) throw error;
+        .eq('id', tripId)
+        .select('id');
+      requireAffectedRows(data, error, 'Updating the trip');
     } catch (error) {
       console.error('Update trip error:', error);
       throw error;
@@ -142,8 +148,8 @@ class TripsService {
 
   async deleteTrip(tripId: string): Promise<void> {
     try {
-      const { error } = await supabase.from('trips').delete().eq('id', tripId);
-      if (error) throw error;
+      const { data, error } = await supabase.from('trips').delete().eq('id', tripId).select('id');
+      requireAffectedRows(data, error, 'Deleting the trip');
     } catch (error) {
       console.error('Delete trip error:', error);
       throw error;
@@ -152,11 +158,7 @@ class TripsService {
 
   async getTripById(tripId: string): Promise<Trip | null> {
     try {
-      const { data, error } = await supabase
-        .from('trips')
-        .select('*')
-        .eq('id', tripId)
-        .single();
+      const { data, error } = await supabase.from('trips').select('*').eq('id', tripId).single();
 
       if (error) throw error;
       return data ? this.mapRowToTrip(data) : null;

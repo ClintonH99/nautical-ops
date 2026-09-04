@@ -271,35 +271,22 @@ Deno.serve(async (req) => {
       gracePeriodEnd = new Date(now).toISOString();
     }
 
-    const { error } = await supabase.from('vessel_subscriptions').upsert(
-      {
-        vessel_id: vesselId,
-        plan_tier: plan.planTierId,
-        billing_period: plan.billingPeriodId,
-        status,
-        payment_provider: 'apple',
-        apple_original_transaction_id: originalTransactionId,
-        apple_latest_transaction_id: latestTransactionId,
-        current_period_start: periodStart,
-        current_period_end: periodEnd,
-        billing_retry_started_at: retryStartedAt,
-        grace_period_end: gracePeriodEnd,
-        last_verified_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'vessel_id' }
-    );
+    const { error } = await supabase.rpc('admin_record_apple_subscription', {
+      p_vessel_id: vesselId,
+      p_plan_tier: plan.planTierId,
+      p_billing_period: plan.billingPeriodId,
+      p_status: status,
+      p_original_transaction_id: originalTransactionId,
+      p_latest_transaction_id: latestTransactionId,
+      p_current_period_start: periodStart,
+      p_current_period_end: periodEnd,
+      p_grace_period_end: gracePeriodEnd,
+      p_billing_retry_started_at: retryStartedAt,
+      p_verified_at: new Date().toISOString(),
+      p_pending_purchase_id: pendingPurchaseId,
+      p_pending_user_id: null,
+    });
     if (error) throw error;
-
-    if (pendingPurchaseId) {
-      const { error: consumeError } = await supabase
-        .from('pending_subscription_purchases')
-        .update({ consumed_at: new Date().toISOString() })
-        .eq('id', pendingPurchaseId)
-        .is('consumed_at', null);
-      if (consumeError)
-        console.error('apple-subscription-webhook token consume error', consumeError);
-    }
 
     return response({ received: true });
   } catch (error) {

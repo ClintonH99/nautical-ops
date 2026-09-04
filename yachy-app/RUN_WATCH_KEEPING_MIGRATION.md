@@ -1,7 +1,10 @@
 # Watch Keeping Timetables Migration
 
-Run this in the Supabase SQL Editor to create the `watch_keeping_timetables` table:
+Watch Keeping Timetables are already part of the production schema. For a clean
+local or test database:
 
-1. Open your Supabase project → SQL Editor
-2. Copy and paste the contents of `supabase/migrations/CREATE_WATCH_KEEPING_TIMETABLES_TABLE.sql`
-3. Run the query
+1. Apply `supabase/migrations/20260213000000_PRODUCTION_SCHEMA_BASELINE.sql`.
+2. Apply the remaining timestamped migrations in filename order.
+
+The old incremental script is retained under `supabase/legacy-migrations/` for
+historical reference only. Do not run it individually against production.

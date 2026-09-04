@@ -1,6 +1,6 @@
 /**
  * Vessel Settings Screen
- * HOD can manage vessel name, subscription plans, and invite code
+ * Captain/MOV can manage vessel name, subscription plans, and invite code.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -48,6 +48,7 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
   const {
     hasActiveSubscription: _hasActiveSubscription,
     subscription,
+    accessState: subscriptionAccessState,
     refetch: refetchSubscription,
   } = useSubscriptionStatus(user?.vesselId ?? null);
   const hasActiveSubscription = _hasActiveSubscription;
@@ -308,12 +309,17 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                       ]}
                     >
                       <Text style={[styles.upgradeBannerText, { color: themeColors.textPrimary }]}>
-                        You have reached your crew limit ({crewCount}/{currentPlan!.maxCrew}). Upgrade
-                        your plan to invite more crew members.
+                        You have reached your crew limit ({crewCount}/{currentPlan!.maxCrew}).
+                        Upgrade your plan to invite more crew members.
                       </Text>
                     </View>
                   )}
                 </>
+              ) : subscriptionAccessState === 'unavailable' ? (
+                <Text style={[styles.plansLinkText, { color: themeColors.textPrimary }]}>
+                  Subscription details are temporarily unavailable. Your access has not been
+                  changed; please try again shortly.
+                </Text>
               ) : (
                 <Text style={[styles.plansLinkText, { color: themeColors.textPrimary }]}>
                   Choose a subscription plan to unlock your invite code and invite crew.
@@ -476,7 +482,9 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
 
           {/* Invite Code Section */}
           <View style={[styles.section, !hasActiveSubscription && { opacity: 0.6 }]}>
-            <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Invite Code</Text>
+            <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+              Invite Code
+            </Text>
 
             {hasActiveSubscription && !crewLimitReached ? (
               <>
@@ -555,15 +563,28 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                 </View>
               </>
             ) : hasActiveSubscription && crewLimitReached ? (
-              <View style={[styles.card, styles.gatedCard, { backgroundColor: themeColors.surface }]}>
+              <View
+                style={[styles.card, styles.gatedCard, { backgroundColor: themeColors.surface }]}
+              >
                 <Text style={[styles.gatedText, { color: themeColors.textPrimary }]}>
                   You have reached your crew limit of{' '}
                   <Text style={styles.gatedBold}>{currentPlan!.maxCrew}</Text>. Upgrade your plan in{' '}
                   <Text style={styles.gatedBold}>Vessel Plans</Text> to invite more crew members.
                 </Text>
               </View>
+            ) : subscriptionAccessState === 'unavailable' ? (
+              <View
+                style={[styles.card, styles.gatedCard, { backgroundColor: themeColors.surface }]}
+              >
+                <Text style={[styles.gatedText, { color: themeColors.textPrimary }]}>
+                  The subscription service is temporarily unavailable. Your payment status has not
+                  been changed; please try again shortly.
+                </Text>
+              </View>
             ) : (
-              <View style={[styles.card, styles.gatedCard, { backgroundColor: themeColors.surface }]}>
+              <View
+                style={[styles.card, styles.gatedCard, { backgroundColor: themeColors.surface }]}
+              >
                 <Text style={[styles.gatedText, { color: themeColors.textPrimary }]}>
                   In order to invite Crew Members to the Vessel, please refer to{' '}
                   <Text style={styles.gatedBold}>Vessel Plans</Text> to see the different plans that

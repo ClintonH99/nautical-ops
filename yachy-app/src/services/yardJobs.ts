@@ -3,6 +3,7 @@
  */
 
 import { supabase } from './supabase';
+import { requireAffectedRows } from './mutationResult';
 import { YardPeriodJob, Department, YardJobPriority } from '../types';
 
 export interface CreateYardJobData {
@@ -74,7 +75,9 @@ class YardJobsService {
 
   async create(input: CreateYardJobData): Promise<YardPeriodJob> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from('yard_period_jobs')
         .insert([
@@ -114,27 +117,35 @@ class YardJobsService {
         updated_at: new Date().toISOString(),
       };
       if (input.jobTitle !== undefined) payload.job_title = input.jobTitle.trim();
-      if (input.jobDescription !== undefined) payload.job_description = input.jobDescription?.trim() || null;
-      if (input.defectDetails !== undefined) payload.defect_details = input.defectDetails?.trim() || null;
-      if (input.defectLocation !== undefined) payload.defect_location = input.defectLocation?.trim() || null;
-      if (input.equipmentSerial !== undefined) payload.equipment_serial = input.equipmentSerial?.trim() || null;
+      if (input.jobDescription !== undefined)
+        payload.job_description = input.jobDescription?.trim() || null;
+      if (input.defectDetails !== undefined)
+        payload.defect_details = input.defectDetails?.trim() || null;
+      if (input.defectLocation !== undefined)
+        payload.defect_location = input.defectLocation?.trim() || null;
+      if (input.equipmentSerial !== undefined)
+        payload.equipment_serial = input.equipmentSerial?.trim() || null;
       if (input.department !== undefined) payload.department = input.department;
       if (input.priority !== undefined) payload.priority = input.priority;
-      if (input.yardLocation !== undefined) payload.yard_location = input.yardLocation?.trim() || null;
-      if (input.contractorCompanyName !== undefined) payload.contractor_company_name = input.contractorCompanyName?.trim() || null;
-      if (input.contactDetails !== undefined) payload.contact_details = input.contactDetails?.trim() || null;
+      if (input.yardLocation !== undefined)
+        payload.yard_location = input.yardLocation?.trim() || null;
+      if (input.contractorCompanyName !== undefined)
+        payload.contractor_company_name = input.contractorCompanyName?.trim() || null;
+      if (input.contactDetails !== undefined)
+        payload.contact_details = input.contactDetails?.trim() || null;
       if (input.doneByDate !== undefined) payload.done_by_date = input.doneByDate || null;
       if (input.status !== undefined) payload.status = input.status;
       if (input.completedBy !== undefined) payload.completed_by = input.completedBy || null;
       if (input.completedAt !== undefined) payload.completed_at = input.completedAt || null;
-      if (input.completedByName !== undefined) payload.completed_by_name = input.completedByName || null;
+      if (input.completedByName !== undefined)
+        payload.completed_by_name = input.completedByName || null;
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('yard_period_jobs')
         .update(payload)
-        .eq('id', jobId);
-
-      if (error) throw error;
+        .eq('id', jobId)
+        .select('id');
+      requireAffectedRows(data, error, 'Updating the shipyard job');
     } catch (error) {
       console.error('Update yard job error:', error);
       throw error;
@@ -143,12 +154,12 @@ class YardJobsService {
 
   async delete(jobId: string): Promise<void> {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('yard_period_jobs')
         .delete()
-        .eq('id', jobId);
-
-      if (error) throw error;
+        .eq('id', jobId)
+        .select('id');
+      requireAffectedRows(data, error, 'Deleting the shipyard job');
     } catch (error) {
       console.error('Delete yard job error:', error);
       throw error;
@@ -171,11 +182,7 @@ class YardJobsService {
     }
   }
 
-  async markComplete(
-    jobId: string,
-    completedBy: string,
-    completedByName: string
-  ): Promise<void> {
+  async markComplete(jobId: string, completedBy: string, completedByName: string): Promise<void> {
     const completedAt = new Date().toISOString();
     await this.update(jobId, {
       status: 'COMPLETED',
@@ -201,7 +208,7 @@ class YardJobsService {
       contractorCompanyName: (row.contractor_company_name as string) ?? '',
       contactDetails: (row.contact_details as string) ?? '',
       doneByDate: (row.done_by_date as string) ?? null,
-      status: (row.status as string) as YardPeriodJob['status'],
+      status: row.status as string as YardPeriodJob['status'],
       completedBy: row.completed_by as string | undefined,
       completedAt: row.completed_at as string | undefined,
       completedByName: row.completed_by_name as string | undefined,

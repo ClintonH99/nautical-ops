@@ -164,7 +164,7 @@ describe('AuthService', () => {
 
       await authService.signOut();
 
-      expect(mockSignOut).toHaveBeenCalled();
+      expect(mockSignOut).toHaveBeenCalledWith({ scope: 'local' });
     });
 
     it('throws on signOut error', async () => {

@@ -1,6 +1,7 @@
 # Trip Push Notifications Setup
 
 This guide sets up push notifications for trips:
+
 1. **Immediate** – As soon as a trip is created (urgent)
 2. **Day before** – Reminder the day before the trip starts
 
@@ -50,7 +51,13 @@ When a trip is **created**, notify all vessel crew with push enabled and trips p
    - **Type**: Supabase Edge Function
    - **Function**: `send-trip-push`
    - **HTTP method**: POST
+   - **HTTP Headers**: choose **Add auth header with service key** and keep
+     `Content-Type: application/json`
 4. Save
+
+The function rejects publishable/anon credentials. This is required because it
+uses server-level access to find recipients and send notifications. Never put a
+service key in app code or a checked-in SQL file.
 
 ---
 
@@ -98,7 +105,7 @@ Create `.github/workflows/trip-reminders.yml`:
 name: Trip reminders
 on:
   schedule:
-    - cron: '0 8 * * *'  # 8:00 UTC daily
+    - cron: '0 8 * * *' # 8:00 UTC daily
 jobs:
   send:
     runs-on: ubuntu-latest
@@ -116,10 +123,10 @@ Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` as GitHub repo secrets.
 
 ## Summary
 
-| Trigger            | How                          | Result                          |
-|--------------------|------------------------------|---------------------------------|
-| Trip **created**   | Database Webhook → Edge Fn   | Immediate push to vessel crew  |
-| **Day before**     | Cron → Edge Fn               | Reminder for trips tomorrow    |
+| Trigger          | How                        | Result                        |
+| ---------------- | -------------------------- | ----------------------------- |
+| Trip **created** | Database Webhook → Edge Fn | Immediate push to vessel crew |
+| **Day before**   | Cron → Edge Fn             | Reminder for trips tomorrow   |
 
 Both flows respect `notification_preferences.trips` – only users who opted in receive notifications.
 
@@ -153,13 +160,6 @@ Create a trip in the app. If the Database Webhook is set up, a push should arriv
 
 ### Test day-before reminder (manual)
 
-Run in terminal (replace with your project URL and service role key from Supabase Dashboard → Settings → API):
-
-```bash
-curl -X POST "https://grtrcjgsvfsknpnlarxv.supabase.co/functions/v1/send-trip-push" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_SERVICE_ROLE_KEY" \
-  -d '{"type":"reminders"}'
-```
-
-This triggers the day-before logic. Create a trip with `start_date` = tomorrow, then run the curl. You should get a push if your user has a `push_token` and trips/preDeparture enabled.
+Use the manually triggered GitHub Actions workflow, whose service credential is
+stored in GitHub Secrets. Create a trip with `start_date` = tomorrow first. Do
+not paste the service key into a terminal command, document, or chat.

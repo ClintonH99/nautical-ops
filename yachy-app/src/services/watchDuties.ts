@@ -8,6 +8,7 @@
  */
 
 import { supabase } from './supabase';
+import { requireAffectedRows } from './mutationResult';
 
 export type Department = 'BRIDGE' | 'ENGINEERING' | 'EXTERIOR' | 'INTERIOR' | 'GALLEY';
 
@@ -96,7 +97,11 @@ export async function getDutyGroups(vesselId: string, userId: string): Promise<D
   }));
 }
 
-export async function createDutyGroup(vesselId: string, title: string, department: Department): Promise<string> {
+export async function createDutyGroup(
+  vesselId: string,
+  title: string,
+  department: Department
+): Promise<string> {
   const { data, error } = await supabase
     .from('watch_duty_groups')
     .insert({ vessel_id: vesselId, title, department })
@@ -107,21 +112,39 @@ export async function createDutyGroup(vesselId: string, title: string, departmen
 }
 
 export async function deleteDutyGroup(groupId: string): Promise<void> {
-  const { error } = await supabase.from('watch_duty_groups').delete().eq('id', groupId);
-  if (error) throw error;
+  const { data, error } = await supabase
+    .from('watch_duty_groups')
+    .delete()
+    .eq('id', groupId)
+    .select('id');
+  requireAffectedRows(data, error, 'Deleting the watch-duty group');
 }
 
-export async function addDutyItem(groupId: string, label: string, sortOrder: number): Promise<void> {
-  const { error } = await supabase.from('watch_duty_items').insert({ group_id: groupId, label, sort_order: sortOrder });
+export async function addDutyItem(
+  groupId: string,
+  label: string,
+  sortOrder: number
+): Promise<void> {
+  const { error } = await supabase
+    .from('watch_duty_items')
+    .insert({ group_id: groupId, label, sort_order: sortOrder });
   if (error) throw error;
 }
 
 export async function deleteDutyItem(itemId: string): Promise<void> {
-  const { error } = await supabase.from('watch_duty_items').delete().eq('id', itemId);
-  if (error) throw error;
+  const { data, error } = await supabase
+    .from('watch_duty_items')
+    .delete()
+    .eq('id', itemId)
+    .select('id');
+  requireAffectedRows(data, error, 'Deleting the watch-duty item');
 }
 
-export async function setItemChecked(userId: string, itemId: string, checked: boolean): Promise<void> {
+export async function setItemChecked(
+  userId: string,
+  itemId: string,
+  checked: boolean
+): Promise<void> {
   const { error } = await supabase
     .from('watch_duty_completions')
     .upsert({ user_id: userId, item_id: itemId, checked, updated_at: new Date().toISOString() });
@@ -130,7 +153,10 @@ export async function setItemChecked(userId: string, itemId: string, checked: bo
 
 // ---- Watch assignments (week-ahead schedule) ----
 
-export async function getWeekAssignments(vesselId: string, startDate: string): Promise<WatchAssignment[]> {
+export async function getWeekAssignments(
+  vesselId: string,
+  startDate: string
+): Promise<WatchAssignment[]> {
   const start = new Date(startDate);
   const end = new Date(start);
   end.setDate(end.getDate() + 6);
@@ -173,11 +199,21 @@ export async function addWatchAssignment(
 ): Promise<void> {
   const { error } = await supabase
     .from('watch_assignments')
-    .insert({ vessel_id: vesselId, date, user_id: userId, start_time: startTime, end_time: endTime });
+    .insert({
+      vessel_id: vesselId,
+      date,
+      user_id: userId,
+      start_time: startTime,
+      end_time: endTime,
+    });
   if (error) throw error;
 }
 
 export async function removeWatchAssignment(assignmentId: string): Promise<void> {
-  const { error } = await supabase.from('watch_assignments').delete().eq('id', assignmentId);
-  if (error) throw error;
+  const { data, error } = await supabase
+    .from('watch_assignments')
+    .delete()
+    .eq('id', assignmentId)
+    .select('id');
+  requireAffectedRows(data, error, 'Removing the watch assignment');
 }

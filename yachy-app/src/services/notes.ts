@@ -4,6 +4,7 @@
  * user, not shared across the vessel.
  */
 import { supabase } from './supabase';
+import { requireAffectedRows } from './mutationResult';
 
 export interface Note {
   id: string;
@@ -28,11 +29,7 @@ const notesService = {
   },
 
   async getNoteById(id: string): Promise<Note | null> {
-    const { data, error } = await supabase
-      .from('notes')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const { data, error } = await supabase.from('notes').select('*').eq('id', id).single();
     if (error) throw error;
     return data;
   },
@@ -71,8 +68,8 @@ const notesService = {
   },
 
   async deleteNote(id: string): Promise<void> {
-    const { error } = await supabase.from('notes').delete().eq('id', id);
-    if (error) throw error;
+    const { data, error } = await supabase.from('notes').delete().eq('id', id).select('id');
+    requireAffectedRows(data, error, 'Deleting the note');
   },
 };
 
