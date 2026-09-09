@@ -6,6 +6,12 @@
 import { supabase } from './supabase';
 import { requireAffectedRows } from './mutationResult';
 import { VesselTask, TaskCategory, TaskRecurring, Department } from '../types';
+import { toYYYYMMDD } from '../utils';
+import {
+  calculateRecurringTaskDueDate,
+  isTaskRecurrenceAllowed,
+  normalizeTaskRecurrence,
+} from '../utils/taskRecurrence';
 
 export interface CreateVesselTaskData {
   vesselId: string;
@@ -18,6 +24,7 @@ export interface CreateVesselTaskData {
 }
 
 export interface UpdateVesselTaskData {
+  category?: TaskCategory;
   title?: string;
   notes?: string;
   department?: Department;
@@ -50,6 +57,20 @@ class VesselTasksService {
 
   async create(input: CreateVesselTaskData): Promise<VesselTask> {
     try {
+      const recurring = input.category === 'DAILY' ? null : input.recurring;
+      if (
+        input.category !== 'DAILY' &&
+        !isTaskRecurrenceAllowed(input.category, recurring ?? null)
+      ) {
+        const allowed = input.category === 'WEEKLY' ? '7 or 14 days' : '14 or 30 days';
+        throw new Error(
+          `${input.category === 'WEEKLY' ? 'Weekly' : 'Monthly'} tasks must repeat every ${allowed}.`
+        );
+      }
+      const doneByDate = recurring
+        ? input.doneByDate || calculateRecurringTaskDueDate(recurring)
+        : input.doneByDate || null;
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -62,8 +83,8 @@ class VesselTasksService {
             department: input.department,
             title: input.title.trim(),
             notes: input.notes?.trim() || null,
-            done_by_date: input.doneByDate || null,
-            recurring: input.recurring || null,
+            done_by_date: doneByDate,
+            recurring,
             status: 'NOT_STARTED',
             created_by: user?.id ?? null,
             updated_at: new Date().toISOString(),
@@ -85,6 +106,7 @@ class VesselTasksService {
       const payload: Record<string, unknown> = {
         updated_at: new Date().toISOString(),
       };
+      if (input.category !== undefined) payload.category = input.category;
       if (input.title !== undefined) payload.title = input.title.trim();
       if (input.notes !== undefined) payload.notes = input.notes?.trim() || null;
       if (input.department !== undefined) payload.department = input.department;
@@ -130,15 +152,13 @@ class VesselTasksService {
     const task = await this.getById(taskId);
     if (!task) throw new Error('Task not found');
 
-    // Recurring: advance next due date on the same row and reset status (stays in category list)
-    if (task.recurring && task.doneByDate) {
-      const days = task.recurring === '7_DAYS' ? 7 : task.recurring === '14_DAYS' ? 14 : 30;
-      const nextDate = new Date(task.doneByDate);
-      nextDate.setDate(nextDate.getDate() + days);
-      const nextDue = nextDate.toISOString().slice(0, 10);
+    // Recurring: schedule from the completion date, then reset the same row for its next cycle.
+    if (task.recurring) {
+      const nextDue = calculateRecurringTaskDueDate(task.recurring, new Date());
       await this.update(taskId, {
         status: 'NOT_STARTED',
         doneByDate: nextDue,
+        recurring: task.recurring,
         completedBy: null,
         completedAt: null,
         completedByName: null,
@@ -159,7 +179,7 @@ class VesselTasksService {
 
   async getOverdueTasks(vesselId: string): Promise<VesselTask[]> {
     try {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = toYYYYMMDD(new Date());
       const { data, error } = await supabase
         .from('vessel_tasks')
         .select('*')
@@ -227,10 +247,10 @@ class VesselTasksService {
   async getUpcomingTasks(vesselId: string, withinDays: number = 3): Promise<VesselTask[]> {
     try {
       const today = new Date();
-      const startDate = today.toISOString().slice(0, 10);
+      const startDate = toYYYYMMDD(today);
       const endDate = new Date(today);
       endDate.setDate(endDate.getDate() + withinDays);
-      const endDateStr = endDate.toISOString().slice(0, 10);
+      const endDateStr = toYYYYMMDD(endDate);
 
       const { data, error } = await supabase
         .from('vessel_tasks')
@@ -286,16 +306,31 @@ class VesselTasksService {
   }
 
   private mapRowToTask(row: Record<string, unknown>): VesselTask {
+    const category = row.category as TaskCategory;
+    const status = row.status as VesselTask['status'];
+    const storedRecurring = (row.recurring as TaskRecurring) ?? null;
+    const recurring =
+      status === 'COMPLETED' ? storedRecurring : normalizeTaskRecurrence(category, storedRecurring);
+    let doneByDate = (row.done_by_date as string) ?? null;
+
+    if (status !== 'COMPLETED' && recurring && !doneByDate) {
+      try {
+        doneByDate = calculateRecurringTaskDueDate(recurring, row.created_at as string);
+      } catch {
+        doneByDate = calculateRecurringTaskDueDate(recurring);
+      }
+    }
+
     return {
       id: row.id as string,
       vesselId: row.vessel_id as string,
-      category: row.category as TaskCategory,
+      category,
       department: (row.department as Department) ?? 'INTERIOR',
       title: row.title as string,
       notes: (row.notes as string) ?? '',
-      doneByDate: (row.done_by_date as string) ?? null,
-      status: row.status as string as VesselTask['status'],
-      recurring: (row.recurring as TaskRecurring) ?? null,
+      doneByDate,
+      status,
+      recurring,
       completedBy: row.completed_by as string | undefined,
       completedAt: row.completed_at as string | undefined,
       completedByName: row.completed_by_name as string | undefined,

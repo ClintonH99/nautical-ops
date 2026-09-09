@@ -17,6 +17,7 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
+  Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
@@ -54,11 +55,12 @@ function dateToTimeString(d: Date): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-type ActiveField =
+type TimeField =
   | { type: 'rest'; index: number; edge: 'start' | 'end' }
   | { type: 'work'; edge: 'start' | 'end' }
-  | { type: 'lunch'; edge: 'start' | 'end' }
-  | null;
+  | { type: 'lunch'; edge: 'start' | 'end' };
+
+type ActiveField = TimeField | null;
 
 export const RestDayEntryScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
@@ -75,6 +77,7 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   const [lunchEnd, setLunchEnd] = useState<string | null>('13:00');
   const [status, setStatus] = useState<'draft' | 'pending_confirmation' | 'confirmed'>('draft');
   const [activeField, setActiveField] = useState<ActiveField>(null);
+  const [pendingTime, setPendingTime] = useState<Date | null>(null);
   const [saving, setSaving] = useState(false);
   const [isManager, setIsManager] = useState(false);
 
@@ -84,7 +87,9 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
     const rows = await getWeekEntries(effectiveUserId, date);
     const existing = rows.find((r) => r.date === date);
     if (existing) {
-      setRestPeriods(existing.rest_periods?.length ? existing.rest_periods : [{ start: '22:00', end: '08:00' }]);
+      setRestPeriods(
+        existing.rest_periods?.length ? existing.rest_periods : [{ start: '22:00', end: '08:00' }]
+      );
       setWorkStart(existing.work_start);
       setWorkEnd(existing.work_end);
       setLunchStart(existing.lunch_start);
@@ -102,35 +107,76 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
     }
   }, [effectiveUserId, date, user?.id, user?.vesselId, user?.role]);
 
-  useFocusEffect(useCallback(() => { loadExisting(); }, [loadExisting]));
+  useFocusEffect(
+    useCallback(() => {
+      loadExisting();
+    }, [loadExisting])
+  );
 
   const isLocked = !isManager && status !== 'draft';
   const compliance = checkCompliance(restPeriods);
 
-  const openPicker = (field: ActiveField) => {
+  const getTimeForField = (field: TimeField): string | null => {
+    if (field.type === 'rest') {
+      return field.edge === 'start'
+        ? restPeriods[field.index].start
+        : restPeriods[field.index].end;
+    }
+    if (field.type === 'work') {
+      return field.edge === 'start' ? workStart : workEnd;
+    }
+    return field.edge === 'start' ? lunchStart : lunchEnd;
+  };
+
+  const openPicker = (field: TimeField) => {
     if (isLocked) return;
+    setPendingTime(timeStringToDate(getTimeForField(field)));
     setActiveField(field);
   };
 
-  const handleTimeChange = (event: any, selectedDate?: Date) => {
-    if (!selectedDate || !activeField) { setActiveField(null); return; }
+  const applyTime = (field: TimeField, selectedDate: Date) => {
     const timeStr = dateToTimeString(selectedDate);
 
-    if (activeField.type === 'rest') {
+    if (field.type === 'rest') {
       setRestPeriods((prev) => {
         const updated = [...prev];
-        updated[activeField.index] = { ...updated[activeField.index], [activeField.edge]: timeStr };
+        updated[field.index] = { ...updated[field.index], [field.edge]: timeStr };
         return updated;
       });
-    } else if (activeField.type === 'work') {
-      if (activeField.edge === 'start') setWorkStart(timeStr);
+    } else if (field.type === 'work') {
+      if (field.edge === 'start') setWorkStart(timeStr);
       else setWorkEnd(timeStr);
-    } else if (activeField.type === 'lunch') {
-      if (activeField.edge === 'start') setLunchStart(timeStr);
+    } else if (field.type === 'lunch') {
+      if (field.edge === 'start') setLunchStart(timeStr);
       else setLunchEnd(timeStr);
     }
+  };
 
-    if (event.type === 'set' || event.type === undefined) setActiveField(null);
+  const closePicker = () => {
+    setActiveField(null);
+    setPendingTime(null);
+  };
+
+  const handleTimeChange = (event: any, selectedDate?: Date) => {
+    if (event.type === 'dismissed') {
+      closePicker();
+      return;
+    }
+    if (!selectedDate || !activeField) return;
+
+    if (Platform.OS === 'ios') {
+      setPendingTime(selectedDate);
+      return;
+    }
+
+    applyTime(activeField, selectedDate);
+    closePicker();
+  };
+
+  const confirmPendingTime = () => {
+    if (!activeField || !pendingTime) return;
+    applyTime(activeField, pendingTime);
+    closePicker();
   };
 
   const addRestPeriod = () => {
@@ -224,25 +270,42 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
       onPress={onPress}
       disabled={isLocked}
     >
-      <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base }}>{value ?? '--:--'}</Text>
+      <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base }}>
+        {value ?? '--:--'}
+      </Text>
     </TouchableOpacity>
   );
 
   return (
     <View style={styles.pageWrap}>
       <PageHeader title="Rest Entry" />
-      <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={styles.content}
+      >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Text style={[styles.dateTitle, { color: themeColors.textPrimary }]}>{formatDateDisplay(date)}</Text>
+          <Text style={[styles.dateTitle, { color: themeColors.textPrimary }]}>
+            {formatDateDisplay(date)}
+          </Text>
           {status !== 'draft' && (
-            <Text style={{ color: status === 'confirmed' ? '#16a34a' : '#d97706', fontWeight: '700', fontSize: FONTS.base }}>
+            <Text
+              style={{
+                color: status === 'confirmed' ? '#16a34a' : '#d97706',
+                fontWeight: '700',
+                fontSize: FONTS.base,
+              }}
+            >
               {status === 'confirmed' ? 'Confirmed' : 'Pending confirmation'}
             </Text>
           )}
         </View>
 
         {isManager && targetUserName && (
-          <Text style={{ color: themeColors.textSecondary, marginTop: 4, marginBottom: SPACING.sm }}>Editing for {targetUserName}</Text>
+          <Text
+            style={{ color: themeColors.textSecondary, marginTop: 4, marginBottom: SPACING.sm }}
+          >
+            Editing for {targetUserName}
+          </Text>
         )}
 
         {status !== 'draft' && !isManager && (
@@ -257,12 +320,38 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
           </View>
         )}
 
-        <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>Hours of rest</Text>
+        <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>Time Worked</Text>
+        <View style={styles.row}>
+          {renderTimeChip('Start', workStart, () => openPicker({ type: 'work', edge: 'start' }))}
+          <Text style={{ color: themeColors.textSecondary }}>{'->'}</Text>
+          {renderTimeChip('End', workEnd, () => openPicker({ type: 'work', edge: 'end' }))}
+        </View>
+
+        <Text
+          style={[styles.sectionLabel, { color: themeColors.textPrimary, marginTop: SPACING.lg }]}
+        >
+          Lunch Break
+        </Text>
+        <View style={styles.row}>
+          {renderTimeChip('Start', lunchStart, () => openPicker({ type: 'lunch', edge: 'start' }))}
+          <Text style={{ color: themeColors.textSecondary }}>{'->'}</Text>
+          {renderTimeChip('End', lunchEnd, () => openPicker({ type: 'lunch', edge: 'end' }))}
+        </View>
+
+        <Text
+          style={[styles.sectionLabel, { color: themeColors.textPrimary, marginTop: SPACING.lg }]}
+        >
+          Hours of Rest
+        </Text>
         {restPeriods.map((p, i) => (
           <View key={i} style={styles.row}>
-            {renderTimeChip('Start', p.start, () => openPicker({ type: 'rest', index: i, edge: 'start' }))}
+            {renderTimeChip('Start', p.start, () =>
+              openPicker({ type: 'rest', index: i, edge: 'start' })
+            )}
             <Text style={{ color: themeColors.textSecondary }}>{'->'}</Text>
-            {renderTimeChip('End', p.end, () => openPicker({ type: 'rest', index: i, edge: 'end' }))}
+            {renderTimeChip('End', p.end, () =>
+              openPicker({ type: 'rest', index: i, edge: 'end' })
+            )}
             {!isLocked && restPeriods.length > 1 && (
               <TouchableOpacity onPress={() => removeRestPeriod(i)}>
                 <Text style={{ color: '#dc2626', marginLeft: SPACING.sm }}>Remove</Text>
@@ -272,11 +361,15 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
         ))}
         {!isLocked && restPeriods.length < 2 && (
           <TouchableOpacity onPress={addRestPeriod}>
-            <Text style={{ color: COLORS.primary, marginBottom: SPACING.lg }}>+ Add another rest period</Text>
+            <Text style={{ color: COLORS.primary, marginBottom: SPACING.lg }}>
+              + Add another rest period
+            </Text>
           </TouchableOpacity>
         )}
 
-        <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>Comment (optional)</Text>
+        <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>
+          Comment (optional)
+        </Text>
         <TextInput
           value={comment}
           onChangeText={setComment}
@@ -286,47 +379,62 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
           placeholderTextColor={themeColors.textSecondary}
           style={[
             styles.commentInput,
-            { color: themeColors.textPrimary, backgroundColor: themeColors.surface, borderColor: themeColors.isDark ? 'rgba(255,255,255,0.1)' : COLORS.border },
+            {
+              color: themeColors.textPrimary,
+              backgroundColor: themeColors.surface,
+              borderColor: themeColors.isDark ? 'rgba(255,255,255,0.1)' : COLORS.border,
+            },
           ]}
         />
-        <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.xs, marginTop: -SPACING.sm, marginBottom: SPACING.lg }}>
+        <Text
+          style={{
+            color: themeColors.textSecondary,
+            fontSize: FONTS.xs,
+            marginTop: SPACING.xs,
+            marginBottom: SPACING.lg,
+          }}
+        >
           {comment.length}/40
         </Text>
-        <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>Time worked</Text>
-        <View style={styles.row}>
-          {renderTimeChip('Start', workStart, () => openPicker({ type: 'work', edge: 'start' }))}
-          <Text style={{ color: themeColors.textSecondary }}>{'->'}</Text>
-          {renderTimeChip('End', workEnd, () => openPicker({ type: 'work', edge: 'end' }))}
-        </View>
-
-        <Text style={[styles.sectionLabel, { color: themeColors.textPrimary, marginTop: SPACING.lg }]}>Lunch break</Text>
-        <View style={styles.row}>
-          {renderTimeChip('Start', lunchStart, () => openPicker({ type: 'lunch', edge: 'start' }))}
-          <Text style={{ color: themeColors.textSecondary }}>{'->'}</Text>
-          {renderTimeChip('End', lunchEnd, () => openPicker({ type: 'lunch', edge: 'end' }))}
-        </View>
-
         {activeField && (
-          <DateTimePicker
-            value={
-              activeField.type === 'rest'
-                ? timeStringToDate(activeField.edge === 'start' ? restPeriods[activeField.index].start : restPeriods[activeField.index].end)
-                : activeField.type === 'work'
-                  ? timeStringToDate(activeField.edge === 'start' ? workStart : workEnd)
-                  : timeStringToDate(activeField.edge === 'start' ? lunchStart : lunchEnd)
-            }
-            mode="time"
-            display="spinner"
-            onChange={handleTimeChange}
-          />
+          <View style={styles.timePickerContainer}>
+            <DateTimePicker
+              value={pendingTime ?? timeStringToDate(getTimeForField(activeField))}
+              mode="time"
+              display="spinner"
+              onChange={handleTimeChange}
+            />
+            {Platform.OS === 'ios' && (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Confirm selected time"
+                style={styles.pickerDoneButton}
+                onPress={confirmPendingTime}
+              >
+                <Text style={styles.pickerDoneButtonText}>Done</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         )}
 
-        <View style={[styles.complianceBox, { backgroundColor: compliance.compliant ? 'rgba(22,163,74,0.08)' : 'rgba(220,38,38,0.08)' }]}>
+        <View
+          style={[
+            styles.complianceBox,
+            {
+              backgroundColor: compliance.compliant
+                ? 'rgba(22,163,74,0.08)'
+                : 'rgba(220,38,38,0.08)',
+            },
+          ]}
+        >
           <Text style={{ color: compliance.compliant ? '#16a34a' : '#dc2626', fontWeight: '600' }}>
-            {compliance.totalRestHours}h rest {compliance.compliant ? '- compliant' : '- not compliant'}
+            {compliance.totalRestHours}h rest{' '}
+            {compliance.compliant ? '- compliant' : '- not compliant'}
           </Text>
           {compliance.violations.map((v, i) => (
-            <Text key={i} style={{ color: '#dc2626', fontSize: FONTS.sm, marginTop: 2 }}>{v}</Text>
+            <Text key={i} style={{ color: '#dc2626', fontSize: FONTS.sm, marginTop: 2 }}>
+              {v}
+            </Text>
           ))}
         </View>
 
@@ -369,9 +477,42 @@ const styles = StyleSheet.create({
   editablePillText: { color: '#000000', fontSize: FONTS.sm, fontWeight: '600' },
   sectionLabel: { fontSize: FONTS.base, fontWeight: '600', marginBottom: SPACING.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.md },
-  chip: { paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md, borderRadius: BORDER_RADIUS.md },
-  complianceBox: { padding: SPACING.md, borderRadius: BORDER_RADIUS.md, marginVertical: SPACING.lg },
-  saveButton: { backgroundColor: COLORS.primary, padding: SPACING.md, borderRadius: BORDER_RADIUS.md, alignItems: 'center' },
+  chip: {
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  complianceBox: {
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    marginVertical: SPACING.lg,
+  },
+  saveButton: {
+    backgroundColor: COLORS.primary,
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+  },
   saveButtonText: { color: '#fff', fontWeight: '600' },
-  commentInput: { borderWidth: 1, borderRadius: BORDER_RADIUS.md, padding: SPACING.md, fontSize: FONTS.base, marginBottom: SPACING.xs },
+  commentInput: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    fontSize: FONTS.base,
+    marginBottom: SPACING.xs,
+  },
+  timePickerContainer: {
+    marginBottom: SPACING.md,
+  },
+  pickerDoneButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+  },
+  pickerDoneButtonText: {
+    color: '#ffffff',
+    fontSize: FONTS.base,
+    fontWeight: '700',
+  },
 });

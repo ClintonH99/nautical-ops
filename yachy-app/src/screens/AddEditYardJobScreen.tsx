@@ -1,6 +1,6 @@
 /**
  * Add / Edit Yard Period Job Screen
- * Job Title, Description, Yard Location, Contractor, Contact Details, Done by Date. HOD only for create/edit.
+ * Job details, contractor information, and an individual start/end date range.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -23,6 +23,32 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import yardJobsService from '../services/yardJobs';
 import { Input, Button, LoadingSpinner, PageHeader, LabeledDropdown } from '../components';
 import { Department, YardJobPriority } from '../types';
+import { formatLocalDateString, parseLocalDate, toYYYYMMDD } from '../utils';
+
+type MarkedDates = {
+  [date: string]: {
+    startingDay?: boolean;
+    endingDay?: boolean;
+    color: string;
+    textColor?: string;
+  };
+};
+
+function getMarkedRange(start: string, end: string): MarkedDates {
+  const marked: MarkedDates = {};
+  const startDate = parseLocalDate(start);
+  const endDate = parseLocalDate(end);
+  for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
+    const key = toYYYYMMDD(date);
+    marked[key] = {
+      startingDay: key === start,
+      endingDay: key === end,
+      color: COLORS.primary,
+      textColor: COLORS.white,
+    };
+  }
+  return marked;
+}
 
 export const AddEditYardJobScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
@@ -41,12 +67,13 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
   const [yardLocation, setYardLocation] = useState('');
   const [contractorCompanyName, setContractorCompanyName] = useState('');
   const [contactDetails, setContactDetails] = useState('');
-  const [doneByDate, setDoneByDate] = useState<string | null>(null);
+  const [startDate, setStartDate] = useState<string | null>(null);
+  const [endDate, setEndDate] = useState<string | null>(null);
+  const [dateSelectionStep, setDateSelectionStep] = useState<'start' | 'end'>('start');
   const [loading, setLoading] = useState(!!jobId);
   const [saving, setSaving] = useState(false);
 
   const vesselId = user?.vesselId ?? null;
-  const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
   const isEdit = !!jobId;
 
   useEffect(() => {
@@ -71,7 +98,9 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
           setYardLocation(job.yardLocation ?? '');
           setContractorCompanyName(job.contractorCompanyName ?? '');
           setContactDetails(job.contactDetails ?? '');
-          setDoneByDate(job.doneByDate ?? null);
+          setStartDate(job.startDate ?? null);
+          setEndDate(job.endDate ?? null);
+          setDateSelectionStep(job.startDate ? 'end' : 'start');
         }
       } catch (e) {
         console.error('Load job error:', e);
@@ -82,19 +111,24 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
     })();
   }, [jobId, user?.department]);
 
-  const markedDates: Record<
-    string,
-    { selected?: boolean; selectedColor?: string; selectedTextColor?: string; marked?: boolean }
-  > = doneByDate
-    ? {
-        [doneByDate]: {
-          selected: true,
-          selectedColor: COLORS.primary,
-          selectedTextColor: '#FFFFFF',
-          marked: true,
-        },
-      }
-    : {};
+  const markedDates = startDate && endDate ? getMarkedRange(startDate, endDate) : {};
+
+  const handleDatePress = (dateString: string) => {
+    if (dateSelectionStep === 'start') {
+      setStartDate(dateString);
+      setEndDate(dateString);
+      setDateSelectionStep('end');
+      return;
+    }
+
+    if (startDate && dateString < startDate) {
+      setEndDate(startDate);
+      setStartDate(dateString);
+    } else {
+      setEndDate(dateString);
+    }
+    setDateSelectionStep('start');
+  };
 
   const calendarTextColor = themeColors.isDark ? COLORS.white : COLORS.black;
   const calendarTheme = {
@@ -120,6 +154,10 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
       Alert.alert('Error', 'You must be in a vessel to create jobs.');
       return;
     }
+    if (!startDate || !endDate) {
+      Alert.alert('Select dates', 'Please select the start and end dates for this job.');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -135,7 +173,8 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
           yardLocation: yardLocation.trim() || undefined,
           contractorCompanyName: contractorCompanyName.trim() || undefined,
           contactDetails: contactDetails.trim() || undefined,
-          doneByDate: doneByDate || null,
+          startDate,
+          endDate,
         });
         Alert.alert('Updated', 'Job updated.', [
           { text: 'OK', onPress: () => navigation.goBack() },
@@ -154,7 +193,8 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
           yardLocation: yardLocation.trim() || undefined,
           contractorCompanyName: contractorCompanyName.trim() || undefined,
           contactDetails: contactDetails.trim() || undefined,
-          doneByDate: doneByDate || null,
+          startDate,
+          endDate,
         });
         Alert.alert('Created', 'Job added.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
       }
@@ -165,7 +205,6 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
       setSaving(false);
     }
   };
-
 
   if (!vesselId) {
     return (
@@ -349,39 +388,47 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
           onChangeText={setContactDetails}
           placeholder="Phone, email, or other contact info"
         />
-        <Text style={[styles.label, { color: themeColors.textPrimary }]}>
-          Done by date (optional)
-        </Text>
+        <Text style={[styles.label, { color: themeColors.textPrimary }]}>Job dates</Text>
         <Text
           style={[
             styles.hint,
             { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
           ]}
         >
-          Jobs with a deadline change color as time passes (green → yellow → red).
+          {!startDate
+            ? 'Tap the first day of this job'
+            : dateSelectionStep === 'end'
+              ? 'Now tap the final day of this job'
+              : `${formatLocalDateString(startDate)} – ${formatLocalDateString(endDate ?? startDate)}`}
         </Text>
         <View style={[styles.calendarWrap, { backgroundColor: themeColors.surface }]}>
           <Calendar
-            current={doneByDate || new Date().toISOString().slice(0, 10)}
-            minDate={new Date().toISOString().slice(0, 10)}
+            current={startDate || toYYYYMMDD(new Date())}
+            minDate={isEdit ? undefined : toYYYYMMDD(new Date())}
             markedDates={markedDates}
-            onDayPress={({ dateString }) =>
-              setDoneByDate(doneByDate === dateString ? null : dateString)
-            }
+            markingType="period"
+            onDayPress={({ dateString }) => handleDatePress(dateString)}
             theme={calendarTheme}
             hideExtraDays
             hideArrows={false}
           />
         </View>
-        {doneByDate && (
-          <TouchableOpacity style={styles.clearDate} onPress={() => setDoneByDate(null)}>
+        {startDate && (
+          <TouchableOpacity
+            style={styles.clearDate}
+            onPress={() => {
+              setStartDate(null);
+              setEndDate(null);
+              setDateSelectionStep('start');
+            }}
+          >
             <Text
               style={[
                 styles.clearDateText,
                 { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
               ]}
             >
-              Clear deadline
+              Clear dates
             </Text>
           </TouchableOpacity>
         )}

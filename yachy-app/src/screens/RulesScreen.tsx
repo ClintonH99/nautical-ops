@@ -9,7 +9,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   Alert,
 } from 'react-native';
@@ -19,8 +18,15 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import rulesService from '../services/rules';
-import { Button, LoadingSpinner, PageHeader } from '../components';
-import { generateRulesPdf } from '../utils/rulesPdf';
+import {
+  Button,
+  Checkbox,
+  ExportBar,
+  ExportButton,
+  LoadingSpinner,
+  PageHeader,
+} from '../components';
+import { generateRulesDocumentsPdf } from '../utils/rulesPdf';
 import type { Rule } from '../services/rules';
 
 function RulesPreview({
@@ -77,7 +83,9 @@ export const RulesScreen = ({ navigation }: any) => {
   const [items, setItems] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [exportingId, setExportingId] = useState<string | null>(null);
+  const [exportMode, setExportMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [exporting, setExporting] = useState(false);
 
   const load = useCallback(async () => {
     if (!vesselId) return;
@@ -97,15 +105,37 @@ export const RulesScreen = ({ navigation }: any) => {
     }, [load])
   );
 
-  const onDownloadPdf = async (item: Rule) => {
-    setExportingId(item.id);
+  const toggleSelect = (id: string) => {
+    setSelectedIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectedRules = items.filter((item) => selectedIds.has(item.id));
+
+  const onExportSelected = async () => {
+    if (selectedRules.length === 0) {
+      Alert.alert('Nothing selected', 'Tap the Rules boards you want to include, then export.');
+      return;
+    }
+    setExporting(true);
     try {
-      const fn = (item.data?.title || 'Rules').replace(/[^a-z0-9]/gi, '_') + '.pdf';
-      await generateRulesPdf(item.data?.title || item.title, item.data?.rules || [], fn);
+      await generateRulesDocumentsPdf(
+        selectedRules.map((item) => ({
+          title: item.data?.title || item.title,
+          rules: item.data?.rules || [],
+        })),
+        `Rules_On_Board_${new Date().toISOString().slice(0, 10)}.pdf`
+      );
+      setExportMode(false);
+      setSelectedIds(new Set());
     } catch (e) {
       Alert.alert('Error', 'Could not export PDF');
     } finally {
-      setExportingId(null);
+      setExporting(false);
     }
   };
 
@@ -151,7 +181,28 @@ export const RulesScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.pageWrap}>
-      <PageHeader title="Rules On-Board" info={RULES_INFO} infoScreenKey="rules_on_board" />
+      <PageHeader
+        title="Rules On-Board"
+        info={RULES_INFO}
+        infoScreenKey="rules_on_board"
+        actions={
+          <ExportButton
+            active={exportMode}
+            onPress={() => {
+              if (exportMode) setSelectedIds(new Set());
+              setExportMode(!exportMode);
+            }}
+          />
+        }
+      />
+      {exportMode && (
+        <ExportBar
+          count={selectedRules.length}
+          onConfirm={onExportSelected}
+          exporting={exporting}
+          hint="Tap Rules boards to select"
+        />
+      )}
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={styles.content}
@@ -170,18 +221,25 @@ export const RulesScreen = ({ navigation }: any) => {
           <TouchableOpacity
             key={item.id}
             style={[styles.card, { backgroundColor: themeColors.surface }]}
-            onPress={() => onEdit(item)}
-            activeOpacity={isHOD ? 0.8 : 1}
-            disabled={!isHOD}
+            onPress={() => (exportMode ? toggleSelect(item.id) : onEdit(item))}
+            activeOpacity={isHOD || exportMode ? 0.8 : 1}
+            disabled={!isHOD && !exportMode}
           >
             <View style={styles.cardHeader}>
+              {exportMode && (
+                <Checkbox
+                  checked={selectedIds.has(item.id)}
+                  onPress={() => toggleSelect(item.id)}
+                  surface={themeColors.surface}
+                />
+              )}
               <Text
                 style={[styles.cardTitle, { color: themeColors.textPrimary }]}
                 numberOfLines={1}
               >
                 {item.data?.title || item.title}
               </Text>
-              {isHOD && (
+              {isHOD && !exportMode && (
                 <TouchableOpacity
                   onPress={() => onDelete(item)}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -191,27 +249,6 @@ export const RulesScreen = ({ navigation }: any) => {
               )}
             </View>
             <RulesPreview rules={item.data?.rules ?? []} themeColors={themeColors} />
-            <TouchableOpacity
-              style={styles.downloadBtn}
-              onPress={() => onDownloadPdf(item)}
-              disabled={!!exportingId}
-            >
-              {exportingId === item.id ? (
-                <ActivityIndicator
-                  size="small"
-                  color={themeColors.isDark ? COLORS.white : COLORS.primary}
-                />
-              ) : (
-                <Text
-                  style={[
-                    styles.downloadBtnText,
-                    { color: themeColors.isDark ? COLORS.white : COLORS.primary },
-                  ]}
-                >
-                  Export to PDF
-                </Text>
-              )}
-            </TouchableOpacity>
           </TouchableOpacity>
         ))}
         {items.length === 0 && (
@@ -255,6 +292,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: SPACING.sm,
     marginBottom: SPACING.sm,
   },
   cardTitle: { fontSize: FONTS.lg, fontWeight: '600', flex: 1 },
@@ -268,8 +306,6 @@ const styles = StyleSheet.create({
   previewRow: { fontSize: FONTS.sm, marginBottom: 2 },
   previewMore: { fontSize: FONTS.xs, marginTop: 2 },
   previewEmpty: { fontSize: FONTS.sm, fontStyle: 'italic', marginTop: SPACING.sm },
-  downloadBtn: { alignSelf: 'flex-start', paddingVertical: SPACING.xs },
-  downloadBtnText: { fontSize: FONTS.base, color: COLORS.primary, fontWeight: '600' },
   emptyText: { fontSize: FONTS.base, marginBottom: SPACING.xl, textAlign: 'center' },
   createSection: { marginTop: SPACING.lg },
 });

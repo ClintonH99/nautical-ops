@@ -3,7 +3,7 @@
  * Fill-in form for rules (title + rule items), Export to PDF, Publish
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import rulesService from '../services/rules';
-import { Button, LoadingSpinner, PageHeader, ExportButton } from '../components';
+import { Button, LoadingSpinner, PageHeader, ExportButton, EnterToAddHint } from '../components';
 import { generateRulesPdf } from '../utils/rulesPdf';
 
 export const CreateRulesScreen = ({ navigation, route }: any) => {
@@ -32,6 +32,8 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
   const [loading, setLoading] = useState(isEdit);
   const [title, setTitle] = useState('');
   const [rules, setRules] = useState<string[]>(['']);
+  const [activeRuleIndex, setActiveRuleIndex] = useState(0);
+  const ruleInputRefs = useRef<Array<TextInput | null>>([]);
 
   useEffect(() => {
     navigation.setOptions({ title: isEdit ? 'Edit Rules' : 'Create Rules' });
@@ -63,10 +65,27 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
     next[i] = v;
     setRules(next);
   };
-  const addRule = () => setRules([...rules, '']);
+  const addRule = () => {
+    const newIndex = rules.length;
+    setActiveRuleIndex(newIndex);
+    setRules((previous) => [...previous, '']);
+    setTimeout(() => ruleInputRefs.current[newIndex]?.focus(), 50);
+  };
+  const handleRuleSubmit = (index: number) => {
+    if (index < rules.length - 1) {
+      ruleInputRefs.current[index + 1]?.focus();
+      return;
+    }
+    if (rules[index].trim()) addRule();
+  };
   const removeRule = (i: number) => {
     if (rules.length <= 1) return;
     setRules(rules.filter((_, idx) => idx !== i));
+    setActiveRuleIndex((current) => {
+      if (i < current) return current - 1;
+      if (i === current) return Math.max(0, Math.min(i, rules.length - 2));
+      return current;
+    });
   };
 
   const filteredRules = rules.filter(Boolean);
@@ -124,7 +143,8 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
       style={[styles.container, { backgroundColor: themeColors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <PageHeader title="Create Rules"
+      <PageHeader
+        title="Create Rules"
         actions={<ExportButton active={false} onPress={onExport} />}
       />
       <ScrollView
@@ -160,30 +180,35 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
           Rules
         </Text>
         {rules.map((r, i) => (
-          <View key={i} style={styles.ruleRow}>
-            <TextInput
-              style={[
-                styles.input,
-                styles.textArea,
-                styles.flex,
-                { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
-              ]}
-              value={r}
-              onChangeText={(v) => setRule(i, v)}
-              placeholder="Enter rule"
-              placeholderTextColor={themeColors.textSecondary}
-              multiline
-            />
-            {rules.length > 1 && (
-              <TouchableOpacity onPress={() => removeRule(i)}>
-                <Text style={styles.remove}>✕</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          <React.Fragment key={i}>
+            <View style={styles.ruleRow}>
+              <TextInput
+                ref={(element) => {
+                  ruleInputRefs.current[i] = element;
+                }}
+                style={[
+                  styles.input,
+                  styles.flex,
+                  { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+                ]}
+                value={r}
+                onChangeText={(v) => setRule(i, v)}
+                placeholder="Enter rule"
+                placeholderTextColor={themeColors.textSecondary}
+                returnKeyType="done"
+                submitBehavior="submit"
+                onFocus={() => setActiveRuleIndex(i)}
+                onSubmitEditing={() => handleRuleSubmit(i)}
+              />
+              {rules.length > 1 && (
+                <TouchableOpacity onPress={() => removeRule(i)}>
+                  <Text style={styles.remove}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            {i === activeRuleIndex && <EnterToAddHint />}
+          </React.Fragment>
         ))}
-        <TouchableOpacity onPress={addRule}>
-          <Text style={styles.add}>+ New Rule</Text>
-        </TouchableOpacity>
 
         <View style={styles.actions}>
           <Button
@@ -213,16 +238,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  textArea: { minHeight: 60, textAlignVertical: 'top' },
   ruleRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: SPACING.sm,
     marginBottom: SPACING.sm,
   },
   flex: { flex: 1 },
-  remove: { fontSize: FONTS.sm, color: COLORS.primary, paddingTop: SPACING.md },
-  add: { fontSize: FONTS.base, color: COLORS.primary, fontWeight: '600', marginBottom: SPACING.sm },
+  remove: { fontSize: FONTS.sm, color: COLORS.primary, padding: SPACING.sm },
   actions: { marginTop: SPACING.xl, gap: SPACING.md },
   btn: { marginBottom: SPACING.sm },
 });

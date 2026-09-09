@@ -26,14 +26,21 @@ import yardJobsService from '../services/yardJobs';
 import { YardPeriodJob, Department } from '../types';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
-import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner, LabeledDropdown } from '../components';
-import { getTaskUrgencyColor } from '../utils/taskUrgency';
+import {
+  Button,
+  ButtonTagCard,
+  ButtonTagRow,
+  LoadingSpinner,
+  LabeledDropdown,
+} from '../components';
 import { PageHeader, ExportButton, ExportBar } from '../components';
 import { exportYardJobsToPdf } from '../utils/yardJobsPdf';
+import { formatLocalDateString } from '../utils';
 
 const SHIPYARD_INFO = {
   title: 'Shipyard List',
-  description: 'Track defects and jobs for your yard period, from first report through to sign-off.',
+  description:
+    'Track defects and jobs for your yard period, from first report through to sign-off.',
   features: [
     'Add jobs with defect details, location and equipment serial number',
     'Set a priority - green, yellow or red - so the yard knows what is urgent',
@@ -112,8 +119,7 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
     loadJobs();
   };
 
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  const formatDate = (date: string) => formatLocalDateString(date);
 
   const onCreate = () => {
     navigation.navigate('AddEditYardJob');
@@ -160,16 +166,14 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
   };
 
   const renderItem = ({ item }: { item: YardPeriodJob }) => {
-    const borderColor = item.priority
-      ? getPriorityColor(item.priority)
-      : getTaskUrgencyColor(item.doneByDate, item.createdAt, item.status);
+    const borderColor = getPriorityColor(item.priority);
     const isComplete = item.status === 'COMPLETED';
     const deptLabel = item.department
       ? item.department.charAt(0) + item.department.slice(1).toLowerCase()
       : '';
 
-    const dateVal = item.doneByDate
-      ? `${formatDate(item.doneByDate)}${isComplete ? ' \u2713' : ''}`
+    const dateVal = item.startDate
+      ? `${formatDate(item.startDate)}${item.endDate && item.endDate !== item.startDate ? ` – ${formatDate(item.endDate)}` : ''}${isComplete ? ' \u2713' : ''}`
       : item.createdAt
         ? formatDate(item.createdAt)
         : '';

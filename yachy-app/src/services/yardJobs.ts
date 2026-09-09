@@ -19,7 +19,8 @@ export interface CreateYardJobData {
   yardLocation?: string;
   contractorCompanyName?: string;
   contactDetails?: string;
-  doneByDate?: string | null;
+  startDate: string;
+  endDate: string;
 }
 
 export interface UpdateYardJobData {
@@ -33,11 +34,51 @@ export interface UpdateYardJobData {
   yardLocation?: string;
   contractorCompanyName?: string;
   contactDetails?: string;
-  doneByDate?: string | null;
+  startDate?: string;
+  endDate?: string;
   status?: string;
   completedBy?: string;
   completedAt?: string;
   completedByName?: string;
+}
+
+export function validateYardJobDateRange(startDate: string, endDate: string): void {
+  const isoDate = /^\d{4}-\d{2}-\d{2}$/;
+  if (!isoDate.test(startDate) || !isoDate.test(endDate)) {
+    throw new Error('Shipyard job dates must use YYYY-MM-DD format.');
+  }
+  if (endDate < startDate) {
+    throw new Error('The shipyard job end date cannot be before its start date.');
+  }
+}
+
+export function mapRowToYardJob(row: Record<string, unknown>): YardPeriodJob {
+  const legacyDate = (row.done_by_date as string) ?? null;
+  return {
+    id: row.id as string,
+    vesselId: row.vessel_id as string,
+    tripId: (row.trip_id as string) ?? null,
+    jobTitle: row.job_title as string,
+    jobDescription: (row.job_description as string) ?? '',
+    defectDetails: (row.defect_details as string) ?? '',
+    defectLocation: (row.defect_location as string) ?? '',
+    equipmentSerial: (row.equipment_serial as string) ?? '',
+    department: (row.department as Department) ?? 'INTERIOR',
+    priority: (row.priority as YardJobPriority) ?? 'GREEN',
+    yardLocation: (row.yard_location as string) ?? '',
+    contractorCompanyName: (row.contractor_company_name as string) ?? '',
+    contactDetails: (row.contact_details as string) ?? '',
+    startDate: (row.start_date as string) ?? legacyDate,
+    endDate: (row.end_date as string) ?? legacyDate,
+    doneByDate: legacyDate,
+    status: row.status as string as YardPeriodJob['status'],
+    completedBy: row.completed_by as string | undefined,
+    completedAt: row.completed_at as string | undefined,
+    completedByName: row.completed_by_name as string | undefined,
+    createdBy: row.created_by as string | undefined,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  };
 }
 
 class YardJobsService {
@@ -50,7 +91,7 @@ class YardJobsService {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return (data || []).map(this.mapRowToJob);
+      return (data || []).map(mapRowToYardJob);
     } catch (error) {
       console.error('Get yard jobs error:', error);
       return [];
@@ -66,7 +107,7 @@ class YardJobsService {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return (data || []).map(this.mapRowToJob);
+      return (data || []).map(mapRowToYardJob);
     } catch (error) {
       console.error('Get yard jobs by trip error:', error);
       return [];
@@ -75,6 +116,7 @@ class YardJobsService {
 
   async create(input: CreateYardJobData): Promise<YardPeriodJob> {
     try {
+      validateYardJobDateRange(input.startDate, input.endDate);
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -94,7 +136,8 @@ class YardJobsService {
             yard_location: input.yardLocation?.trim() || null,
             contractor_company_name: input.contractorCompanyName?.trim() || null,
             contact_details: input.contactDetails?.trim() || null,
-            done_by_date: input.doneByDate || null,
+            start_date: input.startDate,
+            end_date: input.endDate,
             status: 'NOT_STARTED',
             created_by: user?.id ?? null,
             updated_at: new Date().toISOString(),
@@ -104,7 +147,7 @@ class YardJobsService {
         .single();
 
       if (error) throw error;
-      return this.mapRowToJob(data);
+      return mapRowToYardJob(data);
     } catch (error) {
       console.error('Create yard job error:', error);
       throw error;
@@ -113,6 +156,9 @@ class YardJobsService {
 
   async update(jobId: string, input: UpdateYardJobData): Promise<void> {
     try {
+      if (input.startDate !== undefined && input.endDate !== undefined) {
+        validateYardJobDateRange(input.startDate, input.endDate);
+      }
       const payload: Record<string, unknown> = {
         updated_at: new Date().toISOString(),
       };
@@ -133,7 +179,8 @@ class YardJobsService {
         payload.contractor_company_name = input.contractorCompanyName?.trim() || null;
       if (input.contactDetails !== undefined)
         payload.contact_details = input.contactDetails?.trim() || null;
-      if (input.doneByDate !== undefined) payload.done_by_date = input.doneByDate || null;
+      if (input.startDate !== undefined) payload.start_date = input.startDate;
+      if (input.endDate !== undefined) payload.end_date = input.endDate;
       if (input.status !== undefined) payload.status = input.status;
       if (input.completedBy !== undefined) payload.completed_by = input.completedBy || null;
       if (input.completedAt !== undefined) payload.completed_at = input.completedAt || null;
@@ -175,7 +222,7 @@ class YardJobsService {
         .single();
 
       if (error) throw error;
-      return data ? this.mapRowToJob(data) : null;
+      return data ? mapRowToYardJob(data) : null;
     } catch (error) {
       console.error('Get yard job error:', error);
       return null;
@@ -190,32 +237,6 @@ class YardJobsService {
       completedAt,
       completedByName,
     });
-  }
-
-  private mapRowToJob(row: Record<string, unknown>): YardPeriodJob {
-    return {
-      id: row.id as string,
-      vesselId: row.vessel_id as string,
-      tripId: (row.trip_id as string) ?? null,
-      jobTitle: row.job_title as string,
-      jobDescription: (row.job_description as string) ?? '',
-      defectDetails: (row.defect_details as string) ?? '',
-      defectLocation: (row.defect_location as string) ?? '',
-      equipmentSerial: (row.equipment_serial as string) ?? '',
-      department: (row.department as Department) ?? 'INTERIOR',
-      priority: (row.priority as YardJobPriority) ?? 'GREEN',
-      yardLocation: (row.yard_location as string) ?? '',
-      contractorCompanyName: (row.contractor_company_name as string) ?? '',
-      contactDetails: (row.contact_details as string) ?? '',
-      doneByDate: (row.done_by_date as string) ?? null,
-      status: row.status as string as YardPeriodJob['status'],
-      completedBy: row.completed_by as string | undefined,
-      completedAt: row.completed_at as string | undefined,
-      completedByName: row.completed_by_name as string | undefined,
-      createdBy: row.created_by as string | undefined,
-      createdAt: row.created_at as string,
-      updatedAt: row.updated_at as string,
-    };
   }
 }
 

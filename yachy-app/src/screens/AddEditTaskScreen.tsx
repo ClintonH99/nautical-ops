@@ -24,18 +24,19 @@ import vesselTasksService from '../services/vesselTasks';
 import { usePostHog } from 'posthog-react-native';
 import { TaskCategory, TaskRecurring, Department } from '../types';
 import { Input, Button, LoadingSpinner, PageHeader, LabeledDropdown } from '../components';
+import { formatLocalDateString, toYYYYMMDD } from '../utils';
+import {
+  calculateRecurringTaskDueDate,
+  isTaskRecurrenceAllowed,
+  TASK_RECURRENCE_LABELS,
+  TASK_RECURRENCE_OPTIONS,
+} from '../utils/taskRecurrence';
 
 const CATEGORY_LABELS: Record<TaskCategory, string> = {
   DAILY: 'Daily',
   WEEKLY: 'Weekly',
   MONTHLY: 'Monthly',
 };
-
-const RECURRING_OPTIONS: { value: TaskRecurring; label: string }[] = [
-  { value: '7_DAYS', label: '7 Days' },
-  { value: '14_DAYS', label: '14 Days' },
-  { value: '30_DAYS', label: '30 Days' },
-];
 
 export const AddEditTaskScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
@@ -59,6 +60,7 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
   const vesselId = user?.vesselId ?? null;
   const isEdit = !!taskId;
   const categoryLabel = CATEGORY_LABELS[category];
+  const recurrenceOptions = TASK_RECURRENCE_OPTIONS[category];
 
   useEffect(() => {
     if (categoryFromRoute) setCategory(categoryFromRoute);
@@ -114,6 +116,20 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
     monthTextColor: calendarTextColor,
   };
 
+  const handleCategoryChange = (nextCategory: TaskCategory) => {
+    if (nextCategory === category) return;
+    setCategory(nextCategory);
+    setRecurring(null);
+    setDoneByDate(null);
+    setRecurringExpanded(false);
+  };
+
+  const handleRecurrenceChange = (nextRecurring: Exclude<TaskRecurring, null>) => {
+    setRecurring(nextRecurring);
+    setDoneByDate(calculateRecurringTaskDueDate(nextRecurring));
+    setRecurringExpanded(false);
+  };
+
   const handleSave = async () => {
     const trimmed = title.trim();
     if (!trimmed) {
@@ -124,23 +140,36 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
       Alert.alert('Error', 'You must be in a vessel to create tasks.');
       return;
     }
+    if (category !== 'DAILY' && !isTaskRecurrenceAllowed(category, recurring)) {
+      Alert.alert(
+        'Choose repeat frequency',
+        `Please choose how often this ${categoryLabel.toLowerCase()} task repeats.`
+      );
+      return;
+    }
+
+    const resolvedRecurring = category === 'DAILY' ? null : recurring;
+    const resolvedDoneByDate = resolvedRecurring
+      ? doneByDate || calculateRecurringTaskDueDate(resolvedRecurring)
+      : doneByDate;
 
     setSaving(true);
     try {
       if (isEdit) {
         await vesselTasksService.update(taskId, {
+          category,
           title: trimmed,
           notes: notes.trim() || undefined,
           department,
-          doneByDate: doneByDate || null,
-          recurring: recurring || undefined,
+          doneByDate: resolvedDoneByDate || null,
+          recurring: resolvedRecurring,
         });
         posthog.capture('task_updated', {
           task_id: taskId,
           category,
           department,
-          has_deadline: !!doneByDate,
-          is_recurring: !!recurring,
+          has_deadline: !!resolvedDoneByDate,
+          is_recurring: !!resolvedRecurring,
         });
         Alert.alert('Updated', 'Task updated.', [
           { text: 'OK', onPress: () => navigation.goBack() },
@@ -152,14 +181,14 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
           department,
           title: trimmed,
           notes: notes.trim() || undefined,
-          doneByDate: doneByDate || null,
-          recurring: recurring || undefined,
+          doneByDate: resolvedDoneByDate || null,
+          recurring: resolvedRecurring,
         });
         posthog.capture('task_created', {
           category,
           department,
-          has_deadline: !!doneByDate,
-          is_recurring: !!recurring,
+          has_deadline: !!resolvedDoneByDate,
+          is_recurring: !!resolvedRecurring,
         });
         Alert.alert('Created', 'Task added.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
       }
@@ -260,7 +289,7 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
                     { backgroundColor: category === cat ? undefined : themeColors.surface },
                     category === cat && styles.categoryChipSelected,
                   ]}
-                  onPress={() => setCategory(cat)}
+                  onPress={() => handleCategoryChange(cat)}
                 >
                   <Text
                     style={[
@@ -291,90 +320,83 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
           multiline
           numberOfLines={3}
         />
-        <Text style={[styles.label, { color: themeColors.textPrimary }]}>Recurring (optional)</Text>
-        <TouchableOpacity
-          style={[styles.recurringToggle, { backgroundColor: themeColors.surfaceAlt }]}
-          onPress={() => setRecurringExpanded(!recurringExpanded)}
-        >
-          <Text style={[styles.recurringToggleText, { color: themeColors.textPrimary }]}>
-            {recurring
-              ? (RECURRING_OPTIONS.find((o) => o.value === recurring)?.label ?? 'Selected')
-              : 'Off'}
-          </Text>
-          <Text
-            style={[
-              styles.recurringChevron,
-              { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-            ]}
-          >
-            {recurringExpanded ? '▲' : '▼'}
-          </Text>
-        </TouchableOpacity>
-        {recurringExpanded && (
-          <View style={styles.recurringOptions}>
+        {category !== 'DAILY' && (
+          <>
+            <Text style={[styles.label, { color: themeColors.textPrimary }]}>Repeat every</Text>
             <TouchableOpacity
-              style={[
-                styles.recurringOption,
-                styles.recurringOptionBorder,
-                !recurring && styles.recurringOptionSelected,
-              ]}
-              onPress={() => {
-                setRecurring(null);
-                setRecurringExpanded(false);
-              }}
+              style={[styles.recurringToggle, { backgroundColor: themeColors.surfaceAlt }]}
+              onPress={() => setRecurringExpanded(!recurringExpanded)}
             >
-              <Text style={[styles.recurringOptionText, { color: themeColors.textPrimary }]}>
-                Off
+              <Text style={[styles.recurringToggleText, { color: themeColors.textPrimary }]}>
+                {recurring ? TASK_RECURRENCE_LABELS[recurring] : 'Choose frequency'}
+              </Text>
+              <Text
+                style={[
+                  styles.recurringChevron,
+                  { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                ]}
+              >
+                {recurringExpanded ? '▲' : '▼'}
               </Text>
             </TouchableOpacity>
-            {RECURRING_OPTIONS.map((opt, i) => (
-              <TouchableOpacity
-                key={opt.value}
-                style={[
-                  styles.recurringOption,
-                  i < RECURRING_OPTIONS.length - 1 && styles.recurringOptionBorder,
-                  recurring === opt.value && styles.recurringOptionSelected,
-                ]}
-                onPress={() => {
-                  setRecurring(opt.value);
-                  setRecurringExpanded(false);
-                }}
-              >
-                <Text style={[styles.recurringOptionText, { color: themeColors.textPrimary }]}>
-                  {opt.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+            {recurringExpanded && (
+              <View style={[styles.recurringOptions, { backgroundColor: themeColors.surface }]}>
+                {recurrenceOptions.map((option, index) => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      styles.recurringOption,
+                      index < recurrenceOptions.length - 1 && styles.recurringOptionBorder,
+                      recurring === option && styles.recurringOptionSelected,
+                    ]}
+                    onPress={() => handleRecurrenceChange(option)}
+                  >
+                    <Text style={[styles.recurringOptionText, { color: themeColors.textPrimary }]}>
+                      {TASK_RECURRENCE_LABELS[option]}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            {doneByDate && recurring && (
+              <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
+                {isEdit ? 'Next' : 'First'} due: {formatLocalDateString(doneByDate)}
+              </Text>
+            )}
+          </>
         )}
-        <Text style={[styles.label, { color: themeColors.textPrimary }]}>
-          Done by date (optional)
-        </Text>
-        <Text
-          style={[
-            styles.hint,
-            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-          ]}
-        >
-          Tasks with a deadline change color as time passes (green → yellow → red).
-        </Text>
-        <View style={[styles.calendarWrap, { backgroundColor: themeColors.surface }]}>
-          <Calendar
-            current={doneByDate || new Date().toISOString().slice(0, 10)}
-            minDate={new Date().toISOString().slice(0, 10)}
-            markedDates={markedDates}
-            onDayPress={({ dateString }) =>
-              setDoneByDate(doneByDate === dateString ? null : dateString)
-            }
-            theme={calendarTheme}
-            hideExtraDays
-            hideArrows={false}
-          />
-        </View>
-        {doneByDate && (
-          <TouchableOpacity style={styles.clearDate} onPress={() => setDoneByDate(null)}>
-            <Text style={styles.clearDateText}>Clear deadline</Text>
-          </TouchableOpacity>
+        {category === 'DAILY' && (
+          <>
+            <Text style={[styles.label, { color: themeColors.textPrimary }]}>
+              Done by date (optional)
+            </Text>
+            <Text
+              style={[
+                styles.hint,
+                { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+              ]}
+            >
+              Tasks with a deadline change color as time passes (green → yellow → red).
+            </Text>
+            <View style={[styles.calendarWrap, { backgroundColor: themeColors.surface }]}>
+              <Calendar
+                current={doneByDate || toYYYYMMDD(new Date())}
+                minDate={toYYYYMMDD(new Date())}
+                markedDates={markedDates}
+                onDayPress={({ dateString }) =>
+                  setDoneByDate(doneByDate === dateString ? null : dateString)
+                }
+                theme={calendarTheme}
+                hideExtraDays
+                hideArrows={false}
+              />
+            </View>
+            {doneByDate && (
+              <TouchableOpacity style={styles.clearDate} onPress={() => setDoneByDate(null)}>
+                <Text style={styles.clearDateText}>Clear deadline</Text>
+              </TouchableOpacity>
+            )}
+          </>
         )}
         <View style={styles.actions}>
           <Button

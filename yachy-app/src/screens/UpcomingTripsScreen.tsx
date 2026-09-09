@@ -1,6 +1,6 @@
 /**
  * Upcoming Trips Screen
- * Main trips hub: calendar showing all trips + Guest / Boss / Delivery / Yard Period options
+ * Main trips hub: calendar showing Guest, Boss, and Delivery trips.
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
@@ -69,7 +69,7 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
     GUEST: true,
     BOSS: true,
     DELIVERY: true,
-    YARD_PERIOD: true,
+    YARD_PERIOD: false,
   });
 
   const toggleVisible = (type: TripType) => {
@@ -95,19 +95,22 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
     }, [loadTrips])
   );
 
-
   const onRefresh = () => {
     setRefreshing(true);
     loadTrips();
   };
 
-  const filteredTrips = trips.filter((t) => visibleTypes[t.type]);
+  const filteredTrips = trips.filter(
+    (trip) => trip.type !== 'YARD_PERIOD' && visibleTypes[trip.type]
+  );
   const markedDates = getMarkedDatesFromTrips(filteredTrips, typeColorMap);
 
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = tomorrow.toISOString().slice(0, 10);
-  const tripsStartingTomorrow = trips.filter((t) => t.startDate === tomorrowStr);
+  const tripsStartingTomorrow = trips.filter(
+    (trip) => trip.type !== 'YARD_PERIOD' && trip.startDate === tomorrowStr
+  );
 
   const calendarTextColor = themeColors.isDark ? COLORS.white : COLORS.black;
   const calendarTheme = {
@@ -138,7 +141,15 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.pageWrap}>
-      <PageHeader title="Upcoming Trips" actions={<PillButton label="Edit colors" onPress={() => navigation.navigate('TripColorSettings')} />} />
+      <PageHeader
+        title="Upcoming Trips"
+        actions={
+          <PillButton
+            label="Edit colors"
+            onPress={() => navigation.navigate('TripColorSettings')}
+          />
+        }
+      />
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={styles.content}
@@ -146,7 +157,6 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
         }
       >
-
         {tripsStartingTomorrow.length > 0 && (
           <View style={styles.tripTomorrowBanner}>
             <Text style={styles.tripTomorrowBannerText}>
@@ -176,7 +186,10 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
         </View>
 
         <Text
-          style={[styles.sectionTitle, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}
+          style={[
+            styles.sectionTitle,
+            { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+          ]}
         >
           Trip types
         </Text>
@@ -205,7 +218,10 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
             </TouchableOpacity>
             <TouchableOpacity style={styles.visibilityBtn} onPress={() => toggleVisible('GUEST')}>
               <Text
-                style={[styles.visibilityBtnText, !visibleTypes.GUEST && styles.visibilityBtnTextDim]}
+                style={[
+                  styles.visibilityBtnText,
+                  !visibleTypes.GUEST && styles.visibilityBtnTextDim,
+                ]}
               >
                 {visibleTypes.GUEST ? 'Hide' : 'Show'}
               </Text>
@@ -223,14 +239,19 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
               activeOpacity={0.8}
             >
               <Text style={styles.optionEmoji}>⚓</Text>
-              <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>Boss Trips</Text>
+              <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>
+                Boss Trips
+              </Text>
               <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>
                 Owner / family
               </Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.visibilityBtn} onPress={() => toggleVisible('BOSS')}>
               <Text
-                style={[styles.visibilityBtnText, !visibleTypes.BOSS && styles.visibilityBtnTextDim]}
+                style={[
+                  styles.visibilityBtnText,
+                  !visibleTypes.BOSS && styles.visibilityBtnTextDim,
+                ]}
               >
                 {visibleTypes.BOSS ? 'Hide' : 'Show'}
               </Text>
@@ -255,7 +276,10 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
                 Delivery periods
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.visibilityBtn} onPress={() => toggleVisible('DELIVERY')}>
+            <TouchableOpacity
+              style={styles.visibilityBtn}
+              onPress={() => toggleVisible('DELIVERY')}
+            >
               <Text
                 style={[
                   styles.visibilityBtnText,

@@ -36,7 +36,6 @@ import {
   AddEditPreDepartureChecklistScreen,
   ViewPreDepartureChecklistScreen,
   DeliveryTripsScreen,
-  YardPeriodTripsScreen,
   TripColorSettingsScreen,
   TasksScreen,
   TasksListScreen,
@@ -115,11 +114,7 @@ import {
 import { DEVICE_LIMIT_MESSAGE } from '../services/deviceAccess';
 import { reconcileAppleSubscription } from '../services/iap';
 import { COLORS } from '../constants/theme';
-import {
-  isSentryEnabled,
-  sentryNavigationIntegration,
-  setSentryUserContext,
-} from '../lib/sentry';
+import { isSentryEnabled, sentryNavigationIntegration, setSentryUserContext } from '../lib/sentry';
 
 const Stack = createNativeStackNavigator();
 
@@ -168,7 +163,6 @@ const APP_SCREEN_PATHS = {
   BossTrips: 'trips/boss',
   AddEditTrip: 'trips/edit',
   DeliveryTrips: 'trips/delivery',
-  YardPeriodTrips: 'trips/yard-period',
   TripColorSettings: 'trip-colors',
   VesselCrewSafety: 'safety',
   MusterStation: 'safety/muster',
@@ -930,13 +924,6 @@ export const RootNavigator = () => {
                 name="DeliveryTrips"
                 component={DeliveryTripsScreen}
                 options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="YardPeriodTrips"
-                component={YardPeriodTripsScreen}
-                options={{
-                  headerShown: false,
-                }}
               />
               <Stack.Screen
                 name="TripColorSettings"

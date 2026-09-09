@@ -18,8 +18,17 @@ import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
-import safetyEquipmentService from '../services/safetyEquipment';
-import { Button, LoadingSpinner, PageHeader, ExportButton, ExportBar, Checkbox } from '../components';
+import safetyEquipmentService, {
+  getSafetyEquipmentCategoryOrder,
+} from '../services/safetyEquipment';
+import {
+  Button,
+  LoadingSpinner,
+  PageHeader,
+  ExportButton,
+  ExportBar,
+  Checkbox,
+} from '../components';
 import { generateSafetyEquipmentListPdf } from '../utils/safetyEquipmentPdf';
 import type { SafetyEquipment, SafetyEquipmentData } from '../services/safetyEquipment';
 import { normalizeSafetyItem } from '../services/safetyEquipment';
@@ -53,11 +62,12 @@ function SafetyEquipmentPreview({
   themeColors: { textPrimary: string; textSecondary: string };
 }) {
   const items: { key: string; label: string; locations: string }[] = [];
-  Object.entries(data || {}).forEach(([key, val]) => {
-    if (key === 'vesselName' || key === 'customLabels') return;
+  getSafetyEquipmentCategoryOrder(data, Object.keys(CATEGORY_LABELS)).forEach((key) => {
+    const val = data[key];
     const arr = Array.isArray(val) ? val.filter(Boolean) : [];
     const locations = arr.map((raw) => normalizeSafetyItem(raw as any).location).filter(Boolean);
-    if (locations.length) items.push({ key, label: getLabel(key, data), locations: locations.join(', ') });
+    if (locations.length)
+      items.push({ key, label: getLabel(key, data), locations: locations.join(', ') });
   });
 
   return (
@@ -91,17 +101,16 @@ function SafetyEquipmentPreview({
   );
 }
 
-
 const SAFETY_EQUIPMENT_INFO = {
-            title: 'Safety Equipment',
-            description: 'Log and track safety equipment on-board.',
-            features: [
-              'Record safety equipment and locations',
-              'Track service and expiry dates',
-              'Keep an auditable safety inventory',
-              'Update records after inspections',
-            ],
-          };
+  title: 'Safety Equipment',
+  description: 'Log and track safety equipment on-board.',
+  features: [
+    'Record safety equipment and locations',
+    'Track service and expiry dates',
+    'Keep an auditable safety inventory',
+    'Update records after inspections',
+  ],
+};
 
 export const SafetyEquipmentScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -273,7 +282,10 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
                   surface={themeColors.surface}
                 />
               )}
-              <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
+              <Text
+                style={[styles.cardTitle, { color: themeColors.textPrimary }]}
+                numberOfLines={1}
+              >
                 {item.title}
               </Text>
               {!exportMode && expandedId !== item.id && (
@@ -329,7 +341,12 @@ const styles = StyleSheet.create({
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
-  sectionTitle: { fontSize: FONTS.sm, fontWeight: '600', marginTop: SPACING.xl, marginBottom: SPACING.md },
+  sectionTitle: {
+    fontSize: FONTS.sm,
+    fontWeight: '600',
+    marginTop: SPACING.xl,
+    marginBottom: SPACING.md,
+  },
   editBtn: { fontSize: FONTS.sm, fontWeight: '600' },
   card: {
     borderRadius: BORDER_RADIUS.lg,

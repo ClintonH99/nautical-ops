@@ -5,7 +5,7 @@
  * (built in a later pass).
  */
 
-import React, { useState, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useCallback, useLayoutEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -27,7 +27,7 @@ import { User } from '../types';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { PageHeader, LabeledDropdown } from '../components';
+import { PageHeader, LabeledDropdown, EnterToAddHint } from '../components';
 import {
   getRules,
   saveRules,
@@ -43,6 +43,8 @@ import {
   deleteDutyItem,
   addWatchAssignment,
   removeWatchAssignment,
+  resetDutyCompletionsForVessel,
+  resetWeekAssignments,
 } from '../services/watchDuties';
 
 const DEPT_LABEL: Record<Department, string> = {
@@ -88,7 +90,7 @@ const WATCH_DUTIES_INFO = {
     'View Watch Duty Rules - Captain/HOD can edit, everyone can view and export',
     'See the week-ahead watch assignment schedule',
     'Check off duty checklist items by department',
-    'Adding items: tap + Add item, type, and press enter for each one - press enter on a blank line to finish',
+    'Adding items: tap + Add item, type the item, and press Enter to add each new line',
     'Stay on top of who is covering what, and when',
   ],
 };
@@ -113,6 +115,8 @@ export const WatchDutiesScreen = () => {
   const [addGroupModalVisible, setAddGroupModalVisible] = useState(false);
   const [newGroupTitle, setNewGroupTitle] = useState('');
   const [newGroupDept, setNewGroupDept] = useState<Department>('BRIDGE');
+  const [newGroupDeptPickerVisible, setNewGroupDeptPickerVisible] = useState(false);
+  const [newGroupItems, setNewGroupItems] = useState<string[]>(['']);
   const [addingItemGroupId, setAddingItemGroupId] = useState<string | null>(null);
   const [newItemText, setNewItemText] = useState('');
   const [savingGroup, setSavingGroup] = useState(false);
@@ -125,6 +129,9 @@ export const WatchDutiesScreen = () => {
   const [assignEndTime, setAssignEndTime] = useState('08:00');
   const [activeTimeField, setActiveTimeField] = useState<'start' | 'end' | null>(null);
   const [savingAssignment, setSavingAssignment] = useState(false);
+  const [resettingWeek, setResettingWeek] = useState(false);
+  const [resettingDuties, setResettingDuties] = useState(false);
+  const newGroupItemRefs = useRef<Array<TextInput | null>>([]);
 
   const weekStartDate = getMonday(new Date());
   const weekStart = toDateStr(weekStartDate);
@@ -238,18 +245,132 @@ export const WatchDutiesScreen = () => {
     ]);
   };
 
+  const handleResetWeek = () => {
+    if (!user?.vesselId || !canManage || resettingWeek) return;
+
+    Alert.alert(
+      'Reset this week?',
+      'This will remove every crew assignment from the displayed week. Duty groups will not be changed.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            setResettingWeek(true);
+            try {
+              await resetWeekAssignments(user.vesselId!, weekStart);
+              setAssignments([]);
+            } catch (e) {
+              console.error('Reset week assignments error:', e);
+              Alert.alert('Error', 'Failed to reset this week. Please try again.');
+            } finally {
+              setResettingWeek(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleResetDuties = () => {
+    if (!user?.vesselId || !canManage || resettingDuties) return;
+
+    Alert.alert(
+      'Reset duties for all crew?',
+      'This will untick every duty for every crew member. Duty groups and duty items will not be deleted.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            setResettingDuties(true);
+            try {
+              await resetDutyCompletionsForVessel(user.vesselId!);
+              setDutyGroups((prev) =>
+                prev.map((group) => ({
+                  ...group,
+                  items: group.items.map((item) => ({ ...item, checked: false })),
+                }))
+              );
+            } catch (e) {
+              console.error('Reset duty completions error:', e);
+              Alert.alert('Error', 'Failed to reset duties. Please try again.');
+            } finally {
+              setResettingDuties(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const openAddGroupModal = () => {
+    setNewGroupTitle('');
+    setNewGroupDept('BRIDGE');
+    setNewGroupDeptPickerVisible(false);
+    setNewGroupItems(['']);
+    newGroupItemRefs.current = [];
+    setAddGroupModalVisible(true);
+  };
+
+  const closeAddGroupModal = () => {
+    if (savingGroup) return;
+    setNewGroupDeptPickerVisible(false);
+    setAddGroupModalVisible(false);
+  };
+
+  const handleNewGroupItemChange = (index: number, value: string) => {
+    setNewGroupItems((prev) => prev.map((item, itemIndex) => (itemIndex === index ? value : item)));
+  };
+
+  const handleNewGroupItemSubmit = (index: number) => {
+    if (!newGroupItems[index]?.trim()) return;
+
+    if (index < newGroupItems.length - 1) {
+      newGroupItemRefs.current[index + 1]?.focus();
+      return;
+    }
+
+    setNewGroupItems((prev) => [...prev, '']);
+    requestAnimationFrame(() => newGroupItemRefs.current[index + 1]?.focus());
+  };
+
+  const handleRemoveNewGroupItem = (index: number) => {
+    setNewGroupItems((prev) => {
+      if (prev.length === 1) return [''];
+      return prev.filter((_, itemIndex) => itemIndex !== index);
+    });
+  };
+
   const handleCreateGroup = async () => {
-    if (!user?.vesselId || !newGroupTitle.trim()) return;
+    const title = newGroupTitle.trim();
+    if (!user?.vesselId || !title) return;
+
+    const itemLabels = newGroupItems.map((item) => item.trim()).filter(Boolean);
+    let createdGroupId: string | null = null;
     setSavingGroup(true);
     try {
-      const id = await createDutyGroup(user.vesselId, newGroupTitle.trim(), newGroupDept);
-      setDutyGroups((prev) => [
-        ...prev,
-        { id, title: newGroupTitle.trim(), department: newGroupDept, items: [] },
-      ]);
+      createdGroupId = await createDutyGroup(user.vesselId, title, newGroupDept);
+      for (const [index, label] of itemLabels.entries()) {
+        await addDutyItem(createdGroupId, label, index);
+      }
+
+      const refreshedGroups = await getDutyGroups(user.vesselId, user.id);
+      setDutyGroups(refreshedGroups);
       setNewGroupTitle('');
+      setNewGroupItems(['']);
+      setNewGroupDeptPickerVisible(false);
       setAddGroupModalVisible(false);
     } catch (e) {
+      if (createdGroupId) {
+        try {
+          await deleteDutyGroup(createdGroupId);
+        } catch (cleanupError) {
+          console.error('Clean up duty group error:', cleanupError);
+        }
+      }
       Alert.alert('Error', 'Failed to create duty group.');
     } finally {
       setSavingGroup(false);
@@ -275,12 +396,7 @@ export const WatchDutiesScreen = () => {
   };
 
   const handleAddItem = async (groupId: string) => {
-    // The return key is the only way in or out of this field now: an empty
-    // line means the user is finished adding.
-    if (!newItemText.trim()) {
-      setAddingItemGroupId(null);
-      return;
-    }
+    if (!newItemText.trim()) return;
     const group = dutyGroups.find((g) => g.id === groupId);
     const sortOrder = group ? group.items.length : 0;
     try {
@@ -372,7 +488,25 @@ export const WatchDutiesScreen = () => {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>This week</Text>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary, marginBottom: 0 }]}>
+            This week
+          </Text>
+          {canManage && (
+            <TouchableOpacity
+              onPress={handleResetWeek}
+              disabled={resettingWeek || assignments.length === 0}
+              style={[
+                styles.resetButton,
+                { opacity: resettingWeek || assignments.length === 0 ? 0.45 : 1 },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Reset all crew assignments for this week"
+            >
+              <Text style={styles.resetButtonText}>{resettingWeek ? 'Resetting...' : 'Reset'}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
         <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
           {weekDates.map((d, i) => {
             const dateStr = toDateStr(d);
@@ -776,13 +910,7 @@ export const WatchDutiesScreen = () => {
             Duties
           </Text>
           {canManage && (
-            <TouchableOpacity
-              onPress={() => {
-                setNewGroupTitle('');
-                setNewGroupDept('BRIDGE');
-                setAddGroupModalVisible(true);
-              }}
-            >
+            <TouchableOpacity onPress={openAddGroupModal}>
               <Text style={{ color: COLORS.primary, fontSize: FONTS.sm, fontWeight: '600' }}>
                 + Add group
               </Text>
@@ -790,22 +918,69 @@ export const WatchDutiesScreen = () => {
           )}
         </View>
 
+        {canManage && (
+          <View style={styles.dutiesResetRow}>
+            <TouchableOpacity
+              onPress={handleResetDuties}
+              disabled={resettingDuties || dutyGroups.every((group) => group.items.length === 0)}
+              style={[
+                styles.resetButton,
+                {
+                  opacity:
+                    resettingDuties || dutyGroups.every((group) => group.items.length === 0)
+                      ? 0.45
+                      : 1,
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Reset duties for all crew members"
+            >
+              <Text style={styles.resetButtonText}>
+                {resettingDuties ? 'Resetting...' : 'Reset'}
+              </Text>
+            </TouchableOpacity>
+            <Text style={[styles.resetNote, { color: themeColors.textSecondary }]}>
+              Resets duties for all crew members.
+            </Text>
+          </View>
+        )}
+
         {addGroupModalVisible && (
-          <Modal visible transparent animationType="fade">
+          <Modal visible transparent animationType="slide" onRequestClose={closeAddGroupModal}>
             <KeyboardAvoidingView
-              style={styles.modalBackdrop}
+              style={styles.groupSheetBackdrop}
               behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
-              <Pressable
-                style={{ flex: 1, width: '100%', justifyContent: 'center', alignItems: 'center' }}
-                onPress={() => setAddGroupModalVisible(false)}
+              <Pressable style={StyleSheet.absoluteFill} onPress={closeAddGroupModal} />
+              <View
+                style={[styles.groupSheet, { backgroundColor: themeColors.surface }]}
+                onStartShouldSetResponder={() => true}
               >
-                <View
-                  style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
-                  onStartShouldSetResponder={() => true}
+                <View style={styles.groupSheetHeader}>
+                  <Text style={[styles.groupSheetTitle, { color: themeColors.textPrimary }]}>
+                    Create Duty Group
+                  </Text>
+                  <TouchableOpacity
+                    onPress={closeAddGroupModal}
+                    disabled={savingGroup}
+                    style={styles.groupSheetClose}
+                    accessibilityRole="button"
+                    accessibilityLabel="Close create duty group"
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text style={[styles.groupSheetCloseText, { color: themeColors.textPrimary }]}>
+                      ×
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  contentContainerStyle={styles.groupSheetContent}
                 >
-                  <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
-                    New duty group
+                  <Text style={[styles.groupFieldLabel, { color: themeColors.textPrimary }]}>
+                    Group name
                   </Text>
                   <TextInput
                     value={newGroupTitle}
@@ -813,54 +988,133 @@ export const WatchDutiesScreen = () => {
                     placeholder="e.g. Morning Duties"
                     placeholderTextColor={themeColors.textSecondary}
                     style={[
-                      styles.rulesInput,
+                      styles.groupNameInput,
                       {
                         color: themeColors.textPrimary,
                         borderColor: themeColors.textSecondary,
-                        minHeight: 44,
-                        marginBottom: SPACING.md,
+                        backgroundColor: themeColors.background,
                       },
                     ]}
                   />
+
+                  <LabeledDropdown
+                    label="Department"
+                    value={DEPT_LABEL[newGroupDept]}
+                    open={newGroupDeptPickerVisible}
+                    onPress={() => setNewGroupDeptPickerVisible((visible) => !visible)}
+                  />
+                  {newGroupDeptPickerVisible && (
+                    <View
+                      style={[
+                        styles.groupDepartmentOptions,
+                        {
+                          borderColor: themeColors.textSecondary + '50',
+                          backgroundColor: themeColors.background,
+                        },
+                      ]}
+                    >
+                      {ALL_DEPARTMENTS.map((dept) => (
+                        <TouchableOpacity
+                          key={dept}
+                          style={[
+                            styles.groupDepartmentOption,
+                            newGroupDept === dept && {
+                              backgroundColor: COLORS.primary + '18',
+                            },
+                          ]}
+                          onPress={() => {
+                            setNewGroupDept(dept);
+                            setNewGroupDeptPickerVisible(false);
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: themeColors.textPrimary,
+                              fontSize: FONTS.base,
+                              fontWeight: newGroupDept === dept ? '600' : '400',
+                            }}
+                          >
+                            {DEPT_LABEL[dept]}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+
                   <Text
-                    style={{
-                      color: themeColors.textSecondary,
-                      fontSize: FONTS.sm,
-                      marginBottom: 8,
-                    }}
+                    style={[
+                      styles.groupFieldLabel,
+                      { color: themeColors.textPrimary, marginTop: SPACING.md },
+                    ]}
                   >
-                    Department
+                    Duty items
                   </Text>
-                  {ALL_DEPARTMENTS.map((dept) => (
-                    <TouchableOpacity
-                      key={dept}
-                      style={[styles.modalItem, newGroupDept === dept && styles.modalItemSelected]}
-                      onPress={() => setNewGroupDept(dept)}
-                    >
-                      <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base }}>
-                        {DEPT_LABEL[dept]}
-                      </Text>
-                    </TouchableOpacity>
+                  {newGroupItems.map((item, index) => (
+                    <View key={index}>
+                      <View
+                        style={[
+                          styles.groupItemInputRow,
+                          {
+                            borderColor: themeColors.textSecondary,
+                            backgroundColor: themeColors.background,
+                          },
+                        ]}
+                      >
+                        <TextInput
+                          ref={(ref) => {
+                            newGroupItemRefs.current[index] = ref;
+                          }}
+                          value={item}
+                          onChangeText={(value) => handleNewGroupItemChange(index, value)}
+                          placeholder="Add a duty item"
+                          placeholderTextColor={themeColors.textSecondary}
+                          style={[styles.groupItemInput, { color: themeColors.textPrimary }]}
+                          returnKeyType="next"
+                          submitBehavior="submit"
+                          onSubmitEditing={() => handleNewGroupItemSubmit(index)}
+                        />
+                        {(newGroupItems.length > 1 || item.length > 0) && (
+                          <TouchableOpacity
+                            onPress={() => handleRemoveNewGroupItem(index)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Remove duty item ${index + 1}`}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          >
+                            <Text
+                              style={[styles.groupItemRemove, { color: themeColors.textPrimary }]}
+                            >
+                              ×
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                      {index === newGroupItems.length - 1 && <EnterToAddHint />}
+                    </View>
                   ))}
-                  <View style={{ flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.md }}>
-                    <TouchableOpacity
-                      onPress={() => setAddGroupModalVisible(false)}
-                      style={styles.secondaryButton}
-                    >
-                      <Text style={{ color: themeColors.textPrimary }}>Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={handleCreateGroup}
-                      disabled={savingGroup || !newGroupTitle.trim()}
-                      style={styles.primaryButton}
-                    >
-                      <Text style={{ color: '#fff', fontWeight: '600' }}>
-                        {savingGroup ? 'Creating...' : 'Create'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </Pressable>
+
+                  <TouchableOpacity
+                    onPress={handleCreateGroup}
+                    disabled={savingGroup || !newGroupTitle.trim()}
+                    style={[
+                      styles.groupCreateButton,
+                      { opacity: savingGroup || !newGroupTitle.trim() ? 0.6 : 1 },
+                    ]}
+                  >
+                    <Text style={styles.groupCreateButtonText}>
+                      {savingGroup ? 'Creating...' : 'Create Group'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={closeAddGroupModal}
+                    disabled={savingGroup}
+                    style={styles.groupCancelButton}
+                  >
+                    <Text style={[styles.groupCancelText, { color: themeColors.textPrimary }]}>
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </View>
             </KeyboardAvoidingView>
           </Modal>
         )}
@@ -971,9 +1225,7 @@ export const WatchDutiesScreen = () => {
                 ))}
                 {canManage &&
                   (addingItemGroupId === group.id ? (
-                    <View
-                      style={{ flexDirection: 'row', gap: 8, marginTop: 6, alignItems: 'center' }}
-                    >
+                    <View style={{ marginTop: 6 }}>
                       <TextInput
                         value={newItemText}
                         onChangeText={setNewItemText}
@@ -991,9 +1243,10 @@ export const WatchDutiesScreen = () => {
                         ]}
                         autoFocus
                         returnKeyType="done"
-                        blurOnSubmit={false}
+                        submitBehavior="submit"
                         onSubmitEditing={() => handleAddItem(group.id)}
                       />
+                      <EnterToAddHint />
                     </View>
                   ) : (
                     <TouchableOpacity
@@ -1020,6 +1273,37 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   sectionTitle: { fontSize: FONTS.base, fontWeight: '600', marginBottom: SPACING.sm },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
+  },
+  resetButton: {
+    minHeight: 34,
+    borderWidth: 1,
+    borderColor: '#dc2626',
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resetButtonText: {
+    color: '#dc2626',
+    fontSize: FONTS.sm,
+    fontWeight: '600',
+  },
+  dutiesResetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginTop: -SPACING.xs,
+    marginBottom: SPACING.md,
+  },
+  resetNote: {
+    flex: 1,
+    fontSize: FONTS.xs,
+  },
   card: { borderRadius: BORDER_RADIUS.lg, padding: SPACING.md },
   cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   weekRow: {
@@ -1084,5 +1368,111 @@ const styles = StyleSheet.create({
   },
   modalItemSelected: {
     backgroundColor: COLORS.gray200,
+  },
+  groupSheetBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  groupSheet: {
+    width: '100%',
+    maxHeight: '92%',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    overflow: 'hidden',
+  },
+  groupSheetHeader: {
+    minHeight: 68,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 56,
+    paddingTop: SPACING.sm,
+  },
+  groupSheetTitle: {
+    fontSize: FONTS.xl,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  groupSheetClose: {
+    position: 'absolute',
+    right: SPACING.lg,
+    top: SPACING.md,
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  groupSheetCloseText: {
+    fontSize: 32,
+    fontWeight: '300',
+    lineHeight: 34,
+  },
+  groupSheetContent: {
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.xl,
+  },
+  groupFieldLabel: {
+    fontSize: FONTS.base,
+    fontWeight: '600',
+    marginBottom: SPACING.sm,
+  },
+  groupNameInput: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    minHeight: 48,
+    paddingHorizontal: SPACING.md,
+    fontSize: FONTS.base,
+  },
+  groupDepartmentOptions: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    overflow: 'hidden',
+    marginTop: -SPACING.xs,
+    marginBottom: SPACING.sm,
+  },
+  groupDepartmentOption: {
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+  },
+  groupItemInputRow: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    marginBottom: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+  },
+  groupItemInput: {
+    flex: 1,
+    paddingVertical: SPACING.sm,
+    fontSize: FONTS.base,
+  },
+  groupItemRemove: {
+    fontSize: 26,
+    fontWeight: '300',
+    marginLeft: SPACING.sm,
+  },
+  groupCreateButton: {
+    minHeight: 50,
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: SPACING.sm,
+  },
+  groupCreateButtonText: {
+    color: COLORS.white,
+    fontSize: FONTS.base,
+    fontWeight: '700',
+  },
+  groupCancelButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.md,
+  },
+  groupCancelText: {
+    fontSize: FONTS.base,
+    fontWeight: '600',
   },
 });

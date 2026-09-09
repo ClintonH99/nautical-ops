@@ -23,7 +23,16 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import uniformsService, { Uniform } from '../services/uniforms';
 import { Department } from '../types';
 import { exportUniformsToPdf } from '../utils/uniformsPdf';
-import { Button, Input, ButtonTagCard, ButtonTagRow, PageHeader, ExportButton, ExportBar, LabeledDropdown } from '../components';
+import {
+  Button,
+  Input,
+  ButtonTagCard,
+  ButtonTagRow,
+  PageHeader,
+  ExportButton,
+  ExportBar,
+  LabeledDropdown,
+} from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -104,7 +113,13 @@ export const UniformsScreen = ({ navigation }: any) => {
   };
 
   const selectAllDepartments = () => {
-    setVisibleDepartments({ BRIDGE: true, ENGINEERING: true, EXTERIOR: true, INTERIOR: true, GALLEY: true });
+    setVisibleDepartments({
+      BRIDGE: true,
+      ENGINEERING: true,
+      EXTERIOR: true,
+      INTERIOR: true,
+      GALLEY: true,
+    });
   };
 
   const handleDelete = (u: Uniform) => {
@@ -140,7 +155,11 @@ export const UniformsScreen = ({ navigation }: any) => {
     }
   }, [vesselId]);
 
-  useFocusEffect(useCallback(() => { loadUniforms(); }, [loadUniforms]));
+  useFocusEffect(
+    useCallback(() => {
+      loadUniforms();
+    }, [loadUniforms])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -149,19 +168,24 @@ export const UniformsScreen = ({ navigation }: any) => {
 
   const departmentDisplayText = DEPARTMENTS.every((d) => visibleDepartments[d])
     ? 'All departments'
-    : DEPARTMENTS.filter((d) => visibleDepartments[d]).map((d) => d.charAt(0) + d.slice(1).toLowerCase()).join(', ');
+    : DEPARTMENTS.filter((d) => visibleDepartments[d])
+        .map((d) => d.charAt(0) + d.slice(1).toLowerCase())
+        .join(', ');
 
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to use Uniforms.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to use Uniforms.
+        </Text>
       </View>
     );
   }
 
   return (
     <View style={styles.pageWrap}>
-      <PageHeader title="Uniforms"
+      <PageHeader
+        title="Uniforms"
         actions={
           <ExportButton
             active={exportMode}
@@ -172,11 +196,21 @@ export const UniformsScreen = ({ navigation }: any) => {
           />
         }
       />
+      {exportMode && (
+        <ExportBar
+          count={selectedUniforms.length}
+          onConfirm={handleExportPdf}
+          exporting={exporting}
+          hint="Tap uniforms to select"
+        />
+      )}
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
+        }
       >
         <View style={styles.searchRow}>
           <Input
@@ -196,15 +230,6 @@ export const UniformsScreen = ({ navigation }: any) => {
             fullWidth
           />
         </View>
-        {exportMode && (
-          <ExportBar
-            count={selectedUniforms.length}
-            onConfirm={handleExportPdf}
-            exporting={exporting}
-            hint="Tap uniforms to select"
-          />
-        )}
-
         <LabeledDropdown
           label="Department"
           value={departmentDisplayText}
@@ -213,22 +238,48 @@ export const UniformsScreen = ({ navigation }: any) => {
         />
         {departmentDropdownOpen && (
           <Modal visible transparent animationType="fade">
-            <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentDropdownOpen(false)}>
-              <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
-                <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Filter by department</Text>
+            <Pressable
+              style={styles.modalBackdrop}
+              onPress={() => setDepartmentDropdownOpen(false)}
+            >
+              <View
+                style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+                onStartShouldSetResponder={() => true}
+              >
+                <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+                  Filter by department
+                </Text>
                 <TouchableOpacity
-                  style={[styles.modalItem, DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
-                  onPress={() => { selectAllDepartments(); setDepartmentDropdownOpen(false); }}
+                  style={[
+                    styles.modalItem,
+                    DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected,
+                  ]}
+                  onPress={() => {
+                    selectAllDepartments();
+                    setDepartmentDropdownOpen(false);
+                  }}
                 >
-                  <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>All Departments</Text>
+                  <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
+                    All Departments
+                  </Text>
                 </TouchableOpacity>
                 {DEPARTMENTS.map((dept) => (
                   <TouchableOpacity
                     key={dept}
-                    style={[styles.modalItem, visibleDepartments[dept] && !DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
-                    onPress={() => { selectDepartment(dept); setDepartmentDropdownOpen(false); }}
+                    style={[
+                      styles.modalItem,
+                      visibleDepartments[dept] &&
+                        !DEPARTMENTS.every((d) => visibleDepartments[d]) &&
+                        styles.modalItemSelected,
+                    ]}
+                    onPress={() => {
+                      selectDepartment(dept);
+                      setDepartmentDropdownOpen(false);
+                    }}
                   >
-                    <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>{dept.charAt(0) + dept.slice(1).toLowerCase()}</Text>
+                    <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
+                      {dept.charAt(0) + dept.slice(1).toLowerCase()}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -240,7 +291,9 @@ export const UniformsScreen = ({ navigation }: any) => {
           <ActivityIndicator size="small" color={COLORS.primary} style={styles.loader} />
         ) : filteredUniforms.length === 0 ? (
           <Text style={[styles.empty, { color: themeColors.textSecondary }]}>
-            {uniforms.length === 0 ? 'No uniform labels yet. Tap Create to add one.' : 'No labels match your search or department filter.'}
+            {uniforms.length === 0
+              ? 'No uniform labels yet. Tap Create to add one.'
+              : 'No labels match your search or department filter.'}
           </Text>
         ) : (
           filteredUniforms.map((u) => {
@@ -255,12 +308,27 @@ export const UniformsScreen = ({ navigation }: any) => {
                 selected={exportMode && selected}
                 onEdit={() => navigation.navigate('AddEditUniform', { uniformId: u.id })}
                 onDelete={() => handleDelete(u)}
-                onPress={!exportMode ? () => navigation.navigate('AddEditUniform', { uniformId: u.id }) : undefined}
+                onPress={
+                  !exportMode
+                    ? () => navigation.navigate('AddEditUniform', { uniformId: u.id })
+                    : undefined
+                }
               >
-                <View style={[styles.deptBadge, { backgroundColor: getDepartmentColor(u.department, overrides) }]}>
-                  <Text style={styles.deptBadgeText}>{(u.department ?? 'INTERIOR').charAt(0) + (u.department ?? 'INTERIOR').slice(1).toLowerCase()}</Text>
+                <View
+                  style={[
+                    styles.deptBadge,
+                    { backgroundColor: getDepartmentColor(u.department, overrides) },
+                  ]}
+                >
+                  <Text style={styles.deptBadgeText}>
+                    {(u.department ?? 'INTERIOR').charAt(0) +
+                      (u.department ?? 'INTERIOR').slice(1).toLowerCase()}
+                  </Text>
                 </View>
-                <ButtonTagRow label="Entries" value={`${u.entries?.length ?? 0} ${(u.entries?.length ?? 0) === 1 ? 'entry' : 'entries'}`} />
+                <ButtonTagRow
+                  label="Entries"
+                  value={`${u.entries?.length ?? 0} ${(u.entries?.length ?? 0) === 1 ? 'entry' : 'entries'}`}
+                />
               </ButtonTagCard>
             );
           })
@@ -282,23 +350,43 @@ const styles = StyleSheet.create({
   exportBtn: { marginTop: SPACING.sm },
   filterLabel: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs },
   dropdown: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg, borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.lg,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: SPACING.lg,
   },
   dropdownText: { fontSize: FONTS.base, fontWeight: '500' },
   dropdownChevron: { fontSize: 10 },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
+  },
   modalBox: { borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, minWidth: 260, maxHeight: 400 },
   modalTitle: { fontSize: FONTS.lg, fontWeight: '600', marginBottom: SPACING.md },
-  modalItem: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg, borderRadius: BORDER_RADIUS.sm },
+  modalItem: {
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: BORDER_RADIUS.sm,
+  },
   modalItemSelected: { backgroundColor: COLORS.gray200 },
   modalItemText: { fontSize: FONTS.base },
   loader: { marginVertical: SPACING.xl },
   empty: { fontSize: FONTS.base, paddingVertical: SPACING.xl },
   deptBadge: {
-    paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: BORDER_RADIUS.sm,
-    marginTop: SPACING.xs, marginBottom: SPACING.sm, alignSelf: 'flex-start',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.sm,
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.sm,
+    alignSelf: 'flex-start',
   },
   deptBadgeText: { fontSize: FONTS.xs, fontWeight: '600', color: COLORS.white },
 });

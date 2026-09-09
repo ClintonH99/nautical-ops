@@ -15,8 +15,19 @@ const STATUS_LABEL: Record<string, string> = {
   COMPLETED: 'Completed',
 };
 
+function formatDateRange(job: YardPeriodJob): string {
+  if (!job.startDate) return '';
+  if (!job.endDate || job.endDate === job.startDate) return job.startDate.slice(0, 10);
+  return `${job.startDate.slice(0, 10)} – ${job.endDate.slice(0, 10)}`;
+}
+
 function sanitizeFilename(s: string): string {
-  return s.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_').trim() || 'Shipyard';
+  return (
+    s
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, '_')
+      .trim() || 'Shipyard'
+  );
 }
 
 function getYardJobsPdfFilename(jobs: YardPeriodJob[]): string {
@@ -56,7 +67,7 @@ export function buildYardJobsHtml(jobs: YardPeriodJob[], title: string = 'Shipya
       row('Yard location', job.yardLocation),
       row('Contractor', job.contractorCompanyName),
       row('Contact', job.contactDetails),
-      row('Done by', job.doneByDate ? job.doneByDate.slice(0, 10) : ''),
+      row('Job dates', formatDateRange(job)),
       row('Status', status),
       row('Completed by', job.completedByName),
     ].join('');

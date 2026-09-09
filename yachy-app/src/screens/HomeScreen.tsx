@@ -65,7 +65,11 @@ function getMarkedDatesFromTrips(trips: Trip[], typeColorMap: Record<string, str
   Object.entries(byDate).forEach(([date, entries]) => {
     const seen = new Set<string>();
     const periods = entries
-      .filter((e) => { if (seen.has(e.tripType)) return false; seen.add(e.tripType); return true; })
+      .filter((e) => {
+        if (seen.has(e.tripType)) return false;
+        seen.add(e.tripType);
+        return true;
+      })
       .map((e) => ({
         startingDay: true,
         endingDay: true,
@@ -76,11 +80,9 @@ function getMarkedDatesFromTrips(trips: Trip[], typeColorMap: Record<string, str
   return marked;
 }
 
-function getMarkedDatesFromYardPeriodTrips(
-  trips: Trip[],
-  defaultColor: string,
-  getDeptColor: (dept: string) => string,
-  yardJobs: YardPeriodJob[] = []
+function getMarkedDatesFromYardJobs(
+  yardJobs: YardPeriodJob[],
+  getDeptColor: (dept: string) => string
 ): MarkedDates {
   const marked: MarkedDates = {};
   // Track which colours are already on a given day so several jobs from the
@@ -95,22 +97,14 @@ function getMarkedDatesFromYardPeriodTrips(
     (marked as any)[key].periods.push({ startingDay: true, endingDay: true, color });
   };
 
-  trips
-    .filter((t) => t.type === 'YARD_PERIOD')
-    .forEach((trip) => {
-      const color = trip.department ? getDeptColor(trip.department) : defaultColor;
-      const start = parseLocalDate(trip.startDate);
-      const end = parseLocalDate(trip.endDate);
-      for (let d = new Date(start.getTime()); d <= end; d.setDate(d.getDate() + 1)) {
-        addMark(toYYYYMMDD(d), color);
-      }
-    });
-
-  // Shipyard List jobs with a done-by date also show on this calendar.
   yardJobs.forEach((job) => {
-    if (!job.doneByDate) return;
-    const color = job.department ? getDeptColor(job.department) : defaultColor;
-    addMark(job.doneByDate.slice(0, 10), color);
+    if (!job.startDate || !job.endDate) return;
+    const color = getDeptColor(job.department);
+    const start = parseLocalDate(job.startDate);
+    const end = parseLocalDate(job.endDate);
+    for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+      addMark(toYYYYMMDD(date), color);
+    }
   });
 
   return marked;
@@ -160,16 +154,10 @@ export const HomeScreen = ({ navigation }: any) => {
   const typeColorMap = tripColors
     ? getTripTypeColorMap(tripColors)
     : getTripTypeColorMap(DEFAULT_COLORS);
-  const yardPeriodColor = tripColors?.yardPeriod ?? DEFAULT_COLORS.yardPeriod;
   const getDeptColor = (dept: string) => getDepartmentColor(dept, overrides);
 
   const markedDatesTrips = getMarkedDatesFromTrips(trips, typeColorMap);
-  const markedDatesYardPeriod = getMarkedDatesFromYardPeriodTrips(
-    trips,
-    yardPeriodColor,
-    getDeptColor,
-    yardJobs
-  );
+  const markedDatesYardPeriod = getMarkedDatesFromYardJobs(yardJobs, getDeptColor);
   const markedDates = calendarMode === 'trips' ? markedDatesTrips : markedDatesYardPeriod;
 
   const loadTrips = useCallback(async () => {
@@ -351,7 +339,9 @@ export const HomeScreen = ({ navigation }: any) => {
                           styles.calendarModeBtnText,
                           {
                             color:
-                              calendarMode === 'trips' ? CALENDAR_ACCENT : themeColors.textSecondary,
+                              calendarMode === 'trips'
+                                ? CALENDAR_ACCENT
+                                : themeColors.textSecondary,
                           },
                         ]}
                       >
@@ -363,7 +353,9 @@ export const HomeScreen = ({ navigation }: any) => {
                         styles.calendarModeBtn,
                         {
                           borderColor:
-                            calendarMode === 'yardPeriod' ? CALENDAR_ACCENT : themeColors.surfaceAlt,
+                            calendarMode === 'yardPeriod'
+                              ? CALENDAR_ACCENT
+                              : themeColors.surfaceAlt,
                           backgroundColor: themeColors.surface,
                         },
                       ]}
@@ -470,12 +462,14 @@ export const HomeScreen = ({ navigation }: any) => {
                     },
                   ]}
                   onPress={() =>
-                    navigation.navigate(calendarMode === 'trips' ? 'UpcomingTrips' : 'YardPeriodTrips')
+                    navigation.navigate(
+                      calendarMode === 'trips' ? 'UpcomingTrips' : 'YardPeriodJobs'
+                    )
                   }
                   activeOpacity={0.8}
                 >
                   <Text style={[styles.seeTripsButtonText, { color: CALENDAR_ACCENT }]}>
-                    {calendarMode === 'trips' ? 'See trips' : 'See yard periods'}
+                    {calendarMode === 'trips' ? 'See trips' : 'See Shipyard List'}
                   </Text>
                   <Text style={[styles.seeTripsArrow, { color: CALENDAR_ACCENT }]}>›</Text>
                 </TouchableOpacity>
@@ -567,7 +561,11 @@ const styles = StyleSheet.create({
   },
   bannerImageStyle: { resizeMode: 'cover' },
   bannerOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     backgroundColor: 'rgba(0,0,0,0.35)',
   },
   bannerVesselName: {
@@ -731,7 +729,11 @@ const styles = StyleSheet.create({
   },
   categoryImageStyle: { borderRadius: BORDER_RADIUS.lg },
   categoryOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     backgroundColor: 'rgba(0,0,0,0.3)',
     borderRadius: BORDER_RADIUS.lg,
   },

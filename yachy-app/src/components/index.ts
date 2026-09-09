@@ -17,3 +17,4 @@ export { PillButton } from './PillButton';
 export { ExportBar } from './ExportBar';
 export { Checkbox } from './Checkbox';
 export { LabeledDropdown } from './LabeledDropdown';
+export { EnterToAddHint } from './EnterToAddHint';

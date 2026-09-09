@@ -23,7 +23,14 @@ import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import inventoryService, { InventoryItemRow } from '../services/inventory';
 import { Department } from '../types';
-import { Input, Button, LoadingSpinner, PageHeader, LabeledDropdown } from '../components';
+import {
+  Input,
+  Button,
+  LoadingSpinner,
+  PageHeader,
+  LabeledDropdown,
+  EnterToAddHint,
+} from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -43,6 +50,7 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
   const [rows, setRows] = useState<InventoryItemRow[]>([{ ...defaultRow }]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [activeRowIndex, setActiveRowIndex] = useState(0);
 
   const vesselId = user?.vesselId ?? null;
 
@@ -82,12 +90,18 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
 
   const addRow = () => {
     const newIndex = rows.length;
+    setActiveRowIndex(newIndex);
     setRows((prev) => [...prev, { ...defaultRow }]);
     setTimeout(() => amountInputRefs.current[newIndex]?.focus(), 50);
   };
   const removeRow = (index: number) => {
     if (rows.length <= 1) return;
     setRows((prev) => prev.filter((_, i) => i !== index));
+    setActiveRowIndex((current) => {
+      if (index < current) return current - 1;
+      if (index === current) return Math.max(0, Math.min(index, rows.length - 2));
+      return current;
+    });
   };
   const setRowAt = (index: number, field: 'amount' | 'item', value: string) => {
     setRows((prev) => {
@@ -254,46 +268,57 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
         </Text>
         <View style={[styles.table, { backgroundColor: themeColors.surface }]}>
           {rows.map((row, index) => (
-            <View key={index} style={styles.tableRow}>
-              <TextInput
-                ref={(el) => { amountInputRefs.current[index] = el; }}
-                style={[
-                  styles.tableInput,
-                  styles.amountCol,
-                  { color: themeColors.textPrimary, backgroundColor: themeColors.surface },
-                ]}
-                value={row.amount}
-                onChangeText={(v) => setRowAt(index, 'amount', v)}
-                placeholder="#"
-                keyboardType="decimal-pad"
-                placeholderTextColor={themeColors.textSecondary}
-                returnKeyType="next"
-              />
-              <TextInput
-                style={[
-                  styles.tableInput,
-                  styles.itemCol,
-                  { color: themeColors.textPrimary, backgroundColor: themeColors.surface },
-                ]}
-                value={row.item}
-                onChangeText={(v) => setRowAt(index, 'item', v)}
-                placeholder="Item"
-                placeholderTextColor={themeColors.textSecondary}
-                returnKeyType="done"
-                onSubmitEditing={() => {
-                  if (index === rows.length - 1) addRow();
-                }}
-              />
-              <TouchableOpacity
-                onPress={() => removeRow(index)}
-                style={styles.removeBtn}
-                disabled={rows.length <= 1}
-              >
-                <Text style={[styles.removeBtnText, rows.length <= 1 && styles.removeBtnDisabled]}>
-                  Remove
-                </Text>
-              </TouchableOpacity>
-            </View>
+            <React.Fragment key={index}>
+              <View style={styles.tableRow}>
+                <TextInput
+                  ref={(el) => {
+                    amountInputRefs.current[index] = el;
+                  }}
+                  style={[
+                    styles.tableInput,
+                    styles.amountCol,
+                    { color: themeColors.textPrimary, backgroundColor: themeColors.surface },
+                  ]}
+                  value={row.amount}
+                  onChangeText={(v) => setRowAt(index, 'amount', v)}
+                  placeholder="#"
+                  keyboardType="decimal-pad"
+                  placeholderTextColor={themeColors.textSecondary}
+                  returnKeyType="next"
+                  onFocus={() => setActiveRowIndex(index)}
+                />
+                <TextInput
+                  style={[
+                    styles.tableInput,
+                    styles.itemCol,
+                    { color: themeColors.textPrimary, backgroundColor: themeColors.surface },
+                  ]}
+                  value={row.item}
+                  onChangeText={(v) => setRowAt(index, 'item', v)}
+                  placeholder="Item"
+                  placeholderTextColor={themeColors.textSecondary}
+                  returnKeyType="done"
+                  submitBehavior="submit"
+                  onFocus={() => setActiveRowIndex(index)}
+                  onSubmitEditing={() => {
+                    if (index === rows.length - 1) addRow();
+                    else amountInputRefs.current[index + 1]?.focus();
+                  }}
+                />
+                <TouchableOpacity
+                  onPress={() => removeRow(index)}
+                  style={styles.removeBtn}
+                  disabled={rows.length <= 1}
+                >
+                  <Text
+                    style={[styles.removeBtnText, rows.length <= 1 && styles.removeBtnDisabled]}
+                  >
+                    Remove
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              {index === activeRowIndex && <EnterToAddHint style={styles.tableHint} />}
+            </React.Fragment>
           ))}
         </View>
 
@@ -411,6 +436,7 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xs,
     paddingHorizontal: SPACING.sm,
   },
+  tableHint: { paddingHorizontal: SPACING.sm },
   tableInput: {
     flex: 1,
     height: SIZES.inputHeight,

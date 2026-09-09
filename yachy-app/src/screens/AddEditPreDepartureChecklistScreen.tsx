@@ -10,7 +10,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -25,7 +24,14 @@ import { usePostHog } from 'posthog-react-native';
 import preDepartureChecklistsService from '../services/preDepartureChecklists';
 import tripsService from '../services/trips';
 import { PreDepartureChecklistItem, Department } from '../types';
-import { Input, Button, LoadingSpinner, PageHeader, LabeledDropdown } from '../components';
+import {
+  Input,
+  Button,
+  LoadingSpinner,
+  PageHeader,
+  LabeledDropdown,
+  EnterToAddHint,
+} from '../components';
 import { Trip } from '../types';
 import { formatLocalDateString } from '../utils';
 
@@ -63,6 +69,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
   const [tripId, setTripId] = useState<string | null>(null);
   const [department, setDepartment] = useState<Department | null>(null);
   const [items, setItems] = useState<PreDepartureChecklistItem[]>([]);
+  const [draftItems, setDraftItems] = useState<string[]>(DEFAULT_ITEMS);
   const [newItemLabel, setNewItemLabel] = useState('');
   const [loading, setLoading] = useState(!!checklistId);
   const [saving, setSaving] = useState(false);
@@ -124,7 +131,15 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
 
   const addItem = async () => {
     const label = newItemLabel.trim();
-    if (!label || !checklistId || !isEditable) return;
+    if (!label || !isEditable) return;
+
+    if (!isEdit) {
+      setDraftItems((previous) => [...previous, label]);
+      setNewItemLabel('');
+      return;
+    }
+
+    if (!checklistId) return;
     try {
       const added = await preDepartureChecklistsService.addItem(checklistId, label);
       setItems((prev) => [...prev, added].sort((a, b) => a.sortOrder - b.sortOrder));
@@ -141,6 +156,10 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
     } catch (e) {
       Alert.alert('Error', 'Could not remove item.');
     }
+  };
+
+  const removeDraftItem = (index: number) => {
+    setDraftItems((previous) => previous.filter((_, itemIndex) => itemIndex !== index));
   };
 
   const handleSave = async () => {
@@ -164,7 +183,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
           { text: 'OK', onPress: () => navigation.goBack() },
         ]);
       } else {
-        const itemLabels = items.length > 0 ? items.map((i) => i.label) : DEFAULT_ITEMS;
+        const itemLabels = draftItems.map((label) => label.trim()).filter(Boolean);
         const created = await preDepartureChecklistsService.create({
           vesselId,
           tripId: tripId || undefined,
@@ -181,8 +200,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
         Alert.alert('Created', 'Pre-departure checklist created.', [
           {
             text: 'OK',
-            onPress: () =>
-              navigation.replace('AddEditPreDepartureChecklist', { checklistId: created.id }),
+            onPress: () => navigation.goBack(),
           },
         ]);
       }
@@ -396,49 +414,54 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
           Checklist items
         </Text>
 
-        {isEdit ? (
-          <>
-            {items.map((item, idx) => (
-              <View key={item.id} style={styles.itemRow}>
-                <Text style={styles.itemBullet}>{idx + 1}.</Text>
-                <Text style={[styles.itemLabel, { color: themeColors.textPrimary }]}>
-                  {item.label}
-                </Text>
-                {isEditable && (
+        <>
+          {isEdit
+            ? items.map((item, idx) => (
+                <View key={item.id} style={styles.itemRow}>
+                  <Text style={styles.itemBullet}>{idx + 1}.</Text>
+                  <Text style={[styles.itemLabel, { color: themeColors.textPrimary }]}>
+                    {item.label}
+                  </Text>
+                  {isEditable && (
+                    <TouchableOpacity
+                      onPress={() => removeItem(item)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text style={styles.removeBtn}>Remove</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))
+            : draftItems.map((label, idx) => (
+                <View key={`${label}-${idx}`} style={styles.itemRow}>
+                  <Text style={styles.itemBullet}>{idx + 1}.</Text>
+                  <Text style={[styles.itemLabel, { color: themeColors.textPrimary }]}>
+                    {label}
+                  </Text>
                   <TouchableOpacity
-                    onPress={() => removeItem(item)}
+                    onPress={() => removeDraftItem(idx)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <Text style={styles.removeBtn}>Remove</Text>
                   </TouchableOpacity>
-                )}
-              </View>
-            ))}
-            {isEditable && (
-              <View style={styles.addRow}>
-                <Input
-                  value={newItemLabel}
-                  onChangeText={setNewItemLabel}
-                  placeholder="Add new item..."
-                  containerStyle={styles.addInput}
-                  onSubmitEditing={addItem}
-                />
-                <TouchableOpacity style={styles.addBtn} onPress={addItem}>
-                  <Text style={styles.addBtnText}>Add</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </>
-        ) : (
-          <Text
-            style={[
-              styles.hint,
-              { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-            ]}
-          >
-            Save the checklist to add and manage items. Default items will be added on creation.
-          </Text>
-        )}
+                </View>
+              ))}
+
+          {isEditable && (
+            <View style={styles.addSection}>
+              <Input
+                value={newItemLabel}
+                onChangeText={setNewItemLabel}
+                placeholder="Add new item..."
+                containerStyle={styles.addInput}
+                returnKeyType="done"
+                submitBehavior="submit"
+                onSubmitEditing={addItem}
+              />
+              <EnterToAddHint />
+            </View>
+          )}
+        </>
 
         {showEditableFields && (
           <View style={styles.actions}>
@@ -531,16 +554,8 @@ const styles = StyleSheet.create({
   },
   itemLabel: { flex: 1, fontSize: FONTS.base },
   removeBtn: { fontSize: FONTS.sm, color: COLORS.danger },
-  addRow: { flexDirection: 'row', alignItems: 'flex-end', gap: SPACING.sm, marginTop: SPACING.sm },
-  addInput: { flex: 1, marginBottom: 0 },
-  addBtn: {
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    backgroundColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.md,
-    justifyContent: 'center',
-  },
-  addBtnText: { fontSize: FONTS.sm, fontWeight: '600', color: COLORS.white },
+  addSection: { marginTop: SPACING.sm },
+  addInput: { marginBottom: 0 },
   hint: { fontSize: FONTS.sm, marginTop: SPACING.xs },
   actions: { marginTop: SPACING.xl, gap: SPACING.sm },
   cancelBtn: { alignSelf: 'center', padding: SPACING.sm },

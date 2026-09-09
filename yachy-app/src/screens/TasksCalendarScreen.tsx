@@ -27,6 +27,7 @@ import { PieDayComponent } from '../components/PieDayComponent';
 import { VesselTask, YardPeriodJob, Department } from '../types';
 import { getTaskUrgencyColor, getUrgencyLevel, UrgencyLevel } from '../utils/taskUrgency';
 import { LoadingSpinner, PageHeader } from '../components';
+import { parseLocalDate, toYYYYMMDD } from '../utils';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -71,10 +72,14 @@ function getMarkedDatesFromTasksAndJobs(
   });
 
   yardJobs.forEach((job) => {
-    if (!job.doneByDate) return;
+    if (!job.startDate || !job.endDate) return;
     if (!visibleDepartments[job.department ?? 'INTERIOR']) return;
     const color = job.department ? getDeptColor(job.department) : YARD_JOB_COLOR;
-    addColor(job.doneByDate, color);
+    const start = parseLocalDate(job.startDate);
+    const end = parseLocalDate(job.endDate);
+    for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+      addColor(toYYYYMMDD(date), color);
+    }
   });
 
   const marked: MarkedDates = {};
@@ -134,7 +139,10 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
       ]);
       setTasks(taskData);
       setYardJobs(
-        jobData.filter((j) => j.doneByDate && j.doneByDate >= startStr && j.doneByDate <= endStr)
+        jobData.filter(
+          (job) =>
+            job.startDate && job.endDate && job.startDate <= endStr && job.endDate >= startStr
+        )
       );
     } catch (e) {
       console.error('Load tasks calendar error:', e);
@@ -185,7 +193,13 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
   const tasksForSelectedDate = useMemo((): { tasks: VesselTask[]; yardJobs: YardPeriodJob[] } => {
     if (!selectedDate) return { tasks: [], yardJobs: [] };
     const dayTasks = filteredTasks.filter((t) => t.doneByDate === selectedDate);
-    const dayJobs = filteredYardJobs.filter((j) => j.doneByDate === selectedDate);
+    const dayJobs = filteredYardJobs.filter(
+      (job) =>
+        !!job.startDate &&
+        !!job.endDate &&
+        job.startDate <= selectedDate &&
+        job.endDate >= selectedDate
+    );
     return { tasks: dayTasks, yardJobs: dayJobs };
   }, [filteredTasks, filteredYardJobs, selectedDate]);
 
@@ -391,9 +405,10 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
             <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
               Tasks & Jobs for {formatDate(selectedDate)}
             </Text>
-            {tasksForSelectedDate.tasks.length === 0 && tasksForSelectedDate.yardJobs.length === 0 ? (
+            {tasksForSelectedDate.tasks.length === 0 &&
+            tasksForSelectedDate.yardJobs.length === 0 ? (
               <Text style={[styles.emptyDate, { color: themeColors.textSecondary }]}>
-                No tasks or yard jobs due on this date
+                No tasks due or shipyard jobs scheduled on this date
               </Text>
             ) : (
               <View style={styles.taskList}>
@@ -419,7 +434,9 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
                           style={[
                             styles.taskTitle,
                             {
-                              color: isComplete ? themeColors.textSecondary : themeColors.textPrimary,
+                              color: isComplete
+                                ? themeColors.textSecondary
+                                : themeColors.textPrimary,
                             },
                             isComplete && styles.taskTitleComplete,
                           ]}
@@ -477,7 +494,9 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
                           style={[
                             styles.taskTitle,
                             {
-                              color: isComplete ? themeColors.textSecondary : themeColors.textPrimary,
+                              color: isComplete
+                                ? themeColors.textSecondary
+                                : themeColors.textPrimary,
                             },
                             isComplete && styles.taskTitleComplete,
                           ]}

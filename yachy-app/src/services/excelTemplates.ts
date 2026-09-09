@@ -1,12 +1,14 @@
 /**
  * Excel Template Service
- * Generate downloadable templates and parse imported files for Tasks, Maintenance Log, Yard Period
+ * Generate downloadable templates and parse imported files for Tasks, Maintenance Log, and Shipyard List
  */
 
 import * as XLSX from 'xlsx';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Alert } from 'react-native';
+import { Department, TaskCategory, TaskRecurring } from '../types';
+import { isTaskRecurrenceAllowed } from '../utils/taskRecurrence';
 
 /** Encode bytes to base64. Uses base64-js when available; fallback for React Native bundling issues. */
 function bytesToBase64(bytes: Uint8Array): string {
@@ -44,7 +46,7 @@ const TASKS_HEADERS = [
   'Title',
   'Notes',
   'Done By Date (YYYY-MM-DD)',
-  'Recurring (7_DAYS/14_DAYS/30_DAYS or leave blank)',
+  'Repeat Every (WEEKLY: 7_DAYS/14_DAYS; MONTHLY: 14_DAYS/30_DAYS)',
 ];
 
 // --- MAINTENANCE LOG TEMPLATE ---
@@ -59,11 +61,15 @@ const MAINTENANCE_HEADERS = [
   'Service Done By',
 ];
 
-// --- YARD PERIOD TEMPLATE ---
+// --- SHIPYARD LIST TEMPLATE ---
 const YARD_HEADERS = [
   'Job Title',
+  'Defect / Damage / Improvements Needed',
   'Job Description',
+  'Defect Location',
+  'Equipment or Serial Number',
   'Department (BRIDGE/ENGINEERING/EXTERIOR/INTERIOR/GALLEY)',
+  'Priority (GREEN/YELLOW/RED)',
   'Yard Location',
   'Contractor Company Name',
   'Contact Details',
@@ -84,7 +90,10 @@ const VALID_RECURRING = ['7_DAYS', '14_DAYS', '30_DAYS'] as const;
 function normalizeDateForImport(raw: string | null | undefined): string | null {
   const s = (raw ?? '').trim();
   if (!s) return null;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const date = new Date(`${s}T00:00:00.000Z`);
+    return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === s ? s : null;
+  }
   const n = parseInt(s, 10);
   if (!Number.isNaN(n) && n >= 1 && s.length >= 5) {
     const date = new Date((n - 25569) * 86400 * 1000);
@@ -93,7 +102,7 @@ function normalizeDateForImport(raw: string | null | undefined): string | null {
   return null;
 }
 
-/** Only allow DB values '7_DAYS' | '14_DAYS' | '30_DAYS' or null (empty/invalid -> null). */
+/** Normalize supported task recurrence values; validation remains category-specific. */
 function normalizeRecurringForImport(
   raw: string | null | undefined
 ): (typeof VALID_RECURRING)[number] | null {
@@ -141,7 +150,7 @@ function createTasksWorkbook(): XLSX.WorkBook {
       'WEEKLY',
       'Example weekly task',
       'Optional notes',
-      '2025-12-31',
+      '',
       '7_DAYS',
     ]),
     'Weekly'
@@ -153,7 +162,7 @@ function createTasksWorkbook(): XLSX.WorkBook {
       'MONTHLY',
       'Example monthly task',
       'Optional notes',
-      '2025-12-31',
+      '',
       '30_DAYS',
     ]),
     'Monthly'
@@ -188,15 +197,19 @@ function createYardWorkbook(): XLSX.WorkBook {
     wb,
     createSheetWithHeaders(YARD_HEADERS, [
       'Hull Paint',
+      'Existing coating is peeling along the waterline',
       'Full hull repaint',
+      'Port and starboard waterline',
+      'Paint system reference 12345',
       'EXTERIOR',
+      'YELLOW',
       'Marina XYZ',
       'ABC Marine',
       'contact@abc.com',
       '2026-03-01',
       '2026-03-15',
     ]),
-    'Yard Period Jobs'
+    'Shipyard List'
   );
   return wb;
 }
@@ -233,7 +246,7 @@ export async function downloadTemplate(type: TemplateType): Promise<void> {
       break;
     case 'yard':
       wb = createYardWorkbook();
-      fileLabel = 'Yard_Period_Jobs';
+      fileLabel = 'Shipyard_List';
       break;
     case 'inventory':
       wb = createInventoryWorkbook();
@@ -263,12 +276,12 @@ export async function downloadTemplate(type: TemplateType): Promise<void> {
 const VALID_DEPARTMENTS = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'] as const;
 
 export interface ParsedTask {
-  department: string;
-  category: string;
+  department: Department;
+  category: TaskCategory;
   title: string;
   notes?: string;
   doneByDate?: string | null;
-  recurring?: string | null;
+  recurring?: TaskRecurring;
 }
 
 export interface ParsedMaintenance {
@@ -285,7 +298,11 @@ export interface ParsedMaintenance {
 export interface ParsedYardJob {
   jobTitle: string;
   jobDescription?: string;
+  defectDetails?: string;
+  defectLocation?: string;
+  equipmentSerial?: string;
   department?: string;
+  priority?: 'GREEN' | 'YELLOW' | 'RED';
   yardLocation?: string;
   contractorCompanyName?: string;
   contactDetails?: string;
@@ -324,17 +341,32 @@ export function parseTasksFile(uri: string): Promise<ParseResult<ParsedTask>> {
       (headerMap['Done By Date (YYYY-MM-DD)'] ?? headerMap['Done By Date'] ?? '').trim() || null;
     const recurringRaw =
       (
+        headerMap['Repeat Every (WEEKLY: 7_DAYS/14_DAYS; MONTHLY: 14_DAYS/30_DAYS)'] ??
         headerMap['Recurring (7_DAYS/14_DAYS/30_DAYS or leave blank)'] ??
         headerMap['Recurring'] ??
         ''
       ).trim() || null;
+    const resolvedCategory = (category || 'DAILY') as TaskCategory;
+    const recurring = normalizeRecurringForImport(recurringRaw);
+    if (recurringRaw && !recurring) {
+      throw new Error(`Invalid repeat frequency "${recurringRaw}".`);
+    }
+    if (resolvedCategory === 'DAILY' && recurring) {
+      throw new Error('Daily tasks are one-off and cannot have a repeat frequency.');
+    }
+    if (resolvedCategory !== 'DAILY' && !isTaskRecurrenceAllowed(resolvedCategory, recurring)) {
+      const allowed = resolvedCategory === 'WEEKLY' ? '7_DAYS or 14_DAYS' : '14_DAYS or 30_DAYS';
+      throw new Error(
+        `${resolvedCategory === 'WEEKLY' ? 'Weekly' : 'Monthly'} tasks require ${allowed}.`
+      );
+    }
     return {
-      department,
-      category: category || 'DAILY',
+      department: department as Department,
+      category: resolvedCategory,
       title,
       notes: (headerMap['Notes'] ?? '').trim() || undefined,
-      doneByDate: normalizeDateForImport(doneByDateRaw),
-      recurring: normalizeRecurringForImport(recurringRaw),
+      doneByDate: resolvedCategory === 'DAILY' ? normalizeDateForImport(doneByDateRaw) : null,
+      recurring,
     };
   });
 }
@@ -373,6 +405,13 @@ export function parseYardFile(uri: string): Promise<ParseResult<ParsedYardJob>> 
       deptRaw && VALID_DEPARTMENTS.includes(deptRaw as (typeof VALID_DEPARTMENTS)[number])
         ? deptRaw
         : undefined;
+    const priorityRaw = (headerMap['Priority (GREEN/YELLOW/RED)'] ?? headerMap['Priority'] ?? '')
+      .trim()
+      .toUpperCase();
+    const validPriorities = ['GREEN', 'YELLOW', 'RED'] as const;
+    if (priorityRaw && !validPriorities.includes(priorityRaw as (typeof validPriorities)[number])) {
+      throw new Error(`Invalid priority "${priorityRaw}". Use GREEN, YELLOW, or RED.`);
+    }
     const startDate = normalizeDateForImport(
       headerMap['Start Date (YYYY-MM-DD)'] ?? headerMap['Start Date'] ?? ''
     );
@@ -381,10 +420,15 @@ export function parseYardFile(uri: string): Promise<ParseResult<ParsedYardJob>> 
     );
     if (!startDate) throw new Error('Start Date is required.');
     if (!endDate) throw new Error('End Date is required.');
+    if (endDate < startDate) throw new Error('End Date cannot be before Start Date.');
     return {
       jobTitle,
       jobDescription: (headerMap['Job Description'] ?? '').trim() || undefined,
+      defectDetails: (headerMap['Defect / Damage / Improvements Needed'] ?? '').trim() || undefined,
+      defectLocation: (headerMap['Defect Location'] ?? '').trim() || undefined,
+      equipmentSerial: (headerMap['Equipment or Serial Number'] ?? '').trim() || undefined,
       department,
+      priority: (priorityRaw || undefined) as ParsedYardJob['priority'],
       yardLocation: (headerMap['Yard Location'] ?? '').trim() || undefined,
       contractorCompanyName: (headerMap['Contractor Company Name'] ?? '').trim() || undefined,
       contactDetails: (headerMap['Contact Details'] ?? '').trim() || undefined,
@@ -435,7 +479,7 @@ function getDataSheetNames(type: TemplateType): string[] {
     case 'maintenance':
       return ['Maintenance Log'];
     case 'yard':
-      return ['Yard Period Jobs'];
+      return ['Shipyard List', 'Yard Period Jobs'];
     case 'inventory':
       return ['Bridge', 'Engineering', 'Exterior', 'Interior', 'Galley'];
   }

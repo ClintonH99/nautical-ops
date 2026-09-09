@@ -1,6 +1,6 @@
 /**
  * Trip Color Settings Screen
- * HOD can choose calendar colors for each trip type (Guest, Boss, Delivery, Yard Period)
+ * HOD can choose calendar colors for each visible trip type.
  */
 
 import React, { useState, useCallback } from 'react';
@@ -18,7 +18,6 @@ const TRIP_LABELS: { key: ColorKey; label: string; emoji: string }[] = [
   { key: 'guest', label: 'Guest Trips', emoji: '👥' },
   { key: 'boss', label: 'Boss Trips', emoji: '⚓' },
   { key: 'delivery', label: 'Delivery', emoji: '🚢' },
-  { key: 'yardPeriod', label: 'Yard Period', emoji: '🔧' },
 ];
 
 export const TripColorSettingsScreen = ({ navigation }: any) => {
@@ -148,7 +147,10 @@ export const TripColorSettingsScreen = ({ navigation }: any) => {
                     style={[
                       styles.swatch,
                       { backgroundColor: hex },
-                      isSelected && [styles.swatchSelected, { borderColor: themeColors.textPrimary }],
+                      isSelected && [
+                        styles.swatchSelected,
+                        { borderColor: themeColors.textPrimary },
+                      ],
                     ]}
                     onPress={() => handlePick(key, hex)}
                     disabled={saving}

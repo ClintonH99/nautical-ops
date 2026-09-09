@@ -4,7 +4,12 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import { SafetyEquipmentData, SafetyItem, normalizeSafetyItem } from '../services/safetyEquipment';
+import {
+  SafetyEquipmentData,
+  SafetyItem,
+  getSafetyEquipmentCategoryOrder,
+  normalizeSafetyItem,
+} from '../services/safetyEquipment';
 
 const LABELS: Record<string, string> = {
   fireExtinguishers: 'Fire extinguishers',
@@ -43,9 +48,7 @@ function dateCell(value: string | null, isNA: boolean): string {
 
 function buildRows(data: SafetyEquipmentData): string[] {
   const rows: string[] = [];
-  const categoryKeys = Object.keys(data).filter(
-    (k) => k !== 'vesselName' && k !== 'customLabels' && Array.isArray(data[k])
-  );
+  const categoryKeys = getSafetyEquipmentCategoryOrder(data, Object.keys(LABELS));
   for (const key of categoryKeys) {
     const rawArr = data[key] as (string | SafetyItem)[];
     if (!Array.isArray(rawArr) || !rawArr.length) continue;
@@ -54,9 +57,9 @@ function buildRows(data: SafetyEquipmentData): string[] {
     items.forEach((item) => {
       rows.push(
         `<tr><td><strong>${escapeHtml(label)}</strong></td><td>${escapeHtml(item.location)}</td>` +
-        dateCell(item.lastChecked, item.lastCheckedNA) +
-        dateCell(item.expiryDate, item.expiryDateNA) +
-        `</tr>`
+          dateCell(item.lastChecked, item.lastCheckedNA) +
+          dateCell(item.expiryDate, item.expiryDateNA) +
+          `</tr>`
       );
     });
   }

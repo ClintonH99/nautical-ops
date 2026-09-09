@@ -23,21 +23,29 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import inventoryService, { InventoryItem } from '../services/inventory';
 import { Department } from '../types';
 import { exportInventoryToPdf } from '../utils/inventoryPdf';
-import { Button, Input, ButtonTagCard, ButtonTagRow, PageHeader, ExportButton, ExportBar, LabeledDropdown } from '../components';
+import {
+  Button,
+  Input,
+  ButtonTagCard,
+  ButtonTagRow,
+  PageHeader,
+  ExportButton,
+  ExportBar,
+  LabeledDropdown,
+} from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
-
 const INVENTORY_INFO = {
-            title: 'Inventory',
-            description: 'Track stock and supplies across departments.',
-            features: [
-              'Create inventory items with quantities and locations',
-              'Filter items by department',
-              'Search across titles, descriptions, and locations',
-              'Select items and export to PDF',
-            ],
-          };
+  title: 'Inventory',
+  description: 'Track stock and supplies across departments.',
+  features: [
+    'Create inventory items with quantities and locations',
+    'Filter items by department',
+    'Search across titles, descriptions, and locations',
+    'Select items and export to PDF',
+  ],
+};
 
 export const InventoryScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -129,26 +137,22 @@ export const InventoryScreen = ({ navigation }: any) => {
   };
 
   const handleDelete = (item: InventoryItem) => {
-    Alert.alert(
-      'Remove item',
-      `Remove "${item.title}" from inventory?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await inventoryService.delete(item.id);
-              setItems((prev) => prev.filter((i) => i.id !== item.id));
-            } catch (e) {
-              console.error('Delete inventory item error:', e);
-              Alert.alert('Error', 'Could not remove item.');
-            }
-          },
+    Alert.alert('Remove item', `Remove "${item.title}" from inventory?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await inventoryService.delete(item.id);
+            setItems((prev) => prev.filter((i) => i.id !== item.id));
+          } catch (e) {
+            console.error('Delete inventory item error:', e);
+            Alert.alert('Error', 'Could not remove item.');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const loadItems = useCallback(async () => {
@@ -185,14 +189,19 @@ export const InventoryScreen = ({ navigation }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to use Inventory.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to use Inventory.
+        </Text>
       </View>
     );
   }
 
   return (
     <View style={styles.pageWrap}>
-      <PageHeader title="Inventory" info={INVENTORY_INFO} infoScreenKey="inventory"
+      <PageHeader
+        title="Inventory"
+        info={INVENTORY_INFO}
+        infoScreenKey="inventory"
         actions={
           <ExportButton
             active={exportMode}
@@ -203,16 +212,20 @@ export const InventoryScreen = ({ navigation }: any) => {
           />
         }
       />
+      {exportMode && (
+        <ExportBar
+          count={selectedItems.length}
+          onConfirm={handleExportPdf}
+          exporting={exporting}
+          hint="Tap items to select"
+        />
+      )}
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[COLORS.primary]}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
         }
       >
         <View style={styles.searchRow}>
@@ -240,15 +253,6 @@ export const InventoryScreen = ({ navigation }: any) => {
             style={styles.exportBtn}
           />
         </View>
-        {exportMode && (
-          <ExportBar
-            count={selectedItems.length}
-            onConfirm={handleExportPdf}
-            exporting={exporting}
-            hint="Tap items to select"
-          />
-        )}
-
         <LabeledDropdown
           label="Department"
           value={departmentDisplayText}
@@ -257,13 +261,22 @@ export const InventoryScreen = ({ navigation }: any) => {
         />
         {departmentDropdownOpen && (
           <Modal visible transparent animationType="fade">
-            <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentDropdownOpen(false)}>
-              <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
+            <Pressable
+              style={styles.modalBackdrop}
+              onPress={() => setDepartmentDropdownOpen(false)}
+            >
+              <View
+                style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+                onStartShouldSetResponder={() => true}
+              >
                 <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
                   Filter by department
                 </Text>
                 <TouchableOpacity
-                  style={[styles.modalItem, DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
+                  style={[
+                    styles.modalItem,
+                    DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected,
+                  ]}
                   onPress={() => {
                     selectAllDepartments();
                     setDepartmentDropdownOpen(false);
@@ -276,7 +289,12 @@ export const InventoryScreen = ({ navigation }: any) => {
                 {DEPARTMENTS.map((dept) => (
                   <TouchableOpacity
                     key={dept}
-                    style={[styles.modalItem, visibleDepartments[dept] && !DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
+                    style={[
+                      styles.modalItem,
+                      visibleDepartments[dept] &&
+                        !DEPARTMENTS.every((d) => visibleDepartments[d]) &&
+                        styles.modalItemSelected,
+                    ]}
                     onPress={() => {
                       selectDepartment(dept);
                       setDepartmentDropdownOpen(false);
@@ -304,7 +322,11 @@ export const InventoryScreen = ({ navigation }: any) => {
           filteredItems.map((item) => {
             const selected = selectedIds.has(item.id);
             const dateStr = item.createdAt
-              ? new Date(item.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })
+              ? new Date(item.createdAt).toLocaleDateString(undefined, {
+                  month: 'short',
+                  day: 'numeric',
+                  year: '2-digit',
+                })
               : '';
             return (
               <ButtonTagCard
@@ -316,15 +338,25 @@ export const InventoryScreen = ({ navigation }: any) => {
                 selected={exportMode && selected}
                 onEdit={() => navigation.navigate('AddEditInventoryItem', { itemId: item.id })}
                 onDelete={() => handleDelete(item)}
-                onPress={!exportMode ? () => navigation.navigate('AddEditInventoryItem', { itemId: item.id }) : undefined}
+                onPress={
+                  !exportMode
+                    ? () => navigation.navigate('AddEditInventoryItem', { itemId: item.id })
+                    : undefined
+                }
                 collapsible={!exportMode}
                 expanded={expandedId === item.id}
                 onToggleExpand={() => setExpandedId(expandedId === item.id ? null : item.id)}
                 summary={dateStr ? <ButtonTagRow label="Date" value={dateStr} /> : undefined}
               >
-                <View style={[styles.deptBadge, { backgroundColor: getDepartmentColor(item.department, overrides) }]}>
+                <View
+                  style={[
+                    styles.deptBadge,
+                    { backgroundColor: getDepartmentColor(item.department, overrides) },
+                  ]}
+                >
                   <Text style={styles.deptBadgeText}>
-                    {(item.department ?? 'INTERIOR').charAt(0) + (item.department ?? 'INTERIOR').slice(1).toLowerCase()}
+                    {(item.department ?? 'INTERIOR').charAt(0) +
+                      (item.department ?? 'INTERIOR').slice(1).toLowerCase()}
                   </Text>
                 </View>
                 <ButtonTagRow label="Location" value={item.location ?? ''} />
@@ -366,10 +398,20 @@ const styles = StyleSheet.create({
   },
   dropdownText: { fontSize: FONTS.base, fontWeight: '500' },
   dropdownChevron: { fontSize: 10 },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
+  },
   modalBox: { borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, minWidth: 260, maxHeight: 400 },
   modalTitle: { fontSize: FONTS.lg, fontWeight: '600', marginBottom: SPACING.md },
-  modalItem: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg, borderRadius: BORDER_RADIUS.sm },
+  modalItem: {
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: BORDER_RADIUS.sm,
+  },
   modalItemSelected: { backgroundColor: COLORS.gray200 },
   modalItemText: { fontSize: FONTS.base },
   loader: { marginVertical: SPACING.xl },

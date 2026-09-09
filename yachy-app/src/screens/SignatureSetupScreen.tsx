@@ -20,7 +20,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import SignatureCanvas, { SignatureViewRef } from 'react-native-signature-canvas';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { useAuthStore } from '../store';
@@ -36,6 +36,7 @@ const HIDE_FOOTER_STYLE = `
 
 export const SignatureSetupScreen = () => {
   const themeColors = useThemeColors();
+  const navigation = useNavigation<any>();
   const { user } = useAuthStore();
   const signatureRef = useRef<SignatureViewRef>(null);
 
@@ -124,18 +125,46 @@ export const SignatureSetupScreen = () => {
 
   if (mode === 'view' && saved) {
     return (
-      <View style={[styles.container, { backgroundColor: themeColors.background, padding: SPACING.lg }]}>
-        <Text style={[styles.label, { color: themeColors.textSecondary }]}>Your signature</Text>
-        <View style={[styles.previewBox, { borderColor: themeColors.textSecondary + '40', backgroundColor: themeColors.surface }]}>
-          {saved.signatureType === 'drawn' && saved.signatureImage ? (
-            <Image source={{ uri: saved.signatureImage }} style={styles.previewImage} resizeMode="contain" />
-          ) : (
-            <Text style={[styles.typedPreview, { color: themeColors.textPrimary }]}>{saved.typedName}</Text>
-          )}
+      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <PageHeader title="E-Signature" />
+        <View style={{ padding: SPACING.lg, flex: 1 }}>
+          <Text style={[styles.label, { color: themeColors.textSecondary }]}>Your signature</Text>
+          <View
+            style={[
+              styles.previewBox,
+              {
+                borderColor: themeColors.textSecondary + '40',
+                backgroundColor: themeColors.surface,
+              },
+            ]}
+          >
+            {saved.signatureType === 'drawn' && saved.signatureImage ? (
+              <Image
+                source={{ uri: saved.signatureImage }}
+                style={styles.previewImage}
+                resizeMode="contain"
+              />
+            ) : (
+              <Text style={[styles.typedPreview, { color: themeColors.textPrimary }]}>
+                {saved.typedName}
+              </Text>
+            )}
+          </View>
+          <TouchableOpacity
+            onPress={() => setMode('edit')}
+            style={[styles.primaryButton, { marginTop: SPACING.lg }]}
+          >
+            <Text style={{ color: '#fff', fontWeight: '600' }}>Edit signature</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Finish signature setup"
+            onPress={() => navigation.goBack()}
+            style={[styles.primaryButton, { marginTop: SPACING.sm }]}
+          >
+            <Text style={{ color: '#fff', fontWeight: '600' }}>Done</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={() => setMode('edit')} style={[styles.primaryButton, { marginTop: SPACING.lg }]}>
-          <Text style={{ color: '#fff', fontWeight: '600' }}>Edit signature</Text>
-        </TouchableOpacity>
       </View>
     );
   }

@@ -267,6 +267,9 @@ export interface YardPeriodJob {
   yardLocation: string;
   contractorCompanyName: string;
   contactDetails: string;
+  startDate: string | null;
+  endDate: string | null;
+  /** @deprecated Preserved temporarily while existing records are migrated to a date range. */
   doneByDate: string | null;
   status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
   completedBy?: string;

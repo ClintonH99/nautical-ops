@@ -12,4 +12,4 @@ Trip dates displayed **must** match the selected YYYY-MM-DD exactly. No timezone
 
 ## Scope
 
-Applies to: AddEditTripScreen, HomeScreen, YardPeriodTripsScreen, UpcomingTripsScreen, GuestTripsScreen, BossTripsScreen, DeliveryTripsScreen, AddEditPreDepartureChecklistScreen, and any screen that displays or iterates over trip dates.
+Applies to: AddEditTripScreen, HomeScreen, UpcomingTripsScreen, GuestTripsScreen, BossTripsScreen, DeliveryTripsScreen, AddEditPreDepartureChecklistScreen, and any screen that displays or iterates over trip dates. Shipyard job ranges follow `SHIPYARD_LIST_DATE_RANGES.md`.

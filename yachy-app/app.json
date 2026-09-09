@@ -7,7 +7,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "ios": {
       "bundleIdentifier": "com.nauticalops.app",
       "supportsTablet": true,
@@ -24,7 +23,6 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0d1b2a"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.CAMERA",
@@ -43,6 +41,10 @@
       "expo-notifications",
       "expo-web-browser",
       "expo-apple-authentication",
+      "expo-asset",
+      "expo-image",
+      "expo-sharing",
+      "expo-status-bar",
       [
         "@react-native-google-signin/google-signin",
         {
@@ -63,7 +65,7 @@
         }
       ],
       [
-        "@sentry/react-native/expo",
+        "@sentry/react-native",
         {
           "url": "https://sentry.io/",
           "project": "nautical-ops-mobile",

@@ -12,7 +12,6 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import vesselTasksService from '../services/vesselTasks';
 import maintenanceLogsService from '../services/maintenanceLogs';
 import yardJobsService from '../services/yardJobs';
-import tripsService from '../services/trips';
 import {
   downloadTemplate,
   MAX_IMPORT_FILE_BYTES,
@@ -147,13 +146,16 @@ export const ImportExportScreen = ({ navigation }: any) => {
         for (const row of success) {
           try {
             if (!vesselId) throw new Error('No vessel selected.');
-            await tripsService.createTrip({
+            await yardJobsService.create({
               vesselId,
-              type: 'YARD_PERIOD',
-              title: row.jobTitle,
+              jobTitle: row.jobTitle,
+              jobDescription: row.jobDescription,
+              defectDetails: row.defectDetails,
+              defectLocation: row.defectLocation,
+              equipmentSerial: row.equipmentSerial,
+              priority: row.priority ?? 'GREEN',
               startDate: row.startDate,
               endDate: row.endDate,
-              notes: row.jobDescription,
               department: (row.department || user?.department || 'INTERIOR') as
                 | 'BRIDGE'
                 | 'ENGINEERING'
@@ -171,7 +173,7 @@ export const ImportExportScreen = ({ navigation }: any) => {
           }
         }
         const errMsg = errors.length > 0 ? `\n\n${errors.length} row(s) had errors.` : '';
-        Alert.alert('Import complete', `Imported ${imported} yard period(s).${errMsg}`);
+        Alert.alert('Import complete', `Imported ${imported} shipyard job(s).${errMsg}`);
       } else if (type === 'inventory') {
         const { success, errors } = await parseInventoryFile(uri);
         if (success.length === 0 && errors.length > 0) {
@@ -296,9 +298,9 @@ export const ImportExportScreen = ({ navigation }: any) => {
           />
           <TemplateSection
             type="yard"
-            title="Yard Period"
+            title="Shipyard List"
             icon="🔧"
-            description="Yard period jobs. Columns: Job Title, Description, Yard Location, Contractor, Contact."
+            description="Shipyard jobs with complete job details, department, priority, yard contacts, and individual Start and End Dates."
           />
 
           <View style={[styles.section, { backgroundColor: themeColors.surface }]}>

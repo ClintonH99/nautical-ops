@@ -37,12 +37,14 @@ export interface CreateShoppingListInput {
   isMaster?: boolean;
 }
 
-function normalizeItems(raw: unknown): ShoppingListItem[] {
+export function normalizeShoppingListItems(raw: unknown): ShoppingListItem[] {
   if (!Array.isArray(raw)) return [];
   return raw.map((entry) => {
     if (entry && typeof entry === 'object' && 'text' in entry && 'checked' in entry) {
+      const amount = 'amount' in entry ? String(entry.amount ?? '').trim() : '';
       return {
         text: String((entry as ShoppingListItem).text),
+        amount: amount || undefined,
         checked: Boolean((entry as ShoppingListItem).checked),
       };
     }
@@ -145,7 +147,7 @@ class ShoppingListsService {
       listType: listType === 'trip' ? 'trip' : 'general',
       isMaster: Boolean(row.is_master),
       title: row.title as string,
-      items: normalizeItems(row.items),
+      items: normalizeShoppingListItems(row.items),
       createdAt: row.created_at as string,
       createdBy: row.created_by as string | undefined,
     };

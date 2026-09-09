@@ -26,7 +26,7 @@ const PREFERENCE_LABELS: Record<NotificationPreferenceKey, string> = {
   trips: 'Trips',
   preDeparture: 'Pre-Departure Checklist',
   maintenance: 'Maintenance',
-  yardJobs: 'Yard Period Jobs',
+  yardJobs: 'Shipyard List Jobs',
   watchSchedule: 'Watch Schedule',
 };
 

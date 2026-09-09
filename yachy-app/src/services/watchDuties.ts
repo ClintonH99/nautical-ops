@@ -151,6 +151,34 @@ export async function setItemChecked(
   if (error) throw error;
 }
 
+/**
+ * Untick every duty item for every crew member on a vessel. Completion rows
+ * are removed rather than changed to false because a missing row already
+ * represents the unchecked state.
+ */
+export async function resetDutyCompletionsForVessel(vesselId: string): Promise<void> {
+  const { data: groups, error: groupsError } = await supabase
+    .from('watch_duty_groups')
+    .select('id')
+    .eq('vessel_id', vesselId);
+  if (groupsError) throw groupsError;
+
+  const groupIds = (groups ?? []).map((group) => group.id);
+  if (groupIds.length === 0) return;
+
+  const { data: items, error: itemsError } = await supabase
+    .from('watch_duty_items')
+    .select('id')
+    .in('group_id', groupIds);
+  if (itemsError) throw itemsError;
+
+  const itemIds = (items ?? []).map((item) => item.id);
+  if (itemIds.length === 0) return;
+
+  const { error } = await supabase.from('watch_duty_completions').delete().in('item_id', itemIds);
+  if (error) throw error;
+}
+
 // ---- Watch assignments (week-ahead schedule) ----
 
 export async function getWeekAssignments(
@@ -197,15 +225,13 @@ export async function addWatchAssignment(
   startTime: string,
   endTime: string
 ): Promise<void> {
-  const { error } = await supabase
-    .from('watch_assignments')
-    .insert({
-      vessel_id: vesselId,
-      date,
-      user_id: userId,
-      start_time: startTime,
-      end_time: endTime,
-    });
+  const { error } = await supabase.from('watch_assignments').insert({
+    vessel_id: vesselId,
+    date,
+    user_id: userId,
+    start_time: startTime,
+    end_time: endTime,
+  });
   if (error) throw error;
 }
 
@@ -216,4 +242,19 @@ export async function removeWatchAssignment(assignmentId: string): Promise<void>
     .eq('id', assignmentId)
     .select('id');
   requireAffectedRows(data, error, 'Removing the watch assignment');
+}
+
+/** Clear every crew assignment in the displayed Monday-Sunday week. */
+export async function resetWeekAssignments(vesselId: string, startDate: string): Promise<void> {
+  const end = new Date(`${startDate}T00:00:00Z`);
+  end.setUTCDate(end.getUTCDate() + 6);
+  const endDate = end.toISOString().slice(0, 10);
+
+  const { error } = await supabase
+    .from('watch_assignments')
+    .delete()
+    .eq('vessel_id', vesselId)
+    .gte('date', startDate)
+    .lte('date', endDate);
+  if (error) throw error;
 }

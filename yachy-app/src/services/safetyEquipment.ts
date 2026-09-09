@@ -52,7 +52,37 @@ export function normalizeSafetyItem(raw: string | SafetyItem): SafetyItem {
 export interface SafetyEquipmentData {
   vesselName?: string;
   customLabels?: Record<string, string>;
+  categoryOrder?: string[];
   [key: string]: (string | SafetyItem)[] | string | Record<string, string> | undefined;
+}
+
+const SAFETY_EQUIPMENT_METADATA_KEYS = new Set(['vesselName', 'customLabels', 'categoryOrder']);
+
+/**
+ * Returns the saved category order exactly when present. Older records did not
+ * store an order, so they fall back to their saved category keys instead of
+ * silently restoring categories that the user may have removed.
+ */
+export function getSafetyEquipmentCategoryOrder(
+  data: SafetyEquipmentData,
+  preferredLegacyOrder: string[] = []
+): string[] {
+  const uniqueKeys = (keys: string[]) =>
+    Array.from(new Set(keys.filter((key) => key && !SAFETY_EQUIPMENT_METADATA_KEYS.has(key))));
+
+  if (Array.isArray(data.categoryOrder)) {
+    return uniqueKeys(data.categoryOrder.filter((key): key is string => typeof key === 'string'));
+  }
+
+  const legacyKeys = Object.keys(data).filter(
+    (key) => !SAFETY_EQUIPMENT_METADATA_KEYS.has(key) && Array.isArray(data[key])
+  );
+  const legacyKeySet = new Set(legacyKeys);
+
+  return uniqueKeys([
+    ...preferredLegacyOrder.filter((key) => legacyKeySet.has(key)),
+    ...legacyKeys,
+  ]);
 }
 
 export interface SafetyEquipment {

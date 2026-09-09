@@ -28,7 +28,14 @@ import shoppingListsService, {
   ShoppingListType,
 } from '../services/shoppingLists';
 import { Department } from '../types';
-import { Input, Button, LoadingSpinner, PageHeader, LabeledDropdown } from '../components';
+import {
+  Input,
+  Button,
+  LoadingSpinner,
+  PageHeader,
+  LabeledDropdown,
+  EnterToAddHint,
+} from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -48,6 +55,7 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
   const [saving, setSaving] = useState(false);
   const [isMaster, setIsMaster] = useState(false);
   const [departmentDropdownOpen, setDepartmentDropdownOpen] = useState(false);
+  const [activeItemIndex, setActiveItemIndex] = useState(0);
 
   const vesselId = user?.vesselId ?? null;
 
@@ -93,12 +101,18 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
 
   const addItem = () => {
     const newIndex = items.length;
+    setActiveItemIndex(newIndex);
     setItems((prev) => [...prev, { text: '', checked: false }]);
     setTimeout(() => itemInputRefs.current[newIndex]?.focus(), 50);
   };
   const removeItem = (index: number) => {
     if (items.length <= 1) return;
     setItems((prev) => prev.filter((_, i) => i !== index));
+    setActiveItemIndex((current) => {
+      if (index < current) return current - 1;
+      if (index === current) return Math.max(0, Math.min(index, items.length - 2));
+      return current;
+    });
   };
   const setItemAt = (index: number, field: 'text' | 'amount', value: string) => {
     setItems((prev) => {
@@ -114,7 +128,11 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
       return;
     }
     const trimmedItems: ShoppingListItem[] = items
-      .map((item) => ({ text: item.text.trim(), checked: false }))
+      .map((item) => ({
+        text: item.text.trim(),
+        amount: item.amount?.trim() || undefined,
+        checked: false,
+      }))
       .filter((item) => item.text.length > 0);
     if (!vesselId) return;
     setSaving(true);
@@ -250,45 +268,55 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
 
         <Text style={[styles.label, { color: themeColors.textPrimary }]}>Items</Text>
         {items.map((item, index) => (
-          <View key={index} style={styles.itemRow}>
-            <TextInput
-              style={[
-                styles.amountInput,
-                { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
-              ]}
-              value={item.amount ?? ''}
-              onChangeText={(v) => setItemAt(index, 'amount', v)}
-              placeholder="#"
-              keyboardType="decimal-pad"
-              placeholderTextColor={themeColors.textSecondary}
-              returnKeyType="next"
-              onSubmitEditing={() => itemInputRefs.current[index]?.focus()}
-            />
-            <TextInput
-              ref={(el) => { itemInputRefs.current[index] = el; }}
-              style={[
-                styles.itemInput,
-                { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
-              ]}
-              value={item.text}
-              onChangeText={(v) => setItemAt(index, 'text', v)}
-              placeholder="Item"
-              placeholderTextColor={themeColors.textSecondary}
-              returnKeyType="done"
-              onSubmitEditing={() => {
-                if (index === items.length - 1) addItem();
-              }}
-            />
-            <TouchableOpacity
-              onPress={() => removeItem(index)}
-              style={styles.removeBtn}
-              disabled={items.length <= 1}
-            >
-              <Text style={[styles.removeBtnText, items.length <= 1 && styles.removeBtnDisabled]}>
-                Remove
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <React.Fragment key={index}>
+            <View style={styles.itemRow}>
+              <TextInput
+                style={[
+                  styles.amountInput,
+                  { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+                ]}
+                value={item.amount ?? ''}
+                onChangeText={(v) => setItemAt(index, 'amount', v)}
+                placeholder="#"
+                keyboardType="decimal-pad"
+                placeholderTextColor={themeColors.textSecondary}
+                returnKeyType="next"
+                submitBehavior="submit"
+                onFocus={() => setActiveItemIndex(index)}
+                onSubmitEditing={() => itemInputRefs.current[index]?.focus()}
+              />
+              <TextInput
+                ref={(el) => {
+                  itemInputRefs.current[index] = el;
+                }}
+                style={[
+                  styles.itemInput,
+                  { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+                ]}
+                value={item.text}
+                onChangeText={(v) => setItemAt(index, 'text', v)}
+                placeholder="Item"
+                placeholderTextColor={themeColors.textSecondary}
+                returnKeyType="done"
+                submitBehavior="submit"
+                onFocus={() => setActiveItemIndex(index)}
+                onSubmitEditing={() => {
+                  if (index === items.length - 1) addItem();
+                  else itemInputRefs.current[index + 1]?.focus();
+                }}
+              />
+              <TouchableOpacity
+                onPress={() => removeItem(index)}
+                style={styles.removeBtn}
+                disabled={items.length <= 1}
+              >
+                <Text style={[styles.removeBtnText, items.length <= 1 && styles.removeBtnDisabled]}>
+                  Remove
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {index === activeItemIndex && <EnterToAddHint />}
+          </React.Fragment>
         ))}
 
         <View style={styles.actions}>

@@ -27,7 +27,6 @@ export { PreDepartureChecklistScreen } from './PreDepartureChecklistScreen';
 export { AddEditPreDepartureChecklistScreen } from './AddEditPreDepartureChecklistScreen';
 export { ViewPreDepartureChecklistScreen } from './ViewPreDepartureChecklistScreen';
 export { DeliveryTripsScreen } from './DeliveryTripsScreen';
-export { YardPeriodTripsScreen } from './YardPeriodTripsScreen';
 export { TripColorSettingsScreen } from './TripColorSettingsScreen';
 export { TasksScreen } from './TasksScreen';
 export { TasksListScreen } from './TasksListScreen';

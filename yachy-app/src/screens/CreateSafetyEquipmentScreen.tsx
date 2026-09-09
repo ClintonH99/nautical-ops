@@ -21,7 +21,10 @@ import { Calendar } from 'react-native-calendars';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
-import safetyEquipmentService, { normalizeSafetyItem } from '../services/safetyEquipment';
+import safetyEquipmentService, {
+  getSafetyEquipmentCategoryOrder,
+  normalizeSafetyItem,
+} from '../services/safetyEquipment';
 import type { SafetyEquipmentData, SafetyItem } from '../services/safetyEquipment';
 import vesselService from '../services/vessel';
 import { Button, LoadingSpinner, PageHeader, ExportButton } from '../components';
@@ -68,7 +71,13 @@ function toYYYYMMDD(d: Date): string {
 }
 
 function emptyItem(): SafetyItem {
-  return { location: '', lastChecked: null, lastCheckedNA: false, expiryDate: null, expiryDateNA: false };
+  return {
+    location: '',
+    lastChecked: null,
+    lastCheckedNA: false,
+    expiryDate: null,
+    expiryDateNA: false,
+  };
 }
 
 type ActiveDateField = { key: string; index: number; field: 'lastChecked' | 'expiryDate' } | null;
@@ -82,7 +91,7 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
   const canManage = isHOD || isMOV;
   const equipmentId = route.params?.equipmentId as string | undefined;
   const isEdit = !!equipmentId;
-  const [loading, setLoading] = useState(isEdit);
+  const [loading, setLoading] = useState(true);
   const [vesselName, setVesselName] = useState('');
   const [title, setTitle] = useState('');
   const [categoryOrder, setCategoryOrder] = useState<string[]>(() => [...DEFAULT_CATEGORIES]);
@@ -105,45 +114,52 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
   }, [vesselId]);
 
   useEffect(() => {
-    if (!equipmentId) {
+    if (!vesselId) {
       setLoading(false);
       return;
     }
+    let cancelled = false;
+
     (async () => {
       try {
+        if (!equipmentId) {
+          const existingPlans = await safetyEquipmentService.getByVessel(vesselId);
+          if (!cancelled && existingPlans.length > 0) {
+            setCategoryOrder([]);
+            setData({});
+          }
+          return;
+        }
+
         const item = await safetyEquipmentService.getById(equipmentId);
-        if (item) {
+        if (item && !cancelled) {
           setTitle(item.title ?? '');
           const raw = item.data || {};
           const labels = (raw.customLabels as Record<string, string>) || {};
           setCustomLabels(labels);
-          const allKeys = new Set(DEFAULT_CATEGORIES);
-          Object.keys(raw).forEach((k) => {
-            if (k !== 'vesselName' && k !== 'customLabels' && k.startsWith('custom_')) {
-              allKeys.add(k);
-            }
-          });
-          const order = [...DEFAULT_CATEGORIES.filter((k) => allKeys.has(k))];
-          const customKeys = Object.keys(raw).filter(
-            (k) => k.startsWith('custom_') && !DEFAULT_CATEGORIES.includes(k)
-          );
-          order.push(...customKeys);
-          setCategoryOrder(order.length ? order : [...DEFAULT_CATEGORIES]);
+          const order = getSafetyEquipmentCategoryOrder(raw, DEFAULT_CATEGORIES);
+          setCategoryOrder(order);
           const next: Record<string, SafetyItem[]> = {};
-          order.forEach((k) => {
-            const rawArr = (raw[k] as (string | SafetyItem)[] | undefined) ?? [];
-            const normalized = rawArr.map(normalizeSafetyItem).filter((it) => it.location);
-            next[k] = normalized.length ? normalized : [emptyItem()];
+          order.forEach((key) => {
+            const rawItems = (raw[key] as (string | SafetyItem)[] | undefined) ?? [];
+            const normalized = rawItems
+              .map(normalizeSafetyItem)
+              .filter((safetyItem) => safetyItem.location);
+            next[key] = normalized.length ? normalized : [emptyItem()];
           });
           setData(next);
         }
       } catch (e) {
         console.error('Load safety equipment error:', e);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
-  }, [equipmentId]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [equipmentId, vesselId]);
 
   const setLoc = (key: string, i: number, v: string) => {
     const arr = [...(data[key] || [emptyItem()])];
@@ -151,7 +167,12 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
     setData({ ...data, [key]: arr });
   };
 
-  const setDateField = (key: string, i: number, field: 'lastChecked' | 'expiryDate', value: string) => {
+  const setDateField = (
+    key: string,
+    i: number,
+    field: 'lastChecked' | 'expiryDate',
+    value: string
+  ) => {
     const arr = [...(data[key] || [emptyItem()])];
     const naField = field === 'lastChecked' ? 'lastCheckedNA' : 'expiryDateNA';
     arr[i] = { ...arr[i], [field]: value, [naField]: false };
@@ -183,9 +204,9 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
       return;
     }
     const key = `custom_${Date.now()}`;
-    setCustomLabels({ ...customLabels, [key]: name });
-    setCategoryOrder([...categoryOrder, key]);
-    setData({ ...data, [key]: [emptyItem()] });
+    setCustomLabels((previous) => ({ ...previous, [key]: name }));
+    setCategoryOrder((previous) => [key, ...previous]);
+    setData((previous) => ({ ...previous, [key]: [emptyItem()] }));
     setNewCategoryName('');
   };
 
@@ -198,14 +219,9 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
         style: 'destructive',
         onPress: () => {
           const nextOrder = categoryOrder.filter((k) => k !== key);
-          if (nextOrder.length === 0) {
-            setCategoryOrder([...DEFAULT_CATEGORIES]);
-            setData(Object.fromEntries(DEFAULT_CATEGORIES.map((c) => [c, [emptyItem()]])));
-          } else {
-            setCategoryOrder(nextOrder);
-            const { [key]: _, ...rest } = data;
-            setData(rest);
-          }
+          setCategoryOrder(nextOrder);
+          const { [key]: _, ...rest } = data;
+          setData(rest);
           if (key.startsWith('custom_')) {
             const { [key]: __, ...rest } = customLabels;
             setCustomLabels(rest);
@@ -216,7 +232,7 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
   };
 
   const build = (): SafetyEquipmentData => {
-    const out: SafetyEquipmentData = { vesselName };
+    const out: SafetyEquipmentData = { vesselName, categoryOrder: [...categoryOrder] };
     if (Object.keys(customLabels).length) {
       out.customLabels = customLabels;
     }
@@ -284,7 +300,8 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
       style={[styles.container, { backgroundColor: themeColors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <PageHeader title="Create Safety Equipment"
+      <PageHeader
+        title="Create Safety Equipment"
         actions={<ExportButton active={false} onPress={onExport} />}
       />
       <ScrollView
@@ -358,7 +375,10 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
                 key={i}
                 style={[
                   styles.itemCard,
-                  { backgroundColor: themeColors.surface, borderColor: themeColors.isDark ? 'rgba(255,255,255,0.1)' : COLORS.border },
+                  {
+                    backgroundColor: themeColors.surface,
+                    borderColor: themeColors.isDark ? 'rgba(255,255,255,0.1)' : COLORS.border,
+                  },
                 ]}
               >
                 <View style={styles.row}>
@@ -379,14 +399,18 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
                 </View>
                 <View style={styles.dateRow}>
                   <View style={styles.dateCol}>
-                    <Text style={[styles.dateLabel, { color: themeColors.textSecondary }]}>Last checked</Text>
+                    <Text style={[styles.dateLabel, { color: themeColors.textSecondary }]}>
+                      Last checked
+                    </Text>
                     <TouchableOpacity
                       disabled={item.lastCheckedNA}
                       onPress={() => openDatePicker(key, i, 'lastChecked')}
                       style={[
                         styles.dateChip,
                         {
-                          backgroundColor: item.lastCheckedNA ? themeColors.background : themeColors.background,
+                          backgroundColor: item.lastCheckedNA
+                            ? themeColors.background
+                            : themeColors.background,
                           borderColor: themeColors.isDark ? 'rgba(255,255,255,0.1)' : COLORS.border,
                         },
                       ]}
@@ -395,7 +419,10 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
                         style={[
                           styles.dateChipText,
                           {
-                            color: item.lastCheckedNA || !item.lastChecked ? themeColors.textSecondary : themeColors.textPrimary,
+                            color:
+                              item.lastCheckedNA || !item.lastChecked
+                                ? themeColors.textSecondary
+                                : themeColors.textPrimary,
                             fontStyle: item.lastCheckedNA ? 'italic' : 'normal',
                           },
                         ]}
@@ -412,11 +439,15 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
                         size={15}
                         color={item.lastCheckedNA ? COLORS.primary : themeColors.textSecondary}
                       />
-                      <Text style={[styles.naLabel, { color: themeColors.textSecondary }]}>Mark N/A</Text>
+                      <Text style={[styles.naLabel, { color: themeColors.textSecondary }]}>
+                        Mark N/A
+                      </Text>
                     </TouchableOpacity>
                   </View>
                   <View style={styles.dateCol}>
-                    <Text style={[styles.dateLabel, { color: themeColors.textSecondary }]}>Expiry / replace by</Text>
+                    <Text style={[styles.dateLabel, { color: themeColors.textSecondary }]}>
+                      Expiry / replace by
+                    </Text>
                     <TouchableOpacity
                       disabled={item.expiryDateNA}
                       onPress={() => openDatePicker(key, i, 'expiryDate')}
@@ -432,7 +463,10 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
                         style={[
                           styles.dateChipText,
                           {
-                            color: item.expiryDateNA || !item.expiryDate ? themeColors.textSecondary : themeColors.textPrimary,
+                            color:
+                              item.expiryDateNA || !item.expiryDate
+                                ? themeColors.textSecondary
+                                : themeColors.textPrimary,
                             fontStyle: item.expiryDateNA ? 'italic' : 'normal',
                           },
                         ]}
@@ -449,7 +483,9 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
                         size={15}
                         color={item.expiryDateNA ? COLORS.primary : themeColors.textSecondary}
                       />
-                      <Text style={[styles.naLabel, { color: themeColors.textSecondary }]}>Mark N/A</Text>
+                      <Text style={[styles.naLabel, { color: themeColors.textSecondary }]}>
+                        Mark N/A
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -487,7 +523,12 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
                 }
                 onDayPress={({ dateString }: { dateString: string }) => {
                   if (activeDateField) {
-                    setDateField(activeDateField.key, activeDateField.index, activeDateField.field, dateString);
+                    setDateField(
+                      activeDateField.key,
+                      activeDateField.index,
+                      activeDateField.field,
+                      dateString
+                    );
                   }
                   setActiveDateField(null);
                 }}
@@ -503,7 +544,12 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
                   monthTextColor: themeColors.textPrimary,
                 }}
               />
-              <Button title="Close" onPress={() => setActiveDateField(null)} variant="outline" fullWidth />
+              <Button
+                title="Close"
+                onPress={() => setActiveDateField(null)}
+                variant="outline"
+                fullWidth
+              />
             </View>
           </Pressable>
         </Modal>
@@ -556,7 +602,12 @@ const styles = StyleSheet.create({
   dateRow: { flexDirection: 'row', gap: SPACING.md },
   dateCol: { flex: 1 },
   dateLabel: { fontSize: FONTS.xs, marginBottom: 4 },
-  dateChip: { borderWidth: 1, borderRadius: BORDER_RADIUS.sm, padding: SPACING.sm, marginBottom: 6 },
+  dateChip: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.sm,
+    padding: SPACING.sm,
+    marginBottom: 6,
+  },
   dateChipText: { fontSize: FONTS.sm },
   naRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   naLabel: { fontSize: FONTS.xs },

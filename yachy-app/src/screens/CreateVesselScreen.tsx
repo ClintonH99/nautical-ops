@@ -27,10 +27,6 @@ import { useAuthStore } from '../store';
 import { usePostHog } from 'posthog-react-native';
 
 const ACCENT_GOLD = '#c9a227';
-const MARITIME_BACKGROUND = '#0f172a';
-const MARITIME_SURFACE = '#1e293b';
-const MARITIME_TEXT = '#f8fafc';
-const MARITIME_TEXT_MUTED = '#cbd5e1';
 
 export const CreateVesselScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -108,19 +104,19 @@ export const CreateVesselScreen = ({ navigation }: any) => {
 
   if (createdVessel) {
     return (
-      <View style={[styles.container, { backgroundColor: MARITIME_BACKGROUND }]}>
-        <StatusBar barStyle="light-content" backgroundColor={MARITIME_BACKGROUND} />
+      <View style={[styles.container, { backgroundColor: COLORS.white }]}>
+        <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 }]}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.hero}>
-            <View style={[styles.heroBadge, { backgroundColor: MARITIME_SURFACE }]}>
+            <View style={[styles.heroBadge, { backgroundColor: COLORS.gray100 }]}>
               <Ionicons name="boat-outline" size={20} color={ACCENT_GOLD} />
-              <Text style={[styles.heroBadgeText, { color: MARITIME_TEXT }]}>Nautical Ops</Text>
+              <Text style={[styles.heroBadgeText, { color: COLORS.primary }]}>Nautical Ops</Text>
             </View>
-            <Text style={[styles.successTitle, { color: MARITIME_TEXT }]}>Vessel Created!</Text>
-            <Text style={[styles.successSubtitle, { color: MARITIME_TEXT_MUTED }]}>
+            <Text style={[styles.successTitle, { color: COLORS.primary }]}>Vessel Created!</Text>
+            <Text style={[styles.successSubtitle, { color: COLORS.primary }]}>
               {createdVessel.name} is ready to go
             </Text>
             <View style={styles.heroAccent} />
@@ -130,22 +126,22 @@ export const CreateVesselScreen = ({ navigation }: any) => {
             style={[
               styles.infoBox,
               {
-                backgroundColor: 'rgba(14, 165, 233, 0.1)',
-                borderColor: 'rgba(14, 165, 233, 0.3)',
+                backgroundColor: COLORS.gray50,
+                borderColor: COLORS.border,
               },
             ]}
           >
-            <Text style={[styles.instructionsTitle, { color: MARITIME_TEXT }]}>Next Steps</Text>
-            <Text style={[styles.instructionText, { color: MARITIME_TEXT_MUTED }]}>
+            <Text style={[styles.instructionsTitle, { color: COLORS.primary }]}>Next Steps</Text>
+            <Text style={[styles.instructionText, { color: COLORS.primary }]}>
               1. Open Settings and go to Vessel Plans to select a plan
             </Text>
-            <Text style={[styles.instructionText, { color: MARITIME_TEXT_MUTED }]}>
+            <Text style={[styles.instructionText, { color: COLORS.primary }]}>
               2. Complete payment to unlock your invite code
             </Text>
-            <Text style={[styles.instructionText, { color: MARITIME_TEXT_MUTED }]}>
+            <Text style={[styles.instructionText, { color: COLORS.primary }]}>
               3. Share the invite code with your crew members
             </Text>
-            <Text style={[styles.instructionText, { color: MARITIME_TEXT_MUTED }]}>
+            <Text style={[styles.instructionText, { color: COLORS.primary }]}>
               Invite Code is accessible in the settings menu.
             </Text>
           </View>
@@ -155,7 +151,7 @@ export const CreateVesselScreen = ({ navigation }: any) => {
               title="Continue to Dashboard"
               onPress={handleContinue}
               fullWidth
-              variant="outlineLight"
+              variant="primary"
               style={styles.actionButton}
             />
           </View>

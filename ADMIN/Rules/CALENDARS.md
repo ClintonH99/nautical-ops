@@ -3,6 +3,7 @@
 ## Rule
 
 All calendars in the app (current and newly added) **must** use:
+
 - **Day mode:** Black text for day numbers, day headers (Mon, Tue, etc.), month name, and arrows
 - **Dark mode:** White text for all calendar elements
 
@@ -22,4 +23,4 @@ Calendar month navigation arrows **must** always remain visible.
 
 ## Scope
 
-Applies to: HomeScreen, UpcomingTripsScreen, YardPeriodTripsScreen, TasksCalendarScreen, AddEditTaskScreen, AddEditTripScreen, CreateWatchTimetableScreen, and any future screens that add calendar components.
+Applies to: HomeScreen, UpcomingTripsScreen, YardPeriodJobsScreen, AddEditYardJobScreen, TasksCalendarScreen, AddEditTaskScreen, AddEditTripScreen, CreateWatchTimetableScreen, and any future screens that add calendar components.
