@@ -117,7 +117,11 @@ describe('getVesselSubscriptionAccess', () => {
   beforeEach(() => mockRpc.mockReset());
 
   it('loads only the safe server-side entitlement projection', async () => {
-    mockRpc.mockResolvedValue({ data: [row()], error: null });
+    // Keep this RPC-focused test independent of the real calendar date.
+    mockRpc.mockResolvedValue({
+      data: [row({ current_period_end: '2099-09-10T12:00:00.000Z' })],
+      error: null,
+    });
 
     const result = await getVesselSubscriptionAccess('vessel-1');
 

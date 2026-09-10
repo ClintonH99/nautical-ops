@@ -8,7 +8,7 @@
  * review queue.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -33,8 +33,13 @@ import {
   getWeekEntries,
   confirmEntryForUser,
   canManageRestFor,
+  RestEntryStatus,
 } from '../services/restEntries';
 import { getSignatureForUser } from '../services/signatures';
+import watchKeepingService, {
+  getRestWatchConflicts,
+  WatchWorkPeriod,
+} from '../services/watchKeeping';
 
 function timeStringToDate(t: string | null): Date {
   const d = new Date();
@@ -75,7 +80,8 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   const [comment, setComment] = useState('');
   const [lunchStart, setLunchStart] = useState<string | null>('12:00');
   const [lunchEnd, setLunchEnd] = useState<string | null>('13:00');
-  const [status, setStatus] = useState<'draft' | 'pending_confirmation' | 'confirmed'>('draft');
+  const [status, setStatus] = useState<RestEntryStatus>('draft');
+  const [watchPeriods, setWatchPeriods] = useState<WatchWorkPeriod[]>([]);
   const [activeField, setActiveField] = useState<ActiveField>(null);
   const [pendingTime, setPendingTime] = useState<Date | null>(null);
   const [saving, setSaving] = useState(false);
@@ -84,7 +90,13 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   const loadExisting = useCallback(async () => {
     if (!effectiveUserId) return;
 
-    const rows = await getWeekEntries(effectiveUserId, date);
+    const [rows, linkedWatchPeriods] = await Promise.all([
+      getWeekEntries(effectiveUserId, date),
+      user?.vesselId
+        ? watchKeepingService.getWorkPeriodsForUser(user.vesselId, effectiveUserId, date, date)
+        : Promise.resolve([]),
+    ]);
+    setWatchPeriods(linkedWatchPeriods);
     const existing = rows.find((r) => r.date === date);
     if (existing) {
       setRestPeriods(
@@ -113,14 +125,13 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
     }, [loadExisting])
   );
 
-  const isLocked = !isManager && status !== 'draft';
+  const isLocked = !isManager && (status === 'pending_confirmation' || status === 'confirmed');
   const compliance = checkCompliance(restPeriods);
+  const watchRestConflicts = getRestWatchConflicts(restPeriods, watchPeriods);
 
   const getTimeForField = (field: TimeField): string | null => {
     if (field.type === 'rest') {
-      return field.edge === 'start'
-        ? restPeriods[field.index].start
-        : restPeriods[field.index].end;
+      return field.edge === 'start' ? restPeriods[field.index].start : restPeriods[field.index].end;
     }
     if (field.type === 'work') {
       return field.edge === 'start' ? workStart : workEnd;
@@ -191,20 +202,8 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
     setRestPeriods((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSave = async () => {
+  const saveOwnEntry = async () => {
     if (!user?.id || !user?.vesselId) return;
-    const signature = await getSignatureForUser(user.id);
-    if (!signature) {
-      Alert.alert(
-        'Set up your E-Signature',
-        'You need to set up your signature before submitting your Hours of Rest.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Set up now', onPress: () => navigation.navigate('SignatureSetup') },
-        ]
-      );
-      return;
-    }
     setSaving(true);
     try {
       const entry: RestEntry = {
@@ -221,8 +220,62 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
       };
       await saveEntry(entry);
       navigation.goBack();
-    } catch (e) {
+    } catch {
       Alert.alert('Error', 'Failed to save. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!user?.id || !user?.vesselId) return;
+    const signature = await getSignatureForUser(user.id);
+    if (!signature) {
+      Alert.alert(
+        'Set up your E-Signature',
+        'You need to set up your signature before submitting your Hours of Rest.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Set up now', onPress: () => navigation.navigate('SignatureSetup') },
+        ]
+      );
+      return;
+    }
+
+    if (watchRestConflicts.length > 0) {
+      Alert.alert(
+        'Rest overlaps a scheduled watch',
+        'The saved rest period overlaps an automatically imported Watch Keeping period. Check the times, or save anyway if this accurately records what happened.',
+        [
+          { text: 'Check Times', style: 'cancel' },
+          { text: 'Save Anyway', onPress: saveOwnEntry },
+        ]
+      );
+      return;
+    }
+
+    await saveOwnEntry();
+  };
+
+  const confirmManagedEntry = async () => {
+    if (!effectiveUserId || !user?.vesselId || !user?.id) return;
+    setSaving(true);
+    try {
+      await confirmEntryForUser(
+        effectiveUserId,
+        user.vesselId,
+        date,
+        restPeriods,
+        workStart,
+        workEnd,
+        lunchStart,
+        lunchEnd,
+        user.id,
+        comment.trim() || null
+      );
+      navigation.goBack();
+    } catch {
+      Alert.alert('Error', 'Failed to confirm. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -242,26 +295,20 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
       );
       return;
     }
-    setSaving(true);
-    try {
-      await confirmEntryForUser(
-        effectiveUserId,
-        user.vesselId,
-        date,
-        restPeriods,
-        workStart,
-        workEnd,
-        lunchStart,
-        lunchEnd,
-        user.id,
-        comment.trim() || null
+
+    if (watchRestConflicts.length > 0) {
+      Alert.alert(
+        'Rest overlaps a scheduled watch',
+        'The recorded rest overlaps an automatically imported Watch Keeping period. Check the times, or confirm anyway if this accurately records what happened.',
+        [
+          { text: 'Check Times', style: 'cancel' },
+          { text: 'Confirm Anyway', onPress: confirmManagedEntry },
+        ]
       );
-      navigation.goBack();
-    } catch (e) {
-      Alert.alert('Error', 'Failed to confirm. Please try again.');
-    } finally {
-      setSaving(false);
+      return;
     }
+
+    await confirmManagedEntry();
   };
 
   const renderTimeChip = (label: string, value: string | null, onPress: () => void) => (
@@ -295,7 +342,11 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
                 fontSize: FONTS.base,
               }}
             >
-              {status === 'confirmed' ? 'Confirmed' : 'Pending confirmation'}
+              {status === 'confirmed'
+                ? 'Confirmed'
+                : status === 'needs_reconfirmation'
+                  ? 'Needs reconfirmation'
+                  : 'Pending confirmation'}
             </Text>
           )}
         </View>
@@ -308,9 +359,15 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
           </Text>
         )}
 
-        {status !== 'draft' && !isManager && (
+        {isLocked && !isManager && (
           <Text style={[styles.lockedNote, { color: themeColors.textSecondary }]}>
             {status === 'pending_confirmation' ? 'Locked until reviewed' : 'Locked'}
+          </Text>
+        )}
+
+        {status === 'needs_reconfirmation' && !isManager && (
+          <Text style={[styles.lockedNote, { color: themeColors.textSecondary }]}>
+            The Watch Keeping schedule changed. Review this entry and save it again.
           </Text>
         )}
 
@@ -326,6 +383,36 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
           <Text style={{ color: themeColors.textSecondary }}>{'->'}</Text>
           {renderTimeChip('End', workEnd, () => openPicker({ type: 'work', edge: 'end' }))}
         </View>
+
+        {watchPeriods.length > 0 && (
+          <View style={[styles.watchCard, { backgroundColor: themeColors.surface }]}>
+            <View style={styles.watchCardHeader}>
+              <Text style={[styles.watchCardTitle, { color: themeColors.textPrimary }]}>
+                Watch Keeping
+              </Text>
+              <Text style={styles.automaticLabel}>Automatically added</Text>
+            </View>
+            {watchPeriods.map((period, index) => (
+              <View
+                key={`${period.timetableId}-${period.date}-${period.startTime}-${index}`}
+                style={styles.watchPeriodRow}
+              >
+                <Text style={[styles.watchPeriodName, { color: themeColors.textSecondary }]}>
+                  {period.watchTitle}
+                </Text>
+                <Text style={[styles.watchPeriodTime, { color: themeColors.textPrimary }]}>
+                  {period.startTime}–{period.endTime}
+                </Text>
+              </View>
+            ))}
+            {watchRestConflicts.length > 0 && (
+              <Text style={styles.watchConflictText}>
+                Warning: recorded rest overlaps this scheduled watch. You can still save an honest
+                non-compliant record.
+              </Text>
+            )}
+          </View>
+        )}
 
         <Text
           style={[styles.sectionLabel, { color: themeColors.textPrimary, marginTop: SPACING.lg }]}
@@ -473,6 +560,38 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 2,
     elevation: 2,
+  },
+  watchCard: {
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.sm,
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.primary,
+  },
+  watchCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  watchCardTitle: { fontSize: FONTS.base, fontWeight: '700' },
+  automaticLabel: { color: COLORS.primary, fontSize: FONTS.xs, fontWeight: '600' },
+  watchPeriodRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: SPACING.md,
+    paddingVertical: SPACING.xs,
+  },
+  watchPeriodName: { flex: 1, fontSize: FONTS.sm },
+  watchPeriodTime: { fontSize: FONTS.sm, fontWeight: '700' },
+  watchConflictText: {
+    color: '#dc2626',
+    fontSize: FONTS.xs,
+    lineHeight: 17,
+    marginTop: SPACING.sm,
   },
   editablePillText: { color: '#000000', fontSize: FONTS.sm, fontWeight: '600' },
   sectionLabel: { fontSize: FONTS.base, fontWeight: '600', marginBottom: SPACING.sm },

@@ -40,6 +40,7 @@ const STATUS_LABEL: Record<string, string> = {
   missing: 'not complete',
   draft: 'not complete',
   pending_confirmation: 'complete - awaiting confirmation',
+  needs_reconfirmation: 'watch changed - needs reconfirmation',
   confirmed: 'confirmed',
 };
 
@@ -56,7 +57,9 @@ type DayCategory = 'not_complete' | 'complete' | 'confirmed';
 function categorizeDay(entries: DayReviewEntry[]): DayCategory {
   const hasIncomplete = entries.some((e) => e.status === 'missing' || e.status === 'draft');
   if (hasIncomplete) return 'not_complete';
-  const hasPending = entries.some((e) => e.status === 'pending_confirmation');
+  const hasPending = entries.some(
+    (e) => e.status === 'pending_confirmation' || e.status === 'needs_reconfirmation'
+  );
   if (hasPending) return 'complete';
   return 'confirmed';
 }
@@ -79,7 +82,7 @@ export const RestToBeConfirmedScreen = () => {
   const [selectedExportIds, setSelectedExportIds] = useState<Set<string>>(new Set());
   const [exporting, setExporting] = useState(false);
 
-  const pastMonths = getPastMonths(12);
+  const pastMonths = user?.createdAt ? getPastMonths(user.createdAt) : [];
 
   const loadCurrent = useCallback(async () => {
     if (!user?.vesselId) return;
@@ -301,18 +304,24 @@ export const RestToBeConfirmedScreen = () => {
 
         {tab === 'history' && !selectedMonth && (
           <View style={{ gap: SPACING.sm }}>
-            {pastMonths.map((m) => (
-              <TouchableOpacity
-                key={`${m.year}-${m.month}`}
-                style={[styles.monthRow, { borderColor: themeColors.textSecondary }]}
-                onPress={() => {
-                  setSelectedMonth(m);
-                  loadMonth(m.year, m.month);
-                }}
-              >
-                <Text style={{ color: themeColors.textPrimary }}>{m.label}</Text>
-              </TouchableOpacity>
-            ))}
+            {pastMonths.length === 0 ? (
+              <Text style={{ color: themeColors.textSecondary }}>
+                Completed months will appear here from the first day of the following month.
+              </Text>
+            ) : (
+              pastMonths.map((m) => (
+                <TouchableOpacity
+                  key={`${m.year}-${m.month}`}
+                  style={[styles.monthRow, { borderColor: themeColors.textSecondary }]}
+                  onPress={() => {
+                    setSelectedMonth(m);
+                    loadMonth(m.year, m.month);
+                  }}
+                >
+                  <Text style={{ color: themeColors.textPrimary }}>{m.label}</Text>
+                </TouchableOpacity>
+              ))
+            )}
           </View>
         )}
 

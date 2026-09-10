@@ -22,44 +22,35 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import userService from '../services/user';
-import watchKeepingService, { TimetableSlot } from '../services/watchKeeping';
+import watchKeepingService, { getWatchDateTime, TimetableSlot } from '../services/watchKeeping';
 import { User } from '../types';
-import { formatLocalDateString } from '../utils';
+import { formatLocalDateString, toYYYYMMDD } from '../utils';
 import { Input, Button, LoadingSpinner, PageHeader } from '../components';
-
-function parseTimeToHour(str: string): number {
-  const cleaned = str.trim().replace(/\s/g, '');
-  const match = cleaned.match(/^(\d{1,2})(?::(\d{2}))?(?:\s*[ap]m)?$/i);
-  if (!match) return 0;
-  let h = parseInt(match[1], 10);
-  const m = match[2] ? parseInt(match[2], 10) : 0;
-  if (/pm/i.test(cleaned) && h < 12) h += 12;
-  if (/am/i.test(cleaned) && h === 12) h = 0;
-  return h + m / 60;
-}
-
-function formatHourFromStart(hourFromStart: number, startHourOfDay: number): string {
-  const totalHours = startHourOfDay + hourFromStart;
-  const h = Math.floor(totalHours) % 24;
-  const m = Math.round((totalHours % 1) * 60);
-  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-}
 
 function generateWatchTimetable(
   watchIntervalHours: number,
   totalRunningHours: number,
   restHours: number,
   crew: User[],
-  startTimeStr: string
-): Array<{ crew: User; startTimeStr: string; endTimeStr: string; durationHours: number }> {
+  startTimeStr: string,
+  startDate: string
+): Array<{
+  crew: User;
+  startTimeStr: string;
+  endTimeStr: string;
+  durationHours: number;
+  startDate: string;
+  endDate: string;
+}> {
   const slots: Array<{
     crew: User;
     startTimeStr: string;
     endTimeStr: string;
     durationHours: number;
+    startDate: string;
+    endDate: string;
   }> = [];
   if (crew.length === 0) return slots;
-  const startHourOfDay = parseTimeToHour(startTimeStr);
   const availableAt = crew.map(() => 0);
   let currentHour = 0;
   let crewIndex = 0;
@@ -86,11 +77,15 @@ function generateWatchTimetable(
     }
     const shiftEnd = Math.min(currentHour + watchIntervalHours, totalRunningHours);
     const actualDuration = shiftEnd - currentHour;
+    const slotStart = getWatchDateTime(startDate, startTimeStr, currentHour);
+    const slotEnd = getWatchDateTime(startDate, startTimeStr, shiftEnd);
     slots.push({
       crew: crew[assigned!],
-      startTimeStr: formatHourFromStart(currentHour, startHourOfDay),
-      endTimeStr: formatHourFromStart(shiftEnd, startHourOfDay),
+      startTimeStr: slotStart.time,
+      endTimeStr: slotEnd.time,
       durationHours: actualDuration,
+      startDate: slotStart.date,
+      endDate: slotEnd.date,
     });
     availableAt[assigned!] = shiftEnd + restHours;
     currentHour = shiftEnd;
@@ -105,6 +100,8 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
   const { user } = useAuthStore();
   const [editingTimetableId, setEditingTimetableId] = useState<string | null>(null);
   const [watchTitle, setWatchTitle] = useState('');
+  const [forDate, setForDate] = useState(() => toYYYYMMDD(new Date()));
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [startTime, setStartTime] = useState('06:00');
   const [startLocation, setStartLocation] = useState('');
   const [destination, setDestination] = useState('');
@@ -122,7 +119,10 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
     startTimeStr: string;
     endTimeStr: string;
     durationHours: number;
+    startDate: string;
+    endDate: string;
   }> | null>(null);
+  const [timetablePreviewOpen, setTimetablePreviewOpen] = useState(false);
   const [calculatedWatchHours, setCalculatedWatchHours] = useState<number | null>(null);
   const [exporting, setExporting] = useState(false);
   const vesselId = user?.vesselId ?? null;
@@ -154,6 +154,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
         }
         setEditingTimetableId(timetableId);
         setWatchTitle(timetable.watchTitle);
+        setForDate(timetable.forDate || '');
         setStartTime(timetable.startTime);
         setStartLocation(timetable.startLocation || '');
         setDestination(timetable.destination || '');
@@ -174,6 +175,8 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
               startTimeStr: slot.startTimeStr,
               endTimeStr: slot.endTimeStr,
               durationHours: slot.durationHours,
+              startDate: slot.startDate || timetable.forDate || '',
+              endDate: slot.endDate || timetable.forDate || '',
             };
           }
           return {
@@ -181,6 +184,8 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
             startTimeStr: slot.startTimeStr,
             endTimeStr: slot.endTimeStr,
             durationHours: slot.durationHours,
+            startDate: slot.startDate || timetable.forDate || '',
+            endDate: slot.endDate || timetable.forDate || '',
           };
         });
 
@@ -194,9 +199,30 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
           const avgDuration =
             convertedSlots.reduce((sum, s) => sum + s.durationHours, 0) / convertedSlots.length;
           setCalculatedWatchHours(Math.round(avgDuration * 10) / 10);
+
+          const totalDuration = convertedSlots.reduce((sum, slot) => sum + slot.durationHours, 0);
+          setTotalRunningTime(String(Math.round(totalDuration * 10) / 10));
+
+          // Rest hours were not stored separately by older schedules. Infer
+          // them from the gaps between each crew member's consecutive slots
+          // so pressing Update preserves the existing rotation accurately.
+          const lastCrewEnd = new Map<string, number>();
+          const restGaps: number[] = [];
+          let elapsedHours = 0;
+          convertedSlots.forEach((slot) => {
+            const previousEnd = lastCrewEnd.get(slot.crew.id);
+            if (previousEnd !== undefined) restGaps.push(elapsedHours - previousEnd);
+            elapsedHours += slot.durationHours;
+            lastCrewEnd.set(slot.crew.id, elapsedHours);
+          });
+          const inferredRest = restGaps.length > 0 ? Math.min(...restGaps) : 8;
+          setHoursOfRest(String(Math.round(inferredRest * 10) / 10));
         }
 
         setTimetableSlots(convertedSlots);
+        // Editing must open directly on the form. The full timetable is only
+        // shown after the user deliberately regenerates it for review.
+        setTimetablePreviewOpen(false);
       } catch (e) {
         console.error('Load timetable error:', e);
         Alert.alert('Error', 'Could not load timetable.');
@@ -251,6 +277,10 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
       Alert.alert('No crew', 'Please select at least one crew member.');
       return;
     }
+    if (!forDate) {
+      Alert.alert('Select a date', 'Please select the date and time when the voyage begins.');
+      return;
+    }
     const totalRunningHours = parseFloat((totalRunningTime || '36').replace(/[^\d.]/g, '')) || 36;
     const restHours = parseFloat((hoursOfRest || '8').replace(/[^\d.]/g, '')) || 8;
     const crewCount = selectedCrew.length;
@@ -266,10 +296,12 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
       totalRunningHours,
       restHours,
       selectedCrew,
-      startTime || '06:00'
+      startTime || '06:00',
+      forDate
     );
     setTimetableSlots(slots);
     setCalculatedWatchHours(watchIntervalHours);
+    setTimetablePreviewOpen(true);
     setGenerating(false);
   };
 
@@ -281,10 +313,14 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
       startTimeStr: s.startTimeStr,
       endTimeStr: s.endTimeStr,
       durationHours: s.durationHours,
+      startDate: s.startDate,
+      endDate: s.endDate,
     }));
 
-  const handleExport = async () => {
-    if (!vesselId || !timetableSlots) return;
+  const handleExport = async (slotsOverride?: NonNullable<typeof timetableSlots>) => {
+    const slotsToSave = slotsOverride ?? timetableSlots;
+    if (!vesselId || !slotsToSave) return;
+    const wasEditing = Boolean(editingTimetableId);
     setExporting(true);
     try {
       const timetableData = {
@@ -294,7 +330,8 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
         startLocation: startLocation || undefined,
         destination: destination || undefined,
         notes: notes || undefined,
-        slots: slotsToExportFormat(timetableSlots),
+        forDate,
+        slots: slotsToExportFormat(slotsToSave),
         createdBy: user?.id,
       };
 
@@ -308,9 +345,14 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
       }
 
       setTimetableSlots(null);
+      setTimetablePreviewOpen(false);
       setCalculatedWatchHours(null);
       setEditingTimetableId(null);
-      navigation.navigate('WatchSchedule', { timetableId: savedTimetable.id });
+      if (wasEditing) {
+        navigation.goBack();
+      } else {
+        navigation.replace('WatchSchedule', { timetableId: savedTimetable.id });
+      }
     } catch (e) {
       console.error('Export error:', e);
       Alert.alert(
@@ -322,6 +364,43 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
     } finally {
       setExporting(false);
     }
+  };
+
+  const handleUpdateDirectly = async () => {
+    if (!editingTimetableId) return;
+    if (!watchTitle.trim()) {
+      Alert.alert('Missing title', 'Please enter a Watch Title.');
+      return;
+    }
+    if (selectedCrew.length === 0) {
+      Alert.alert('No crew', 'Please select at least one crew member.');
+      return;
+    }
+    if (!forDate) {
+      Alert.alert('Select a date', 'Please select the date and time when the voyage begins.');
+      return;
+    }
+    if (!isHOD) {
+      Alert.alert('Access denied', 'Only HODs and Captain have access.');
+      return;
+    }
+
+    const totalRunningHours = parseFloat((totalRunningTime || '36').replace(/[^\d.]/g, '')) || 36;
+    const restHours = parseFloat((hoursOfRest || '8').replace(/[^\d.]/g, '')) || 8;
+    const watchIntervalHours =
+      selectedCrew.length <= 1
+        ? totalRunningHours
+        : Math.max(1, Math.ceil(restHours / (selectedCrew.length - 1)));
+    const updatedSlots = generateWatchTimetable(
+      watchIntervalHours,
+      totalRunningHours,
+      restHours,
+      selectedCrew,
+      startTime || '06:00',
+      forDate
+    );
+
+    await handleExport(updatedSlots);
   };
 
   if (!vesselId) {
@@ -358,7 +437,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={0}
     >
-      <PageHeader title="Create" />
+      <PageHeader title={editingTimetableId ? 'Edit Watch Schedule' : 'Create'} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -371,6 +450,65 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
           placeholder="e.g. Morning Watch"
           autoCapitalize="words"
         />
+        <Text style={[styles.label, { color: themeColors.textPrimary }]}>Voyage Start Date</Text>
+        <TouchableOpacity
+          style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
+          onPress={() => setDatePickerOpen(true)}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
+            {forDate
+              ? formatLocalDateString(forDate, {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                })
+              : 'Select voyage start date'}
+          </Text>
+          <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>▼</Text>
+        </TouchableOpacity>
+        {datePickerOpen && (
+          <Modal visible transparent animationType="fade">
+            <Pressable style={styles.modalBackdrop} onPress={() => setDatePickerOpen(false)}>
+              <View
+                style={[styles.calendarModal, { backgroundColor: themeColors.surface }]}
+                onStartShouldSetResponder={() => true}
+              >
+                <Text style={[styles.calendarTitle, { color: themeColors.textPrimary }]}>
+                  Voyage Start Date
+                </Text>
+                <Calendar
+                  current={forDate || undefined}
+                  markedDates={
+                    forDate
+                      ? {
+                          [forDate]: {
+                            selected: true,
+                            selectedColor: COLORS.primary,
+                            selectedTextColor: COLORS.white,
+                          },
+                        }
+                      : {}
+                  }
+                  onDayPress={(day: { dateString: string }) => {
+                    setForDate(day.dateString);
+                    setDatePickerOpen(false);
+                  }}
+                  theme={{
+                    backgroundColor: themeColors.surface,
+                    calendarBackground: themeColors.surface,
+                    dayTextColor: themeColors.textPrimary,
+                    monthTextColor: themeColors.textPrimary,
+                    textSectionTitleColor: themeColors.textSecondary,
+                    todayTextColor: COLORS.primary,
+                    arrowColor: COLORS.primary,
+                  }}
+                />
+              </View>
+            </Pressable>
+          </Modal>
+        )}
         <Text style={[styles.label, { color: themeColors.textPrimary }]}>Start Time</Text>
         <TouchableOpacity
           style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
@@ -525,22 +663,38 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
           </Modal>
         )}
         <View style={styles.actions}>
-          <Button
-            title={
-              editingTimetableId
-                ? 'Regenerate Watch Keeping Timetable'
-                : 'Generate Watch Keeping Timetable'
-            }
-            onPress={handleGenerateTimetable}
-            variant="primary"
-            loading={generating}
-            disabled={generating}
-            fullWidth
-          />
+          {editingTimetableId ? (
+            <View style={styles.editActions}>
+              <Button
+                title="Update"
+                onPress={handleUpdateDirectly}
+                variant="primary"
+                loading={exporting}
+                disabled={exporting}
+                style={styles.editActionButton}
+              />
+              <Button
+                title="Close"
+                onPress={() => navigation.goBack()}
+                variant="outline"
+                disabled={exporting}
+                style={styles.editActionButton}
+              />
+            </View>
+          ) : (
+            <Button
+              title="Generate Watch Keeping Timetable"
+              onPress={handleGenerateTimetable}
+              variant="primary"
+              loading={generating}
+              disabled={generating}
+              fullWidth
+            />
+          )}
         </View>
       </ScrollView>
 
-      {timetableSlots !== null && (
+      {timetableSlots !== null && timetablePreviewOpen && (
         <Modal visible transparent animationType="slide">
           <View style={[styles.timetableModal, { backgroundColor: themeColors.background }]}>
             <View style={[styles.timetableHeader, { backgroundColor: themeColors.surface }]}>
@@ -653,6 +807,20 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
                     ) : null}
                   </View>
                   <View style={styles.timetableRowCenter}>
+                    <Text style={[styles.timetableDate, { color: themeColors.textSecondary }]}>
+                      {formatLocalDateString(slot.startDate, {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                      {slot.endDate !== slot.startDate
+                        ? ` – ${formatLocalDateString(slot.endDate, {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric',
+                          })}`
+                        : ''}
+                    </Text>
                     <Text style={[styles.timetableTime, { color: themeColors.textPrimary }]}>
                       {slot.startTimeStr} – {slot.endTimeStr}
                     </Text>
@@ -678,15 +846,18 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
               >
                 <Text style={styles.timetableExportText}>
                   {exporting
-                    ? editingTimetableId ? 'Updating...' : 'Exporting...'
-                    : editingTimetableId ? 'Update' : 'Export'}
+                    ? editingTimetableId
+                      ? 'Updating...'
+                      : 'Exporting...'
+                    : editingTimetableId
+                      ? 'Update'
+                      : 'Export'}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.timetableCloseBtn}
                 onPress={() => {
-                  setTimetableSlots(null);
-                  setCalculatedWatchHours(null);
+                  setTimetablePreviewOpen(false);
                 }}
               >
                 <Text
@@ -699,7 +870,6 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
                 </Text>
               </TouchableOpacity>
             </View>
-
           </View>
         </Modal>
       )}
@@ -743,6 +913,18 @@ const styles = StyleSheet.create({
     minWidth: 280,
     maxHeight: 320,
   },
+  calendarModal: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+  },
+  calendarTitle: {
+    fontSize: FONTS.lg,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: SPACING.sm,
+  },
   crewList: { maxHeight: 280 },
   timeList: { maxHeight: 280 },
   modalItem: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg },
@@ -752,6 +934,8 @@ const styles = StyleSheet.create({
   modalItemSubtext: { fontSize: FONTS.sm, marginTop: 2 },
   emptyCrew: { fontSize: FONTS.base, padding: SPACING.lg, textAlign: 'center' },
   actions: { marginTop: SPACING.xl },
+  editActions: { flexDirection: 'row', gap: SPACING.sm },
+  editActionButton: { flex: 1 },
   timetableModal: {
     flex: 1,
     marginTop: 60,
@@ -787,6 +971,7 @@ const styles = StyleSheet.create({
   timetableCrewName: { fontSize: FONTS.base, fontWeight: '600', color: COLORS.textPrimary },
   timetableCrewRole: { fontSize: FONTS.sm, color: COLORS.textSecondary, marginTop: 2 },
   timetableTime: { fontSize: FONTS.base, fontWeight: '600', color: COLORS.primary },
+  timetableDate: { fontSize: FONTS.xs, marginBottom: 2 },
   timetableDuration: { fontSize: FONTS.sm, color: COLORS.textSecondary, marginTop: 2 },
   timetableActions: {
     flexDirection: 'row',

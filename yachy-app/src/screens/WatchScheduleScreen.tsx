@@ -11,7 +11,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Modal,
   RefreshControl,
   Alert,
 } from 'react-native';
@@ -22,7 +21,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { PageHeader } from '../components';
+import { PageHeader, ExportButton, ExportBar, Checkbox } from '../components';
 import { useAuthStore } from '../store';
 import watchKeepingService, { PublishedWatchTimetable } from '../services/watchKeeping';
 import { formatLocalDateString } from '../utils';
@@ -32,8 +31,11 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
   const { user } = useAuthStore();
   const [publishedTimetables, setPublishedTimetables] = useState<PublishedWatchTimetable[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exportMode, setExportMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exportingPdf, setExportingPdf] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const vesselId = user?.vesselId ?? null;
   const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
@@ -61,7 +63,7 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
         if (timetableId && data && data.length > 0) {
           const timetable = data.find((t) => t.id === timetableId);
           if (timetable) {
-            navigation.navigate('WatchScheduleDetail', { schedule: timetable });
+            setExpandedId(timetable.id);
             navigation.setParams({ timetableId: undefined });
           }
         }
@@ -69,11 +71,20 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
     }, [vesselId, loadPublished, route?.params?.timetableId, navigation])
   );
 
-  // New timetables no longer require choosing a date (Captain shares the
-  // schedule separately, e.g. via WhatsApp) - fall back to when it was
-  // actually published for any timetable with no chosen date.
+  // Newly generated timetables require a voyage start date. The fallback
+  // keeps older published schedules readable if they predate that field.
   const scheduleDateStr = (t: { forDate: string | null; createdAt: string }): string =>
     t.forDate || t.createdAt.slice(0, 10);
+
+  const slotTimeLabel = (slot: PublishedWatchTimetable['slots'][number]): string => {
+    if (!slot.startDate) return `${slot.startTimeStr} – ${slot.endTimeStr}`;
+    const startDate = formatLocalDateString(slot.startDate, { month: 'short', day: 'numeric' });
+    if (slot.endDate && slot.endDate !== slot.startDate) {
+      const endDate = formatLocalDateString(slot.endDate, { month: 'short', day: 'numeric' });
+      return `${startDate} ${slot.startTimeStr} – ${endDate} ${slot.endTimeStr}`;
+    }
+    return `${startDate} · ${slot.startTimeStr} – ${slot.endTimeStr}`;
+  };
 
   const handleDelete = async (timetable: PublishedWatchTimetable) => {
     Alert.alert(
@@ -106,35 +117,57 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
     navigation.navigate('CreateWatchTimetable', { timetableId: timetable.id });
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectedSchedules = publishedTimetables.filter((timetable) =>
+    selectedIds.has(timetable.id)
+  );
+
   const SLOTS_PER_PAGE = 30;
 
-  const exportWatchSchedulePdf = async (t: PublishedWatchTimetable) => {
+  const exportWatchSchedulesPdf = async (schedules: PublishedWatchTimetable[]) => {
+    if (schedules.length === 0) {
+      Alert.alert('Nothing selected', 'Tap the watch schedules you want to include, then export.');
+      return;
+    }
+
     setExportingPdf(true);
     try {
-      const dateStr = formatLocalDateString(scheduleDateStr(t), {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
+      const slotToRow = (s: PublishedWatchTimetable['slots'][number]) =>
+        `<tr><td>${s.crewPosition || '—'}</td><td>${s.crewName}</td><td>${slotTimeLabel(s)}</td></tr>`;
+
+      const pages = schedules.flatMap((schedule) => {
+        const chunks: PublishedWatchTimetable['slots'][] = [];
+        for (let i = 0; i < schedule.slots.length; i += SLOTS_PER_PAGE) {
+          chunks.push(schedule.slots.slice(i, i + SLOTS_PER_PAGE));
+        }
+        if (chunks.length === 0) chunks.push([]);
+        return chunks.map((slots) => ({ schedule, slots }));
       });
-      const headerMeta = `
+
+      const pageBlocks = pages.map(({ schedule, slots }, pageIndex) => {
+        const dateStr = formatLocalDateString(scheduleDateStr(schedule), {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+        });
+        const headerMeta = `
           <h1>Watch Schedule</h1>
           <p class="subtitle">${dateStr}</p>
-          ${t.startLocation ? `<p class="meta"><strong>From:</strong> ${t.startLocation}</p>` : ''}
-          ${t.destination ? `<p class="meta"><strong>To:</strong> ${t.destination}</p>` : ''}
-          <p class="meta"><strong>Start:</strong> ${t.startTime}</p>`;
-
-      const slotToRow = (s: (typeof t.slots)[0]) =>
-        `<tr><td>${s.crewPosition || '—'}</td><td>${s.crewName}</td><td>${s.startTimeStr} – ${s.endTimeStr}</td></tr>`;
-
-      const chunks: (typeof t.slots)[] = [];
-      for (let i = 0; i < t.slots.length; i += SLOTS_PER_PAGE) {
-        chunks.push(t.slots.slice(i, i + SLOTS_PER_PAGE));
-      }
-
-      const pageBlocks = chunks.map((chunk, pageIndex) => {
-        const rows = chunk.map(slotToRow).join('');
-        const isLast = pageIndex === chunks.length - 1;
+          <p class="meta"><strong>Schedule:</strong> ${schedule.watchTitle}</p>
+          ${schedule.startLocation ? `<p class="meta"><strong>From:</strong> ${schedule.startLocation}</p>` : ''}
+          ${schedule.destination ? `<p class="meta"><strong>To:</strong> ${schedule.destination}</p>` : ''}
+          <p class="meta"><strong>Start:</strong> ${schedule.startTime}</p>`;
+        const rows = slots.map(slotToRow).join('');
+        const isLast = pageIndex === pages.length - 1;
         return `
           <div class="page" ${isLast ? '' : 'style="page-break-after: always;"'}>
             <div class="content">
@@ -145,13 +178,13 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
                     <tr>
                       <th class="col-position">Position</th>
                       <th class="col-crew">Crew</th>
-                      <th class="col-time">Time</th>
+                      <th class="col-time">Date and time</th>
                     </tr>
                   </thead>
                   <tbody>${rows}</tbody>
                 </table>
               </div>
-              ${chunks.length > 1 ? `<p class="page-num">Page ${pageIndex + 1} of ${chunks.length}</p>` : ''}
+              ${pages.length > 1 ? `<p class="page-num">Page ${pageIndex + 1} of ${pages.length}</p>` : ''}
             </div>
           </div>`;
       });
@@ -172,22 +205,27 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
           th { padding: 8px 10px; text-align: left; font-weight: 600; }
           td { padding: 7px 10px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
           tr:nth-child(even) td { background: #f9fafb; }
-          .col-position { width: 30%; }
-          .col-crew { width: 35%; }
-          .col-time { width: 35%; }
+          .col-position { width: 25%; }
+          .col-crew { width: 30%; }
+          .col-time { width: 45%; }
           .page-num { font-size: 11px; color: #999; margin-top: 14px; text-align: right; }
         </style>
         </head>
         <body>${pageBlocks.join('')}</body>
         </html>`;
       const { uri } = await Print.printToFileAsync({ html });
-      const filename = `Watch_Schedule_${scheduleDateStr(t)}.pdf`;
+      const filename =
+        schedules.length === 1
+          ? `Watch_Schedule_${scheduleDateStr(schedules[0])}.pdf`
+          : 'Watch_Schedules.pdf';
       const newUri = `${FileSystem.cacheDirectory}${filename}`;
       await FileSystem.moveAsync({ from: uri, to: newUri });
       await Sharing.shareAsync(newUri, {
         mimeType: 'application/pdf',
-        dialogTitle: 'Export Watch Schedule as PDF',
+        dialogTitle: 'Export Watch Schedules as PDF',
       });
+      setExportMode(false);
+      setSelectedIds(new Set());
     } catch (e) {
       console.error('Export PDF error:', e);
       Alert.alert('Export failed', 'Could not generate PDF.');
@@ -208,7 +246,28 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
 
   return (
     <View style={styles.pageWrap}>
-      <PageHeader title="Watch Schedule" />
+      <PageHeader
+        title="Watch Schedule"
+        actions={
+          <ExportButton
+            active={exportMode}
+            busy={exportingPdf}
+            onPress={() => {
+              if (exportMode) setSelectedIds(new Set());
+              if (!exportMode) setExpandedId(null);
+              setExportMode(!exportMode);
+            }}
+          />
+        }
+      />
+      {exportMode && (
+        <ExportBar
+          count={selectedSchedules.length}
+          onConfirm={() => exportWatchSchedulesPdf(selectedSchedules)}
+          exporting={exportingPdf}
+          hint="Tap schedules to select"
+        />
+      )}
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={styles.content}
@@ -232,89 +291,107 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
             add it here.
           </Text>
         ) : (
-          publishedTimetables.map((t) => (
-            <TouchableOpacity
-              key={t.id}
-              style={[styles.card, { backgroundColor: themeColors.surface }]}
-              onPress={() => navigation.navigate('WatchScheduleDetail', { schedule: t })}
-              activeOpacity={0.8}
-            >
-              <View style={styles.cardHeader}>
-                <Text
-                  style={[styles.cardTitle, { color: themeColors.textPrimary }]}
-                  numberOfLines={1}
+          publishedTimetables.map((t) => {
+            const expanded = isHOD && expandedId === t.id && !exportMode;
+            return (
+              <View key={t.id} style={[styles.card, { backgroundColor: themeColors.surface }]}>
+                <TouchableOpacity
+                  style={styles.cardSummary}
+                  onPress={() => {
+                    if (exportMode) toggleSelect(t.id);
+                    else if (isHOD) setExpandedId(expanded ? null : t.id);
+                  }}
+                  activeOpacity={exportMode || isHOD ? 0.8 : 1}
                 >
-                  {t.watchTitle}
-                </Text>
-                {isHOD && (
-                  <View style={styles.cardHeaderActions}>
-                    <TouchableOpacity
-                      onPress={() => handleEdit(t)}
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  <View style={styles.cardHeader}>
+                    {exportMode && (
+                      <Checkbox
+                        checked={selectedIds.has(t.id)}
+                        onPress={() => toggleSelect(t.id)}
+                        surface={themeColors.surface}
+                      />
+                    )}
+                    <Text
+                      style={[styles.cardTitle, { color: themeColors.textPrimary }]}
+                      numberOfLines={1}
                     >
-                      <Text
-                        style={{
-                          color: themeColors.isDark ? COLORS.white : COLORS.primary,
-                          fontSize: FONTS.sm,
-                          fontWeight: '600',
-                        }}
+                      {t.watchTitle}
+                    </Text>
+                    {!exportMode && isHOD && (
+                      <Ionicons
+                        name={expanded ? 'chevron-up' : 'chevron-down'}
+                        size={20}
+                        color={themeColors.textSecondary}
+                      />
+                    )}
+                  </View>
+                  <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>
+                    {formatLocalDateString(scheduleDateStr(t), {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                  </Text>
+                  {t.startLocation ? (
+                    <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>
+                      From: {t.startLocation}
+                    </Text>
+                  ) : null}
+                  {t.destination ? (
+                    <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>
+                      To: {t.destination}
+                    </Text>
+                  ) : null}
+                  <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>
+                    Start: {t.startTime}
+                  </Text>
+                </TouchableOpacity>
+
+                {expanded && (
+                  <View
+                    style={[
+                      styles.previewPanel,
+                      {
+                        borderTopColor: themeColors.isDark
+                          ? 'rgba(255,255,255,0.14)'
+                          : COLORS.border,
+                      },
+                    ]}
+                  >
+                    <View style={styles.previewActions}>
+                      <TouchableOpacity
+                        style={[
+                          styles.previewActionBtn,
+                          {
+                            borderColor: themeColors.isDark ? COLORS.white : COLORS.primary,
+                          },
+                        ]}
+                        onPress={() => handleEdit(t)}
                       >
-                        Edit
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => handleDelete(t)}
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                      disabled={deleting}
-                    >
-                      <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-                    </TouchableOpacity>
+                        <Text
+                          style={[
+                            styles.previewActionText,
+                            { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                          ]}
+                        >
+                          Edit
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.previewActionBtn, { borderColor: COLORS.danger }]}
+                        onPress={() => handleDelete(t)}
+                        disabled={deleting}
+                      >
+                        <Text style={[styles.previewActionText, { color: COLORS.danger }]}>
+                          {deleting ? 'Deleting…' : 'Delete'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 )}
               </View>
-              <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>
-                {formatLocalDateString(scheduleDateStr(t), {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                })}
-              </Text>
-              {t.startLocation ? (
-                <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>
-                  From: {t.startLocation}
-                </Text>
-              ) : null}
-              {t.destination ? (
-                <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>
-                  To: {t.destination}
-                </Text>
-              ) : null}
-              <TouchableOpacity
-                style={styles.cardExportBtn}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  exportWatchSchedulePdf(t);
-                }}
-              >
-                <Ionicons
-                  name="download-outline"
-                  size={16}
-                  color={themeColors.isDark ? COLORS.white : COLORS.primary}
-                />
-                <Text
-                  style={[
-                    styles.cardExportText,
-                    { color: themeColors.isDark ? COLORS.white : COLORS.primary },
-                  ]}
-                >
-                  Export to PDF
-                </Text>
-              </TouchableOpacity>
-              <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>
-                Start: {t.startTime}
-              </Text>
-            </TouchableOpacity>
-          ))
+            );
+          })
         )}
       </ScrollView>
     </View>
@@ -330,26 +407,33 @@ const styles = StyleSheet.create({
   empty: { fontSize: FONTS.base, padding: SPACING.xl },
   card: {
     borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
     marginBottom: SPACING.md,
+    overflow: 'hidden',
   },
+  cardSummary: { padding: SPACING.lg },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: SPACING.xs,
   },
-  cardHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
   cardTitle: { fontSize: FONTS.lg, fontWeight: '600', flex: 1 },
   cardMeta: { fontSize: FONTS.sm, marginTop: SPACING.xs },
-  cardExportBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-    marginTop: SPACING.sm,
-    alignSelf: 'flex-start',
+  previewPanel: {
+    borderTopWidth: 1,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.lg,
   },
-  cardExportText: { fontSize: FONTS.sm, fontWeight: '600' },
+  previewActions: { flexDirection: 'row', gap: SPACING.sm },
+  previewActionBtn: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: SPACING.sm,
+    alignItems: 'center',
+  },
+  previewActionText: { fontSize: FONTS.sm, fontWeight: '600' },
   viewModal: { flex: 1 },
   viewModalContent: { paddingBottom: SIZES.bottomScrollPadding },
   viewHeader: { padding: SPACING.lg, borderBottomWidth: 1, borderBottomColor: COLORS.border },

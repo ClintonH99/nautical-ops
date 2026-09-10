@@ -8,6 +8,7 @@
 import { supabase } from './supabase';
 import { requireAffectedRows } from './mutationResult';
 import { getSignatureForUser, UserSignature } from './signatures';
+import watchKeepingService, { WatchWorkPeriod } from './watchKeeping';
 
 export interface RestPeriod {
   start: string; // "HH:MM"
@@ -25,10 +26,16 @@ export interface RestEntry {
   lunch_start: string | null;
   lunch_end: string | null;
   comment?: string | null;
-  status: 'draft' | 'pending_confirmation' | 'confirmed';
+  status: RestEntryStatus;
   confirmed_by?: string | null;
   confirmed_at?: string | null;
 }
+
+export type RestEntryStatus =
+  | 'draft'
+  | 'pending_confirmation'
+  | 'confirmed'
+  | 'needs_reconfirmation';
 
 function timeToMinutes(t: string): number {
   const [h, m] = t.split(':').map(Number);
@@ -324,17 +331,15 @@ export async function setDepartmentSigner(
   department: Department,
   signerUserId: string
 ): Promise<void> {
-  const { error } = await supabase
-    .from('department_signers')
-    .upsert(
-      {
-        vessel_id: vesselId,
-        department,
-        signer_user_id: signerUserId,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'vessel_id,department' }
-    );
+  const { error } = await supabase.from('department_signers').upsert(
+    {
+      vessel_id: vesselId,
+      department,
+      signer_user_id: signerUserId,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'vessel_id,department' }
+  );
 
   if (error) throw error;
 }
@@ -343,7 +348,7 @@ export interface DayReviewEntry {
   userId: string;
   userName: string;
   department: Department;
-  status: 'missing' | 'draft' | 'pending_confirmation' | 'confirmed';
+  status: 'missing' | RestEntryStatus;
   compliant?: boolean;
   violations?: string[];
 }
@@ -438,17 +443,38 @@ export async function getMonthReview(
   return days.reverse();
 }
 
-export function getPastMonths(count: number): { year: number; month: number; label: string }[] {
-  const result = [];
-  const now = new Date();
-  for (let i = 0; i < count; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+/**
+ * Completed calendar months since the user created their account.
+ *
+ * The current month never belongs in History. For example, an account
+ * created during September has no History in September; September first
+ * appears on 1 October. Using the server-backed account date also means an
+ * app reinstall or a second device cannot reset the available history.
+ */
+export function getPastMonths(
+  accountCreatedAt: string,
+  now: Date = new Date()
+): { year: number; month: number; label: string }[] {
+  const createdDateMatch = /^(\d{4})-(\d{2})/.exec(accountCreatedAt);
+  if (!createdDateMatch) return [];
+
+  const createdYear = Number(createdDateMatch[1]);
+  const createdMonthIndex = Number(createdDateMatch[2]) - 1;
+  if (!Number.isInteger(createdYear) || createdMonthIndex < 0 || createdMonthIndex > 11) return [];
+
+  const firstAccountMonth = new Date(createdYear, createdMonthIndex, 1);
+  const cursor = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const result: { year: number; month: number; label: string }[] = [];
+
+  while (cursor >= firstAccountMonth) {
     result.push({
-      year: d.getFullYear(),
-      month: d.getMonth() + 1,
-      label: d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+      year: cursor.getFullYear(),
+      month: cursor.getMonth() + 1,
+      label: cursor.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
     });
+    cursor.setMonth(cursor.getMonth() - 1);
   }
+
   return result;
 }
 
@@ -562,32 +588,45 @@ function minutesToHHMM(totalMinutes: number): string {
 // Builds 24 hourly work/rest marks for one day from work_start/work_end,
 // excluding the lunch period (lunch is neither work nor rest on the form,
 // left blank same as rest).
-function buildHourMarks(
+export function buildHourMarks(
   workStart: string | null,
   workEnd: string | null,
   lunchStart: string | null,
-  lunchEnd: string | null
+  lunchEnd: string | null,
+  watchPeriods: WatchWorkPeriod[] = []
 ): boolean[] {
   const marks = new Array(24).fill(false);
-  if (!workStart || !workEnd) return marks;
+  if (workStart && workEnd) {
+    const ws = timeToMinutes(workStart);
+    let we = timeToMinutes(workEnd);
+    if (we <= ws) we += 24 * 60;
 
-  const ws = timeToMinutes(workStart);
-  let we = timeToMinutes(workEnd);
-  if (we <= ws) we += 24 * 60;
+    let ls: number | null = null;
+    let le: number | null = null;
+    if (lunchStart && lunchEnd) {
+      ls = timeToMinutes(lunchStart);
+      le = timeToMinutes(lunchEnd);
+      if (le <= ls) le += 24 * 60;
+    }
 
-  let ls: number | null = null;
-  let le: number | null = null;
-  if (lunchStart && lunchEnd) {
-    ls = timeToMinutes(lunchStart);
-    le = timeToMinutes(lunchEnd);
-    if (le <= ls) le += 24 * 60;
+    for (let h = 0; h < 24; h++) {
+      const hourStart = h * 60;
+      const inWork = hourStart >= ws && hourStart < we;
+      const inLunch = ls !== null && le !== null && hourStart >= ls && hourStart < le;
+      marks[h] = inWork && !inLunch;
+    }
   }
 
-  for (let h = 0; h < 24; h++) {
-    const hourStart = h * 60;
-    const inWork = hourStart >= ws && hourStart < we;
-    const inLunch = ls !== null && le !== null && hourStart >= ls && hourStart < le;
-    marks[h] = inWork && !inLunch;
+  // Published watches are authoritative working periods. They remain work
+  // even when they overlap the manually entered lunch or work fields.
+  for (const watch of watchPeriods) {
+    const watchStart = timeToMinutes(watch.startTime);
+    const watchEnd = timeToMinutes(watch.endTime);
+    for (let h = 0; h < 24; h++) {
+      const hourStart = h * 60;
+      const hourEnd = hourStart + 60;
+      if (Math.max(hourStart, watchStart) < Math.min(hourEnd, watchEnd)) marks[h] = true;
+    }
   }
   return marks;
 }
@@ -664,6 +703,17 @@ export async function getMonthDataForPdf(
     date: e.date,
     rest_periods: e.rest_periods || [],
   }));
+  const watchPeriods = await watchKeepingService.getWorkPeriodsForUser(
+    user.vessel_id,
+    userId,
+    toDateStr(effectiveStart),
+    toDateStr(effectiveEnd)
+  );
+  const watchPeriodsByDate = new Map<string, WatchWorkPeriod[]>();
+  watchPeriods.forEach((period) => {
+    if (!watchPeriodsByDate.has(period.date)) watchPeriodsByDate.set(period.date, []);
+    watchPeriodsByDate.get(period.date)!.push(period);
+  });
 
   const days: PdfDayRow[] = [];
   let lastConfirmedBy: string | null = null;
@@ -689,7 +739,8 @@ export async function getMonthDataForPdf(
         entry?.work_start ?? null,
         entry?.work_end ?? null,
         entry?.lunch_start ?? null,
-        entry?.lunch_end ?? null
+        entry?.lunch_end ?? null,
+        watchPeriodsByDate.get(dateStr) ?? []
       ),
       restHoursToday: minutesToHHMM(restMinutesToday),
       restIn24h: minutesToHHMM(rolling.minRestIn24h * 60),

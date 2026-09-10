@@ -94,7 +94,6 @@ import {
   CreateRulesScreen,
 } from '../screens';
 import { CreateVesselScreen, CaptainWelcomeScreen } from '../screens';
-import { WatchScheduleDetailScreen } from '../screens/WatchScheduleDetailScreen';
 import { MainTabsNavigator } from './MainTabsNavigator';
 import {
   useAuthStore,
@@ -1043,11 +1042,6 @@ export const RootNavigator = () => {
               <Stack.Screen
                 name="WatchSchedule"
                 component={WatchScheduleScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="WatchScheduleDetail"
-                component={WatchScheduleDetailScreen}
                 options={{ headerShown: false }}
               />
               <Stack.Screen
