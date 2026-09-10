@@ -211,6 +211,12 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
           value={deptLabel}
           badgeColor={item.department ? getDepartmentColor(item.department, overrides) : undefined}
         />
+        {item.linkedTrip && (
+          <ButtonTagRow
+            label="Linked Trip"
+            value={`${item.linkedTrip.title} · ${formatDate(item.linkedTrip.startDate)}`}
+          />
+        )}
         <ButtonTagRow label="Items" value={`${count} items`} />
       </ButtonTagCard>
     );
@@ -291,6 +297,11 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
             <Text style={styles.captainBoardTitle} numberOfLines={1}>
               {captainBoard.title}
             </Text>
+            {captainBoard.linkedTrip && (
+              <Text style={styles.captainBoardTrip} numberOfLines={1}>
+                Linked to {captainBoard.linkedTrip.title}
+              </Text>
+            )}
             <View style={styles.captainBoardItems}>
               {captainBoard.items.slice(0, CAPTAIN_CHECKLIST_MAX_ITEMS).map((item, idx) => (
                 <View key={item.id} style={styles.captainBoardItemRow}>
@@ -584,6 +595,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.white,
     marginBottom: SPACING.md,
+  },
+  captainBoardTrip: {
+    color: COLORS.white,
+    fontSize: FONTS.sm,
+    fontWeight: '600',
+    marginTop: -SPACING.sm,
+    marginBottom: SPACING.md,
+    opacity: 0.9,
   },
   captainBoardItems: {},
   captainBoardItemRow: {

@@ -26,14 +26,17 @@ import userService from '../services/user';
 import { User, RotationGroup } from '../types';
 import { LoadingSpinner, PageHeader } from '../components';
 
-export const RotationalGroupsScreen = ({ navigation }: any) => {
+export const RotationalGroupsScreen = () => {
   const themeColors = useThemeColors();
   const { user: currentUser } = useAuthStore();
+  const [allCrew, setAllCrew] = useState<User[]>([]);
   const [rotationalCrew, setRotationalCrew] = useState<User[]>([]);
   const [namedGroups, setNamedGroups] = useState<RotationGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [crewPickerOpen, setCrewPickerOpen] = useState(false);
+  const [addingRotationId, setAddingRotationId] = useState<string | null>(null);
 
   // Name input modal state
   const [nameModalVisible, setNameModalVisible] = useState(false);
@@ -49,10 +52,11 @@ export const RotationalGroupsScreen = ({ navigation }: any) => {
     if (!currentUser?.vesselId) return;
     try {
       const [crew, groups] = await Promise.all([
-        userService.getRotationalCrew(currentUser.vesselId),
+        userService.getVesselCrew(currentUser.vesselId),
         userService.getRotationGroupsByVessel(currentUser.vesselId),
       ]);
-      setRotationalCrew(crew);
+      setAllCrew(crew);
+      setRotationalCrew(crew.filter((member) => member.contractType === 'rotational'));
       setNamedGroups(groups);
     } catch {
       Alert.alert('Error', 'Failed to load rotational crew');
@@ -71,6 +75,31 @@ export const RotationalGroupsScreen = ({ navigation }: any) => {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await loadData();
+  };
+
+  const handleAddCrewRotation = (member: User) => {
+    Alert.alert(
+      'Add Crew Rotation',
+      `Mark ${member.name} as rotational crew? They will appear under Ungrouped until assigned to a rotation group.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Add Rotation',
+          onPress: async () => {
+            setAddingRotationId(member.id);
+            try {
+              await userService.assignCrewRotation(member.id);
+              setCrewPickerOpen(false);
+              await loadData();
+            } catch {
+              Alert.alert('Error', 'Failed to add this crew member to rotation.');
+            } finally {
+              setAddingRotationId(null);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const toggleSelect = (id: string) => {
@@ -198,6 +227,7 @@ export const RotationalGroupsScreen = ({ navigation }: any) => {
   // Organise crew into named groups and ungrouped
   const crewByGroup = new Map<string, User[]>();
   const ungrouped: User[] = [];
+  const availableCrew = allCrew.filter((member) => member.contractType !== 'rotational');
 
   rotationalCrew.forEach((member) => {
     if (member.rotationGroupId) {
@@ -288,13 +318,87 @@ export const RotationalGroupsScreen = ({ navigation }: any) => {
           </Text>
         </View>
 
+        {canEdit && (
+          <>
+            <TouchableOpacity
+              style={styles.addRotationButton}
+              onPress={() => setCrewPickerOpen((open) => !open)}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.addRotationButtonText}>+ Add Crew Rotation</Text>
+            </TouchableOpacity>
+
+            {crewPickerOpen && (
+              <View
+                style={[
+                  styles.crewPickerCard,
+                  {
+                    backgroundColor: themeColors.surface,
+                    borderColor: themeColors.isDark ? 'rgba(255,255,255,0.12)' : COLORS.border,
+                  },
+                ]}
+              >
+                <Text style={[styles.crewPickerTitle, { color: themeColors.textPrimary }]}>
+                  Select a crew member
+                </Text>
+                <Text style={[styles.crewPickerHint, { color: themeColors.textSecondary }]}>
+                  Captains, HODs and Crew can all be assigned to rotation.
+                </Text>
+                {availableCrew.length === 0 ? (
+                  <Text style={[styles.crewPickerEmpty, { color: themeColors.textSecondary }]}>
+                    Everyone onboard is already rotational.
+                  </Text>
+                ) : (
+                  availableCrew.map((member) => (
+                    <TouchableOpacity
+                      key={member.id}
+                      style={[
+                        styles.crewPickerRow,
+                        {
+                          borderTopColor: themeColors.isDark
+                            ? 'rgba(255,255,255,0.08)'
+                            : COLORS.border,
+                        },
+                      ]}
+                      onPress={() => handleAddCrewRotation(member)}
+                      disabled={addingRotationId !== null}
+                    >
+                      <View style={styles.memberAvatar}>
+                        <Text style={styles.memberAvatarText}>
+                          {member.name.charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
+                      <View style={styles.memberInfo}>
+                        <Text style={[styles.memberName, { color: themeColors.textPrimary }]}>
+                          {member.name}
+                        </Text>
+                        <Text style={[styles.memberPosition, { color: themeColors.textSecondary }]}>
+                          {[
+                            member.position,
+                            member.role === 'CAPTAIN_MOV' ? 'Captain/MOV' : member.role,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </Text>
+                      </View>
+                      <Text style={[styles.addCrewLabel, { color: COLORS.primary }]}>
+                        {addingRotationId === member.id ? 'Adding…' : 'Add'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))
+                )}
+              </View>
+            )}
+          </>
+        )}
+
         {rotationalCrew.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
               No rotational crew on this vessel yet.
             </Text>
             <Text style={[styles.emptySubtext, { color: themeColors.textSecondary }]}>
-              Crew registered with Contract Type "Rotational" will appear here.
+              Use “Add Crew Rotation” to assign someone from the vessel.
             </Text>
           </View>
         ) : (
@@ -469,6 +573,52 @@ const styles = StyleSheet.create({
   infoBannerText: {
     fontSize: FONTS.xs,
     lineHeight: 18,
+  },
+  addRotationButton: {
+    width: '100%',
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.lg,
+    paddingVertical: SPACING.md,
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  addRotationButtonText: {
+    color: COLORS.white,
+    fontSize: FONTS.base,
+    fontWeight: '700',
+  },
+  crewPickerCard: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.lg,
+    overflow: 'hidden',
+    marginBottom: SPACING.lg,
+  },
+  crewPickerTitle: {
+    fontSize: FONTS.base,
+    fontWeight: '700',
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
+  },
+  crewPickerHint: {
+    fontSize: FONTS.xs,
+    lineHeight: 18,
+    paddingHorizontal: SPACING.md,
+    paddingTop: 4,
+    paddingBottom: SPACING.md,
+  },
+  crewPickerEmpty: {
+    fontSize: FONTS.sm,
+    padding: SPACING.md,
+  },
+  crewPickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SPACING.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  addCrewLabel: {
+    fontSize: FONTS.sm,
+    fontWeight: '700',
   },
   section: { marginBottom: SPACING.lg },
   sectionHeader: {

@@ -242,6 +242,12 @@ export interface PreDepartureChecklist {
   id: string;
   vesselId: string;
   tripId: string | null;
+  linkedTrip?: {
+    id: string;
+    title: string;
+    startDate: string;
+    endDate: string;
+  } | null;
   department: Department | null;
   title: string;
   items: PreDepartureChecklistItem[];

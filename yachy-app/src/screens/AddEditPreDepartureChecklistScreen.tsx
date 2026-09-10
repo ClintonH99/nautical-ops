@@ -17,7 +17,7 @@ import {
   Pressable,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
+import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import { usePostHog } from 'posthog-react-native';
@@ -58,6 +58,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
   const { user } = useAuthStore();
   const posthog = usePostHog();
   const checklistId = route?.params?.checklistId as string | undefined;
+  const initialTripId = route?.params?.tripId as string | undefined;
   const isEdit = !!checklistId;
   const isHOD = user?.role === 'HOD';
   const isCaptain = user?.role === 'CAPTAIN_MOV';
@@ -66,7 +67,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
   const canEdit = () => isCaptain || isHOD;
 
   const [title, setTitle] = useState('');
-  const [tripId, setTripId] = useState<string | null>(null);
+  const [tripId, setTripId] = useState<string | null>(initialTripId ?? null);
   const [department, setDepartment] = useState<Department | null>(null);
   const [items, setItems] = useState<PreDepartureChecklistItem[]>([]);
   const [draftItems, setDraftItems] = useState<string[]>(DEFAULT_ITEMS);
@@ -302,25 +303,12 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
               />
             </View>
             <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: themeColors.textPrimary }]}>
-                Linked Trip (optional)
-              </Text>
-              <TouchableOpacity
-                style={[styles.pickerTrigger, { backgroundColor: themeColors.surface }]}
+              <LabeledDropdown
+                label="Linked Trip"
+                value={selectedTrip?.title ?? (tripId ? 'Linked trip' : 'None')}
+                open={tripModalVisible}
                 onPress={() => setTripModalVisible(true)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.pickerValue,
-                    { color: themeColors.textPrimary },
-                    !selectedTrip && styles.pickerPlaceholder,
-                  ]}
-                >
-                  {selectedTrip ? selectedTrip.title : 'No trip selected'}
-                </Text>
-                <Text style={[styles.pickerIcon, { color: themeColors.textSecondary }]}>▾</Text>
-              </TouchableOpacity>
+              />
             </View>
 
             {departmentModalVisible && (
@@ -366,43 +354,52 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
                     onStartShouldSetResponder={() => true}
                   >
                     <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
-                      Select trip
+                      Select linked trip
                     </Text>
                     <TouchableOpacity
-                      style={styles.modalItem}
+                      style={[styles.modalItem, !tripId && styles.modalItemSelected]}
                       onPress={() => {
                         setTripId(null);
                         setTripModalVisible(false);
                       }}
                     >
                       <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                        No trip
+                        No linked trip
                       </Text>
+                      {!tripId && <Text style={styles.selectedMark}>✓</Text>}
                     </TouchableOpacity>
-                    {trips.map((t) => (
-                      <TouchableOpacity
-                        key={t.id}
-                        style={[styles.modalItem, tripId === t.id && styles.modalItemSelected]}
-                        onPress={() => {
-                          setTripId(t.id);
-                          setTripModalVisible(false);
-                        }}
-                      >
-                        <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                          {t.title}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.modalItemSub,
-                            {
-                              color: themeColors.isDark ? COLORS.white : themeColors.textSecondary,
-                            },
-                          ]}
+                    <ScrollView style={styles.tripOptions} nestedScrollEnabled>
+                      {trips.map((t) => (
+                        <TouchableOpacity
+                          key={t.id}
+                          style={[styles.modalItem, tripId === t.id && styles.modalItemSelected]}
+                          onPress={() => {
+                            setTripId(t.id);
+                            setTripModalVisible(false);
+                          }}
                         >
-                          {formatLocalDateString(t.startDate)} – {formatLocalDateString(t.endDate)}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                          <View style={styles.modalItemContent}>
+                            <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
+                              {t.title}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.modalItemSub,
+                                {
+                                  color: themeColors.isDark
+                                    ? COLORS.white
+                                    : themeColors.textSecondary,
+                                },
+                              ]}
+                            >
+                              {formatLocalDateString(t.startDate)} –{' '}
+                              {formatLocalDateString(t.endDate)}
+                            </Text>
+                          </View>
+                          {tripId === t.id && <Text style={styles.selectedMark}>✓</Text>}
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
                   </View>
                 </Pressable>
               </Modal>
@@ -503,19 +500,6 @@ const styles = StyleSheet.create({
   readOnlyTitle: { fontSize: FONTS.base, fontWeight: '600' },
   fieldContainer: { marginBottom: SPACING.md },
   label: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs },
-  pickerTrigger: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    height: SIZES.inputHeight,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: BORDER_RADIUS.md,
-    paddingHorizontal: SPACING.md,
-  },
-  pickerValue: { fontSize: FONTS.base },
-  pickerPlaceholder: { color: COLORS.gray400 },
-  pickerIcon: { fontSize: 14 },
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
@@ -530,10 +514,20 @@ const styles = StyleSheet.create({
     maxHeight: 400,
   },
   modalTitle: { fontSize: FONTS.lg, fontWeight: '600', marginBottom: SPACING.md },
-  modalItem: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.sm },
+  modalItem: {
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  modalItemContent: { flex: 1 },
   modalItemSelected: { backgroundColor: COLORS.primaryLight },
   modalItemText: { fontSize: FONTS.base },
   modalItemSub: { fontSize: FONTS.xs, marginTop: 2 },
+  selectedMark: { color: COLORS.primary, fontSize: FONTS.lg, fontWeight: '700' },
+  tripOptions: { maxHeight: 300 },
   sectionLabel: {
     fontSize: FONTS.sm,
     fontWeight: '600',

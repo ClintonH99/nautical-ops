@@ -173,15 +173,6 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
           Tap a date to enter or edit your hours
         </Text>
 
-        {isCaptainOrMov && (
-          <TouchableOpacity
-            style={styles.reviewButton}
-            onPress={() => navigation.navigate('RestToBeConfirmed')}
-          >
-            <Text style={styles.reviewButtonText}>Rest to be confirmed</Text>
-          </TouchableOpacity>
-        )}
-
         {loading && !hasLoadedOnce ? (
           <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.xl }} />
         ) : (
@@ -215,6 +206,14 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
               </View>
             </View>
 
+            {isCaptainOrMov && (
+              <TouchableOpacity
+                style={styles.reviewButton}
+                onPress={() => navigation.navigate('RestToBeConfirmed')}
+              >
+                <Text style={styles.reviewButtonText}>Rest to be confirmed</Text>
+              </TouchableOpacity>
+            )}
           </>
         )}
       </ScrollView>
@@ -235,6 +234,6 @@ const styles = StyleSheet.create({
   legendRow: { flexDirection: 'row', gap: SPACING.lg, justifyContent: 'center', marginTop: SPACING.md },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
-  reviewButton: { backgroundColor: COLORS.primary, padding: SPACING.md, borderRadius: BORDER_RADIUS.md, alignItems: 'center', marginBottom: SPACING.lg },
+  reviewButton: { backgroundColor: COLORS.primary, padding: SPACING.md, borderRadius: BORDER_RADIUS.md, alignItems: 'center', marginTop: SPACING.lg, marginBottom: SPACING.lg },
   reviewButtonText: { color: '#fff', fontWeight: '600' },
 });

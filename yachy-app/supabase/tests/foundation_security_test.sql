@@ -2,6 +2,63 @@
 
 DO $$
 DECLARE
+  private_vessel UUID := '10000000-0000-0000-0000-000000000007';
+  target_vessel UUID := '10000000-0000-0000-0000-000000000008';
+  joining_crew UUID := '20000000-0000-0000-0000-000000000011';
+BEGIN
+  INSERT INTO vessels (id, name, invite_code, invite_expiry, is_solo)
+  VALUES
+    (private_vessel, 'Crew Account', 'SOLOJOIN0001', now() + INTERVAL '1 year', TRUE),
+    (target_vessel, 'Join Target', 'JOINTEST0001', now() + INTERVAL '1 year', FALSE);
+  INSERT INTO users (id, vessel_id, role, rotation_group_id, paused)
+  VALUES (
+    joining_crew,
+    private_vessel,
+    'CREW',
+    '30000000-0000-0000-0000-000000000002',
+    TRUE
+  );
+  INSERT INTO vessel_subscriptions (
+    vessel_id,
+    plan_tier,
+    status,
+    payment_provider,
+    current_period_end,
+    last_verified_at
+  ) VALUES (
+    target_vessel,
+    '1_5',
+    'active',
+    'apple',
+    now() + INTERVAL '1 month',
+    now()
+  );
+
+  PERFORM set_config('request.jwt.claim.sub', joining_crew::TEXT, true);
+  PERFORM join_current_user_to_vessel('JOINTEST0001');
+
+  IF (SELECT vessel_id FROM users WHERE id = joining_crew) <> target_vessel THEN
+    RAISE EXCEPTION 'Crew account did not join the target vessel';
+  END IF;
+  IF (SELECT rotation_group_id FROM users WHERE id = joining_crew) IS NOT NULL THEN
+    RAISE EXCEPTION 'Old-vessel rotation group remained after join';
+  END IF;
+  IF (SELECT paused FROM users WHERE id = joining_crew) THEN
+    RAISE EXCEPTION 'Crew member remained paused after joining a new vessel';
+  END IF;
+  IF EXISTS (SELECT 1 FROM vessels WHERE id = private_vessel) THEN
+    RAISE EXCEPTION 'Empty private Crew Account vessel was not deleted after join';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM vessels WHERE id = target_vessel) THEN
+    RAISE EXCEPTION 'Target vessel was incorrectly deleted during join cleanup';
+  END IF;
+
+  PERFORM set_config('request.jwt.claim.sub', '', true);
+END;
+$$;
+
+DO $$
+DECLARE
   old_vessel UUID := '10000000-0000-0000-0000-000000000001';
   captain UUID := '20000000-0000-0000-0000-000000000001';
   crew UUID := '20000000-0000-0000-0000-000000000002';

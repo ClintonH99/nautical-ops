@@ -12,6 +12,7 @@ import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../st
 import preDepartureChecklistsService from '../services/preDepartureChecklists';
 import { PreDepartureChecklist, Department } from '../types';
 import { LoadingSpinner, PageHeader } from '../components';
+import { formatLocalDateString } from '../utils';
 
 const DEPARTMENT_OPTIONS: { value: Department | null; label: string }[] = [
   { value: null, label: 'All Departments' },
@@ -111,6 +112,21 @@ export const ViewPreDepartureChecklistScreen = ({ navigation, route }: any) => {
             </Text>
           </View>
 
+          {checklist.linkedTrip && (
+            <View style={[styles.linkedTrip, { borderColor: COLORS.border }]}>
+              <Text style={[styles.linkedTripLabel, { color: themeColors.textSecondary }]}>
+                Linked Trip
+              </Text>
+              <Text style={[styles.linkedTripTitle, { color: themeColors.textPrimary }]}>
+                {checklist.linkedTrip.title}
+              </Text>
+              <Text style={[styles.linkedTripDates, { color: themeColors.textSecondary }]}>
+                {formatLocalDateString(checklist.linkedTrip.startDate)} –{' '}
+                {formatLocalDateString(checklist.linkedTrip.endDate)}
+              </Text>
+            </View>
+          )}
+
           <View style={styles.itemsSection}>
             <Text style={[styles.itemsLabel, { color: themeColors.textPrimary }]}>
               Checklist items
@@ -178,6 +194,15 @@ const styles = StyleSheet.create({
   },
   deptBadgeText: { fontSize: FONTS.xs, fontWeight: '600', color: COLORS.white },
   date: { fontSize: FONTS.sm },
+  linkedTrip: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.lg,
+  },
+  linkedTripLabel: { fontSize: FONTS.xs, fontWeight: '600', marginBottom: 2 },
+  linkedTripTitle: { fontSize: FONTS.base, fontWeight: '700' },
+  linkedTripDates: { fontSize: FONTS.sm, marginTop: 2 },
   itemsSection: {},
   itemsLabel: {
     fontSize: FONTS.sm,

@@ -13,10 +13,10 @@ import {
   registerForPushNotificationsAsync,
   savePushToken,
   clearPushToken,
+  isPushEnabledForCurrentDevice,
   getNotificationPreferences,
   saveNotificationPreference,
 } from '../services/notifications';
-import { supabase } from '../services/supabase';
 import * as Device from 'expo-device';
 import type { NotificationPreferenceKey } from '../types';
 import { LoadingSpinner, PageHeader } from '../components';
@@ -57,12 +57,12 @@ export const NotificationSettingsScreen = () => {
           return;
         }
         try {
-          const [tokenRes, prefsRes] = await Promise.all([
-            supabase.from('users').select('push_token').eq('id', user.id).single(),
+          const [deviceEnabled, prefsRes] = await Promise.all([
+            isPushEnabledForCurrentDevice(user.id),
             getNotificationPreferences(user.id),
           ]);
           if (mounted) {
-            setEnabled(!!tokenRes.data?.push_token);
+            setEnabled(deviceEnabled);
             setPreferences(prefsRes);
           }
         } catch {
@@ -179,7 +179,7 @@ export const NotificationSettingsScreen = () => {
           </View>
           {enabled && (
             <Text style={[styles.statusText, { color: themeColors.textSecondary }]}>
-              You will receive push notifications.
+              This device will receive push notifications.
             </Text>
           )}
         </View>

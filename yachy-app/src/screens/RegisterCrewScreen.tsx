@@ -1,6 +1,6 @@
 /**
  * Register Crew Screen
- * For crew members joining with an invite code
+ * For crew members creating a personal account before joining a vessel
  */
 
 import React, { useState } from 'react';
@@ -23,9 +23,6 @@ import { Department } from '../types';
 import authService from '../services/auth';
 import { useAuthStore } from '../store';
 
-const INFO_BG = 'rgba(14, 165, 233, 0.12)';
-const INFO_BORDER = 'rgba(14, 165, 233, 0.3)';
-
 const DEPARTMENTS = [
   { label: 'Bridge', value: 'BRIDGE' },
   { label: 'Engineering', value: 'ENGINEERING' },
@@ -41,10 +38,9 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
     email: '',
     password: '',
     confirmPassword: '',
-    contractType: 'permanent' as 'permanent' | 'temporary' | 'rotational',
+    contractType: 'permanent' as 'permanent' | 'temporary',
     position: '',
     departments: [] as Department[], // Up to 2 departments for dual-role (e.g. deck/stew)
-    inviteCode: '',
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>({});
@@ -102,8 +98,6 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
       valid = false;
     }
 
-    // Invite code is now optional - a crew member can create a bare account
-    // and use Join Vessel later once they have a real code from a paying vessel.
     if (!acceptedTerms) {
       newErrors.terms = 'You must agree to the Terms & Conditions and Privacy Policy';
       valid = false;
@@ -126,7 +120,6 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
         department: formData.departments[0],
         department2: formData.departments[1] || null,
         contractType: formData.contractType,
-        inviteCode: formData.inviteCode,
       });
 
       if (user) {
@@ -136,19 +129,8 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
         ]);
       }
     } catch (error: any) {
-      const msg = error?.message?.toLowerCase() || '';
-      const isInviteCodeError =
-        msg.includes('invite code') ||
-        msg.includes('vessel not found') ||
-        msg.includes('cannot coerce') ||
-        msg.includes('expired');
-      if (!isInviteCodeError) console.error('Crew registration error:', error);
-      Alert.alert(
-        isInviteCodeError ? 'Invalid Invite Code' : 'Error',
-        isInviteCodeError
-          ? 'Request new code from the Captain.'
-          : error.message || 'Failed to create account.'
-      );
+      console.error('Crew registration error:', error);
+      Alert.alert('Error', error.message || 'Failed to create account.');
     } finally {
       setLoading(false);
     }
@@ -177,16 +159,12 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
             <Ionicons name="chevron-back" size={28} color={themeColors.textPrimary} />
           </TouchableOpacity>
 
-          <Text style={[styles.title, { color: themeColors.textPrimary }]}>Create Crew Account</Text>
-          <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-            Join your vessel using an invite code
+          <Text style={[styles.title, { color: themeColors.textPrimary }]}>
+            Create Crew Account
           </Text>
-
-          <View style={styles.infoBanner}>
-            <Text style={[styles.infoBannerText, { color: themeColors.textPrimary }]}>
-              You'll need an 8-character invite code from your captain to create a crew account.
-            </Text>
-          </View>
+          <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+            Create your personal crew profile
+          </Text>
 
           <>
             <View
@@ -245,13 +223,14 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
 
               {/* Contract Type */}
               <View style={styles.contractTypeSection}>
-                <Text style={[styles.label, { color: themeColors.textPrimary }]}>Contract Type</Text>
+                <Text style={[styles.label, { color: themeColors.textPrimary }]}>
+                  Contract Type
+                </Text>
                 <View style={styles.contractTypeButtons}>
                   {(
                     [
                       { label: 'Permanent', value: 'permanent' },
-                      { label: 'Rotational', value: 'rotational' },
-                      { label: 'Temporary', value: 'temporary' },
+                      { label: 'Temporary/Delivery', value: 'temporary' },
                     ] as const
                   ).map((ct) => {
                     const isSelected = formData.contractType === ct.value;
@@ -328,18 +307,6 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
                 error={errors.position}
               />
 
-              {/* Invite Code - REQUIRED for crew */}
-              <Input
-                forceLight
-                label="Invite Code *"
-                placeholder="e.g., ABC12345"
-                value={formData.inviteCode}
-                onChangeText={(value) => updateField('inviteCode', value.toUpperCase())}
-                autoCapitalize="characters"
-                maxLength={8}
-                error={errors.inviteCode}
-              />
-
               <ConsentCheckbox
                 checked={acceptedTerms}
                 onToggle={() => setAcceptedTerms((v) => !v)}
@@ -359,18 +326,12 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
             </View>
 
             <View style={styles.footer}>
-              <Text style={[styles.footerText, { color: themeColors.textSecondary }]}>Already have an account? </Text>
+              <Text style={[styles.footerText, { color: themeColors.textSecondary }]}>
+                Already have an account?{' '}
+              </Text>
               <TouchableOpacity onPress={() => navigation.navigate('Login')}>
                 <Text style={styles.footerLink}>Sign In</Text>
               </TouchableOpacity>
-            </View>
-
-            <View style={styles.helpSection}>
-              <Text style={[styles.helpText, { color: themeColors.textPrimary }]}>Don't have an invite code?</Text>
-              <Text style={[styles.helpSubtext, { color: themeColors.textSecondary }]}>
-                Ask your captain for the vessel's invite code, or create a captain account if you're
-                starting your own vessel.
-              </Text>
             </View>
           </>
         </ScrollView>
@@ -409,20 +370,6 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sm,
     textAlign: 'center',
     marginBottom: SPACING.lg,
-  },
-  infoBanner: {
-    backgroundColor: INFO_BG,
-    borderWidth: 1,
-    borderColor: INFO_BORDER,
-    padding: SPACING.lg,
-    borderRadius: BORDER_RADIUS.lg,
-    marginBottom: SPACING.xl,
-  },
-  infoBannerText: {
-    fontSize: FONTS.sm,
-    fontWeight: '500',
-    textAlign: 'center',
-    lineHeight: 22,
   },
   formCard: {
     borderRadius: BORDER_RADIUS.lg,
@@ -487,25 +434,6 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sm,
     fontWeight: '600',
     color: COLORS.primary,
-  },
-  helpSection: {
-    backgroundColor: INFO_BG,
-    borderColor: INFO_BORDER,
-    padding: SPACING.lg,
-    borderRadius: BORDER_RADIUS.lg,
-    marginBottom: SPACING.xl,
-    borderWidth: 1,
-  },
-  helpText: {
-    fontSize: FONTS.sm,
-    fontWeight: '600',
-    marginBottom: SPACING.xs,
-    textAlign: 'center',
-  },
-  helpSubtext: {
-    fontSize: FONTS.xs,
-    textAlign: 'center',
-    lineHeight: 20,
   },
   error: {
     fontSize: FONTS.xs,

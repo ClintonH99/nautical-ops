@@ -11,10 +11,11 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import tripsService from '../services/trips';
-import { Trip, TripType } from '../types';
+import preDepartureChecklistsService from '../services/preDepartureChecklists';
+import { PreDepartureChecklist, Trip, TripType } from '../types';
 import { useVesselTripColors, getTripTypeColorMap } from '../hooks/useVesselTripColors';
 import { DEFAULT_COLORS } from '../services/tripColors';
-import { parseLocalDate, toYYYYMMDD } from '../utils';
+import { formatLocalDateString, parseLocalDate, toYYYYMMDD } from '../utils';
 import { LoadingSpinner, PageHeader, PillButton } from '../components';
 
 // Full-day colored cells: period marking with same start/end = whole day in that color
@@ -53,6 +54,7 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [checklists, setChecklists] = useState<PreDepartureChecklist[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -79,8 +81,13 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
   const loadTrips = useCallback(async () => {
     if (!vesselId) return;
     try {
-      const [data] = await Promise.all([tripsService.getTripsByVessel(vesselId), loadColors()]);
+      const [data, checklistData] = await Promise.all([
+        tripsService.getTripsByVessel(vesselId),
+        preDepartureChecklistsService.getByVessel(vesselId),
+        loadColors(),
+      ]);
       setTrips(data);
+      setChecklists(checklistData);
     } catch (e) {
       console.error('Load trips error:', e);
     } finally {
@@ -111,6 +118,17 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
   const tripsStartingTomorrow = trips.filter(
     (trip) => trip.type !== 'YARD_PERIOD' && trip.startDate === tomorrowStr
   );
+  const todayStr = toYYYYMMDD(new Date());
+  const linkedUpcomingChecklists = checklists
+    .map((checklist) => ({
+      checklist,
+      trip: trips.find((trip) => trip.id === checklist.tripId),
+    }))
+    .filter(
+      (entry): entry is { checklist: PreDepartureChecklist; trip: Trip } =>
+        Boolean(entry.trip && entry.trip.type !== 'YARD_PERIOD' && entry.trip.endDate >= todayStr)
+    )
+    .sort((a, b) => a.trip.startDate.localeCompare(b.trip.startDate));
 
   const calendarTextColor = themeColors.isDark ? COLORS.white : COLORS.black;
   const calendarTheme = {
@@ -184,6 +202,48 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
             </View>
           </TouchableOpacity>
         </View>
+
+        {linkedUpcomingChecklists.length > 0 && (
+          <View style={styles.linkedChecklistSection}>
+            <Text
+              style={[
+                styles.linkedChecklistHeading,
+                { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+              ]}
+            >
+              Linked trip checklists
+            </Text>
+            {linkedUpcomingChecklists.map(({ checklist, trip }) => (
+              <TouchableOpacity
+                key={checklist.id}
+                style={[styles.linkedChecklistCard, { backgroundColor: themeColors.surface }]}
+                onPress={() =>
+                  navigation.navigate('ViewPreDepartureChecklist', {
+                    checklistId: checklist.id,
+                  })
+                }
+                activeOpacity={0.8}
+              >
+                <View style={styles.linkedChecklistContent}>
+                  <Text
+                    style={[styles.linkedChecklistTitle, { color: themeColors.textPrimary }]}
+                  >
+                    {checklist.title}
+                  </Text>
+                  <Text
+                    style={[styles.linkedChecklistTrip, { color: themeColors.textSecondary }]}
+                  >
+                    {trip.title} · {formatLocalDateString(trip.startDate)} –{' '}
+                    {formatLocalDateString(trip.endDate)}
+                  </Text>
+                </View>
+                <Text style={[styles.linkedChecklistArrow, { color: themeColors.textSecondary }]}>
+                  ›
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         <Text
           style={[
@@ -403,6 +463,23 @@ const styles = StyleSheet.create({
   },
   preDepartureLabel: { fontSize: FONTS.lg, fontWeight: '600' },
   preDepartureHint: { fontSize: FONTS.sm, marginTop: 2 },
+  linkedChecklistSection: { marginBottom: SPACING.xl, gap: SPACING.sm },
+  linkedChecklistHeading: { fontSize: FONTS.lg, fontWeight: '700' },
+  linkedChecklistCard: {
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: COLORS.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  linkedChecklistContent: { flex: 1 },
+  linkedChecklistTitle: { fontSize: FONTS.base, fontWeight: '700' },
+  linkedChecklistTrip: { fontSize: FONTS.sm, marginTop: 2 },
+  linkedChecklistArrow: { fontSize: FONTS['2xl'], marginLeft: SPACING.sm },
   optionCard: {
     flex: 1,
     flexDirection: 'row',

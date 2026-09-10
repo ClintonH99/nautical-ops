@@ -179,6 +179,22 @@ class UserService {
   }
 
   /**
+   * Mark any member of the Captain's current vessel as rotational crew.
+   * Uses a protected RPC so the Captain can also assign themselves.
+   */
+  async assignCrewRotation(userId: string): Promise<void> {
+    try {
+      const { error } = await supabase.rpc('assign_current_vessel_crew_rotation', {
+        p_user_id: userId,
+      });
+      if (error) throw error;
+    } catch (error) {
+      console.error('Assign crew rotation error:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get all rotational crew for a vessel, organised into groups
    */
   async getRotationalCrew(vesselId: string): Promise<User[]> {

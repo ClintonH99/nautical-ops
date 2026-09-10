@@ -18,7 +18,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import tripsService from '../services/trips';
 import { Trip } from '../types';
-import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner, PageHeader, PillButton } from '../components';
+import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner, PageHeader, PillButton, TripLoadErrorBanner } from '../components';
 import { useVesselTripColors } from '../hooks/useVesselTripColors';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { DEFAULT_COLORS } from '../services/tripColors';
@@ -32,6 +32,7 @@ export const DeliveryTripsScreen = ({ navigation }: any) => {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   const vesselId = user?.vesselId ?? null;
   // Trip colours stay restricted to HOD and Captain.
@@ -49,8 +50,9 @@ export const DeliveryTripsScreen = ({ navigation }: any) => {
         loadColors(),
       ]);
       setTrips(data);
-    } catch (e) {
-      console.error('Load delivery trips error:', e);
+      setLoadError(false);
+    } catch {
+      setLoadError(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -133,9 +135,17 @@ export const DeliveryTripsScreen = ({ navigation }: any) => {
           <Button title="Add Delivery" onPress={onAdd} variant="primary" style={styles.addButton} />
         </View>
       )}
+      {loadError && (
+        <TripLoadErrorBanner
+          onRetry={() => {
+            if (trips.length === 0) setLoading(true);
+            loadTrips();
+          }}
+        />
+      )}
       {loading ? (
         <LoadingSpinner />
-      ) : trips.length === 0 ? (
+      ) : trips.length === 0 && !loadError ? (
         <View style={styles.empty}>
           <Text style={styles.emptyEmoji}>🚢</Text>
           <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
@@ -145,7 +155,7 @@ export const DeliveryTripsScreen = ({ navigation }: any) => {
             <Button title="Add first" onPress={onAdd} variant="primary" style={styles.emptyBtn} />
           )}
         </View>
-      ) : (
+      ) : trips.length > 0 ? (
         <FlatList
           data={trips}
           keyExtractor={(t) => t.id}
@@ -159,7 +169,7 @@ export const DeliveryTripsScreen = ({ navigation }: any) => {
             />
           }
         />
-      )}
+      ) : null}
     </View>
   );
 };

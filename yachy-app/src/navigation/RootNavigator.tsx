@@ -3,7 +3,7 @@
  * Handles auth flow and main navigation
  */
 
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
   NavigationContainer,
   DefaultTheme,
@@ -11,6 +11,7 @@ import {
   useNavigationContainerRef,
 } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View, StyleSheet, Platform, AppState } from 'react-native';
 import { PostHogProvider } from 'posthog-react-native';
@@ -112,6 +113,7 @@ import {
 } from '../services/accountAccess';
 import { DEVICE_LIMIT_MESSAGE } from '../services/deviceAccess';
 import { reconcileAppleSubscription } from '../services/iap';
+import { syncPushTokenForCurrentDevice } from '../services/notifications';
 import { COLORS } from '../constants/theme';
 import { isSentryEnabled, sentryNavigationIntegration, setSentryUserContext } from '../lib/sentry';
 
@@ -269,6 +271,7 @@ export const RootNavigator = () => {
   const isCaptain = user?.role === 'CAPTAIN_MOV';
   const hasVessel = !!user?.vesselId;
   const navigationRef = useNavigationContainerRef();
+  const lastHandledNotificationId = useRef<string | null>(null);
   // Welcome: logged-out cold start only. Logged-in users skip Welcome (straight to MainTabs / CaptainWelcome).
   // Per ADMIN rule: Crew members never see CaptainWelcome - go straight to MainTabs
   const initialRoute = !isAuthenticated
@@ -299,7 +302,69 @@ export const RootNavigator = () => {
           }
         : null
     );
-  }, [user?.id, user?.role, user?.vesselId]);
+  }, [user]);
+
+  // Keep this installation's token fresh after login and app resume. This
+  // never displays the permission prompt; users still opt in from Settings.
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id || captainPaymentRequired || Platform.OS === 'web') return;
+
+    let active = true;
+    const syncToken = () => {
+      if (!active) return;
+      void syncPushTokenForCurrentDevice(user.id).catch((error) => {
+        if (__DEV__) console.warn('[Notifications] Token refresh unavailable:', error);
+      });
+    };
+
+    const timer = setTimeout(syncToken, 2000);
+    const appStateSubscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') syncToken();
+    });
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+      appStateSubscription.remove();
+    };
+  }, [captainPaymentRequired, isAuthenticated, user?.id]);
+
+  // A notification tap opens the linked checklist when possible; trip
+  // notifications open the Upcoming Trips screen.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    const openNotification = (response: Notifications.NotificationResponse | null) => {
+      if (!response || !isAuthenticated || captainPaymentRequired || !navigationRef.isReady()) {
+        return;
+      }
+
+      const identifier = response.notification.request.identifier;
+      if (lastHandledNotificationId.current === identifier) return;
+
+      const data = response.notification.request.content.data as {
+        checklistId?: unknown;
+      };
+      const checklistId = typeof data?.checklistId === 'string' ? data.checklistId : null;
+      const navigateFromPush = navigationRef.navigate as unknown as (
+        screen: string,
+        params?: Record<string, string>
+      ) => void;
+
+      lastHandledNotificationId.current = identifier;
+      if (checklistId) {
+        navigateFromPush('ViewPreDepartureChecklist', { checklistId });
+      } else {
+        navigateFromPush('UpcomingTrips');
+      }
+      void Notifications.clearLastNotificationResponseAsync();
+    };
+
+    const subscription = Notifications.addNotificationResponseReceivedListener(openNotification);
+    void Notifications.getLastNotificationResponseAsync().then(openNotification);
+
+    return () => subscription.remove();
+  }, [captainPaymentRequired, isAuthenticated, navigationRef]);
 
   const applyAccountAccess = useCallback(
     async (candidate: NonNullable<typeof user>): Promise<boolean> => {

@@ -573,7 +573,6 @@ export interface PdfMonthData {
   vesselName: string;
   vesselImoNumber: string;
   monthLabel: string;
-  isWatchKeeper: boolean;
   days: PdfDayRow[];
   seafarerSignature?: UserSignature | null;
   masterSignature?: UserSignature | null;
@@ -664,14 +663,6 @@ export async function getMonthDataForPdf(
   today.setHours(0, 0, 0, 0);
   const effectiveEnd = lastDayOfMonth < today ? lastDayOfMonth : today;
 
-  const { data: watchKeeperRow } = await supabase
-    .from('watch_keepers')
-    .select('user_id')
-    .eq('vessel_id', user.vessel_id)
-    .eq('user_id', userId)
-    .maybeSingle();
-  const isWatchKeeper = !!watchKeeperRow;
-
   if (effectiveStart > effectiveEnd) {
     return {
       seafarerName: user.name,
@@ -679,7 +670,6 @@ export async function getMonthDataForPdf(
       vesselName: vessel?.name ?? '',
       vesselImoNumber: vessel?.imo_number ?? '',
       monthLabel: monthStart.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
-      isWatchKeeper,
       days: [],
     };
   }
@@ -758,7 +748,6 @@ export async function getMonthDataForPdf(
     vesselName: vessel?.name ?? '',
     vesselImoNumber: vessel?.imo_number ?? '',
     monthLabel: monthStart.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
-    isWatchKeeper,
     days,
     seafarerSignature,
     masterSignature,

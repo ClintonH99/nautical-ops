@@ -6,6 +6,38 @@
 import { supabase } from './supabase';
 import { requireAffectedRows } from './mutationResult';
 import { Trip, TripType, Department } from '../types';
+import { Sentry } from '../lib/sentry';
+
+const TRIP_READ_RETRY_DELAYS_MS = [500, 1200];
+
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    return String((error as { message?: unknown }).message ?? '');
+  }
+  return String(error ?? '');
+};
+
+const isTemporaryReadError = (error: unknown): boolean => {
+  const message = getErrorMessage(error).toLowerCase();
+  const status =
+    typeof error === 'object' && error !== null && 'status' in error
+      ? Number((error as { status?: unknown }).status)
+      : NaN;
+
+  return (
+    [408, 429, 500, 502, 503, 504].includes(status) ||
+    message.includes('gateway timeout') ||
+    message.includes('timeout') ||
+    message.includes('network request failed') ||
+    message.includes('failed to fetch') ||
+    message.includes('service unavailable') ||
+    message.includes('bad gateway')
+  );
+};
+
+const wait = (milliseconds: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
 export interface CreateTripData {
   vesselId: string;
@@ -49,7 +81,9 @@ class TripsService {
   }
 
   async getTripsByVesselAndType(vesselId: string, type: TripType): Promise<Trip[]> {
-    try {
+    let lastError: unknown;
+
+    for (let attempt = 0; attempt <= TRIP_READ_RETRY_DELAYS_MS.length; attempt += 1) {
       const { data, error } = await supabase
         .from('trips')
         .select('*')
@@ -57,12 +91,18 @@ class TripsService {
         .eq('type', type)
         .order('start_date', { ascending: true });
 
-      if (error) throw error;
-      return (data || []).map(this.mapRowToTrip);
-    } catch (error) {
-      console.error('Get trips by type error:', error);
-      return [];
+      if (!error) return (data || []).map(this.mapRowToTrip);
+
+      lastError = error;
+      const retryDelay = TRIP_READ_RETRY_DELAYS_MS[attempt];
+      if (!isTemporaryReadError(error) || retryDelay === undefined) break;
+      await wait(retryDelay);
     }
+
+    Sentry.captureException(lastError, {
+      tags: { operation: 'get_trips_by_type', trip_type: type },
+    });
+    throw lastError;
   }
 
   async getTripsInRange(vesselId: string, start: string, end: string): Promise<Trip[]> {

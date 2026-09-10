@@ -5,6 +5,7 @@
 
 // Mock supabase before auth is used
 const mockSignInWithPassword = jest.fn();
+const mockSignUp = jest.fn();
 const mockSignOut = jest.fn();
 const mockGetSession = jest.fn();
 const mockFrom = jest.fn();
@@ -15,6 +16,7 @@ jest.mock('../../src/services/supabase', () => ({
   supabase: {
     auth: {
       signInWithPassword: (...args: unknown[]) => mockSignInWithPassword(...args),
+      signUp: (...args: unknown[]) => mockSignUp(...args),
       signOut: (...args: unknown[]) => mockSignOut(...args),
       getSession: (...args: unknown[]) => mockGetSession(...args),
       onAuthStateChange: (cb: unknown) => mockAuthOnAuthStateChange(cb),
@@ -30,6 +32,7 @@ jest.mock('../../src/services/deviceAccess', () => ({
 }));
 
 jest.mock('../../src/services/vessel', () => ({
+  __esModule: true,
   default: {
     createVessel: jest.fn().mockResolvedValue({ id: 'solo-vessel', name: 'Crew Account' }),
   },
@@ -155,6 +158,67 @@ describe('AuthService', () => {
       expect(result.user).toBeDefined();
       expect(result.user?.email).toBe('a@b.com');
       expect(result.session).toBeDefined();
+    });
+  });
+
+  describe('signUp', () => {
+    it('creates a private Crew workspace when no invite code is provided', async () => {
+      const mockedVesselService = jest.requireMock('../../src/services/vessel').default;
+      mockSignUp.mockResolvedValue({
+        data: { user: { id: 'new-crew' }, session: { access_token: 'token' } },
+        error: null,
+      });
+
+      const insert = jest.fn().mockResolvedValue({ error: null });
+      const usersQuery = {
+        insert,
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        maybeSingle: jest.fn().mockResolvedValue({
+          data: {
+            id: 'new-crew',
+            email: 'crew@example.com',
+            name: 'New Crew',
+            position: 'Deckhand',
+            department: 'EXTERIOR',
+            department_2: null,
+            contract_type: 'permanent',
+            role: 'CREW',
+            vessel_id: 'solo-vessel',
+            profile_photo: null,
+            created_at: '2026-09-10T12:00:00.000Z',
+            updated_at: '2026-09-10T12:00:00.000Z',
+          },
+          error: null,
+        }),
+      };
+      mockFrom.mockImplementation((table: string) => {
+        expect(table).toBe('users');
+        return usersQuery;
+      });
+
+      const result = await authService.signUp({
+        email: 'crew@example.com',
+        password: 'password123',
+        name: 'New Crew',
+        position: 'Deckhand',
+        department: 'EXTERIOR',
+        contractType: 'permanent',
+      });
+
+      expect(mockedVesselService.createVessel).toHaveBeenCalledWith({
+        name: 'Crew Account',
+        isSolo: true,
+      });
+      expect(mockRpc).not.toHaveBeenCalled();
+      expect(insert).toHaveBeenCalledWith([
+        expect.objectContaining({
+          id: 'new-crew',
+          role: 'CREW',
+        }),
+      ]);
+      expect(insert.mock.calls[0][0][0]).not.toHaveProperty('vessel_id');
+      expect(result.user?.vesselId).toBe('solo-vessel');
     });
   });
 

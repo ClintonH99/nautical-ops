@@ -32,11 +32,33 @@ class PreDepartureChecklistsService {
     };
   }
 
+  private mapChecklist(row: any, items: PreDepartureChecklistItem[]): PreDepartureChecklist {
+    const linkedTrip = Array.isArray(row.trip) ? row.trip[0] : row.trip;
+    return {
+      id: row.id,
+      vesselId: row.vessel_id,
+      tripId: row.trip_id ?? null,
+      linkedTrip: linkedTrip
+        ? {
+            id: linkedTrip.id,
+            title: linkedTrip.title,
+            startDate: linkedTrip.start_date,
+            endDate: linkedTrip.end_date,
+          }
+        : null,
+      department: (row.department as Department) ?? null,
+      title: row.title,
+      items,
+      createdAt: row.created_at,
+      createdBy: row.created_by,
+    };
+  }
+
   async getByVessel(vesselId: string): Promise<PreDepartureChecklist[]> {
     try {
       const { data: checklists, error: listsError } = await supabase
         .from('pre_departure_checklists')
-        .select('*')
+        .select('*, trip:trips(id, title, start_date, end_date)')
         .eq('vessel_id', vesselId)
         .order('created_at', { ascending: false });
 
@@ -57,16 +79,7 @@ class PreDepartureChecklistsService {
         itemsByChecklist[r.checklist_id].push(item);
       });
 
-      return checklists.map((c) => ({
-        id: c.id,
-        vesselId: c.vessel_id,
-        tripId: c.trip_id ?? null,
-        department: (c.department as Department) ?? null,
-        title: c.title,
-        items: itemsByChecklist[c.id] ?? [],
-        createdAt: c.created_at,
-        createdBy: c.created_by,
-      }));
+      return checklists.map((c) => this.mapChecklist(c, itemsByChecklist[c.id] ?? []));
     } catch (error) {
       console.error('Get pre-departure checklists error:', error);
       return [];
@@ -77,7 +90,7 @@ class PreDepartureChecklistsService {
     try {
       const { data: checklist, error: listError } = await supabase
         .from('pre_departure_checklists')
-        .select('*')
+        .select('*, trip:trips(id, title, start_date, end_date)')
         .eq('id', id)
         .single();
 
@@ -91,16 +104,7 @@ class PreDepartureChecklistsService {
 
       if (itemsError) return null;
 
-      return {
-        id: checklist.id,
-        vesselId: checklist.vessel_id,
-        tripId: checklist.trip_id ?? null,
-        department: (checklist.department as Department) ?? null,
-        title: checklist.title,
-        items: (items || []).map(this.mapItem),
-        createdAt: checklist.created_at,
-        createdBy: checklist.created_by,
-      };
+      return this.mapChecklist(checklist, (items || []).map(this.mapItem));
     } catch (error) {
       console.error('Get pre-departure checklist error:', error);
       return null;
