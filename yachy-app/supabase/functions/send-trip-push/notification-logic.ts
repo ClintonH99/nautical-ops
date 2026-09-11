@@ -14,6 +14,15 @@ export interface ChecklistNotificationRecord {
   title: string;
 }
 
+export interface CrewLeaveNotificationRecord {
+  id: string;
+  vessel_id: string;
+  crew_member_id: string;
+  leave_type: string;
+  start_date: string;
+  end_date: string;
+}
+
 export type NotificationData = Record<string, string>;
 
 export interface PushContent {
@@ -39,7 +48,7 @@ export interface NotificationRecipient {
   source: 'device' | 'legacy';
 }
 
-export type NotificationPreferenceRule = 'trips' | 'preDeparture' | 'dayBefore';
+export type NotificationPreferenceRule = 'trips' | 'preDeparture' | 'dayBefore' | 'crewLeave';
 
 export function formatTripType(type: string): string {
   const labels: Record<string, string> = {
@@ -136,6 +145,33 @@ export function buildChecklistNotification(
       screen: 'ViewPreDepartureChecklist',
       checklistId: checklist.id,
       tripId: trip.id,
+    },
+  };
+}
+
+export function buildCrewLeaveNotification(
+  leave: CrewLeaveNotificationRecord,
+  event: 'created' | 'updated'
+): PushContent {
+  const labels: Record<string, string> = {
+    ANNUAL: 'Annual leave',
+    SICK: 'Sick leave',
+    ROTATION: 'Rotation leave',
+    OTHER: 'Other leave',
+  };
+  const label = labels[leave.leave_type] ?? 'Crew leave';
+  const dateRange =
+    leave.start_date === leave.end_date
+      ? leave.start_date
+      : `${leave.start_date} – ${leave.end_date}`;
+
+  return {
+    title: event === 'created' ? 'Crew leave published' : 'Crew leave updated',
+    body: `${label}: ${dateRange}. Tap to view.`,
+    data: {
+      kind: event === 'created' ? 'crew_leave_created' : 'crew_leave_updated',
+      screen: 'CrewLeave',
+      crewLeaveId: leave.id,
     },
   };
 }

@@ -208,6 +208,7 @@ export async function getNotificationPreferences(userId: string): Promise<Record
       maintenance: true,
       yardJobs: true,
       watchSchedule: true,
+      crewLeave: true,
     };
   }
   return { ...data.notification_preferences } as Record<string, boolean>;

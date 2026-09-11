@@ -1,5 +1,6 @@
 import {
   buildChecklistNotification,
+  buildCrewLeaveNotification,
   buildDayBeforeNotification,
   buildTripNotification,
   collectNotificationRecipients,
@@ -54,6 +55,47 @@ describe('trip notification content', () => {
       title: 'Trip tomorrow: Fort Lauderdale to Sag Harbor',
       data: { kind: 'trip_day_before', tripId: 'trip-1', screen: 'UpcomingTrips' },
     });
+  });
+
+  it('notifies only the selected crew member about published or updated leave', () => {
+    const leave = {
+      id: 'leave-1',
+      vessel_id: 'vessel-1',
+      crew_member_id: 'crew-1',
+      leave_type: 'ANNUAL',
+      start_date: '2026-09-14',
+      end_date: '2026-09-21',
+    };
+
+    expect(buildCrewLeaveNotification(leave, 'created')).toEqual({
+      title: 'Crew leave published',
+      body: 'Annual leave: 2026-09-14 – 2026-09-21. Tap to view.',
+      data: {
+        kind: 'crew_leave_created',
+        screen: 'CrewLeave',
+        crewLeaveId: 'leave-1',
+      },
+    });
+    expect(buildCrewLeaveNotification(leave, 'updated')).toMatchObject({
+      title: 'Crew leave updated',
+      data: { kind: 'crew_leave_updated' },
+    });
+  });
+
+  it('respects the selected crew member crew-leave notification preference', () => {
+    const recipients = collectNotificationRecipients(
+      [
+        {
+          id: 'crew-1',
+          push_token: null,
+          notification_preferences: { crewLeave: false },
+        },
+      ],
+      [{ user_id: 'crew-1', expo_push_token: 'ExponentPushToken[iphone]' }],
+      'crewLeave'
+    );
+
+    expect(recipients).toEqual([]);
   });
 
   it('accepts Expo token formats and rejects unrelated strings', () => {

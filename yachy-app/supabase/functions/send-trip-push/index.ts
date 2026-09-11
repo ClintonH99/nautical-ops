@@ -1,18 +1,21 @@
 /**
- * Send vessel trip and linked pre-departure checklist notifications.
+ * Send vessel trip, linked pre-departure checklist, and crew leave notifications.
  *
  * Accepted calls:
  * - Database Webhook: trips INSERT or UPDATE
  * - Database Webhook: pre_departure_checklists INSERT or UPDATE
  * - Scheduled POST: { "type": "reminders" }
+ * - Authenticated app POST: { "type": "crew_leave", "crewLeaveId": "...", "event": "created" | "updated" }
  */
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import {
   buildChecklistNotification,
+  buildCrewLeaveNotification,
   buildDayBeforeNotification,
   buildTripNotification,
   ChecklistNotificationRecord,
+  CrewLeaveNotificationRecord,
   collectNotificationRecipients,
   NotificationPreferenceRule,
   NotificationRecipient,
@@ -70,6 +73,28 @@ async function getVesselRecipients(
     .is('revoked_at', null)
     .not('expo_push_token', 'is', null);
 
+  if (devicesError) throw devicesError;
+
+  return collectNotificationRecipients(users as any[], devices || [], preferenceRule);
+}
+
+async function getUserRecipients(
+  userId: string,
+  preferenceRule: NotificationPreferenceRule
+): Promise<NotificationRecipient[]> {
+  const { data: users, error: usersError } = await supabase
+    .from('users')
+    .select('id, push_token, notification_preferences')
+    .eq('id', userId);
+  if (usersError) throw usersError;
+  if (!users?.length) return [];
+
+  const { data: devices, error: devicesError } = await supabase
+    .from('user_devices')
+    .select('user_id, expo_push_token')
+    .eq('user_id', userId)
+    .is('revoked_at', null)
+    .not('expo_push_token', 'is', null);
   if (devicesError) throw devicesError;
 
   return collectNotificationRecipients(users as any[], devices || [], preferenceRule);
@@ -241,12 +266,80 @@ async function sendChecklistWebhook(
   return jsonResponse({ sent: messages.length, ...result });
 }
 
+async function getAuthenticatedActor(req: Request) {
+  const authorization = req.headers.get('Authorization') ?? '';
+  const token = authorization.replace(/^Bearer\s+/i, '');
+  if (!token || token === authorization) return null;
+
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data.user) return null;
+
+  const userClient = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_ANON_KEY')!,
+    { global: { headers: { Authorization: authorization } } }
+  );
+  const { data: deviceAllowed, error: deviceError } = await userClient.rpc(
+    'current_session_has_device_access'
+  );
+  if (deviceError || deviceAllowed !== true) return null;
+
+  const { data: actor, error: actorError } = await supabase
+    .from('users')
+    .select('id, vessel_id, role')
+    .eq('id', data.user.id)
+    .single();
+  if (actorError || !actor) return null;
+  return actor as { id: string; vessel_id: string | null; role: string };
+}
+
+async function sendCrewLeaveRequest(
+  req: Request,
+  body: Record<string, unknown>
+): Promise<Response> {
+  const crewLeaveId = typeof body.crewLeaveId === 'string' ? body.crewLeaveId : null;
+  const event = body.event === 'updated' ? 'updated' : body.event === 'created' ? 'created' : null;
+  if (!crewLeaveId || !event) return jsonResponse({ error: 'Invalid crew leave request' }, 400);
+
+  const actor = await getAuthenticatedActor(req);
+  if (!actor || !['HOD', 'CAPTAIN_MOV'].includes(actor.role)) {
+    return jsonResponse({ error: 'Unauthorized' }, 401);
+  }
+
+  const { data: leave, error } = await supabase
+    .from('crew_leave')
+    .select('id, vessel_id, crew_member_id, leave_type, start_date, end_date')
+    .eq('id', crewLeaveId)
+    .single();
+  if (error || !leave) return jsonResponse({ error: 'Crew leave not found' }, 404);
+  if (!actor.vessel_id || actor.vessel_id !== leave.vessel_id) {
+    return jsonResponse({ error: 'Unauthorized' }, 401);
+  }
+
+  const recipients = await getUserRecipients(leave.crew_member_id, 'crewLeave');
+  const content = buildCrewLeaveNotification(leave as CrewLeaveNotificationRecord, event);
+  const messages = envelopes(recipients, content);
+  const result = await sendToExpo(messages);
+
+  console.log('Crew leave notification processed:', {
+    event,
+    crewLeaveId,
+    vesselId: leave.vessel_id,
+    recipientUserId: leave.crew_member_id,
+    recipients: messages.length,
+    ...result,
+  });
+  return jsonResponse({ sent: messages.length, ...result });
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
-  if (!isTrustedInternalRequest(req)) return jsonResponse({ error: 'Unauthorized' }, 401);
 
   try {
     const body = await req.json();
+    if (body?.type === 'crew_leave') return await sendCrewLeaveRequest(req, body);
+
+    if (!isTrustedInternalRequest(req)) return jsonResponse({ error: 'Unauthorized' }, 401);
     if (body?.type === 'reminders') return jsonResponse(await sendDayBeforeReminders());
 
     const payload = body as WebhookPayload;

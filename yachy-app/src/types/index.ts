@@ -23,7 +23,8 @@ export type NotificationPreferenceKey =
   | 'preDeparture'
   | 'maintenance'
   | 'yardJobs'
-  | 'watchSchedule';
+  | 'watchSchedule'
+  | 'crewLeave';
 
 export interface NotificationPreferences {
   tasks: boolean;
@@ -32,6 +33,7 @@ export interface NotificationPreferences {
   maintenance: boolean;
   yardJobs: boolean;
   watchSchedule: boolean;
+  crewLeave: boolean;
 }
 
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
@@ -41,6 +43,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   maintenance: true,
   yardJobs: true,
   watchSchedule: true,
+  crewLeave: true,
 };
 
 export interface User {
@@ -227,6 +230,26 @@ export interface TripPreference {
   tripId: string;
   category: string; // e.g., "Dietary", "Room", "Activities"
   preference: string;
+}
+
+// ===== CREW LEAVE TYPES =====
+
+export type CrewLeaveType = 'ANNUAL' | 'SICK' | 'ROTATION' | 'OTHER';
+
+export interface CrewLeave {
+  id: string;
+  vesselId: string;
+  crewMemberId: string;
+  crewMemberName: string;
+  crewMemberPosition?: string;
+  crewMemberDepartment?: Department;
+  leaveType: CrewLeaveType;
+  startDate: string;
+  endDate: string;
+  notes: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface PreDepartureChecklistItem {

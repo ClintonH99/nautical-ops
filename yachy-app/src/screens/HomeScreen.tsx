@@ -25,9 +25,15 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import vesselService from '../services/vessel';
 import tripsService from '../services/trips';
 import yardJobsService from '../services/yardJobs';
+import crewLeaveService from '../services/crewLeave';
 import { useVesselTripColors, getTripTypeColorMap } from '../hooks/useVesselTripColors';
 import { DEFAULT_COLORS } from '../services/tripColors';
-import type { Trip, TripType, Department, YardPeriodJob } from '../types';
+import type { Trip, TripType, Department, YardPeriodJob, CrewLeave } from '../types';
+import {
+  CREW_LEAVE_COLORS,
+  CREW_LEAVE_SHORT_LABELS,
+  CREW_LEAVE_TYPES,
+} from '../constants/crewLeave';
 import { parseLocalDate, toYYYYMMDD } from '../utils';
 
 const { width } = Dimensions.get('window');
@@ -110,6 +116,27 @@ function getMarkedDatesFromYardJobs(
   return marked;
 }
 
+function getMarkedDatesFromCrewLeave(leave: CrewLeave[]): MarkedDates {
+  const marked: MarkedDates = {};
+  const seen: Record<string, Set<string>> = {};
+
+  leave.forEach((entry) => {
+    const color = CREW_LEAVE_COLORS[entry.leaveType];
+    const start = parseLocalDate(entry.startDate);
+    const end = parseLocalDate(entry.endDate);
+    for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+      const key = toYYYYMMDD(date);
+      if (!seen[key]) seen[key] = new Set();
+      if (seen[key].has(color)) continue;
+      seen[key].add(color);
+      if (!(marked as any)[key]) (marked as any)[key] = { periods: [] };
+      (marked as any)[key].periods.push({ startingDay: true, endingDay: true, color });
+    }
+  });
+
+  return marked;
+}
+
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
 /** Home categories: Tasks, Shopping, Inventory in a row; Vessel & Crew Safety as log button below */
@@ -141,8 +168,9 @@ export const HomeScreen = ({ navigation }: any) => {
   const [bannerLoadFailed, setBannerLoadFailed] = useState(false);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [yardJobs, setYardJobs] = useState<YardPeriodJob[]>([]);
+  const [crewLeave, setCrewLeave] = useState<CrewLeave[]>([]);
   const [tripsLoading, setTripsLoading] = useState(true);
-  const [calendarMode, setCalendarMode] = useState<'trips' | 'yardPeriod'>('trips');
+  const [calendarMode, setCalendarMode] = useState<'trips' | 'yardPeriod' | 'crewLeave'>('trips');
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   const vesselId = user?.vesselId ?? null;
@@ -158,18 +186,26 @@ export const HomeScreen = ({ navigation }: any) => {
 
   const markedDatesTrips = getMarkedDatesFromTrips(trips, typeColorMap);
   const markedDatesYardPeriod = getMarkedDatesFromYardJobs(yardJobs, getDeptColor);
-  const markedDates = calendarMode === 'trips' ? markedDatesTrips : markedDatesYardPeriod;
+  const markedDatesCrewLeave = getMarkedDatesFromCrewLeave(crewLeave);
+  const markedDates =
+    calendarMode === 'trips'
+      ? markedDatesTrips
+      : calendarMode === 'yardPeriod'
+        ? markedDatesYardPeriod
+        : markedDatesCrewLeave;
 
   const loadTrips = useCallback(async () => {
     if (!vesselId) return;
     try {
-      const [data, jobs] = await Promise.all([
+      const [data, jobs, leave] = await Promise.all([
         tripsService.getTripsByVessel(vesselId),
         yardJobsService.getByVessel(vesselId),
+        crewLeaveService.getByVessel(vesselId),
         loadColors(),
       ]);
       setTrips(data);
       setYardJobs(jobs);
+      setCrewLeave(leave);
     } catch (e) {
       console.error('Load trips error:', e);
     } finally {
@@ -376,6 +412,32 @@ export const HomeScreen = ({ navigation }: any) => {
                         Yard Period
                       </Text>
                     </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.calendarModeBtn,
+                        {
+                          borderColor:
+                            calendarMode === 'crewLeave' ? CALENDAR_ACCENT : themeColors.surfaceAlt,
+                          backgroundColor: themeColors.surface,
+                        },
+                      ]}
+                      onPress={() => setCalendarMode('crewLeave')}
+                      activeOpacity={0.8}
+                    >
+                      <Text
+                        style={[
+                          styles.calendarModeBtnText,
+                          {
+                            color:
+                              calendarMode === 'crewLeave'
+                                ? CALENDAR_ACCENT
+                                : themeColors.textSecondary,
+                          },
+                        ]}
+                      >
+                        Crew Leave
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                   <View
                     style={[styles.tripsCalendarAccent, { backgroundColor: CALENDAR_ACCENT }]}
@@ -437,21 +499,43 @@ export const HomeScreen = ({ navigation }: any) => {
                           </View>
                         )
                       )
-                    : DEPARTMENTS.map((dept) => (
-                        <View key={dept} style={styles.tripsLegendItem}>
-                          <View
-                            style={[
-                              styles.tripsLegendDot,
-                              { backgroundColor: getDepartmentColor(dept, overrides) },
-                            ]}
-                          />
-                          <Text
-                            style={[styles.tripsLegendLabel, { color: themeColors.textSecondary }]}
-                          >
-                            {dept.charAt(0) + dept.slice(1).toLowerCase()}
-                          </Text>
-                        </View>
-                      ))}
+                    : calendarMode === 'yardPeriod'
+                      ? DEPARTMENTS.map((dept) => (
+                          <View key={dept} style={styles.tripsLegendItem}>
+                            <View
+                              style={[
+                                styles.tripsLegendDot,
+                                { backgroundColor: getDepartmentColor(dept, overrides) },
+                              ]}
+                            />
+                            <Text
+                              style={[
+                                styles.tripsLegendLabel,
+                                { color: themeColors.textSecondary },
+                              ]}
+                            >
+                              {dept.charAt(0) + dept.slice(1).toLowerCase()}
+                            </Text>
+                          </View>
+                        ))
+                      : CREW_LEAVE_TYPES.map((type) => (
+                          <View key={type} style={styles.tripsLegendItem}>
+                            <View
+                              style={[
+                                styles.tripsLegendDot,
+                                { backgroundColor: CREW_LEAVE_COLORS[type] },
+                              ]}
+                            />
+                            <Text
+                              style={[
+                                styles.tripsLegendLabel,
+                                { color: themeColors.textSecondary },
+                              ]}
+                            >
+                              {CREW_LEAVE_SHORT_LABELS[type]}
+                            </Text>
+                          </View>
+                        ))}
                 </View>
                 <TouchableOpacity
                   style={[
@@ -463,13 +547,21 @@ export const HomeScreen = ({ navigation }: any) => {
                   ]}
                   onPress={() =>
                     navigation.navigate(
-                      calendarMode === 'trips' ? 'UpcomingTrips' : 'YardPeriodJobs'
+                      calendarMode === 'trips'
+                        ? 'UpcomingTrips'
+                        : calendarMode === 'yardPeriod'
+                          ? 'YardPeriodJobs'
+                          : 'CrewLeave'
                     )
                   }
                   activeOpacity={0.8}
                 >
                   <Text style={[styles.seeTripsButtonText, { color: CALENDAR_ACCENT }]}>
-                    {calendarMode === 'trips' ? 'See trips' : 'See Shipyard List'}
+                    {calendarMode === 'trips'
+                      ? 'See trips'
+                      : calendarMode === 'yardPeriod'
+                        ? 'See Shipyard List'
+                        : 'See crew leave'}
                   </Text>
                   <Text style={[styles.seeTripsArrow, { color: CALENDAR_ACCENT }]}>›</Text>
                 </TouchableOpacity>
@@ -614,14 +706,16 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   calendarModeBtn: {
+    flex: 1,
     paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: SPACING.xs,
     borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,
   },
   calendarModeBtnText: {
     fontSize: FONTS.sm,
     fontWeight: '600',
+    textAlign: 'center',
   },
   tripsCalendarTitle: {
     fontSize: 20,

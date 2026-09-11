@@ -28,6 +28,7 @@ const PREFERENCE_LABELS: Record<NotificationPreferenceKey, string> = {
   maintenance: 'Maintenance',
   yardJobs: 'Shipyard List Jobs',
   watchSchedule: 'Watch Schedule',
+  crewLeave: 'Crew Leave',
 };
 
 const PREFERENCE_ORDER: NotificationPreferenceKey[] = [
@@ -37,6 +38,7 @@ const PREFERENCE_ORDER: NotificationPreferenceKey[] = [
   'maintenance',
   'yardJobs',
   'watchSchedule',
+  'crewLeave',
 ];
 
 export const NotificationSettingsScreen = () => {

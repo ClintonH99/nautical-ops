@@ -33,6 +33,8 @@ import {
   GuestTripsScreen,
   BossTripsScreen,
   AddEditTripScreen,
+  CrewLeaveScreen,
+  AddEditCrewLeaveScreen,
   PreDepartureChecklistScreen,
   AddEditPreDepartureChecklistScreen,
   ViewPreDepartureChecklistScreen,
@@ -163,6 +165,8 @@ const APP_SCREEN_PATHS = {
   GuestTrips: 'trips/guest',
   BossTrips: 'trips/boss',
   AddEditTrip: 'trips/edit',
+  CrewLeave: 'crew-leave',
+  AddEditCrewLeave: 'crew-leave/edit',
   DeliveryTrips: 'trips/delivery',
   TripColorSettings: 'trip-colors',
   VesselCrewSafety: 'safety',
@@ -329,8 +333,7 @@ export const RootNavigator = () => {
     };
   }, [captainPaymentRequired, isAuthenticated, user?.id]);
 
-  // A notification tap opens the linked checklist when possible; trip
-  // notifications open the Upcoming Trips screen.
+  // Notification taps open their related record screen when possible.
   useEffect(() => {
     if (Platform.OS === 'web') return;
 
@@ -344,15 +347,19 @@ export const RootNavigator = () => {
 
       const data = response.notification.request.content.data as {
         checklistId?: unknown;
+        crewLeaveId?: unknown;
       };
       const checklistId = typeof data?.checklistId === 'string' ? data.checklistId : null;
+      const crewLeaveId = typeof data?.crewLeaveId === 'string' ? data.crewLeaveId : null;
       const navigateFromPush = navigationRef.navigate as unknown as (
         screen: string,
         params?: Record<string, string>
       ) => void;
 
       lastHandledNotificationId.current = identifier;
-      if (checklistId) {
+      if (crewLeaveId) {
+        navigateFromPush('CrewLeave');
+      } else if (checklistId) {
         navigateFromPush('ViewPreDepartureChecklist', { checklistId });
       } else {
         navigateFromPush('UpcomingTrips');
@@ -933,6 +940,16 @@ export const RootNavigator = () => {
                 options={{
                   headerShown: false,
                 }}
+              />
+              <Stack.Screen
+                name="CrewLeave"
+                component={CrewLeaveScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="AddEditCrewLeave"
+                component={AddEditCrewLeaveScreen}
+                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="VesselCrewSafety"
