@@ -560,6 +560,37 @@ export const ProfileScreen = ({ navigation }: any) => {
             </View>
           </View>
 
+          {/* Personal Records */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
+              Personal Records
+            </Text>
+            <View style={[styles.settingsCard, { backgroundColor: themeColors.surface }]}>
+              <TouchableOpacity
+                style={[styles.settingsItem, styles.settingsItemLast]}
+                onPress={() => navigation.navigate('MySeaMiles')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.settingsItemLeft}>
+                  <Text style={styles.settingsIcon}>🧭</Text>
+                  <View style={styles.settingsTextContainer}>
+                    <Text style={[styles.settingsLabel, { color: themeColors.textPrimary }]}>
+                      My Sea Miles
+                    </Text>
+                    <Text
+                      style={[styles.settingsDescription, { color: themeColors.textSecondary }]}
+                    >
+                      View and export your permanent personal sea-service record
+                    </Text>
+                  </View>
+                </View>
+                <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>
+                  {'\u203A'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           {/* E-signature */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>

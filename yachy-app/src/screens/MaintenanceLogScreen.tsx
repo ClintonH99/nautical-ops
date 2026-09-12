@@ -19,7 +19,6 @@ import {
   Dimensions,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -29,7 +28,14 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import maintenanceLogsService from '../services/maintenanceLogs';
 import vesselService from '../services/vessel';
 import { MaintenanceLog } from '../types';
-import { Button, LoadingSpinner, PageHeader, ExportButton, ExportBar } from '../components';
+import {
+  Button,
+  LoadingSpinner,
+  PageHeader,
+  ExportButton,
+  ExportBar,
+  PreviewActionButtons,
+} from '../components';
 
 const COLUMN_WIDTH = 110;
 const DATE_WIDTH = 88;
@@ -641,38 +647,10 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
                           </Text>
                         </View>
                       </View>
-                      <View style={styles.previewActions}>
-                        <TouchableOpacity
-                          style={[
-                            styles.previewActionBtn,
-                            { borderColor: themeColors.isDark ? COLORS.white : COLORS.primary },
-                          ]}
-                          onPress={() => onEdit(log)}
-                        >
-                          <Ionicons
-                            name="create-outline"
-                            size={18}
-                            color={themeColors.isDark ? COLORS.white : COLORS.primary}
-                          />
-                          <Text
-                            style={[
-                              styles.previewActionText,
-                              { color: themeColors.isDark ? COLORS.white : COLORS.primary },
-                            ]}
-                          >
-                            Edit
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.previewActionBtn, { borderColor: COLORS.danger }]}
-                          onPress={() => onDelete(log)}
-                        >
-                          <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
-                          <Text style={[styles.previewActionText, { color: COLORS.danger }]}>
-                            Delete
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
+                      <PreviewActionButtons
+                        onEdit={() => onEdit(log)}
+                        onDelete={() => onDelete(log)}
+                      />
                     </View>
                   )}
                 </View>
@@ -887,22 +865,6 @@ const styles = StyleSheet.create({
   },
   previewTitle: { fontSize: FONTS.lg, fontWeight: '700', lineHeight: 24 },
   previewSubtitle: { fontSize: FONTS.xs, marginTop: 2 },
-  previewActions: {
-    flexDirection: 'row',
-    gap: SPACING.md,
-    marginTop: SPACING.xs,
-  },
-  previewActionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: SPACING.sm,
-    borderWidth: 1,
-    borderRadius: BORDER_RADIUS.md,
-  },
-  previewActionText: { fontSize: FONTS.sm, fontWeight: '600' },
   previewPanel: {
     alignSelf: 'stretch',
     padding: SPACING.lg,

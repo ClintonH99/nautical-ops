@@ -12,13 +12,13 @@ Interactive list/card design for screens where users tap to view/edit and items 
 
 ## Typography
 
-| Element | fontSize | fontWeight | color |
-|---------|----------|------------|-------|
-| Title (header) | FONTS.base (16) | '700' | COLORS.primary |
-| Edit (action) | FONTS.sm (14) | '600' | COLORS.primary |
-| Labels (e.g. DATE, POSITION/LOCATION) | FONTS.xs (12) | '600' | themeColors.textSecondary |
-| Values (primary content) | FONTS.base | normal | themeColors.textPrimary |
-| Created by / Logged by (footer) | FONTS.xs | normal | themeColors.textSecondary |
+| Element                               | fontSize        | fontWeight | color                     |
+| ------------------------------------- | --------------- | ---------- | ------------------------- |
+| Title (header)                        | FONTS.base (16) | '700'      | COLORS.primary            |
+| Edit (action)                         | FONTS.sm (14)   | '600'      | COLORS.primary            |
+| Labels (e.g. DATE, POSITION/LOCATION) | FONTS.xs (12)   | '600'      | themeColors.textSecondary |
+| Values (primary content)              | FONTS.base      | normal     | themeColors.textPrimary   |
+| Created by / Logged by (footer)       | FONTS.xs        | normal     | themeColors.textSecondary |
 
 **Label styling**: `textTransform: 'uppercase'`, `letterSpacing: 0.5`, `marginBottom: 2`
 
@@ -29,31 +29,32 @@ Interactive list/card design for screens where users tap to view/edit and items 
 ## Layout
 
 ```
-[Checkbox?] Title                [Delete icon] Edit
+[Checkbox?] Title                         [Expand]
 Date (when applicable)
 Time (when applicable)
 Label
 Value
 Logged by / Created by
+[✎ Edit]                         [🗑 Delete]
 ```
 
-- **Header row**: flexDirection row, justifyContent space-between; left: checkbox (if applicable) + **title** (main identifier); right: delete icon + Edit text. The title is always the first thing the user sees.
+- **Header row**: flexDirection row, justifyContent space-between; left: checkbox (if applicable) + **title** (main identifier); right: expand/collapse indicator. The title is always the first thing the user sees.
 - **Content rows**: Date and Time as label/value rows when the form has them; then other fields. Label above value, stacked; marginBottom SPACING.sm between rows.
 - **Footer**: "Logged by X" or "Created by X" at bottom
 
 ### Title Mapping (per screen)
 
-| Screen | Title (header) |
-|--------|----------------|
-| General Waste Log | Position/Location |
-| Fuel Log | Location of refueling |
-| Pump Out Log | Location |
-| Maintenance Log | Equipment name |
-| Pre-Departure Checklist | Checklist title |
-| Inventory | Item title |
-| Trips (Boss/Guest/Delivery/Yard) | Trip title |
-| Tasks List | Task title |
-| Yard Period Jobs | Job title |
+| Screen                           | Title (header)        |
+| -------------------------------- | --------------------- |
+| General Waste Log                | Position/Location     |
+| Fuel Log                         | Location of refueling |
+| Pump Out Log                     | Location              |
+| Maintenance Log                  | Equipment name        |
+| Pre-Departure Checklist          | Checklist title       |
+| Inventory                        | Item title            |
+| Trips (Boss/Guest/Delivery/Yard) | Trip title            |
+| Tasks List                       | Task title            |
+| Yard Period Jobs                 | Job title             |
 
 - If no date in the form: do not show Date in content.
 - If no time in the form: do not show Time in content.
@@ -65,10 +66,17 @@ Logged by / Created by
 - **Style**: 22x22, borderRadius BORDER_RADIUS.sm, borderWidth 2, borderColor COLORS.gray300; checked: backgroundColor COLORS.primary, borderColor COLORS.primary, white checkmark
 - **Placement**: Top-left of card header, before title
 
-## Actions
+## Preview Actions
 
-- **Delete**: Ionicons `trash-outline`, size 20, `color: COLORS.danger`
-- **Edit**: Text "Edit", fontSize FONTS.sm, fontWeight '600', color COLORS.primary
+Every expanded preview with Edit/Delete controls must use the Maintenance Log action-row design at the bottom of the preview:
+
+- Two equal-width outlined buttons on one row.
+- **Edit**: Ionicons `create-outline`, size 18; navy border/text in day mode and white border/text in dark mode.
+- **Delete**: Ionicons `trash-outline`, size 18; `COLORS.danger` border/text in both themes.
+- Both buttons use `SPACING.sm` vertical padding, `BORDER_RADIUS.md`, and `SPACING.md` between buttons.
+- Do not place Edit/Delete controls in the top-right header of an expanded preview.
+- Use the shared `PreviewActionButtons` component so preview actions remain consistent.
+- Non-expandable cards that are not preview panels may retain their existing header actions.
 
 ## Reference Implementation
 

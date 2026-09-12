@@ -9,6 +9,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { PreviewActionButtons } from './PreviewActionButtons';
 
 export interface ButtonTagCardProps {
   /** Main identifier shown in header (title first per design standard). Required. */
@@ -107,21 +108,24 @@ export function ButtonTagCard({
       <View style={styles.cardHeader}>
         <View style={styles.cardLeft}>
           {showCheckbox && onToggleSelect !== undefined && (
-            <Checkbox
-              checked={!!checked}
-              onPress={onToggleSelect}
-              themeColors={themeColors}
-            />
+            <Checkbox checked={!!checked} onPress={onToggleSelect} themeColors={themeColors} />
           )}
-          {headerLeft ?? (headerTitle != null ? (
-            <View style={styles.cardMeta}>
-              {headerTitle != null && (
-                <Text style={[styles.cardTitle, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]} numberOfLines={1}>
-                  {headerTitle}
-                </Text>
-              )}
-            </View>
-          ) : null)}
+          {headerLeft ??
+            (headerTitle != null ? (
+              <View style={styles.cardMeta}>
+                {headerTitle != null && (
+                  <Text
+                    style={[
+                      styles.cardTitle,
+                      { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {headerTitle}
+                  </Text>
+                )}
+              </View>
+            ) : null)}
         </View>
         <View style={styles.cardActions}>
           {collapsible && !showDetail && (
@@ -134,20 +138,33 @@ export function ButtonTagCard({
               color={themeColors.isDark ? COLORS.white : COLORS.primary}
             />
           )}
-          {showDetail && onDelete && (
+          {!collapsible && !showCheckbox && showDetail && onDelete && (
             <TouchableOpacity
-              onPress={(e) => { e.stopPropagation(); onDelete(); }}
+              onPress={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
             </TouchableOpacity>
           )}
-          {showDetail && onEdit && (
+          {!collapsible && !showCheckbox && showDetail && onEdit && (
             <TouchableOpacity
-              onPress={(e) => { e.stopPropagation(); onEdit(); }}
+              onPress={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={[styles.editBtn, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Edit</Text>
+              <Text
+                style={[
+                  styles.editBtn,
+                  { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                ]}
+              >
+                Edit
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -158,30 +175,36 @@ export function ButtonTagCard({
       {showDetail && children}
 
       {showDetail && footer && (
-        <Text style={[styles.cardCreatedBy, { color: themeColors.textSecondary }]}>
-          {footer}
-        </Text>
+        <Text style={[styles.cardCreatedBy, { color: themeColors.textSecondary }]}>{footer}</Text>
       )}
+
+      {collapsible && showDetail ? (
+        <PreviewActionButtons onEdit={onEdit} onDelete={onDelete} />
+      ) : null}
     </TouchableOpacity>
   );
 }
 
-export function ButtonTagRow({ label, value, badgeColor }: { label: string; value: string; badgeColor?: string }) {
+export function ButtonTagRow({
+  label,
+  value,
+  badgeColor,
+}: {
+  label: string;
+  value: string;
+  badgeColor?: string;
+}) {
   const themeColors = useThemeColors();
   if (!value) return null;
   return (
     <View style={styles.cardRow}>
-      <Text style={[styles.cardLabel, { color: themeColors.textSecondary }]}>
-        {label}
-      </Text>
+      <Text style={[styles.cardLabel, { color: themeColors.textSecondary }]}>{label}</Text>
       {badgeColor ? (
         <View style={[styles.deptBadge, { backgroundColor: badgeColor }]}>
           <Text style={styles.deptBadgeText}>{value}</Text>
         </View>
       ) : (
-        <Text style={[styles.cardValue, { color: themeColors.textPrimary }]}>
-          {value}
-        </Text>
+        <Text style={[styles.cardValue, { color: themeColors.textPrimary }]}>{value}</Text>
       )}
     </View>
   );
@@ -221,7 +244,12 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   cardValue: { fontSize: FONTS.base, lineHeight: 20 },
-  deptBadge: { alignSelf: 'flex-start', paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: BORDER_RADIUS.sm },
+  deptBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.sm,
+  },
   deptBadgeText: { fontSize: FONTS.xs, fontWeight: '600', color: COLORS.white },
   cardCreatedBy: { fontSize: FONTS.xs, marginTop: SPACING.xs, fontStyle: 'italic' },
   cardSummary: { marginTop: 2 },

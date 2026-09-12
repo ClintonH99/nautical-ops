@@ -21,7 +21,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { PageHeader, ExportButton, ExportBar, Checkbox } from '../components';
+import { PageHeader, ExportButton, ExportBar, Checkbox, PreviewActionButtons } from '../components';
 import { useAuthStore } from '../store';
 import watchKeepingService, { PublishedWatchTimetable } from '../services/watchKeeping';
 import { formatLocalDateString } from '../utils';
@@ -358,35 +358,11 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
                       },
                     ]}
                   >
-                    <View style={styles.previewActions}>
-                      <TouchableOpacity
-                        style={[
-                          styles.previewActionBtn,
-                          {
-                            borderColor: themeColors.isDark ? COLORS.white : COLORS.primary,
-                          },
-                        ]}
-                        onPress={() => handleEdit(t)}
-                      >
-                        <Text
-                          style={[
-                            styles.previewActionText,
-                            { color: themeColors.isDark ? COLORS.white : COLORS.primary },
-                          ]}
-                        >
-                          Edit
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.previewActionBtn, { borderColor: COLORS.danger }]}
-                        onPress={() => handleDelete(t)}
-                        disabled={deleting}
-                      >
-                        <Text style={[styles.previewActionText, { color: COLORS.danger }]}>
-                          {deleting ? 'Deleting…' : 'Delete'}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
+                    <PreviewActionButtons
+                      onEdit={() => handleEdit(t)}
+                      onDelete={() => handleDelete(t)}
+                      deleting={deleting}
+                    />
                   </View>
                 )}
               </View>
@@ -425,15 +401,6 @@ const styles = StyleSheet.create({
     paddingTop: SPACING.md,
     paddingBottom: SPACING.lg,
   },
-  previewActions: { flexDirection: 'row', gap: SPACING.sm },
-  previewActionBtn: {
-    flex: 1,
-    borderWidth: 1.5,
-    borderRadius: BORDER_RADIUS.md,
-    paddingVertical: SPACING.sm,
-    alignItems: 'center',
-  },
-  previewActionText: { fontSize: FONTS.sm, fontWeight: '600' },
   viewModal: { flex: 1 },
   viewModalContent: { paddingBottom: SIZES.bottomScrollPadding },
   viewHeader: { padding: SPACING.lg, borderBottomWidth: 1, borderBottomColor: COLORS.border },

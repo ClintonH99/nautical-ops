@@ -3,39 +3,61 @@
  * Hub for safety-related features: Pre-Departure Checklist, Rules, Safety Equipment
  */
 
-import React, { useLayoutEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { COLORS, FONTS, SPACING, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { PageHeader } from '../components';
 import { useAuthStore } from '../store';
 
 const CATEGORIES = [
-  { icon: '✅', label: 'Pre-Departure Checklist', nav: 'PreDepartureChecklist' as const, enabled: true },
-  { icon: '📍', label: 'Muster Station & Duties', nav: 'MusterStation' as const, enabled: true },
-  { icon: '🦺', label: 'Safety Equipment', nav: 'SafetyEquipment' as const, enabled: true },
-  { icon: '📜', label: 'Rules On-Board', nav: 'Rules' as const, enabled: true },
-  { icon: '💤', label: 'Hours of Rest', nav: 'HoursOfRest' as const, enabled: true },
-  { icon: '📝', label: 'Watch Duties', nav: 'WatchDuties' as const, enabled: true },
+  {
+    icon: '✅',
+    label: 'Pre-Departure Checklist',
+    nav: 'PreDepartureChecklist' as const,
+    enabled: true,
+  },
+  {
+    icon: '📍',
+    label: 'Muster Station & Duties',
+    nav: 'MusterStation' as const,
+    enabled: true,
+  },
+  {
+    icon: '🦺',
+    label: 'Safety Equipment',
+    nav: 'SafetyEquipment' as const,
+    enabled: true,
+  },
+  {
+    icon: '📜',
+    label: 'Rules On-Board',
+    nav: 'Rules' as const,
+    enabled: true,
+  },
+  {
+    icon: '💤',
+    label: 'Hours of Rest',
+    nav: 'HoursOfRest' as const,
+    enabled: true,
+  },
+  {
+    icon: '📝',
+    label: 'Watch Duties',
+    nav: 'WatchDuties' as const,
+    enabled: true,
+  },
 ];
-
-
 const VESSEL_CREW_SAFETY_INFO = {
-            title: 'Vessel & Crew Safety',
-            description: 'Central hub for safety information and procedures.',
-            features: [
-              'Access muster stations and crew duties',
-              'Review safety equipment records',
-              'Read the rules on-board',
-              'Run through the pre-departure checklist',
-            ],
-          };
+  title: 'Vessel & Crew Safety',
+  description: 'Central hub for safety information and procedures.',
+  features: [
+    'Access muster stations and crew duties',
+    'Review safety equipment records',
+    'Read the rules on-board',
+    'Run through the pre-departure checklist',
+  ],
+};
 
 export const VesselCrewSafetyScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -45,25 +67,44 @@ export const VesselCrewSafetyScreen = ({ navigation }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to use Vessel & Crew Safety.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to use Vessel & Crew Safety.
+        </Text>
       </View>
     );
   }
 
   return (
     <View style={styles.pageWrap}>
-      <PageHeader title="Vessel & Crew Safety" info={VESSEL_CREW_SAFETY_INFO} infoScreenKey="vessel_crew_safety" />
-      <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>
+      <PageHeader
+        title="Vessel & Crew Safety"
+        info={VESSEL_CREW_SAFETY_INFO}
+        infoScreenKey="vessel_crew_safety"
+      />
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={styles.content}
+      >
         {CATEGORIES.map((category) => (
           <TouchableOpacity
             key={category.label}
-            style={[styles.card, { backgroundColor: themeColors.surface }, !category.enabled && styles.cardDisabled]}
+            style={[
+              styles.card,
+              { backgroundColor: themeColors.surface },
+              !category.enabled && styles.cardDisabled,
+            ]}
             onPress={() => category.enabled && category.nav && navigation.navigate(category.nav)}
             activeOpacity={category.enabled ? 0.8 : 1}
             disabled={!category.enabled}
           >
             <Text style={styles.cardIcon}>{category.icon}</Text>
-            <Text style={[styles.cardLabel, { color: themeColors.textPrimary }, !category.enabled && { color: themeColors.textSecondary }]}>
+            <Text
+              style={[
+                styles.cardLabel,
+                { color: themeColors.textPrimary },
+                !category.enabled && { color: themeColors.textSecondary },
+              ]}
+            >
               {category.label}
             </Text>
             {category.enabled ? (

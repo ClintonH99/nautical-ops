@@ -1,0 +1,19 @@
+---
+description: Standard Edit and Delete controls for every expandable preview screen
+globs: yachy-app/src/{screens,components}/**/*.tsx
+alwaysApply: false
+---
+
+# Preview Screen Action Standard
+
+- Every new expandable preview screen must follow the Maintenance Log action design.
+- Place Edit and Delete together at the bottom of the expanded preview, after all preview content and footer information.
+- Use the shared `PreviewActionButtons` component. Do not recreate the controls locally.
+- Edit and Delete must be equal-width outlined buttons on one row.
+- Edit uses `create-outline`; it is navy in light mode and white in dark mode.
+- Delete uses `trash-outline` with the danger-red border, icon, and text.
+- Do not place preview Edit/Delete controls in the card header.
+- Hide preview editing controls while the screen is in PDF export-selection mode.
+- Preserve permission checks: only pass an action callback when that user is allowed to perform it.
+
+Reference: `ADMIN/App Design/BUTTON_TAG_STANDARD.md`.

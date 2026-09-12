@@ -417,6 +417,17 @@ export const CrewManagementScreen = ({ navigation }: any) => {
         <Text style={[styles.actionRowChevron, { color: COLORS.primary }]}>›</Text>
       </TouchableOpacity>
 
+      {isMOV ? (
+        <TouchableOpacity
+          style={[styles.actionRow, { backgroundColor: themeColors.surface }]}
+          onPress={() => navigation.navigate('SeaMilesReview')}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.actionRowLabel, { color: COLORS.primary }]}>Sign Off Sea Miles</Text>
+          <Text style={[styles.actionRowChevron, { color: COLORS.primary }]}>›</Text>
+        </TouchableOpacity>
+      ) : null}
+
       <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
         {filterLabel} ({filteredCrew.length})
       </Text>

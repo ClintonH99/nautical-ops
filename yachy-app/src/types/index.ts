@@ -252,6 +252,65 @@ export interface CrewLeave {
   updatedAt: string;
 }
 
+// ===== PERSONAL SEA MILES TYPES =====
+
+export type SeaMileEntryStatus = 'DRAFT' | 'PENDING' | 'APPROVED' | 'DECLINED';
+
+export interface CaptainSeaMileContact {
+  userId: string;
+  firstName: string;
+  lastName: string;
+  cellNumber: string | null;
+  emailAddress: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SeaMileFolder {
+  id: string;
+  userId: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SeaMileFolderAssignment {
+  entryId: string;
+  folderId: string;
+}
+
+export interface SeaMileEntry {
+  id: string;
+  userId: string;
+  reviewVesselId: string | null;
+  voyageDate: string;
+  vesselName: string;
+  vesselLength: string;
+  fromLocation: string;
+  toLocation: string;
+  capacityRole: string;
+  milesLogged: number;
+  dayHours: number;
+  nightHours: number;
+  tidal: boolean;
+  status: SeaMileEntryStatus;
+  declineComment: string | null;
+  submittedAt: string | null;
+  reviewedBy: string | null;
+  reviewerName: string | null;
+  reviewerSignatureType: 'drawn' | 'typed' | null;
+  reviewerSignatureImage: string | null;
+  reviewerTypedName: string | null;
+  reviewerContactFirstName: string | null;
+  reviewerContactLastName: string | null;
+  reviewerContactCellNumber: string | null;
+  reviewerContactEmailAddress: string | null;
+  reviewedAt: string | null;
+  ownerName?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PreDepartureChecklistItem {
   id: string;
   checklistId: string;

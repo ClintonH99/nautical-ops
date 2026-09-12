@@ -28,6 +28,7 @@ import {
   ExportButton,
   ExportBar,
   Checkbox,
+  PreviewActionButtons,
 } from '../components';
 import { generateSafetyEquipmentListPdf } from '../utils/safetyEquipmentPdf';
 import type { SafetyEquipment, SafetyEquipmentData } from '../services/safetyEquipment';
@@ -291,32 +292,24 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
               {!exportMode && expandedId !== item.id && (
                 <Ionicons name="chevron-down" size={18} color={themeColors.textSecondary} />
               )}
-              {canManage && !exportMode && expandedId === item.id && (
-                <View style={styles.cardActions}>
-                  <TouchableOpacity
-                    onPress={() => onDelete(item)}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => onEdit(item)}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <Text
-                      style={[
-                        styles.editBtn,
-                        { color: themeColors.isDark ? COLORS.white : COLORS.primary },
-                      ]}
-                    >
-                      Edit
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+              {!exportMode && expandedId === item.id && (
+                <Ionicons
+                  name="chevron-up"
+                  size={18}
+                  color={themeColors.isDark ? COLORS.white : COLORS.primary}
+                />
               )}
             </View>
             {expandedId === item.id && (
-              <SafetyEquipmentPreview data={item.data} themeColors={themeColors} />
+              <>
+                <SafetyEquipmentPreview data={item.data} themeColors={themeColors} />
+                {canManage && !exportMode ? (
+                  <PreviewActionButtons
+                    onEdit={() => onEdit(item)}
+                    onDelete={() => onDelete(item)}
+                  />
+                ) : null}
+              </>
             )}
           </TouchableOpacity>
         ))}
@@ -347,7 +340,6 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xl,
     marginBottom: SPACING.md,
   },
-  editBtn: { fontSize: FONTS.sm, fontWeight: '600' },
   card: {
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.lg,
@@ -364,7 +356,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: SPACING.sm,
   },
-  cardActions: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
   cardTitle: { fontSize: FONTS.lg, fontWeight: '600', flex: 1 },
   preview: {
     marginTop: SPACING.sm,

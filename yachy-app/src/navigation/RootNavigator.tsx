@@ -29,6 +29,7 @@ import {
   VesselPlansScreen,
   CrewManagementScreen,
   RotationalGroupsScreen,
+  SeaMilesReviewScreen,
   UpcomingTripsScreen,
   GuestTripsScreen,
   BossTripsScreen,
@@ -89,6 +90,8 @@ import {
   FutureUpdatesScreen,
   AddEditNoteScreen,
   VesselCrewSafetyScreen,
+  MySeaMilesScreen,
+  AddEditSeaMileScreen,
   MusterStationScreen,
   CreateMusterStationScreen,
   SafetyEquipmentScreen,
@@ -161,6 +164,7 @@ const APP_SCREEN_PATHS = {
   VesselSettings: 'vessel-settings',
   CrewManagement: 'crew',
   RotationalGroups: 'rotational-groups',
+  SeaMilesReview: 'crew/sea-miles',
   UpcomingTrips: 'trips/upcoming',
   GuestTrips: 'trips/guest',
   BossTrips: 'trips/boss',
@@ -170,6 +174,8 @@ const APP_SCREEN_PATHS = {
   DeliveryTrips: 'trips/delivery',
   TripColorSettings: 'trip-colors',
   VesselCrewSafety: 'safety',
+  MySeaMiles: 'safety/sea-miles',
+  AddEditSeaMile: 'safety/sea-miles/edit',
   MusterStation: 'safety/muster',
   CreateMusterStation: 'safety/muster/create',
   SafetyEquipment: 'safety/equipment',
@@ -920,6 +926,11 @@ export const RootNavigator = () => {
                 }}
               />
               <Stack.Screen
+                name="SeaMilesReview"
+                component={SeaMilesReviewScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
                 name="UpcomingTrips"
                 component={UpcomingTripsScreen}
                 options={{ headerShown: false }}
@@ -954,6 +965,16 @@ export const RootNavigator = () => {
               <Stack.Screen
                 name="VesselCrewSafety"
                 component={VesselCrewSafetyScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="MySeaMiles"
+                component={MySeaMilesScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="AddEditSeaMile"
+                component={AddEditSeaMileScreen}
                 options={{ headerShown: false }}
               />
               <Stack.Screen
