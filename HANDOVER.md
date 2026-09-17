@@ -1,6 +1,6 @@
 # Nautical Ops — Handover
 
-Written 2026-08-23 against commit `03b65eb`. Every figure was checked against the repo, not recalled. Where something is unverified it says so explicitly.
+Originally written 2026-08-23 against commit `03b65eb`; production and release state was re-verified on 2026-09-18 through commit `202ae39`. Where something is unverified it says so explicitly.
 
 **This is not exhaustive.** Section 11 lists exactly what remains unread. Treat that list as the boundary of what can be trusted here.
 
@@ -29,29 +29,26 @@ An empty `~/Desktop/nautical-ops/` (lowercase) also exists, containing only `.cl
 
 ## 2. Size and health
 
-|                             |         |
-| --------------------------- | ------- |
-| Screens                     | **83**  |
-| Components                  | 17      |
-| Services                    | 31      |
-| PDF utils                   | 13      |
-| Source lines                | ~44,000 |
-| **Test files**              | **7**   |
-| Active migrations           | 11      |
-| Historical SQL scripts      | 41      |
-| Edge functions              | 11      |
-| ADMIN rule files            | 30      |
-| `.cursor/rules` files       | 8       |
-| Loose `.md` in `yachy-app/` | **61**  |
+|                                |         |
+| ------------------------------ | ------- |
+| Screens                        | **87**  |
+| Components                     | 19      |
+| Services                       | 35      |
+| PDF utils                      | 10      |
+| Source lines                   | ~52,000 |
+| **Test files**                 | **22**  |
+| Timestamped migrations         | 23      |
+| Historical SQL scripts         | 41      |
+| Locally managed Edge functions | 10      |
+| ADMIN rule files               | 38      |
+| `.cursor/rules` files          | 8       |
+| Loose `.md` in `yachy-app/`    | **61**  |
 
-**Typecheck: 3 errors**, all pre-existing:
+**Typecheck: zero errors.**
 
-- `AddEditUniformScreen.tsx` — invalid `Size` key in `StyleSheet.create`. Cosmetic.
-- `iap.ts` ×2 — `fetchProducts` can return `null` but is typed `Product[]`; `PurchaseError` imported from two module paths giving two type identities. **This is the payments file.**
+**Lint: zero errors and 319 warnings.** Warnings are mostly unused imports and `any`.
 
-**Lint: 2 errors, 317 warnings.** Both errors are empty `catch {}` in `InfoModal.tsx`. Warnings are mostly unused imports and `any`.
-
-**Tests: 42 passing across 7 files.** Coverage now includes authentication,
+**Tests: 120 passing across 22 files.** Coverage now includes authentication,
 subscription gating, Apple IAP handling, account/device access, spreadsheet
 import bounds, and native/web file uploads. This is still not complete coverage
 for an app of this size.
@@ -73,7 +70,7 @@ restricts profile writes to the owner and banner writes to the vessel Captain.
 services now request affected IDs and throw when RLS or a stale ID changes zero
 rows, instead of showing false success.
 
-**Subscription gate implemented in the working tree.** `RootNavigator` now enforces provider-confirmed renewal failure after the 16-day grace period while failing open for connectivity/backend uncertainty. The migration and provider notification function are not deployed yet.
+**Subscription gate implemented; backend deployed with enforcement still off.** `RootNavigator` now enforces provider-confirmed renewal failure after the 16-day grace period while failing open for connectivity/backend uncertainty. The supporting migrations and provider notification functions are deployed, but `security_enforcement_settings.enabled` remains `false` until the compatible TestFlight build completes device testing and is available to users.
 
 ---
 
@@ -303,8 +300,9 @@ This section records findings from the continued audit and their current working
 - **Resolved in the working tree:** Apple transactions are bound to a vessel, bundle/expiry checks are performed server-side, and App Store Server Notifications can refresh renewal state in the background.
 - **Production foundation verified:** the subscription/security migrations are deployed; `verify-apple-iap`, `apple-subscription-webhook`, and `delete-vessel` are active; the Apple secrets and App Store notification URL are configured; and Apple Billing Grace Period is set to 16 days for Production and Sandbox.
 - **Resolved in the working tree:** sign-out is local to the current device, Apple restore now verifies restored transactions server-side before reporting success, duplicate StoreKit callbacks are deduplicated, and plans display the App Store's localized price rather than a hardcoded USD value.
-- **Verified locally:** 42 unit tests pass. The exact production migrations also passed a disposable PostgreSQL test covering the two-device cap, renewal grace, Captain payment recovery access, Crew lockout, normal-data lockout, stale-provider fail-open handling, and revocation.
-- **Remaining rollout:** build and test a compatible iOS release, make it available to all users, and only then enable strict server enforcement. It is currently confirmed off in production.
+- **Verified locally:** 120 unit tests pass across 22 suites. The exact production migrations also passed a disposable PostgreSQL test covering the two-device cap, renewal grace, Captain payment recovery access, Crew lockout, normal-data lockout, stale-provider fail-open handling, and revocation.
+- **Verified in production on 2026-09-18:** tagged disposable-user tests passed for QR claim/one-time consumption, Crew leave, sole-Captain protection, vessel deletion/member isolation, Apple cancellation reminders, Captain succession, account/Auth deletion, and complete cleanup.
+- **Remaining rollout:** iOS 1.1.3 build 47 is valid and in internal TestFlight beta. A physical-device Apple sandbox purchase and restore are still required before wider release; only then should strict enforcement be enabled. It remains confirmed off in production.
 - **Remaining Android implementation:** Google Play subscriptions/base plans, exact product IDs, service-account credentials, server verification, and Real-time Developer Notifications are not yet configured. No IDs will be guessed.
 - **Remaining legacy cleanup:** historical Paddle database columns/migrations remain intentionally. The obsolete `create-paddle-checkout` and `paddle-webhook` functions and Paddle secrets are also still active in the Nautical Ops Supabase project. Their removal requires explicit production approval and confirmation that no legacy vessel still depends on them.
 - **Pricing decision required:** the rule lists 5%, 8%, and 10% multi-month discounts, while code labels every `discountPercent` as zero. The 11–15 monthly price is `$119.99` in the rule and `$119.00` in code/App Store Connect. App Store Connect also currently shows a free-first-month introductory offer for this product. Runtime display now uses StoreKit's authoritative localized price, but the commercial terms and documentation still need the owner's decision.
@@ -313,18 +311,20 @@ This section records findings from the continued audit and their current working
 ### Dependency security
 
 - **Resolved in the working tree:** SheetJS was upgraded from the vulnerable npm release `xlsx@0.18.5` to the official patched `xlsx@0.20.3` package distributed by SheetJS. Spreadsheet imports now stop before parsing files larger than 10 MB or 5,000 rows.
-- **Resolved in the working tree:** `eas-cli` was updated to 23.2.0, and patched `shell-quote`/`tar` overrides remove all critical npm advisories. Expo SDK 54 dependencies still match Expo's expected versions.
-- **Remaining:** npm reports 42 low/moderate/high advisories, all transitive. Several are in EAS CLI/build tooling; the runtime Metro advisories require an Expo 57 upgrade. npm's proposed `--force` repair would introduce breaking downgrades/upgrades and must not be used in this release.
+- **Resolved in the working tree:** the app is on Expo SDK 57 / React Native 0.86.3; the npm 10 lockfile used by EAS was regenerated and clean-installs successfully. Patched `shell-quote`/`tar` overrides leave no critical npm advisory.
+- **Remaining:** npm reports 29 inherited advisories (1 low, 25 moderate, 3 high). Expo Doctor also reports four maintenance warnings, including 22 Expo patch releases now available. These should be handled as a separate dependency-maintenance change; do not use `npm audit fix --force` as a production shortcut.
 
 ### Verification after the fixes
 
 - `npm run typecheck`: passes with zero errors.
-- `npm test -- --runInBand`: all 42 tests pass across seven suites.
-- `npm run lint -- --quiet`: passes with zero errors after including Node `.mjs` build scripts in the ESLint configuration. The broader lint run still reports 342 warnings.
-- `npx expo install --check`: dependencies match Expo SDK 54's expected versions using the online registry check.
-- `npx expo export --platform ios`: all 2,687 modules bundle successfully into the production iOS export.
+- `npm test -- --runInBand`: all 120 tests pass across 22 suites.
+- `npm run lint -- --quiet`: passes with zero errors. The broader lint run reports 319 warnings.
+- Exact EAS install command `npm@10.9.8 ci --include=dev`: passes after the lockfile repair.
+- `npx expo-doctor@latest`: 17/21 checks pass; the four maintenance warnings are recorded above and are not hidden.
+- `npx expo export --platform ios`: all 2,765 modules bundle successfully into the production iOS export.
 - `npm audit --audit-level=critical`: passes with zero critical advisories.
 - `git diff --check`: passes.
+- EAS production build 47 finished successfully and App Store Connect reports it as valid and in internal TestFlight beta.
 
 ### Data integrity and backend security
 
@@ -349,8 +349,10 @@ This section records findings from the continued audit and their current working
   safeguards, Paddle blocking, one-time QR use, one-time Apple token use, and
   denial of privileged RPCs to anon/authenticated roles.
 - **Production check:** all three Database Webhooks use a service credential.
-  No live setting was changed. The new migrations/functions remain undeployed
-  and must follow the order in `docs/SECURITY_ENFORCEMENT_ROLLOUT.md`.
+  Forward migration `20260918130000` and all ten locally managed Edge Functions
+  are deployed. JWT modes and unauthenticated guards were rechecked; malformed
+  QR codes now return `400`. Paddle and other live-only functions were left
+  unchanged.
 - **Live storage finding:** profile-photo and vessel-banner writes were open to
   every authenticated account regardless of path ownership. A verified
   migration now limits profile writes to the matching user folder, banner
@@ -358,10 +360,10 @@ This section records findings from the continued audit and their current working
   This migration was applied directly to production on 2026-09-04; all policy,
   helper-permission and size-limit metadata checks passed afterward. A normal
   user/Captain upload-and-delete smoke test remains part of rollout QA.
-- **Dependency audit:** the SDK 54 dependency set passes Expo's compatibility
-  check and the app has no critical npm advisory. Remaining inherited
-  high/moderate advisories require a breaking Expo SDK upgrade; do not run the
-  automated forced downgrade/upgrade suggested by npm.
+- **Dependency audit:** the SDK 57 lockfile passes the exact clean install used
+  by EAS and the app has no critical npm advisory. Remaining inherited
+  high/moderate advisories and Expo patch drift require a separate reviewed
+  maintenance update; do not run the automated forced repair suggested by npm.
 - **Staged subscription privacy fix:** clean installs now deny app clients
   direct reads of `vessel_subscriptions`; the app uses a safe RPC projection
   that omits Apple/Google transaction identifiers. Production must make the
