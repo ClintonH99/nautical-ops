@@ -23,7 +23,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import vesselTasksService from '../services/vesselTasks';
 import { VesselTask, TaskCategory, Department } from '../types';
-import { LoadingSpinner, PageHeader } from '../components';
+import { Button, LoadingSpinner, PageHeader } from '../components';
 
 const CLEANUP_STORAGE_KEY = 'yachy_tasks_last_cleanup_month';
 
@@ -44,6 +44,7 @@ export const CompletedTasksScreen = ({ navigation }: any) => {
   const [departmentModalVisible, setDepartmentModalVisible] = useState(false);
 
   const vesselId = user?.vesselId ?? null;
+  const canUnmarkComplete = user?.role === 'CAPTAIN_MOV' || user?.role === 'HOD';
 
   const filteredTasks = useMemo(() => {
     if (!departmentFilter) return tasks;
@@ -132,6 +133,27 @@ export const CompletedTasksScreen = ({ navigation }: any) => {
     ]);
   };
 
+  const onUnmarkComplete = (task: VesselTask) => {
+    Alert.alert(
+      'Return to active tasks?',
+      `“${task.title}” will leave Completed Tasks and return to its active task list.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Unmark Complete',
+          onPress: async () => {
+            try {
+              await vesselTasksService.unmarkComplete(task.id);
+              await loadTasks();
+            } catch (error: any) {
+              Alert.alert('Could not return task', error?.message || 'Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderItem = ({ item }: { item: VesselTask }) => (
     <TouchableOpacity
       style={[styles.card, { backgroundColor: themeColors.surface }]}
@@ -173,6 +195,16 @@ export const CompletedTasksScreen = ({ navigation }: any) => {
         <Text style={styles.cardNotes} numberOfLines={2}>
           {item.notes}
         </Text>
+      ) : null}
+      {canUnmarkComplete ? (
+        <Button
+          title="Unmark Complete"
+          variant="outline"
+          size="small"
+          fullWidth
+          onPress={() => onUnmarkComplete(item)}
+          style={styles.unmarkButton}
+        />
       ) : null}
     </TouchableOpacity>
   );
@@ -443,6 +475,7 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sm,
     color: COLORS.textTertiary,
   },
+  unmarkButton: { marginTop: SPACING.sm },
   empty: {
     flex: 1,
     justifyContent: 'center',

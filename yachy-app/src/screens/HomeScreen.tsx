@@ -35,6 +35,7 @@ import {
   CREW_LEAVE_TYPES,
 } from '../constants/crewLeave';
 import { parseLocalDate, toYYYYMMDD } from '../utils';
+import { getActiveYardJobs } from '../utils/shipyardRecords';
 
 const { width } = Dimensions.get('window');
 const CATEGORY_SIZE = (width - SPACING.xl * 2 - SPACING.md * 2) / 3;
@@ -185,7 +186,10 @@ export const HomeScreen = ({ navigation }: any) => {
   const getDeptColor = (dept: string) => getDepartmentColor(dept, overrides);
 
   const markedDatesTrips = getMarkedDatesFromTrips(trips, typeColorMap);
-  const markedDatesYardPeriod = getMarkedDatesFromYardJobs(yardJobs, getDeptColor);
+  const markedDatesYardPeriod = getMarkedDatesFromYardJobs(
+    getActiveYardJobs(yardJobs),
+    getDeptColor
+  );
   const markedDatesCrewLeave = getMarkedDatesFromCrewLeave(crewLeave);
   const markedDates =
     calendarMode === 'trips'

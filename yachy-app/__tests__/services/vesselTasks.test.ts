@@ -1,7 +1,10 @@
-jest.mock('../../src/services/supabase', () => ({ supabase: {} }));
+jest.mock('../../src/services/supabase', () => ({ supabase: { rpc: jest.fn() } }));
 
+import { supabase } from '../../src/services/supabase';
 import vesselTasksService from '../../src/services/vesselTasks';
 import { VesselTask } from '../../src/types';
+
+const mockRpc = supabase.rpc as jest.Mock;
 
 const baseTask: VesselTask = {
   id: 'task-1',
@@ -19,6 +22,7 @@ const baseTask: VesselTask = {
 
 describe('vessel task completion', () => {
   beforeEach(() => {
+    mockRpc.mockReset();
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-09-04T12:00:00.000Z'));
   });
@@ -62,5 +66,15 @@ describe('vessel task completion', () => {
         completedByName: 'Captain',
       })
     );
+  });
+
+  it('uses the role-protected database function to return a completed task', async () => {
+    mockRpc.mockResolvedValue({ data: [{ id: 'task-1' }], error: null });
+
+    await vesselTasksService.unmarkComplete('task-1');
+
+    expect(mockRpc).toHaveBeenCalledWith('unmark_vessel_task_complete', {
+      target_task_id: 'task-1',
+    });
   });
 });

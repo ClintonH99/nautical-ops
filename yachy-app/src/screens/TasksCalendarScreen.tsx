@@ -175,7 +175,10 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
   }, [tasks, visibleDepartments, urgencyFilter]);
 
   const filteredYardJobs = useMemo(
-    () => yardJobs.filter((j) => visibleDepartments[j.department ?? 'INTERIOR']),
+    () =>
+      yardJobs.filter(
+        (j) => j.status !== 'COMPLETED' && visibleDepartments[j.department ?? 'INTERIOR']
+      ),
     [yardJobs, visibleDepartments]
   );
 

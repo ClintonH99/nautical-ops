@@ -177,6 +177,13 @@ class VesselTasksService {
     return {};
   }
 
+  async unmarkComplete(taskId: string): Promise<void> {
+    const { data, error } = await supabase.rpc('unmark_vessel_task_complete', {
+      target_task_id: taskId,
+    });
+    requireAffectedRows(data, error, 'Returning the task to the active list');
+  }
+
   async getOverdueTasks(vesselId: string): Promise<VesselTask[]> {
     try {
       const today = toYYYYMMDD(new Date());

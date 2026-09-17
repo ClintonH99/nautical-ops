@@ -368,6 +368,20 @@ export interface YardPeriodJob {
   updatedAt: string;
 }
 
+export interface ShipyardRecordFolder {
+  id: string;
+  vesselId: string;
+  name: string;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ShipyardRecordFolderAssignment {
+  jobId: string;
+  folderId: string;
+}
+
 // ===== MAINTENANCE LOG TYPES =====
 
 export interface MaintenanceLog {

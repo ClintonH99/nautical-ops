@@ -4,7 +4,13 @@
 
 import { supabase } from './supabase';
 import { requireAffectedRows } from './mutationResult';
-import { YardPeriodJob, Department, YardJobPriority } from '../types';
+import {
+  YardPeriodJob,
+  Department,
+  YardJobPriority,
+  ShipyardRecordFolder,
+  ShipyardRecordFolderAssignment,
+} from '../types';
 
 export interface CreateYardJobData {
   vesselId: string;
@@ -81,7 +87,88 @@ export function mapRowToYardJob(row: Record<string, unknown>): YardPeriodJob {
   };
 }
 
+function mapRowToRecordFolder(row: Record<string, unknown>): ShipyardRecordFolder {
+  return {
+    id: row.id as string,
+    vesselId: row.vessel_id as string,
+    name: row.name as string,
+    createdBy: row.created_by as string | undefined,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  };
+}
+
 class YardJobsService {
+  async getRecordFolders(vesselId: string): Promise<ShipyardRecordFolder[]> {
+    const { data, error } = await supabase
+      .from('shipyard_record_folders')
+      .select('*')
+      .eq('vessel_id', vesselId)
+      .order('name', { ascending: true });
+    if (error) throw error;
+    return (data ?? []).map(mapRowToRecordFolder);
+  }
+
+  async getRecordFolderAssignments(): Promise<ShipyardRecordFolderAssignment[]> {
+    const { data, error } = await supabase
+      .from('shipyard_record_folder_items')
+      .select('job_id, folder_id');
+    if (error) throw error;
+    return (data ?? []).map((row) => ({ jobId: row.job_id, folderId: row.folder_id }));
+  }
+
+  async createRecordFolder(vesselId: string, name: string): Promise<ShipyardRecordFolder> {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    const { data, error } = await supabase
+      .from('shipyard_record_folders')
+      .insert({
+        vessel_id: vesselId,
+        name: name.trim(),
+        created_by: user?.id ?? null,
+      })
+      .select('*')
+      .single();
+    if (error) throw error;
+    return mapRowToRecordFolder(data);
+  }
+
+  async renameRecordFolder(folderId: string, name: string): Promise<void> {
+    const { data, error } = await supabase
+      .from('shipyard_record_folders')
+      .update({ name: name.trim(), updated_at: new Date().toISOString() })
+      .eq('id', folderId)
+      .select('id');
+    requireAffectedRows(data, error, 'Renaming the Shipyard Records folder');
+  }
+
+  async deleteRecordFolder(folderId: string): Promise<void> {
+    const { data, error } = await supabase
+      .from('shipyard_record_folders')
+      .delete()
+      .eq('id', folderId)
+      .select('id');
+    requireAffectedRows(data, error, 'Deleting the Shipyard Records folder');
+  }
+
+  async moveRecordToFolder(jobId: string, folderId: string | null): Promise<void> {
+    if (!folderId) {
+      const { error } = await supabase
+        .from('shipyard_record_folder_items')
+        .delete()
+        .eq('job_id', jobId);
+      if (error) throw error;
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('shipyard_record_folder_items')
+      .upsert({ job_id: jobId, folder_id: folderId }, { onConflict: 'job_id' })
+      .select('job_id');
+    requireAffectedRows(data, error, 'Moving the Shipyard Record');
+  }
+
   async getByVessel(vesselId: string): Promise<YardPeriodJob[]> {
     try {
       const { data, error } = await supabase
@@ -94,7 +181,7 @@ class YardJobsService {
       return (data || []).map(mapRowToYardJob);
     } catch (error) {
       console.error('Get yard jobs error:', error);
-      return [];
+      throw error;
     }
   }
 
@@ -237,6 +324,13 @@ class YardJobsService {
       completedAt,
       completedByName,
     });
+  }
+
+  async unmarkComplete(jobId: string): Promise<void> {
+    const { data, error } = await supabase.rpc('unmark_yard_job_complete', {
+      target_job_id: jobId,
+    });
+    requireAffectedRows(data, error, 'Returning the Shipyard Record to Active Jobs');
   }
 }
 
