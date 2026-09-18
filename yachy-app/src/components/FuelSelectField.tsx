@@ -12,13 +12,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { BORDER_RADIUS, FONTS, SPACING } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 
-export interface FuelSelectOption<T extends string = string> {
+export interface FuelSelectOption<T extends string | number = string> {
   label: string;
   value: T;
   description?: string;
 }
 
-interface FuelSelectFieldProps<T extends string = string> {
+interface FuelSelectFieldProps<T extends string | number = string> {
   label: string;
   value: T | null | undefined;
   options: FuelSelectOption<T>[];
@@ -35,7 +35,7 @@ interface FuelSelectFieldProps<T extends string = string> {
  * Keeping the options in a small bottom sheet gives all three platforms the
  * same interaction and preserves readable contrast in night mode.
  */
-export function FuelSelectField<T extends string = string>({
+export function FuelSelectField<T extends string | number = string>({
   label,
   value,
   options,

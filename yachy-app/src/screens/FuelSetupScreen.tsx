@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -20,7 +20,12 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { fuelManagementService } from '../services/fuelManagement';
 import { useAuthStore } from '../store';
 import { FuelSetupTankInput, FuelVolumeUnit } from '../types';
-import { convertFuelVolume, fromLitres, toLitres } from '../utils/fuelUnits';
+import {
+  commitFuelCapacityDraft,
+  displayFuelCapacityInUnit,
+  fuelCapacityDraftFromLitres,
+} from '../utils/fuelSetupCapacity';
+import { convertFuelVolume } from '../utils/fuelUnits';
 
 interface TankDraft {
   key: string;
@@ -29,6 +34,8 @@ interface TankDraft {
   location: string;
   description: string;
   capacity: string;
+  capacityLitres: number | null;
+  capacityDirty: boolean;
 }
 
 const UNIT_OPTIONS = [
@@ -50,10 +57,14 @@ function unitShortLabel(unit: FuelVolumeUnit): string {
 
 function messageFromError(error: unknown): string {
   if (error instanceof Error && error.message) return error.message;
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = String((error as { message?: unknown }).message ?? '').trim();
+    if (message) return message;
+  }
   return 'Could not save the vessel fuel setup.';
 }
 
-export const FuelSetupScreen = () => {
+export const FuelSetupScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
@@ -61,20 +72,42 @@ export const FuelSetupScreen = () => {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadedVesselId, setLoadedVesselId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [unit, setUnit] = useState<FuelVolumeUnit>('LITRES');
+  const [setupRevision, setSetupRevision] = useState(0);
   const [tanks, setTanks] = useState<TankDraft[]>([]);
   const [editor, setEditor] = useState<TankDraft | null>(null);
+  const loadGeneration = useRef(0);
+  const requestedVesselId = useRef<string | null>(null);
+  const currentVesselId = useRef<string | null>(vesselId);
+  currentVesselId.current = vesselId;
 
   const loadSetup = useCallback(async () => {
+    const generation = ++loadGeneration.current;
     if (!vesselId) {
+      requestedVesselId.current = null;
+      setLoadedVesselId(null);
+      setTanks([]);
+      setLoadError(null);
+      setEditor(null);
+      setSaving(false);
       setLoading(false);
       return;
     }
+    requestedVesselId.current = vesselId;
     setLoading(true);
+    setSaving(false);
+    setLoadError(null);
+    setLoadedVesselId(null);
+    setTanks([]);
+    setEditor(null);
     try {
       const setup = await fuelManagementService.getSetup(vesselId);
+      if (generation !== loadGeneration.current) return;
       const nextUnit = setup.settings?.volumeUnit ?? 'LITRES';
       setUnit(nextUnit);
+      setSetupRevision(setup.settings?.setupRevision ?? 0);
       setTanks(
         setup.tanks.map((tank) => ({
           key: tank.id,
@@ -82,20 +115,27 @@ export const FuelSetupScreen = () => {
           name: tank.name,
           location: tank.location,
           description: tank.description,
-          capacity: String(Number(fromLitres(tank.capacityLitres, nextUnit).toFixed(3))),
+          ...fuelCapacityDraftFromLitres(tank.capacityLitres, nextUnit),
         }))
       );
+      setLoadedVesselId(vesselId);
     } catch (error) {
+      if (generation !== loadGeneration.current) return;
       console.error('Load fuel setup error:', error);
-      Alert.alert('Could not load setup', 'Please check your connection and try again.');
+      setLoadError(
+        'Fuel setup could not be loaded. No setup changes can be saved until refresh succeeds.'
+      );
     } finally {
-      setLoading(false);
+      if (generation === loadGeneration.current) setLoading(false);
     }
   }, [vesselId]);
 
   useFocusEffect(
     useCallback(() => {
       loadSetup();
+      return () => {
+        loadGeneration.current += 1;
+      };
     }, [loadSetup])
   );
 
@@ -113,18 +153,7 @@ export const FuelSetupScreen = () => {
 
   const changeUnit = (nextUnit: FuelVolumeUnit) => {
     if (nextUnit === unit) return;
-    setTanks((current) =>
-      current.map((tank) => {
-        const value = parseDecimal(tank.capacity);
-        return {
-          ...tank,
-          capacity:
-            Number.isFinite(value) && value > 0
-              ? String(Number(convertFuelVolume(value, unit, nextUnit).toFixed(3)))
-              : tank.capacity,
-        };
-      })
-    );
+    setTanks((current) => current.map((tank) => displayFuelCapacityInUnit(tank, nextUnit)));
     setUnit(nextUnit);
   };
 
@@ -135,18 +164,20 @@ export const FuelSetupScreen = () => {
       location: '',
       description: '',
       capacity: '',
+      capacityLitres: null,
+      capacityDirty: true,
     });
   };
 
   const saveEditor = () => {
     if (!editor) return;
     const name = editor.name.trim();
-    const capacity = parseDecimal(editor.capacity);
+    const capacityDraft = commitFuelCapacityDraft(editor, unit);
     if (!name) {
       Alert.alert('Tank name required', 'Give this tank a clear name.');
       return;
     }
-    if (!Number.isFinite(capacity) || capacity <= 0) {
+    if (!capacityDraft) {
       Alert.alert('Capacity required', 'Enter a tank capacity greater than zero.');
       return;
     }
@@ -157,12 +188,11 @@ export const FuelSetupScreen = () => {
       Alert.alert('Duplicate tank name', 'Tank names must be unique for this vessel.');
       return;
     }
-    const cleaned = {
-      ...editor,
+    const cleaned: TankDraft = {
+      ...capacityDraft,
       name,
       location: editor.location.trim(),
       description: editor.description.trim(),
-      capacity: String(capacity),
     };
     setTanks((current) => {
       const index = current.findIndex((tank) => tank.key === cleaned.key);
@@ -192,7 +222,7 @@ export const FuelSetupScreen = () => {
   };
 
   const saveSetup = async () => {
-    if (!vesselId || !canEdit) return;
+    if (!vesselId || !canEdit || loadError || loadedVesselId !== vesselId) return;
     if (tanks.length === 0) {
       Alert.alert('Add a tank', 'Configure at least one fuel tank before saving.');
       return;
@@ -206,8 +236,11 @@ export const FuelSetupScreen = () => {
 
     const tankInputs: FuelSetupTankInput[] = [];
     for (const tank of tanks) {
-      const capacity = parseDecimal(tank.capacity);
-      if (!Number.isFinite(capacity) || capacity <= 0) {
+      if (
+        tank.capacityLitres == null ||
+        !Number.isFinite(tank.capacityLitres) ||
+        tank.capacityLitres <= 0
+      ) {
         Alert.alert(
           'Check tank capacities',
           `Enter a valid capacity for ${tank.name || 'each tank'}.`
@@ -219,17 +252,30 @@ export const FuelSetupScreen = () => {
         name: tank.name.trim(),
         location: tank.location.trim(),
         description: tank.description.trim(),
-        capacityLitres: toLitres(capacity, unit),
+        capacityLitres: tank.capacityLitres,
       });
     }
 
+    const generation = loadGeneration.current;
+    const targetVesselId = vesselId;
+    const submittedUnit = unit;
     setSaving(true);
     try {
       const saved = await fuelManagementService.saveSetup({
-        vesselId,
-        volumeUnit: unit,
+        vesselId: targetVesselId,
+        volumeUnit: submittedUnit,
         tanks: tankInputs,
+        expectedRevision: setupRevision,
       });
+      if (
+        generation !== loadGeneration.current ||
+        requestedVesselId.current !== targetVesselId ||
+        currentVesselId.current !== targetVesselId
+      ) {
+        return;
+      }
+      setUnit(submittedUnit);
+      setSetupRevision(saved.settings?.setupRevision ?? setupRevision + 1);
       setTanks(
         saved.tanks.map((tank) => ({
           key: tank.id,
@@ -237,22 +283,54 @@ export const FuelSetupScreen = () => {
           name: tank.name,
           location: tank.location,
           description: tank.description,
-          capacity: String(Number(fromLitres(tank.capacityLitres, unit).toFixed(3))),
+          ...fuelCapacityDraftFromLitres(tank.capacityLitres, submittedUnit),
         }))
       );
-      Alert.alert('Fuel setup saved', 'The shared vessel tank setup is now up to date.');
+      Alert.alert(
+        'Fuel setup saved',
+        'The shared vessel tank setup is up to date. Any new tank needs an explicit opening level before it can be used in inventory activity.',
+        [
+          { text: 'Done', style: 'cancel' },
+          {
+            text: 'Review Opening Levels',
+            onPress: () => navigation.navigate('FuelOpeningBalances'),
+          },
+        ]
+      );
     } catch (error) {
+      if (
+        generation !== loadGeneration.current ||
+        requestedVesselId.current !== targetVesselId ||
+        currentVesselId.current !== targetVesselId
+      ) {
+        return;
+      }
       console.error('Save fuel setup error:', error);
       const message = messageFromError(error);
       const linkedTank = /foreign key|still referenced|violates/i.test(message);
+      const staleSetup = /changed since|revision|refresh/i.test(message);
       Alert.alert(
         'Could not save setup',
-        linkedTank
-          ? 'A removed tank is already used by a fuel record. Keep that tank and rename it instead.'
-          : message
+        staleSetup
+          ? 'Another manager changed the fuel setup after you opened it. Refresh before making further changes so their work is not overwritten.'
+          : linkedTank
+            ? 'A removed tank is already used by a fuel record. Keep that tank and rename it instead.'
+            : message,
+        staleSetup
+          ? [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Refresh Setup', onPress: loadSetup },
+            ]
+          : [{ text: 'OK' }]
       );
     } finally {
-      setSaving(false);
+      if (
+        generation === loadGeneration.current &&
+        requestedVesselId.current === targetVesselId &&
+        currentVesselId.current === targetVesselId
+      ) {
+        setSaving(false);
+      }
     }
   };
 
@@ -272,6 +350,17 @@ export const FuelSetupScreen = () => {
       {loading ? (
         <View style={styles.center}>
           <LoadingSpinner />
+        </View>
+      ) : loadError || loadedVesselId !== vesselId ? (
+        <View style={styles.center}>
+          <Ionicons name="cloud-offline-outline" size={44} color={COLORS.warning} />
+          <Text style={[styles.errorTitle, { color: themeColors.textPrimary }]}>
+            Could not load
+          </Text>
+          <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
+            {loadError ?? 'The current vessel setup has not been verified.'}
+          </Text>
+          <Button title="Retry" variant="outline" onPress={loadSetup} style={styles.retryButton} />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -348,6 +437,15 @@ export const FuelSetupScreen = () => {
             <Button title="＋  Add Tank" variant="outline" onPress={openNewTank} fullWidth />
           ) : null}
 
+          {canEdit ? (
+            <Button
+              title="Review Opening Levels"
+              variant="outline"
+              onPress={() => navigation.navigate('FuelOpeningBalances')}
+              fullWidth
+            />
+          ) : null}
+
           <View style={styles.permissionRow}>
             <Ionicons name="lock-closed" size={17} color={themeColors.textSecondary} />
             <Text style={[styles.permissionText, { color: themeColors.textSecondary }]}>
@@ -395,7 +493,9 @@ export const FuelSetupScreen = () => {
                 label={`Capacity (${unitShortLabel(unit)})`}
                 value={editor?.capacity ?? ''}
                 onChangeText={(capacity) =>
-                  setEditor((current) => (current ? { ...current, capacity } : null))
+                  setEditor((current) =>
+                    current ? { ...current, capacity, capacityDirty: true } : null
+                  )
                 }
                 placeholder="e.g. 12000"
                 keyboardType="decimal-pad"
@@ -446,6 +546,8 @@ export const FuelSetupScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.lg },
+  errorTitle: { fontSize: FONTS.xl, fontWeight: '700', marginTop: SPACING.md },
+  retryButton: { marginTop: SPACING.md, minWidth: 160 },
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding, gap: SPACING.md },
   capacityCard: {
     borderRadius: BORDER_RADIUS.lg,

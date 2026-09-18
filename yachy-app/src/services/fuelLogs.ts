@@ -61,37 +61,44 @@ class FuelLogsService {
       createdBy: row.created_by ?? null,
       createdByName: row.created_by_name ?? '',
       createdAt: row.created_at,
+      effectiveAt: row.effective_at ?? null,
+      utcOffsetMinutes: row.utc_offset_minutes == null ? null : Number(row.utc_offset_minutes),
+      inventoryRevision:
+        row.inventory_revision == null ? undefined : Number(row.inventory_revision),
+      currentInventoryOperationId: row.current_inventory_operation_id ?? null,
+      voidedAt: row.voided_at ?? null,
     };
   }
 
   async getByVessel(vesselId: string): Promise<FuelLog[]> {
-    try {
-      const { data, error } = await supabase
-        .from('fuel_logs')
-        .select('*')
-        .eq('vessel_id', vesselId)
-        .order('log_date', { ascending: false });
+    const { data, error } = await supabase
+      .from('fuel_logs')
+      .select('*')
+      .eq('vessel_id', vesselId)
+      .is('voided_at', null)
+      .order('log_date', { ascending: false });
 
-      if (error) throw error;
-      return (data || []).map(this.mapRow);
-    } catch (error) {
-      console.error('Get fuel logs error:', error);
-      return [];
-    }
+    if (error) throw error;
+    return (data || []).map(this.mapRow);
   }
 
   async getById(id: string): Promise<FuelLog | null> {
-    try {
-      const { data, error } = await supabase.from('fuel_logs').select('*').eq('id', id).single();
+    const { data, error } = await supabase
+      .from('fuel_logs')
+      .select('*')
+      .eq('id', id)
+      .is('voided_at', null)
+      .maybeSingle();
 
-      if (error) throw error;
-      return data ? this.mapRow(data) : null;
-    } catch (error) {
-      console.error('Get fuel log error:', error);
-      return null;
-    }
+    if (error) throw error;
+    return data ? this.mapRow(data) : null;
   }
 
+  /**
+   * @deprecated Current clients must use fuelManagementService so writes are
+   * allocated, revisioned, and audited. This direct method exists only for
+   * rollout compatibility before a vessel activates the inventory ledger.
+   */
   async create(input: CreateFuelLogData): Promise<FuelLog> {
     const currencyCode = normalizeCurrencyCode(input.currencyCode);
     const { data, error } = await supabase
@@ -118,6 +125,11 @@ class FuelLogsService {
     return this.mapRow(data);
   }
 
+  /**
+   * @deprecated Current clients must use fuelManagementService so writes are
+   * revisioned and audited. This direct method exists only for rollout
+   * compatibility before a vessel activates the inventory ledger.
+   */
   async update(id: string, input: UpdateFuelLogData): Promise<void> {
     const patch: Record<string, any> = {};
     if (input.locationOfRefueling !== undefined)
@@ -140,6 +152,11 @@ class FuelLogsService {
     requireAffectedRows(data, error, 'Updating the fuel log');
   }
 
+  /**
+   * @deprecated Current clients must void fuel records through
+   * fuelManagementService. Direct deletion is retained temporarily for
+   * already-released clients before inventory activation.
+   */
   async delete(id: string): Promise<void> {
     const { data, error } = await supabase.from('fuel_logs').delete().eq('id', id).select('id');
     requireAffectedRows(data, error, 'Deleting the fuel log');

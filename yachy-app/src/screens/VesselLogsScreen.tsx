@@ -16,8 +16,8 @@ const LOG_CATEGORIES = [
   },
   {
     icon: '⛽',
-    label: 'Fuel Log',
-    route: 'FuelLog',
+    label: 'Fuel',
+    route: 'FuelInventory',
   },
   {
     icon: '🚿',
@@ -30,7 +30,7 @@ const VESSEL_LOGS_INFO = {
   title: 'Vessel Logs',
   description: 'Record fuel, waste, and discharge logs.',
   features: [
-    'Log fuel bunkering and tank transfers',
+    'Track calculated tank inventory, bunkering, soundings and transfers',
     'Track general waste disposal',
     'Record discharge events',
     'Maintain compliant vessel records',

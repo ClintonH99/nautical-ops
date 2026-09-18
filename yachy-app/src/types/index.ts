@@ -540,13 +540,39 @@ export interface FuelLog {
   createdBy: string | null;
   createdByName: string;
   createdAt: string;
+  /** Unambiguous ship-time evidence retained for current report-only and ledger records. */
+  effectiveAt?: string | null;
+  utcOffsetMinutes?: number | null;
+  inventoryRevision?: number;
+  currentInventoryOperationId?: string | null;
+  voidedAt?: string | null;
 }
 
 export type FuelVolumeUnit = 'LITRES' | 'US_GALLONS';
 
+/**
+ * Inventory is deliberately opt-in. Historical Fuel Log rows cannot establish
+ * a trustworthy current balance because they contain no consumption data.
+ */
+export type FuelInventoryActivationStatus = 'NOT_ACTIVATED' | 'NEEDS_INITIALIZATION' | 'ACTIVE';
+
+/** Canonical operation kinds persisted by the append-only tank ledger. */
+export type FuelInventoryEntryKind =
+  | 'OPENING'
+  | 'REFUEL'
+  | 'TRANSFER'
+  | 'CONSUMPTION'
+  | 'SOUNDING'
+  | 'ADJUSTMENT';
+
+export type FuelInventoryOperationStatus = 'POSTED' | 'VOIDED' | 'REPLACED';
+export type FuelInventoryVerificationKind = 'OPENING' | 'SOUNDING';
+
 export interface VesselFuelSettings {
   vesselId: string;
   volumeUnit: FuelVolumeUnit;
+  /** Optimistic concurrency token for the vessel-wide tank catalogue. */
+  setupRevision: number;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
@@ -563,6 +589,7 @@ export interface FuelTank {
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
+  archivedAt?: string | null;
 }
 
 export interface FuelTankInput {
@@ -624,15 +651,28 @@ export interface FuelTransfer {
   vesselId: string;
   sourceTankId: string;
   destinationTankId: string;
+  /** Immutable ledger snapshot for posted activity; retained tank-name fallback for legacy rows. */
+  sourceTankName?: string;
+  /** Immutable ledger snapshot for posted activity; retained tank-name fallback for legacy rows. */
+  destinationTankName?: string;
   /** Canonical persisted transfer amount, always in litres. */
   amountLitres: number;
   transferDate: string;
   transferTime: string;
   location: string;
   notes: string;
+  /** Canonical inventory-ledger operation created for this transfer, when activated. */
+  ledgerOperationId?: string | null;
+  /** Unambiguous operational timestamp used by chronological balance validation. */
+  effectiveAt?: string | null;
+  utcOffsetMinutes?: number | null;
   createdBy: string | null;
+  createdByName?: string;
   createdAt: string;
   updatedAt: string;
+  voidedAt?: string | null;
+  inventoryRevision?: number;
+  currentInventoryOperationId?: string | null;
 }
 
 export interface FuelTransferInput {
@@ -644,6 +684,180 @@ export interface FuelTransferInput {
   transferTime: string;
   location?: string;
   notes?: string;
+  /** Optional explicit ISO timestamp; legacy screens may continue supplying date + time. */
+  effectiveAt?: string;
+  utcOffsetMinutes?: number;
+  /** Stable UUID supplied by a caller that may retry the same logical write. */
+  idempotencyKey?: string;
+  /** Required by the server when an existing posted transfer is replaced. */
+  amendmentReason?: string;
+  expectedRevision?: number;
+}
+
+export interface FuelInventoryOpeningBalanceInput {
+  tankId: string;
+  amountLitres: number;
+}
+
+export interface FuelInventoryActivationInput {
+  vesselId: string;
+  entries: FuelInventoryOpeningBalanceInput[];
+  occurredAt?: string;
+  utcOffsetMinutes?: number;
+  notes?: string;
+  idempotencyKey?: string;
+}
+
+/** Manager-only replacement of one existing opening operation. */
+export interface FuelInventoryOpeningAmendmentInput {
+  operationId: string;
+  expectedRevision: number;
+  occurredAt: string;
+  utcOffsetMinutes?: number;
+  entries: FuelInventoryOpeningBalanceInput[];
+  notes?: string;
+  amendmentReason: string;
+  idempotencyKey?: string;
+}
+
+/** Inputs accepted for an explicit sounding, consumption, or manager adjustment. */
+export interface FuelInventoryEntryInput {
+  vesselId: string;
+  fuelTankId: string;
+  kind: Extract<FuelInventoryEntryKind, 'SOUNDING' | 'CONSUMPTION' | 'ADJUSTMENT'>;
+  /** SOUNDING is absolute; CONSUMPTION is positive usage; ADJUSTMENT is signed. */
+  amountLitres: number;
+  adjustmentDirection?: 'ADD' | 'REMOVE';
+  occurredAt: string;
+  utcOffsetMinutes?: number;
+  location?: string;
+  /** Mandatory for ADJUSTMENT and recommended for every manual record. */
+  reason?: string;
+  notes?: string;
+  idempotencyKey?: string;
+}
+
+export interface FuelInventoryEntryAmendmentInput extends FuelInventoryEntryInput {
+  operationId: string;
+  expectedRevision: number;
+  /** Required audit explanation; distinct from the operational entry reason. */
+  amendmentReason: string;
+}
+
+export interface FuelInventoryEntryVoidInput {
+  operationId: string;
+  expectedRevision: number;
+  reason: string;
+  idempotencyKey?: string;
+}
+
+export interface FuelInventoryTankSnapshot {
+  tank: FuelTank;
+  initialized: boolean;
+  /** Null is materially different from zero: the tank has not been initialized. */
+  balanceLitres: number | null;
+  remainingCapacityLitres: number | null;
+  lastVerifiedAt: string | null;
+  lastVerificationKind: FuelInventoryVerificationKind | null;
+  lastVerifiedUtcOffsetMinutes: number | null;
+  lastActivityAt: string | null;
+}
+
+/** Backward-compatible name retained for early callers. */
+export type FuelTankInventoryState = FuelInventoryTankSnapshot;
+
+export interface FuelInventorySnapshot {
+  vesselId: string;
+  status: FuelInventoryActivationStatus;
+  activatedAt: string | null;
+  asOf: string;
+  displayUnit: FuelVolumeUnit;
+  totalBalanceLitres: number | null;
+  totalCapacityLitres: number;
+  allTanksInitialized: boolean;
+  uninitializedTankIds: string[];
+  tanks: FuelInventoryTankSnapshot[];
+}
+
+export type FuelInventoryPostingMode = 'DELTA' | 'ABSOLUTE';
+
+export interface FuelInventoryLedgerPosting {
+  tankId: string;
+  tankName: string;
+  postingMode: FuelInventoryPostingMode;
+  /** Signed for DELTA postings; absolute observed quantity for ABSOLUTE postings. */
+  amountLitres: number;
+}
+
+/** Backward-compatible name retained for early callers. */
+export type FuelInventoryLedgerLine = FuelInventoryLedgerPosting;
+
+export interface FuelInventoryOperation {
+  id: string;
+  logicalOperationId: string;
+  revisionNo: number;
+  vesselId: string;
+  kind: FuelInventoryEntryKind;
+  status: FuelInventoryOperationStatus;
+  effectiveAt: string;
+  /** Null only for historical server rows that predate captured timezone context. */
+  utcOffsetMinutes: number | null;
+  effectiveOrder: number;
+  recordedSequence: number;
+  metadata: Record<string, unknown>;
+  sourceFuelLogId: string | null;
+  sourceTransferId: string | null;
+  supersedesOperationId: string | null;
+  createdBy: string | null;
+  createdByName: string;
+  recordedAt: string;
+  voided: boolean;
+  voidKind: string | null;
+  voidReason: string | null;
+  voidedBy: string | null;
+  voidedByName: string;
+  voidedAt: string | null;
+  postings: FuelInventoryLedgerPosting[];
+}
+
+export interface FuelInventoryHistory {
+  operations: FuelInventoryOperation[];
+  /** Opaque server cursor. Null means there are no older operations. */
+  nextBeforeSequence: number | null;
+}
+
+export type FuelInventoryLegacyAuditSourceType = 'FUEL_LOG' | 'FUEL_TRANSFER';
+export type FuelInventoryLegacyAuditAction = 'AMENDMENT' | 'VOID';
+
+/**
+ * Immutable evidence for a correction to a report-only fuel record that
+ * predates ledger activation. These records never alter calculated inventory.
+ */
+export interface FuelInventoryLegacyAudit {
+  id: string;
+  vesselId: string;
+  sourceType: FuelInventoryLegacyAuditSourceType;
+  sourceId: string;
+  action: FuelInventoryLegacyAuditAction;
+  revisionBefore: number | null;
+  revisionAfter: number | null;
+  beforeSnapshot: Record<string, unknown>;
+  afterSnapshot: Record<string, unknown>;
+  reason: string;
+  clientRequestId: string;
+  createdBy: string | null;
+  createdByName: string;
+  recordedAt: string;
+}
+
+export interface FuelInventoryLegacyAuditCursor {
+  recordedAt: string;
+  id: string;
+}
+
+export interface FuelInventoryLegacyAuditHistory {
+  audits: FuelInventoryLegacyAudit[];
+  nextCursor: FuelInventoryLegacyAuditCursor | null;
 }
 
 export interface FuelTankBalance {
@@ -654,6 +868,10 @@ export interface FuelTankBalance {
    */
   recordedVolumeLitres: number;
   remainingCapacityLitres: number;
+  /** Compatibility read model; use FuelInventorySnapshot when nullability matters. */
+  isInitialized?: boolean;
+  lastVerifiedAt?: string | null;
+  lastVerificationKind?: FuelInventoryVerificationKind | null;
 }
 
 // ===== NAVIGATION TYPES =====

@@ -23,3 +23,4 @@ export { EnterToAddHint } from './EnterToAddHint';
 export { PreviewActionButtons } from './PreviewActionButtons';
 export { TripLoadErrorBanner } from './TripLoadErrorBanner';
 export { DateOnlyPicker } from './DateOnlyPicker';
+export { FuelVoidReasonModal } from './FuelVoidReasonModal';

@@ -3,7 +3,7 @@
  * List of fuel log entries with Add, Edit, Delete, and selective PDF export.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -30,6 +30,7 @@ import {
   PageHeader,
   ExportButton,
   ExportBar,
+  FuelVoidReasonModal,
 } from '../components';
 import { exportFuelLogPdf } from '../utils/vesselLogsPdf';
 import { fromLitres } from '../utils/fuelUnits';
@@ -75,7 +76,8 @@ function formatVolume(value: number): string {
 export const FuelLogScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
-  const [logs, setLogs] = useState<FuelLog[]>([]);
+  const [storedLogs, setStoredLogs] = useState<FuelLog[]>([]);
+  const [loadedVesselId, setLoadedVesselId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -83,11 +85,22 @@ export const FuelLogScreen = ({ navigation }: any) => {
   const [exportMode, setExportMode] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [allocationSnapshot, setAllocationSnapshot] =
+  const [loadError, setLoadError] = useState<{ vesselId: string; message: string } | null>(null);
+  const [storedAllocationSnapshot, setStoredAllocationSnapshot] =
     useState<FuelLogAllocationSnapshot>(EMPTY_ALLOCATION_SNAPSHOT);
+  const [voidTarget, setVoidTarget] = useState<FuelLog | null>(null);
+  const [voidReason, setVoidReason] = useState('');
+  const [voiding, setVoiding] = useState(false);
+  const loadGeneration = useRef(0);
+  const requestedVesselId = useRef<string | null>(null);
 
   const vesselId = user?.vesselId ?? null;
   const canManageSetup = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
+  const logs = loadedVesselId === vesselId ? storedLogs : [];
+  const allocationSnapshot =
+    loadedVesselId === vesselId ? storedAllocationSnapshot : EMPTY_ALLOCATION_SNAPSHOT;
+  const currentLoadError = loadError?.vesselId === vesselId ? loadError.message : null;
+  const waitingForCurrentVessel = loadedVesselId !== vesselId && !currentLoadError;
 
   const filteredLogs = searchQuery.trim()
     ? logs.filter((log) => {
@@ -104,26 +117,67 @@ export const FuelLogScreen = ({ navigation }: any) => {
     : logs;
 
   const loadLogs = useCallback(async () => {
-    if (!vesselId) return;
-    try {
-      const [data, nextAllocationSnapshot] = await Promise.all([
-        fuelLogsService.getByVessel(vesselId),
-        fuelManagementService.getFuelLogAllocationSnapshot(vesselId),
-      ]);
-      setLogs(data);
-      setAllocationSnapshot(nextAllocationSnapshot);
-      setSelectedIds(new Set());
-    } catch (e) {
-      console.error('Load fuel logs error:', e);
-    } finally {
+    const generation = ++loadGeneration.current;
+    if (!vesselId) {
+      requestedVesselId.current = null;
+      setStoredLogs([]);
+      setStoredAllocationSnapshot(EMPTY_ALLOCATION_SNAPSHOT);
+      setLoadedVesselId(null);
+      setLoadError(null);
+      setVoidTarget(null);
+      setVoidReason('');
+      setVoiding(false);
       setLoading(false);
       setRefreshing(false);
+      return;
+    }
+    if (requestedVesselId.current !== vesselId) {
+      requestedVesselId.current = vesselId;
+      setStoredLogs([]);
+      setStoredAllocationSnapshot(EMPTY_ALLOCATION_SNAPSHOT);
+      setLoadedVesselId(null);
+      setLoadError(null);
+      setSelectedIds(new Set());
+      setExpandedId(null);
+      setVoidTarget(null);
+      setVoidReason('');
+      setVoiding(false);
+      setLoading(true);
+    }
+    try {
+      const data = await fuelLogsService.getByVessel(vesselId);
+      const nextAllocationSnapshot = await fuelManagementService.getFuelLogAllocationSnapshot(
+        vesselId,
+        data.map((log) => log.id)
+      );
+      if (generation !== loadGeneration.current) return;
+      setStoredLogs(data);
+      setStoredAllocationSnapshot(nextAllocationSnapshot);
+      setLoadedVesselId(vesselId);
+      setLoadError(null);
+      setSelectedIds(new Set());
+    } catch (e) {
+      if (generation !== loadGeneration.current) return;
+      console.error('Load fuel logs error:', e);
+      setLoadError({
+        vesselId,
+        message:
+          'Fuel receipts could not be refreshed. Existing data is retained, but new entries and corrections are paused until refresh succeeds.',
+      });
+    } finally {
+      if (generation === loadGeneration.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [vesselId]);
 
   useFocusEffect(
     useCallback(() => {
       loadLogs();
+      return () => {
+        loadGeneration.current += 1;
+      };
     }, [loadLogs])
   );
 
@@ -148,26 +202,45 @@ export const FuelLogScreen = ({ navigation }: any) => {
   const onAdd = () => navigation.navigate('AddEditFuelLog', {});
   const onEdit = (log: FuelLog) => navigation.navigate('AddEditFuelLog', { logId: log.id });
 
-  const onDelete = (log: FuelLog) => {
-    Alert.alert(
-      'Delete entry',
-      `Delete fuel log entry for ${log.locationOfRefueling || log.logDate}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await fuelLogsService.delete(log.id);
-              loadLogs();
-            } catch {
-              Alert.alert('Error', 'Could not delete entry.');
-            }
-          },
-        },
-      ]
-    );
+  const confirmLegacyVoid = async () => {
+    if (
+      !voidTarget ||
+      !vesselId ||
+      !voidReason.trim() ||
+      voiding ||
+      !canManageSetup ||
+      currentLoadError ||
+      voidTarget.vesselId !== vesselId ||
+      voidTarget.currentInventoryOperationId
+    ) {
+      return;
+    }
+    const targetVesselId = vesselId;
+    const target = voidTarget;
+    setVoiding(true);
+    try {
+      await fuelManagementService.voidFuelLog(target.id, {
+        expectedRevision: target.inventoryRevision ?? 0,
+        reason: voidReason.trim(),
+      });
+      if (requestedVesselId.current !== targetVesselId) return;
+      setVoidTarget(null);
+      setVoidReason('');
+      await loadLogs();
+      Alert.alert(
+        'Receipt voided',
+        'The report-only receipt remains in the audit history. Calculated tank balances were not changed.'
+      );
+    } catch (error) {
+      if (requestedVesselId.current !== targetVesselId) return;
+      console.error('Void legacy fuel receipt error:', error);
+      Alert.alert(
+        'Could not void receipt',
+        error instanceof Error ? error.message : 'Refresh the receipts and try again.'
+      );
+    } finally {
+      if (requestedVesselId.current === targetVesselId) setVoiding(false);
+    }
   };
 
   const onExportPdf = async () => {
@@ -205,7 +278,7 @@ export const FuelLogScreen = ({ navigation }: any) => {
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <PageHeader
-        title="Fuel Log"
+        title="Fuel Receipts"
         actions={
           <ExportButton
             active={exportMode}
@@ -225,14 +298,23 @@ export const FuelLogScreen = ({ navigation }: any) => {
         />
       )}
       <View style={styles.actionBar}>
-        <Button title="Add Log" onPress={onAdd} variant="primary" style={styles.actionBtn} />
         <Button
-          title="Transfers"
-          onPress={() => navigation.navigate('FuelTransfers')}
+          title="Add Receipt"
+          onPress={onAdd}
+          variant="primary"
+          style={styles.actionBtn}
+          disabled={!!currentLoadError}
+        />
+        <Button
+          title="Tank Inventory"
+          onPress={() => navigation.navigate('FuelInventory')}
           variant="outline"
           style={styles.actionBtn}
         />
       </View>
+      <Text style={[styles.auditHint, { color: themeColors.textSecondary }]}>
+        Posted receipts remain in the audit history. Corrections are recorded separately.
+      </Text>
       <TouchableOpacity
         style={styles.setupLink}
         onPress={() => navigation.navigate('FuelSetup')}
@@ -243,6 +325,22 @@ export const FuelLogScreen = ({ navigation }: any) => {
         </Text>
         <Text style={[styles.setupLinkChevron, { color: themeColors.accent }]}>›</Text>
       </TouchableOpacity>
+
+      {currentLoadError ? (
+        <View
+          style={[
+            styles.loadError,
+            { backgroundColor: themeColors.surface, borderColor: COLORS.warning },
+          ]}
+        >
+          <Text style={[styles.loadErrorText, { color: themeColors.textPrimary }]}>
+            {currentLoadError}
+          </Text>
+          <TouchableOpacity accessibilityRole="button" onPress={loadLogs}>
+            <Text style={[styles.loadErrorAction, { color: themeColors.accent }]}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
 
       {logs.length > 0 && !loading && (
         <>
@@ -266,7 +364,7 @@ export const FuelLogScreen = ({ navigation }: any) => {
         </>
       )}
 
-      {loading ? (
+      {loading || waitingForCurrentVessel ? (
         <View style={styles.loader}>
           <LoadingSpinner />
         </View>
@@ -288,12 +386,18 @@ export const FuelLogScreen = ({ navigation }: any) => {
             <View style={[styles.emptyState, { backgroundColor: themeColors.surface }]}>
               <Text style={styles.emptyIcon}>⛽</Text>
               <Text style={[styles.emptyTitle, { color: themeColors.textPrimary }]}>
-                {logs.length === 0 ? 'No entries yet' : 'No matching entries'}
+                {currentLoadError && logs.length === 0
+                  ? 'Could not load receipts'
+                  : logs.length === 0
+                    ? 'No entries yet'
+                    : 'No matching entries'}
               </Text>
               <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
-                {logs.length === 0
-                  ? 'Tap "Add Log" to record your first fuel entry.'
-                  : 'Try a different search term.'}
+                {currentLoadError && logs.length === 0
+                  ? 'Retry when your connection is available. Nautical Ops will not treat a load failure as an empty audit log.'
+                  : logs.length === 0
+                    ? 'Tap "Add Receipt" to record your first bunkering entry.'
+                    : 'Try a different search term.'}
               </Text>
             </View>
           ) : (
@@ -308,8 +412,22 @@ export const FuelLogScreen = ({ navigation }: any) => {
                   checked={selected}
                   onToggleSelect={() => toggleSelect(log.id)}
                   selected={exportMode && selected}
-                  onEdit={() => onEdit(log)}
-                  onDelete={() => onDelete(log)}
+                  onEdit={
+                    canManageSetup && !currentLoadError && !log.currentInventoryOperationId
+                      ? () => onEdit(log)
+                      : undefined
+                  }
+                  onDelete={
+                    canManageSetup &&
+                    !exportMode &&
+                    !currentLoadError &&
+                    !log.currentInventoryOperationId
+                      ? () => {
+                          setVoidReason('');
+                          setVoidTarget(log);
+                        }
+                      : undefined
+                  }
                   footer={log.createdByName ? `Logged by ${log.createdByName}` : undefined}
                   collapsible={!exportMode}
                   expanded={expandedId === log.id}
@@ -397,6 +515,19 @@ export const FuelLogScreen = ({ navigation }: any) => {
           )}
         </ScrollView>
       )}
+      <FuelVoidReasonModal
+        visible={!!voidTarget && voidTarget.vesselId === vesselId}
+        title="Void this report-only receipt?"
+        description="This does not delete history or change calculated tank balances. Nautical Ops records your name, time and reason in the legacy audit trail."
+        reason={voidReason}
+        onChangeReason={setVoidReason}
+        onCancel={() => {
+          setVoidTarget(null);
+          setVoidReason('');
+        }}
+        onConfirm={confirmLegacyVoid}
+        submitting={voiding}
+      />
     </View>
   );
 };
@@ -423,6 +554,25 @@ const styles = StyleSheet.create({
   },
   setupLinkText: { fontSize: FONTS.sm, fontWeight: '600' },
   setupLinkChevron: { fontSize: 20, marginLeft: 2 },
+  auditHint: {
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.sm,
+    fontSize: FONTS.xs,
+    lineHeight: 18,
+    textAlign: 'center',
+  },
+  loadError: {
+    marginHorizontal: SPACING.lg,
+    marginBottom: SPACING.sm,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  loadErrorText: { flex: 1, fontSize: FONTS.sm, lineHeight: 19 },
+  loadErrorAction: { fontSize: FONTS.sm, fontWeight: '700' },
   searchRow: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.sm },
   searchInput: {},
   selectAllRow: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.sm },

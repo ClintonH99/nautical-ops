@@ -25,8 +25,9 @@ describe('FuelLogsService', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('maps legacy rows without inventing a volume unit while retaining USD and an empty comment', async () => {
-    const single = jest.fn().mockResolvedValue({ data: legacyRow, error: null });
-    const eq = jest.fn().mockReturnValue({ single });
+    const maybeSingle = jest.fn().mockResolvedValue({ data: legacyRow, error: null });
+    const is = jest.fn().mockReturnValue({ maybeSingle });
+    const eq = jest.fn().mockReturnValue({ is });
     const select = jest.fn().mockReturnValue({ eq });
     mockFrom.mockReturnValue({ select });
 
@@ -38,7 +39,34 @@ describe('FuelLogsService', () => {
       comment: '',
       pricePerGallon: 1.08,
       pricePerVolumeUnit: 1.08,
+      effectiveAt: null,
+      utcOffsetMinutes: null,
     });
+  });
+
+  it('propagates receipt-history load failures instead of presenting a false empty log', async () => {
+    const order = jest
+      .fn()
+      .mockResolvedValue({ data: null, error: new Error('Network unavailable') });
+    const is = jest.fn().mockReturnValue({ order });
+    const eq = jest.fn().mockReturnValue({ is });
+    const select = jest.fn().mockReturnValue({ eq });
+    mockFrom.mockReturnValue({ select });
+
+    await expect(fuelLogsService.getByVessel('vessel-1')).rejects.toThrow('Network unavailable');
+  });
+
+  it('returns null only for a genuine missing receipt and propagates lookup failures', async () => {
+    const maybeSingle = jest.fn().mockResolvedValueOnce({ data: null, error: null });
+    const is = jest.fn().mockReturnValue({ maybeSingle });
+    const eq = jest.fn().mockReturnValue({ is });
+    const select = jest.fn().mockReturnValue({ eq });
+    mockFrom.mockReturnValue({ select });
+
+    await expect(fuelLogsService.getById('missing')).resolves.toBeNull();
+
+    maybeSingle.mockResolvedValueOnce({ data: null, error: new Error('Backend unavailable') });
+    await expect(fuelLogsService.getById('fuel-log-1')).rejects.toThrow('Backend unavailable');
   });
 
   it('persists additive unit, currency, and comment metadata for new fuel logs', async () => {
@@ -47,6 +75,8 @@ describe('FuelLogsService', () => {
       volume_unit: 'LITRES',
       currency_code: 'EUR',
       comment: '  Fuel sample stored  ',
+      effective_at: '2026-09-18T00:30:00.000Z',
+      utc_offset_minutes: 600,
     };
     const single = jest.fn().mockResolvedValue({ data: row, error: null });
     const select = jest.fn().mockReturnValue({ single });
@@ -75,7 +105,12 @@ describe('FuelLogsService', () => {
         comment: 'Fuel sample stored',
       }),
     ]);
-    expect(created).toMatchObject({ volumeUnit: 'LITRES', currencyCode: 'EUR' });
+    expect(created).toMatchObject({
+      volumeUnit: 'LITRES',
+      currencyCode: 'EUR',
+      effectiveAt: '2026-09-18T00:30:00.000Z',
+      utcOffsetMinutes: 600,
+    });
   });
 
   it('rejects malformed currency codes before a mutation', async () => {
