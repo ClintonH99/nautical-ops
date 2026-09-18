@@ -18,13 +18,58 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import fuelLogsService from '../services/fuelLogs';
+import { fuelManagementService } from '../services/fuelManagement';
 import vesselService from '../services/vessel';
-import { FuelLog } from '../types';
-import { Button, Input, ButtonTagCard, ButtonTagRow, LoadingSpinner, PageHeader, ExportButton, ExportBar } from '../components';
+import { FuelLog, FuelLogAllocationSnapshot, FuelVolumeUnit } from '../types';
+import {
+  Button,
+  Input,
+  ButtonTagCard,
+  ButtonTagRow,
+  LoadingSpinner,
+  PageHeader,
+  ExportButton,
+  ExportBar,
+} from '../components';
 import { exportFuelLogPdf } from '../utils/vesselLogsPdf';
+import { fromLitres } from '../utils/fuelUnits';
 
-function formatCurrency(value: number): string {
-  return `$${value.toFixed(2)}`;
+const EMPTY_ALLOCATION_SNAPSHOT: FuelLogAllocationSnapshot = {
+  displayUnit: 'LITRES',
+  allocationsByLogId: {},
+};
+
+function formatCurrency(value: number, currencyCode: string): string {
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currencyCode || 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  } catch {
+    return `${currencyCode || 'USD'} ${value.toFixed(2)}`;
+  }
+}
+
+function volumeLabel(log: FuelLog): string {
+  if (log.volumeUnit === 'LITRES') return 'L';
+  if (log.volumeUnit === 'US_GALLONS') return 'US gal';
+  return 'gal (legacy)';
+}
+
+function priceLabel(log: FuelLog): string {
+  if (log.volumeUnit === 'LITRES') return 'Per Litre';
+  if (log.volumeUnit === 'US_GALLONS') return 'Per US Gallon';
+  return 'Per Gallon';
+}
+
+function displayUnitLabel(unit: FuelVolumeUnit): string {
+  return unit === 'LITRES' ? 'L' : 'US gal';
+}
+
+function formatVolume(value: number): string {
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 3 }).format(value);
 }
 
 export const FuelLogScreen = ({ navigation }: any) => {
@@ -38,8 +83,11 @@ export const FuelLogScreen = ({ navigation }: any) => {
   const [exportMode, setExportMode] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [allocationSnapshot, setAllocationSnapshot] =
+    useState<FuelLogAllocationSnapshot>(EMPTY_ALLOCATION_SNAPSHOT);
 
   const vesselId = user?.vesselId ?? null;
+  const canManageSetup = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
 
   const filteredLogs = searchQuery.trim()
     ? logs.filter((log) => {
@@ -47,7 +95,10 @@ export const FuelLogScreen = ({ navigation }: any) => {
         return (
           log.logDate?.toLowerCase().includes(q) ||
           log.logTime?.toLowerCase().includes(q) ||
-          log.locationOfRefueling?.toLowerCase().includes(q)
+          log.locationOfRefueling?.toLowerCase().includes(q) ||
+          (allocationSnapshot.allocationsByLogId[log.id] ?? []).some((allocation) =>
+            allocation.tankName.toLowerCase().includes(q)
+          )
         );
       })
     : logs;
@@ -55,8 +106,12 @@ export const FuelLogScreen = ({ navigation }: any) => {
   const loadLogs = useCallback(async () => {
     if (!vesselId) return;
     try {
-      const data = await fuelLogsService.getByVessel(vesselId);
+      const [data, nextAllocationSnapshot] = await Promise.all([
+        fuelLogsService.getByVessel(vesselId),
+        fuelManagementService.getFuelLogAllocationSnapshot(vesselId),
+      ]);
       setLogs(data);
+      setAllocationSnapshot(nextAllocationSnapshot);
       setSelectedIds(new Set());
     } catch (e) {
       console.error('Load fuel logs error:', e);
@@ -128,7 +183,7 @@ export const FuelLogScreen = ({ navigation }: any) => {
         const vessel = await vesselService.getVessel(vesselId);
         if (vessel?.name) vesselName = vessel.name;
       }
-      await exportFuelLogPdf(toExport, vesselName);
+      await exportFuelLogPdf(toExport, vesselName, allocationSnapshot);
     } catch (e) {
       console.error('Export PDF error:', e);
       Alert.alert('Export failed', 'Could not generate PDF.');
@@ -171,7 +226,23 @@ export const FuelLogScreen = ({ navigation }: any) => {
       )}
       <View style={styles.actionBar}>
         <Button title="Add Log" onPress={onAdd} variant="primary" style={styles.actionBtn} />
+        <Button
+          title="Transfers"
+          onPress={() => navigation.navigate('FuelTransfers')}
+          variant="outline"
+          style={styles.actionBtn}
+        />
       </View>
+      <TouchableOpacity
+        style={styles.setupLink}
+        onPress={() => navigation.navigate('FuelSetup')}
+        accessibilityRole="button"
+      >
+        <Text style={[styles.setupLinkText, { color: themeColors.accent }]}>
+          {canManageSetup ? 'Edit Vessel Fuel Setup' : 'View Vessel Fuel Setup'}
+        </Text>
+        <Text style={[styles.setupLinkChevron, { color: themeColors.accent }]}>›</Text>
+      </TouchableOpacity>
 
       {logs.length > 0 && !loading && (
         <>
@@ -187,13 +258,19 @@ export const FuelLogScreen = ({ navigation }: any) => {
           </View>
           {exportMode && (
             <TouchableOpacity onPress={toggleSelectAll} style={styles.selectAllRow}>
-              <Text style={styles.selectAllText}>{allSelected ? 'Deselect All' : 'Select All'}</Text>
+              <Text style={[styles.selectAllText, { color: themeColors.accent }]}>
+                {allSelected ? 'Deselect All' : 'Select All'}
+              </Text>
             </TouchableOpacity>
           )}
         </>
       )}
 
-      {loading ? null : (
+      {loading ? (
+        <View style={styles.loader}>
+          <LoadingSpinner />
+        </View>
+      ) : (
         <ScrollView
           contentContainerStyle={[
             styles.listContent,
@@ -222,6 +299,7 @@ export const FuelLogScreen = ({ navigation }: any) => {
           ) : (
             filteredLogs.map((log) => {
               const selected = selectedIds.has(log.id);
+              const tankAllocations = allocationSnapshot.allocationsByLogId[log.id] ?? [];
               return (
                 <ButtonTagCard
                   key={log.id}
@@ -246,53 +324,73 @@ export const FuelLogScreen = ({ navigation }: any) => {
                   <ButtonTagRow label="Time" value={log.logTime ?? ''} />
                   <View style={[styles.statsRow, { backgroundColor: themeColors.background }]}>
                     <View style={styles.statBox}>
-                      <Text
-                        style={[
-                          styles.statLabel,
-                          { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                        ]}
-                      >
+                      <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
                         Amount
                       </Text>
                       <Text style={[styles.statValue, { color: themeColors.textPrimary }]}>
-                        {log.amountOfFuel} gal
+                        {log.amountOfFuel} {volumeLabel(log)}
                       </Text>
                     </View>
-                    <View style={styles.statDivider} />
+                    <View style={[styles.statDivider, { backgroundColor: themeColors.border }]} />
                     <View style={styles.statBox}>
-                      <Text
-                        style={[
-                          styles.statLabel,
-                          { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                        ]}
-                      >
-                        Per Gallon
+                      <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
+                        {priceLabel(log)}
                       </Text>
                       <Text style={[styles.statValue, { color: themeColors.textPrimary }]}>
-                        {formatCurrency(log.pricePerGallon)}
+                        {formatCurrency(log.pricePerVolumeUnit, log.currencyCode)}
                       </Text>
                     </View>
-                    <View style={styles.statDivider} />
+                    <View style={[styles.statDivider, { backgroundColor: themeColors.border }]} />
                     <View style={styles.statBox}>
-                      <Text
-                        style={[
-                          styles.statLabel,
-                          { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                        ]}
-                      >
+                      <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
                         Total
                       </Text>
                       <Text
-                        style={[
-                          styles.statValue,
-                          styles.totalValue,
-                          { color: themeColors.isDark ? COLORS.white : COLORS.primary },
-                        ]}
+                        style={[styles.statValue, styles.totalValue, { color: themeColors.accent }]}
                       >
-                        {formatCurrency(log.totalPrice)}
+                        {formatCurrency(log.totalPrice, log.currencyCode)}
                       </Text>
                     </View>
                   </View>
+                  <View
+                    style={[
+                      styles.allocations,
+                      {
+                        backgroundColor: themeColors.control,
+                        borderColor: themeColors.border,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.allocationsTitle, { color: themeColors.textSecondary }]}>
+                      Tank allocation
+                    </Text>
+                    {tankAllocations.length > 0 ? (
+                      tankAllocations.map((allocation) => (
+                        <View key={allocation.fuelTankId} style={styles.allocationRow}>
+                          <Text
+                            style={[styles.allocationTankName, { color: themeColors.textPrimary }]}
+                          >
+                            {allocation.tankName}
+                          </Text>
+                          <Text
+                            style={[styles.allocationAmount, { color: themeColors.textPrimary }]}
+                          >
+                            {formatVolume(
+                              fromLitres(allocation.amountLitres, allocationSnapshot.displayUnit)
+                            )}{' '}
+                            {displayUnitLabel(allocationSnapshot.displayUnit)}
+                          </Text>
+                        </View>
+                      ))
+                    ) : (
+                      <Text style={[styles.unallocatedText, { color: themeColors.textSecondary }]}>
+                        {log.volumeUnit === null
+                          ? 'Legacy entry — no tank allocation recorded.'
+                          : 'No tank allocation recorded.'}
+                      </Text>
+                    )}
+                  </View>
+                  <ButtonTagRow label="Comment" value={log.comment ?? ''} />
                 </ButtonTagCard>
               );
             })
@@ -315,11 +413,21 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.sm,
   },
   actionBtn: { flex: 1 },
+  setupLink: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 40,
+    paddingHorizontal: SPACING.md,
+    marginBottom: SPACING.sm,
+  },
+  setupLinkText: { fontSize: FONTS.sm, fontWeight: '600' },
+  setupLinkChevron: { fontSize: 20, marginLeft: 2 },
   searchRow: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.sm },
   searchInput: {},
   selectAllRow: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.sm },
-  selectAllText: { fontSize: FONTS.sm, color: COLORS.primary, fontWeight: '600' },
-  loader: { marginTop: SPACING.xl },
+  selectAllText: { fontSize: FONTS.sm, fontWeight: '600' },
+  loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   listContent: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   emptyContent: { flexGrow: 1, justifyContent: 'center' },
   emptyState: {
@@ -343,7 +451,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   statBox: { flex: 1, alignItems: 'center' },
-  statDivider: { width: 1, backgroundColor: COLORS.gray200, marginVertical: 2 },
+  statDivider: { width: 1, marginVertical: 2 },
   statLabel: {
     fontSize: FONTS.xs,
     fontWeight: '600',
@@ -353,4 +461,27 @@ const styles = StyleSheet.create({
   },
   statValue: { fontSize: FONTS.base, fontWeight: '600' },
   totalValue: { fontWeight: '700' },
+  allocations: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.sm,
+  },
+  allocationsTitle: {
+    fontSize: FONTS.xs,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: SPACING.xs,
+  },
+  allocationRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: SPACING.md,
+    paddingVertical: 3,
+  },
+  allocationTankName: { flex: 1, fontSize: FONTS.base },
+  allocationAmount: { fontSize: FONTS.base, fontWeight: '600', textAlign: 'right' },
+  unallocatedText: { fontSize: FONTS.sm, lineHeight: 20 },
 });

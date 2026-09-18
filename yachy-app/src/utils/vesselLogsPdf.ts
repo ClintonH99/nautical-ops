@@ -8,7 +8,15 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import { GeneralWasteLog, FuelLog, PumpOutLog, DischargeType } from '../types';
+import {
+  GeneralWasteLog,
+  FuelLog,
+  FuelLogAllocationSnapshot,
+  FuelVolumeUnit,
+  PumpOutLog,
+  DischargeType,
+} from '../types';
+import { fromLitres } from './fuelUnits';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -102,50 +110,159 @@ export async function exportGeneralWasteLogPdf(
 
 // ─── Fuel Log ─────────────────────────────────────────────────────────────────
 
-export async function exportFuelLogPdf(logs: FuelLog[], vesselName: string): Promise<void> {
+function fuelVolumeUnitLabel(log: FuelLog): string {
+  if (log.volumeUnit === 'LITRES') return 'L';
+  if (log.volumeUnit === 'US_GALLONS') return 'US gal';
+  return 'gal (legacy)';
+}
+
+function fuelPriceUnitLabel(log: FuelLog): string {
+  if (log.volumeUnit === 'LITRES') return 'L';
+  if (log.volumeUnit === 'US_GALLONS') return 'US gal';
+  return 'gal';
+}
+
+function pdfMoney(value: number, currencyCode: string): string {
+  const code = /^[A-Z]{3}$/.test(currencyCode) ? currencyCode : 'USD';
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: code,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  } catch {
+    return `${code} ${value.toFixed(2)}`;
+  }
+}
+
+function fuelDisplayUnitLabel(unit: FuelVolumeUnit): string {
+  return unit === 'LITRES' ? 'L' : 'US gal';
+}
+
+function pdfVolume(value: number): string {
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 3 }).format(value);
+}
+
+function fuelAllocationDetailHtml(
+  log: FuelLog,
+  allocationSnapshot: FuelLogAllocationSnapshot
+): string {
+  const allocations = allocationSnapshot.allocationsByLogId[log.id] ?? [];
+  const unit = allocationSnapshot.displayUnit;
+  const detail = allocations.length
+    ? allocations
+        .map(
+          (allocation) => `
+            <div class="allocation-item">
+              <strong>${escapeHtml(allocation.tankName)}</strong>
+              <span>${escapeHtml(pdfVolume(fromLitres(allocation.amountLitres, unit)))} ${escapeHtml(fuelDisplayUnitLabel(unit))}</span>
+            </div>`
+        )
+        .join('')
+    : `<div class="unallocated">${
+        log.volumeUnit === null
+          ? 'Legacy entry — no tank allocation recorded.'
+          : 'No tank allocation recorded.'
+      }</div>`;
+
+  return `
+    <tr class="allocation-row">
+      <td colspan="8">
+        <div class="allocation-title">Tank allocation</div>
+        ${detail}
+      </td>
+    </tr>`;
+}
+
+export async function exportFuelLogPdf(
+  logs: FuelLog[],
+  vesselName: string,
+  allocationSnapshot?: FuelLogAllocationSnapshot
+): Promise<void> {
   const rows = logs.length
     ? logs
         .map(
-          (l) => `
-        <tr>
+          (l) => `<tbody class="fuel-entry">
+        <tr class="fuel-main-row">
           <td>${escapeHtml(l.logDate)}</td>
           <td>${escapeHtml(l.logTime)}</td>
           <td>${escapeHtml(l.locationOfRefueling) || '—'}</td>
-          <td style="text-align:right">${escapeHtml(l.amountOfFuel)} gal</td>
-          <td style="text-align:right">$${Number(l.pricePerGallon).toFixed(4)}</td>
-          <td style="text-align:right;font-weight:700">$${Number(l.totalPrice).toFixed(2)}</td>
+          <td style="text-align:right">${escapeHtml(l.amountOfFuel)} ${escapeHtml(fuelVolumeUnitLabel(l))}</td>
+          <td style="text-align:right">${escapeHtml(l.currencyCode)} ${Number(l.pricePerVolumeUnit).toFixed(4)} / ${escapeHtml(fuelPriceUnitLabel(l))}</td>
+          <td style="text-align:right;font-weight:700">${escapeHtml(pdfMoney(Number(l.totalPrice), l.currencyCode))}</td>
+          <td>${escapeHtml(l.comment) || '—'}</td>
           <td>${escapeHtml(l.createdByName) || '—'}</td>
-        </tr>`
+        </tr>
+        ${allocationSnapshot ? fuelAllocationDetailHtml(l, allocationSnapshot) : ''}
+        </tbody>`
         )
         .join('')
-    : `<tr><td colspan="7" class="empty">No entries</td></tr>`;
+    : `<tbody><tr><td colspan="8" class="empty">No entries</td></tr></tbody>`;
 
-  const totalFuel = logs.reduce((s, l) => s + Number(l.amountOfFuel), 0);
-  const totalCost = logs.reduce((s, l) => s + Number(l.totalPrice), 0);
+  const volumeTotals = new Map<string, number>();
+  const costTotals = new Map<string, number>();
+  for (const log of logs) {
+    const unit = fuelVolumeUnitLabel(log);
+    const currency = /^[A-Z]{3}$/.test(log.currencyCode) ? log.currencyCode : 'USD';
+    volumeTotals.set(unit, (volumeTotals.get(unit) ?? 0) + Number(log.amountOfFuel));
+    costTotals.set(currency, (costTotals.get(currency) ?? 0) + Number(log.totalPrice));
+  }
+  const volumeSummary = [...volumeTotals.entries()]
+    .map(([unit, value]) => `${value.toFixed(2)} ${escapeHtml(unit)}`)
+    .join(' + ');
+  const costSummary = [...costTotals.entries()]
+    .map(([currency, value]) => escapeHtml(pdfMoney(value, currency)))
+    .join(' + ');
   const totalsRow = logs.length
     ? `
     <tfoot>
       <tr style="background:#f3f4f6;font-weight:700">
         <td colspan="3">Total (${logs.length} entr${logs.length === 1 ? 'y' : 'ies'})</td>
-        <td style="text-align:right">${totalFuel.toFixed(2)} gal</td>
+        <td style="text-align:right">${volumeSummary}</td>
         <td></td>
-        <td style="text-align:right">$${totalCost.toFixed(2)}</td>
-        <td></td>
+        <td style="text-align:right">${costSummary}</td>
+        <td colspan="2"></td>
       </tr>
     </tfoot>`
     : '';
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
-    <style>${baseStyles('#1E3A8A')} tfoot td { padding: 8px 10px; border-top: 2px solid #1E3A8A; }</style>
+    <style>${baseStyles('#1E3A8A')}
+      tfoot { display: table-row-group; }
+      tfoot td {
+        padding: 8px 10px;
+        border-top: 2px solid #1E3A8A;
+        white-space: nowrap;
+      }
+      .fuel-entry { break-inside: avoid; page-break-inside: avoid; }
+      .allocation-row td { background: #f8fafc; padding: 7px 10px 9px; }
+      .allocation-title {
+        color: #64748b;
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: .45px;
+        margin-bottom: 3px;
+        text-transform: uppercase;
+      }
+      .allocation-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 2px 0;
+      }
+      .allocation-item span { white-space: nowrap; }
+      .unallocated { color: #64748b; font-style: italic; }
+    </style>
     </head><body>
     <h1>Fuel Log</h1>
     <p class="subtitle">${escapeHtml(vesselName)} &nbsp;·&nbsp; Generated ${dateStr()}</p>
     <table>
       <thead><tr>
         <th>Date</th><th>Time</th><th>Location</th>
-        <th>Amount</th><th>Per Gallon</th><th>Total</th><th>Logged By</th>
+        <th>Amount</th><th>Price / Unit</th><th>Total</th><th>Comment</th><th>Logged By</th>
       </tr></thead>
-      <tbody>${rows}</tbody>
+      ${rows}
       ${totalsRow}
     </table>
   </body></html>`;

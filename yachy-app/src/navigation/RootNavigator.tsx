@@ -82,6 +82,9 @@ import {
   AddEditGeneralWasteLogScreen,
   FuelLogScreen,
   AddEditFuelLogScreen,
+  FuelSetupScreen,
+  FuelTransfersScreen,
+  FuelTransferScreen,
   PumpOutLogScreen,
   AddEditPumpOutLogScreen,
   ContractorDatabaseScreen,
@@ -214,6 +217,9 @@ const APP_SCREEN_PATHS = {
   AddEditGeneralWasteLog: 'logs/general-waste/edit',
   FuelLog: 'logs/fuel',
   AddEditFuelLog: 'logs/fuel/edit',
+  FuelSetup: 'logs/fuel/setup',
+  FuelTransfers: 'logs/fuel/transfers',
+  FuelTransfer: 'logs/fuel/transfers/edit',
   PumpOutLog: 'logs/pump-out',
   AddEditPumpOutLog: 'logs/pump-out/edit',
   ContractorDatabase: 'contractors',
@@ -1263,6 +1269,27 @@ export const RootNavigator = () => {
               <Stack.Screen
                 name="AddEditFuelLog"
                 component={AddEditFuelLogScreen}
+                options={{
+                  headerShown: false,
+                }}
+              />
+              <Stack.Screen
+                name="FuelSetup"
+                component={FuelSetupScreen}
+                options={{
+                  headerShown: false,
+                }}
+              />
+              <Stack.Screen
+                name="FuelTransfers"
+                component={FuelTransfersScreen}
+                options={{
+                  headerShown: false,
+                }}
+              />
+              <Stack.Screen
+                name="FuelTransfer"
+                component={FuelTransferScreen}
                 options={{
                   headerShown: false,
                 }}

@@ -30,7 +30,7 @@ const VESSEL_LOGS_INFO = {
   title: 'Vessel Logs',
   description: 'Record fuel, waste, and discharge logs.',
   features: [
-    'Log fuel bunkering and consumption',
+    'Log fuel bunkering and tank transfers',
     'Track general waste disposal',
     'Record discharge events',
     'Maintain compliant vessel records',

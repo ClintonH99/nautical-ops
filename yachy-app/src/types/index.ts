@@ -522,10 +522,138 @@ export interface FuelLog {
   logDate: string;
   logTime: string;
   amountOfFuel: number;
+  /**
+   * Legacy field name retained because existing callers and historical exports
+   * use the `price_per_gallon` database column. For new entries its semantic
+   * unit is described by `volumeUnit`.
+   */
   pricePerGallon: number;
+  /** Alias for new fuel flows; equal to pricePerGallon for every row. */
+  pricePerVolumeUnit: number;
   totalPrice: number;
+  /** NULL identifies a pre-migration record; the legacy UI stored US gallons. */
+  volumeUnit: FuelVolumeUnit | null;
+  /** ISO-style, three-letter currency code. Historical rows default to USD. */
+  currencyCode: string;
+  comment: string;
+  /** Immutable authenticated actor UUID for new records; null on unverifiable legacy rows. */
+  createdBy: string | null;
   createdByName: string;
   createdAt: string;
+}
+
+export type FuelVolumeUnit = 'LITRES' | 'US_GALLONS';
+
+export interface VesselFuelSettings {
+  vesselId: string;
+  volumeUnit: FuelVolumeUnit;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FuelTank {
+  id: string;
+  vesselId: string;
+  name: string;
+  location: string;
+  description: string;
+  /** Canonical persisted capacity, always in litres. */
+  capacityLitres: number;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FuelTankInput {
+  name: string;
+  location?: string;
+  description?: string;
+  capacityLitres: number;
+}
+
+export interface FuelSetupTankInput extends FuelTankInput {
+  /** Omit for a new tank; supply an existing ID to update it during saveSetup. */
+  id?: string;
+}
+
+export interface FuelSetup {
+  settings: VesselFuelSettings | null;
+  tanks: FuelTank[];
+  /** Derived from configured tank capacities; never stored redundantly. */
+  totalCapacityLitres: number;
+}
+
+export interface FuelLogTankEntry {
+  id: string;
+  vesselId: string;
+  fuelLogId: string;
+  fuelTankId: string;
+  /** Canonical persisted allocation, always in litres. */
+  amountLitres: number;
+  createdAt: string;
+}
+
+export interface FuelLogTankEntryInput {
+  fuelTankId: string;
+  amountLitres: number;
+}
+
+/** Read model used when presenting one persisted tank allocation. */
+export interface FuelLogTankAllocation {
+  fuelLogId: string;
+  fuelTankId: string;
+  tankName: string;
+  /** Canonical persisted allocation, always in litres. */
+  amountLitres: number;
+}
+
+export type FuelLogTankAllocationsByLogId = Record<string, FuelLogTankAllocation[]>;
+
+/**
+ * One batched snapshot for fuel-log history and export. Amounts stay canonical
+ * here; presentation converts them using the vessel's configured display unit.
+ */
+export interface FuelLogAllocationSnapshot {
+  displayUnit: FuelVolumeUnit;
+  allocationsByLogId: FuelLogTankAllocationsByLogId;
+}
+
+export interface FuelTransfer {
+  id: string;
+  vesselId: string;
+  sourceTankId: string;
+  destinationTankId: string;
+  /** Canonical persisted transfer amount, always in litres. */
+  amountLitres: number;
+  transferDate: string;
+  transferTime: string;
+  location: string;
+  notes: string;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FuelTransferInput {
+  vesselId: string;
+  sourceTankId: string;
+  destinationTankId: string;
+  amountLitres: number;
+  transferDate: string;
+  transferTime: string;
+  location?: string;
+  notes?: string;
+}
+
+export interface FuelTankBalance {
+  tank: FuelTank;
+  /**
+   * Recorded net volume only: tank allocations plus inbound transfers minus
+   * outbound transfers. It intentionally excludes unallocated legacy logs.
+   */
+  recordedVolumeLitres: number;
+  remainingCapacityLitres: number;
 }
 
 // ===== NAVIGATION TYPES =====

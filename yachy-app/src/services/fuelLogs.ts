@@ -5,7 +5,7 @@
 
 import { supabase } from './supabase';
 import { requireAffectedRows } from './mutationResult';
-import { FuelLog } from '../types';
+import { FuelLog, FuelVolumeUnit } from '../types';
 
 export interface CreateFuelLogData {
   vesselId: string;
@@ -16,6 +16,11 @@ export interface CreateFuelLogData {
   pricePerGallon: number;
   totalPrice: number;
   createdByName: string;
+  /** Omit only for legacy callers; new fuel flows should always supply a unit. */
+  volumeUnit?: FuelVolumeUnit | null;
+  /** ISO-style currency code. Defaults to USD for backwards compatibility. */
+  currencyCode?: string;
+  comment?: string;
 }
 
 export interface UpdateFuelLogData {
@@ -25,6 +30,17 @@ export interface UpdateFuelLogData {
   amountOfFuel?: number;
   pricePerGallon?: number;
   totalPrice?: number;
+  volumeUnit?: FuelVolumeUnit | null;
+  currencyCode?: string;
+  comment?: string;
+}
+
+function normalizeCurrencyCode(value: string | undefined): string {
+  const code = (value ?? 'USD').trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(code)) {
+    throw new Error('Currency code must be a three-letter ISO-style code.');
+  }
+  return code;
 }
 
 class FuelLogsService {
@@ -37,7 +53,12 @@ class FuelLogsService {
       logTime: row.log_time,
       amountOfFuel: parseFloat(row.amount_of_fuel) || 0,
       pricePerGallon: parseFloat(row.price_per_gallon) || 0,
+      pricePerVolumeUnit: parseFloat(row.price_per_gallon) || 0,
       totalPrice: parseFloat(row.total_price) || 0,
+      volumeUnit: row.volume_unit ?? null,
+      currencyCode: row.currency_code ?? 'USD',
+      comment: row.comment ?? '',
+      createdBy: row.created_by ?? null,
       createdByName: row.created_by_name ?? '',
       createdAt: row.created_at,
     };
@@ -72,6 +93,7 @@ class FuelLogsService {
   }
 
   async create(input: CreateFuelLogData): Promise<FuelLog> {
+    const currencyCode = normalizeCurrencyCode(input.currencyCode);
     const { data, error } = await supabase
       .from('fuel_logs')
       .insert([
@@ -84,6 +106,9 @@ class FuelLogsService {
           price_per_gallon: input.pricePerGallon,
           total_price: input.totalPrice,
           created_by_name: input.createdByName,
+          volume_unit: input.volumeUnit ?? null,
+          currency_code: currencyCode,
+          comment: input.comment?.trim() || '',
         },
       ])
       .select()
@@ -102,6 +127,10 @@ class FuelLogsService {
     if (input.amountOfFuel !== undefined) patch.amount_of_fuel = input.amountOfFuel;
     if (input.pricePerGallon !== undefined) patch.price_per_gallon = input.pricePerGallon;
     if (input.totalPrice !== undefined) patch.total_price = input.totalPrice;
+    if (input.volumeUnit !== undefined) patch.volume_unit = input.volumeUnit;
+    if (input.currencyCode !== undefined)
+      patch.currency_code = normalizeCurrencyCode(input.currencyCode);
+    if (input.comment !== undefined) patch.comment = input.comment.trim();
 
     const { data, error } = await supabase
       .from('fuel_logs')
