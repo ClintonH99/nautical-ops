@@ -179,6 +179,16 @@ export function checkRollingCompliance(
   targetDate: string,
   allEntries: { date: string; rest_periods: RestPeriod[] }[]
 ): RollingComplianceResult {
+  if (allEntries.length === 0) {
+    return {
+      minRestIn24h: 0,
+      minRestIn7Days: 0,
+      maxGapBetweenRestHours: 0,
+      compliant: false,
+      violations: ['No rest periods recorded'],
+    };
+  }
+
   const sorted = [...allEntries].sort((a, b) => a.date.localeCompare(b.date));
   const referenceDate = new Date(sorted[0].date + 'T00:00:00');
   const intervals = buildTimeline(sorted, referenceDate);
@@ -561,6 +571,7 @@ export async function getManagedDepartments(
 export interface PdfDayRow {
   date: string;
   hourMarks: boolean[]; // 24 booleans, true = working hour
+  hasRecord: boolean; // false means unmarked hours are unknown, not rest
   restHoursToday: string; // "HH:MM"
   restIn24h: string;
   restIn7d: string;
@@ -628,6 +639,61 @@ export function buildHourMarks(
     }
   }
   return marks;
+}
+
+type PdfRestEntry = Pick<
+  RestEntry,
+  'rest_periods' | 'work_start' | 'work_end' | 'lunch_start' | 'lunch_end' | 'comment'
+>;
+
+/**
+ * Builds one PDF row without inventing rest data for a missing record.
+ *
+ * A published watch is still known work and can therefore be marked with an
+ * X. Every other hour remains unknown until a rest entry exists; the PDF
+ * renderer distinguishes those cells from the blank cells used for recorded
+ * rest.
+ */
+export function buildPdfDayRow(
+  date: string,
+  entry: PdfRestEntry | null | undefined,
+  watchPeriods: WatchWorkPeriod[],
+  historyForRolling: { date: string; rest_periods: RestPeriod[] }[]
+): PdfDayRow {
+  if (!entry) {
+    return {
+      date,
+      hasRecord: false,
+      hourMarks: buildHourMarks(null, null, null, null, watchPeriods),
+      restHoursToday: '',
+      restIn24h: '',
+      restIn7d: '',
+      comment: '',
+    };
+  }
+
+  const restMinutesToday = (entry.rest_periods ?? []).reduce((sum, period) => {
+    const start = timeToMinutes(period.start);
+    const end = timeToMinutes(period.end);
+    return sum + (end > start ? end - start : 24 * 60 - start + end);
+  }, 0);
+  const rolling = checkRollingCompliance(date, historyForRolling);
+
+  return {
+    date,
+    hasRecord: true,
+    hourMarks: buildHourMarks(
+      entry.work_start,
+      entry.work_end,
+      entry.lunch_start,
+      entry.lunch_end,
+      watchPeriods
+    ),
+    restHoursToday: minutesToHHMM(restMinutesToday),
+    restIn24h: minutesToHHMM(rolling.minRestIn24h * 60),
+    restIn7d: minutesToHHMM(rolling.minRestIn7Days * 60),
+    comment: entry.comment ?? '',
+  };
 }
 
 // Assembles everything needed to render one crew member's month on the
@@ -714,29 +780,9 @@ export async function getMonthDataForPdf(
       lastConfirmedBy = entry.confirmed_by;
     }
 
-    const restPeriods = entry?.rest_periods ?? [];
-    const restMinutesToday = restPeriods.reduce((sum: number, p: RestPeriod) => {
-      const start = timeToMinutes(p.start);
-      const end = timeToMinutes(p.end);
-      return sum + (end > start ? end - start : 24 * 60 - start + end);
-    }, 0);
-
-    const rolling = checkRollingCompliance(dateStr, historyForRolling);
-
-    days.push({
-      date: dateStr,
-      hourMarks: buildHourMarks(
-        entry?.work_start ?? null,
-        entry?.work_end ?? null,
-        entry?.lunch_start ?? null,
-        entry?.lunch_end ?? null,
-        watchPeriodsByDate.get(dateStr) ?? []
-      ),
-      restHoursToday: minutesToHHMM(restMinutesToday),
-      restIn24h: minutesToHHMM(rolling.minRestIn24h * 60),
-      restIn7d: minutesToHHMM(rolling.minRestIn7Days * 60),
-      comment: entry?.comment ?? '',
-    });
+    days.push(
+      buildPdfDayRow(dateStr, entry, watchPeriodsByDate.get(dateStr) ?? [], historyForRolling)
+    );
   }
 
   const seafarerSignature = await getSignatureForUser(userId);

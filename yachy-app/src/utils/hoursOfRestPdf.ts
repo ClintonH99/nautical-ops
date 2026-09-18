@@ -26,9 +26,13 @@ function formatDateDisplay(dateStr: string): string {
 // to the app's expo-font setup - the font file has to be read and
 // base64-embedded directly into this document's own @font-face.
 async function getAlexBrushFontBase64(): Promise<string> {
+  // Expo Asset resolves bundled font modules through Metro's numeric require ID.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const asset = Asset.fromModule(require('../../assets/fonts/AlexBrush-Regular.ttf'));
   await asset.downloadAsync();
-  return FileSystem.readAsStringAsync(asset.localUri!, { encoding: FileSystem.EncodingType.Base64 });
+  return FileSystem.readAsStringAsync(asset.localUri!, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
 }
 
 function buildSignatureBlock(sig: UserSignature | null | undefined, label: string): string {
@@ -41,33 +45,39 @@ function buildSignatureBlock(sig: UserSignature | null | undefined, label: strin
   return '<div class="sigblock">' + content + '<div class="sigline">' + label + '</div></div>';
 }
 
-export async function generateHoursOfRestPdf(data: PdfMonthData, filename: string): Promise<void> {
-  const fontBase64 = await getAlexBrushFontBase64();
+export function buildHoursOfRestPdfHtml(data: PdfMonthData, fontBase64 = ''): string {
   const fontFaceCss =
     "@font-face{font-family:'AlexBrush';src:url(data:font/truetype;charset=utf-8;base64," +
     fontBase64 +
     ") format('truetype');}";
 
-  const hourHeaderCells = Array.from({ length: 24 }, (_, h) =>
-    `<th>${String(h).padStart(2, '0')}</th>`
+  const hourHeaderCells = Array.from(
+    { length: 24 },
+    (_, h) => `<th>${String(h).padStart(2, '0')}</th>`
   ).join('');
 
   const dayRows = data.days
     .map((day) => {
       const hourCells = day.hourMarks
-        .map((marked) => `<td class="hourcell">${marked ? 'X' : ''}</td>`)
+        .map((marked) => {
+          const cellClass = day.hasRecord || marked ? 'hourcell' : 'hourcell unknown';
+          return `<td class="${cellClass}">${marked ? 'X' : day.hasRecord ? '' : '&mdash;'}</td>`;
+        })
         .join('');
+      const noRecord = !day.hasRecord;
       return (
-        '<tr><td class="datecell">' +
-        formatDateDisplay(day.date) +
+        `<tr${noRecord ? ' class="missing-record"' : ''}><td class="datecell">` +
+        escapeHtml(formatDateDisplay(day.date)) +
         '</td>' +
         hourCells +
         '<td class="numcell">' +
-        day.restHoursToday +
-        '</td><td class="comment">' + (day.comment || '') + '</td><td class="numcell office">' +
-        day.restIn24h +
+        (noRecord ? '&mdash;' : escapeHtml(day.restHoursToday)) +
+        '</td><td class="comment">' +
+        (noRecord ? 'No rest record' : escapeHtml(day.comment || '')) +
         '</td><td class="numcell office">' +
-        day.restIn7d +
+        (noRecord ? '&mdash;' : escapeHtml(day.restIn24h)) +
+        '</td><td class="numcell office">' +
+        (noRecord ? '&mdash;' : escapeHtml(day.restIn7d)) +
         '</td></tr>'
       );
     })
@@ -89,31 +99,47 @@ export async function generateHoursOfRestPdf(data: PdfMonthData, filename: strin
     '.numcell{font-weight:600}' +
     '.office{background:#f3f4f6}' +
     '.comment{min-width:60px}' +
+    '.missing-record td{background:#f8fafc;color:#64748b}' +
+    '.missing-record .comment{font-weight:700;text-align:left;white-space:nowrap}' +
+    '.missing-record .unknown{font-weight:600}' +
+    '.legend{margin-top:8px;font-size:7px;color:#475569}' +
     '.footer{margin-top:14px;font-size:7px;color:#666;line-height:1.4}' +
     '.sigrow{display:flex;justify-content:space-between;margin-top:24px;font-size:9px}' +
     '.sigblock{width:260px;text-align:center}' +
     '.sigimg{max-height:50px;max-width:220px;margin:0 auto 4px;display:block}' +
-    '.sigtyped{font-family:\'AlexBrush\',cursive;font-size:28px;margin-bottom:2px}' +
+    ".sigtyped{font-family:'AlexBrush',cursive;font-size:28px;margin-bottom:2px}" +
     '.sigempty{height:24px}' +
     '.sigline{border-top:1px solid #333;width:260px;padding-top:4px;text-align:center}' +
     '</style></head><body>' +
     '<h1>Hours of Work and Rest</h1>' +
     '<table class="info"><tr>' +
-    '<td class="infolabel">Seafarer</td><td>' + escapeHtml(data.seafarerName) + '</td>' +
-    '<td class="infolabel">IMO</td><td>' + escapeHtml(data.vesselImoNumber || '-') + '</td>' +
+    '<td class="infolabel">Seafarer</td><td>' +
+    escapeHtml(data.seafarerName) +
+    '</td>' +
+    '<td class="infolabel">IMO</td><td>' +
+    escapeHtml(data.vesselImoNumber || '-') +
+    '</td>' +
     '</tr><tr>' +
-    '<td class="infolabel">Rank</td><td>' + escapeHtml(data.rank) + '</td>' +
-    '<td class="infolabel">Vessel</td><td>' + escapeHtml(data.vesselName) + '</td>' +
+    '<td class="infolabel">Rank</td><td>' +
+    escapeHtml(data.rank) +
+    '</td>' +
+    '<td class="infolabel">Vessel</td><td>' +
+    escapeHtml(data.vesselName) +
+    '</td>' +
     '</tr><tr>' +
-    '<td class="infolabel">Month</td><td>' + escapeHtml(data.monthLabel) + '</td>' +
+    '<td class="infolabel">Month</td><td>' +
+    escapeHtml(data.monthLabel) +
+    '</td>' +
     '</tr></table>' +
     '<table class="grid"><thead><tr>' +
-    '<th>Date</th>' + hourHeaderCells +
+    '<th>Date</th>' +
+    hourHeaderCells +
     '<th>Rest (24h)</th><th>Comments</th>' +
     '<th class="office">Any 24h*</th><th class="office">Any 7-day*</th>' +
     '</tr></thead><tbody>' +
     dayRows +
     '</tbody></table>' +
+    '<div class="legend">X = recorded work &nbsp;&middot;&nbsp; blank = recorded rest &nbsp;&middot;&nbsp; &mdash; = no rest record / unknown</div>' +
     '<div class="footer">*Not to be completed by the seafarer &mdash; office use only, calculated per the Seafarers&rsquo; Hours of Work and the Manning of Ships Convention, 1996 (No. 180) and the STCW Convention as amended.</div>' +
     '<div class="sigrow">' +
     buildSignatureBlock(data.masterSignature, 'Signature of Master') +
@@ -121,10 +147,20 @@ export async function generateHoursOfRestPdf(data: PdfMonthData, filename: strin
     '</div>' +
     '</body></html>';
 
+  return html;
+}
+
+export async function generateHoursOfRestPdf(data: PdfMonthData, filename: string): Promise<void> {
+  const fontBase64 = await getAlexBrushFontBase64();
+  const html = buildHoursOfRestPdfHtml(data, fontBase64);
+
   const { uri } = await Print.printToFileAsync({ html });
   const newUri = FileSystem.cacheDirectory + filename;
   await FileSystem.moveAsync({ from: uri, to: newUri });
   if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(newUri, { mimeType: 'application/pdf', dialogTitle: 'Save ' + filename });
+    await Sharing.shareAsync(newUri, {
+      mimeType: 'application/pdf',
+      dialogTitle: 'Save ' + filename,
+    });
   }
 }

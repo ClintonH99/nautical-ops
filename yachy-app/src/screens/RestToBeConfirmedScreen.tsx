@@ -263,7 +263,12 @@ export const RestToBeConfirmedScreen = () => {
         </View>
 
         {filterModalVisible && (
-          <Modal visible transparent animationType="fade">
+          <Modal
+            visible
+            transparent
+            animationType="fade"
+            onRequestClose={() => !exporting && setExportModalVisible(false)}
+          >
             <Pressable style={styles.modalBackdrop} onPress={() => setFilterModalVisible(false)}>
               <View
                 style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
@@ -353,13 +358,17 @@ export const RestToBeConfirmedScreen = () => {
 
         {exportModalVisible && (
           <Modal visible transparent animationType="fade">
-            <Pressable
-              style={styles.modalBackdrop}
-              onPress={() => !exporting && setExportModalVisible(false)}
-            >
+            <View style={styles.modalBackdrop}>
+              <Pressable
+                style={StyleSheet.absoluteFill}
+                onPress={() => !exporting && setExportModalVisible(false)}
+              />
               <View
-                style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
-                onStartShouldSetResponder={() => true}
+                style={[
+                  styles.modalBox,
+                  styles.exportModalBox,
+                  { backgroundColor: themeColors.surface },
+                ]}
               >
                 <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
                   Select crew to export
@@ -373,21 +382,28 @@ export const RestToBeConfirmedScreen = () => {
                   </Text>
                 </TouchableOpacity>
 
-                {uniqueCrew.map((c) => (
-                  <TouchableOpacity
-                    key={c.userId}
-                    style={[
-                      styles.modalItem,
-                      selectedExportIds.has(c.userId) && styles.modalItemSelected,
-                    ]}
-                    onPress={() => toggleExportSelection(c.userId)}
-                  >
-                    <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                      {selectedExportIds.has(c.userId) ? '\u2713 ' : ''}
-                      {c.userName}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                <ScrollView
+                  style={styles.exportCrewList}
+                  contentContainerStyle={styles.exportCrewListContent}
+                  showsVerticalScrollIndicator
+                  nestedScrollEnabled
+                >
+                  {uniqueCrew.map((c) => (
+                    <TouchableOpacity
+                      key={c.userId}
+                      style={[
+                        styles.modalItem,
+                        selectedExportIds.has(c.userId) && styles.modalItemSelected,
+                      ]}
+                      onPress={() => toggleExportSelection(c.userId)}
+                    >
+                      <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
+                        {selectedExportIds.has(c.userId) ? '\u2713 ' : ''}
+                        {c.userName}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
 
                 <TouchableOpacity
                   style={[
@@ -405,7 +421,7 @@ export const RestToBeConfirmedScreen = () => {
                   </Text>
                 </TouchableOpacity>
               </View>
-            </Pressable>
+            </View>
           </Modal>
         )}
       </ScrollView>
@@ -463,6 +479,13 @@ const styles = StyleSheet.create({
     minWidth: 260,
     maxHeight: 500,
   },
+  exportModalBox: {
+    width: '100%',
+    maxWidth: 420,
+    maxHeight: '80%',
+  },
+  exportCrewList: { flexShrink: 1 },
+  exportCrewListContent: { paddingBottom: SPACING.xs },
   modalTitle: { fontSize: FONTS.lg, fontWeight: '600', marginBottom: SPACING.md },
   modalItem: {
     paddingVertical: SPACING.md,
