@@ -3,7 +3,7 @@
  * Fill-in form for muster station plan, Export to PDF, Publish
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -58,6 +59,15 @@ const CREW_DUTY_LABELS: Record<keyof typeof EMPTY_CREW, string> = {
   medical: 'Medical',
 };
 
+const CREW_DUTY_FIELDS = [
+  'roleName',
+  'fire',
+  'manOverboard',
+  'grounding',
+  'abandonShip',
+  'medical',
+] as const;
+
 export const CreateMusterStationScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
@@ -69,6 +79,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
   const [vesselName, setVesselName] = useState('');
   const [musterStation, setMusterStation] = useState('');
   const [loading, setLoading] = useState(isEdit);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (isEdit) {
@@ -131,37 +142,52 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
     { ...EMPTY_CREW, roleName: 'Captain' },
   ]);
 
-  const addLocation = (setter: React.Dispatch<React.SetStateAction<string[]>>, arr: string[]) => {
-    setter([...arr, '']);
-  };
-  const removeLocation = (
+  const medicalChestRefs = useRef<Array<TextInput | null>>([]);
+  const grabBagRefs = useRef<Array<TextInput | null>>([]);
+  const lifeRingRefs = useRef<Array<TextInput | null>>([]);
+  const crewDutyRefs = useRef<Record<string, TextInput | null>>({});
+  const savingRef = useRef(false);
+
+  const addLocation = (
     setter: React.Dispatch<React.SetStateAction<string[]>>,
-    arr: string[],
-    i: number
+    refs: React.MutableRefObject<Array<TextInput | null>>,
+    newIndex: number
   ) => {
-    if (arr.length <= 1) return;
-    setter(arr.filter((_, idx) => idx !== i));
+    setter((previous) => [...previous, '']);
+    requestAnimationFrame(() => refs.current[newIndex]?.focus());
   };
-  const setLoc = (
-    setter: React.Dispatch<React.SetStateAction<string[]>>,
-    arr: string[],
-    i: number,
-    v: string
-  ) => {
-    const next = [...arr];
-    next[i] = v;
-    setter(next);
+  const removeLocation = (setter: React.Dispatch<React.SetStateAction<string[]>>, i: number) => {
+    setter((previous) =>
+      previous.length <= 1 ? previous : previous.filter((_, idx) => idx !== i)
+    );
+  };
+  const setLoc = (setter: React.Dispatch<React.SetStateAction<string[]>>, i: number, v: string) => {
+    setter((previous) => {
+      const next = [...previous];
+      next[i] = v;
+      return next;
+    });
   };
 
-  const addCrew = () => setCrewMembers([...crewMembers, { ...EMPTY_CREW, roleName: 'New crew' }]);
+  const addCrew = () =>
+    setCrewMembers((previous) => [...previous, { ...EMPTY_CREW, roleName: 'New crew' }]);
   const removeCrew = (i: number) => {
-    if (crewMembers.length <= 1) return;
-    setCrewMembers(crewMembers.filter((_, idx) => idx !== i));
+    setCrewMembers((previous) =>
+      previous.length <= 1 ? previous : previous.filter((_, idx) => idx !== i)
+    );
   };
   const setCrew = (i: number, field: keyof typeof EMPTY_CREW, v: string) => {
-    const next = [...crewMembers];
-    next[i] = { ...next[i], [field]: v };
-    setCrewMembers(next);
+    setCrewMembers((previous) => {
+      const next = [...previous];
+      next[i] = { ...next[i], [field]: v };
+      return next;
+    });
+  };
+
+  const focusNextCrewDuty = (crewIndex: number, field: keyof typeof EMPTY_CREW) => {
+    const fieldIndex = CREW_DUTY_FIELDS.indexOf(field);
+    const nextField = CREW_DUTY_FIELDS[fieldIndex + 1];
+    if (nextField) crewDutyRefs.current[`${crewIndex}-${nextField}`]?.focus();
   };
 
   const buildData = (): MusterStationData => ({
@@ -183,7 +209,9 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
   };
 
   const onPublish = async () => {
-    if (!vesselId || !isHOD) return;
+    if (!vesselId || !isHOD || savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
     const data = buildData();
     const title = `${vesselName || 'Vessel'} Muster Station and Duties`;
     try {
@@ -196,6 +224,9 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
     } catch (e) {
       console.error('Publish error:', e);
       Alert.alert('Error', 'Could not publish');
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
   };
 
@@ -242,7 +273,8 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
       style={[styles.container, { backgroundColor: themeColors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <PageHeader title="Create Muster Station"
+      <PageHeader
+        title={isEdit ? 'Edit Muster Station' : 'Create Muster Station'}
         actions={<ExportButton active={false} onPress={onExport} />}
       />
       <ScrollView
@@ -280,22 +312,27 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
         {medicalChest.map((loc, i) => (
           <View key={i} style={styles.row}>
             <TextInput
+              ref={(el) => {
+                medicalChestRefs.current[i] = el;
+              }}
               style={[
                 styles.input,
                 styles.flex,
                 { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
               ]}
               value={loc}
-              onChangeText={(v) => setLoc(setMedicalChest, medicalChest, i, v)}
+              onChangeText={(v) => setLoc(setMedicalChest, i, v)}
               placeholder="Location"
               placeholderTextColor={themeColors.textSecondary}
             />
-            <TouchableOpacity onPress={() => removeLocation(setMedicalChest, medicalChest, i)}>
+            <TouchableOpacity onPress={() => removeLocation(setMedicalChest, i)}>
               <Text style={styles.remove}>✕</Text>
             </TouchableOpacity>
           </View>
         ))}
-        <TouchableOpacity onPress={() => addLocation(setMedicalChest, medicalChest)}>
+        <TouchableOpacity
+          onPress={() => addLocation(setMedicalChest, medicalChestRefs, medicalChest.length)}
+        >
           <Text style={styles.add}>+ Add location</Text>
         </TouchableOpacity>
 
@@ -310,22 +347,25 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
         {grabBag.map((loc, i) => (
           <View key={i} style={styles.row}>
             <TextInput
+              ref={(el) => {
+                grabBagRefs.current[i] = el;
+              }}
               style={[
                 styles.input,
                 styles.flex,
                 { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
               ]}
               value={loc}
-              onChangeText={(v) => setLoc(setGrabBag, grabBag, i, v)}
+              onChangeText={(v) => setLoc(setGrabBag, i, v)}
               placeholder="Location"
               placeholderTextColor={themeColors.textSecondary}
             />
-            <TouchableOpacity onPress={() => removeLocation(setGrabBag, grabBag, i)}>
+            <TouchableOpacity onPress={() => removeLocation(setGrabBag, i)}>
               <Text style={styles.remove}>✕</Text>
             </TouchableOpacity>
           </View>
         ))}
-        <TouchableOpacity onPress={() => addLocation(setGrabBag, grabBag)}>
+        <TouchableOpacity onPress={() => addLocation(setGrabBag, grabBagRefs, grabBag.length)}>
           <Text style={styles.add}>+ Add location</Text>
         </TouchableOpacity>
 
@@ -361,22 +401,25 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
         {lifeRings.map((loc, i) => (
           <View key={i} style={styles.row}>
             <TextInput
+              ref={(el) => {
+                lifeRingRefs.current[i] = el;
+              }}
               style={[
                 styles.input,
                 styles.flex,
                 { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
               ]}
               value={loc}
-              onChangeText={(v) => setLoc(setLifeRings, lifeRings, i, v)}
+              onChangeText={(v) => setLoc(setLifeRings, i, v)}
               placeholder="Location"
               placeholderTextColor={themeColors.textSecondary}
             />
-            <TouchableOpacity onPress={() => removeLocation(setLifeRings, lifeRings, i)}>
+            <TouchableOpacity onPress={() => removeLocation(setLifeRings, i)}>
               <Text style={styles.remove}>✕</Text>
             </TouchableOpacity>
           </View>
         ))}
-        <TouchableOpacity onPress={() => addLocation(setLifeRings, lifeRings)}>
+        <TouchableOpacity onPress={() => addLocation(setLifeRings, lifeRingRefs, lifeRings.length)}>
           <Text style={styles.add}>+ Add location</Text>
         </TouchableOpacity>
 
@@ -408,6 +451,9 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
           <View key={i} style={[styles.crewCard, { backgroundColor: themeColors.surface }]}>
             <View style={styles.row}>
               <TextInput
+                ref={(el) => {
+                  crewDutyRefs.current[`${i}-roleName`] = el;
+                }}
                 style={[
                   styles.input,
                   styles.flex,
@@ -417,6 +463,9 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
                 onChangeText={(v) => setCrew(i, 'roleName', v)}
                 placeholder="Role name"
                 placeholderTextColor={themeColors.textSecondary}
+                returnKeyType="next"
+                submitBehavior="submit"
+                onSubmitEditing={() => focusNextCrewDuty(i, 'roleName')}
               />
               <TouchableOpacity onPress={() => removeCrew(i)}>
                 <Text style={styles.remove}>✕ Remove</Text>
@@ -425,6 +474,9 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
             {(['fire', 'manOverboard', 'grounding', 'abandonShip', 'medical'] as const).map((f) => (
               <TextInput
                 key={f}
+                ref={(el) => {
+                  crewDutyRefs.current[`${i}-${f}`] = el;
+                }}
                 style={[
                   styles.input,
                   styles.sm,
@@ -434,6 +486,9 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
                 onChangeText={(v) => setCrew(i, f, v)}
                 placeholder={CREW_DUTY_LABELS[f]}
                 placeholderTextColor={themeColors.textSecondary}
+                returnKeyType={f === 'medical' ? 'done' : 'next'}
+                submitBehavior={f === 'medical' ? 'blurAndSubmit' : 'submit'}
+                onSubmitEditing={f === 'medical' ? Keyboard.dismiss : () => focusNextCrewDuty(i, f)}
               />
             ))}
           </View>
@@ -444,9 +499,11 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
 
         <View style={styles.actions}>
           <Button
-            title={isEdit ? 'Save' : 'Publish'}
+            title={isEdit ? 'Save Changes' : 'Publish'}
             onPress={onPublish}
             variant="primary"
+            loading={saving}
+            disabled={saving}
             fullWidth
             style={styles.btn}
           />

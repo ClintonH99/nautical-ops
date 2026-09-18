@@ -36,6 +36,16 @@ const allDeptsVisible: Record<Department, boolean> = {
   GALLEY: true,
 };
 
+const TRIP_SHOPPING_INFO = {
+  title: 'Trip Shopping',
+  description: 'Keep recurring trip essentials separate from shopping needed for one trip.',
+  features: [
+    'Personalized Lists are reusable checklists of items your vessel needs before every trip',
+    'Tick items as they are purchased, then reset the checks before the next trip',
+    'Trip Shopping Lists are for one-off or department-specific purchases for a particular trip',
+  ],
+};
+
 export const ShoppingListScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
@@ -269,7 +279,11 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
 
   return (
     <View style={styles.pageWrap}>
-      <PageHeader title={listType === 'trip' ? 'Trip Shopping' : 'General Shopping'} />
+      <PageHeader
+        title={listType === 'trip' ? 'Trip Shopping' : 'General Shopping'}
+        info={listType === 'trip' ? TRIP_SHOPPING_INFO : undefined}
+        infoScreenKey={listType === 'trip' ? 'trip_shopping' : undefined}
+      />
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={styles.content}

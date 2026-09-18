@@ -97,13 +97,20 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
     }
   }, [isEdit, presetTitle]);
 
-  const itemInputRefs = useRef<Array<any>>([]);
+  const amountInputRefs = useRef<Array<TextInput | null>>([]);
+  const itemInputRefs = useRef<Array<TextInput | null>>([]);
+  const nextItemIndexRef = useRef(items.length);
+
+  useEffect(() => {
+    nextItemIndexRef.current = items.length;
+  }, [items.length]);
 
   const addItem = () => {
-    const newIndex = items.length;
+    const newIndex = nextItemIndexRef.current;
+    nextItemIndexRef.current += 1;
     setActiveItemIndex(newIndex);
     setItems((prev) => [...prev, { text: '', checked: false }]);
-    setTimeout(() => itemInputRefs.current[newIndex]?.focus(), 50);
+    setTimeout(() => amountInputRefs.current[newIndex]?.focus(), 50);
   };
   const removeItem = (index: number) => {
     if (items.length <= 1) return;
@@ -271,6 +278,9 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
           <React.Fragment key={index}>
             <View style={styles.itemRow}>
               <TextInput
+                ref={(el) => {
+                  amountInputRefs.current[index] = el;
+                }}
                 style={[
                   styles.amountInput,
                   { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
@@ -302,7 +312,7 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
                 onFocus={() => setActiveItemIndex(index)}
                 onSubmitEditing={() => {
                   if (index === items.length - 1) addItem();
-                  else itemInputRefs.current[index + 1]?.focus();
+                  else amountInputRefs.current[index + 1]?.focus();
                 }}
               />
               <TouchableOpacity
