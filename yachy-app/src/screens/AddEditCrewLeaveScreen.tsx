@@ -156,7 +156,7 @@ export const AddEditCrewLeaveScreen = ({ navigation, route }: any) => {
     }
   };
 
-  const calendarTextColor = themeColors.isDark ? COLORS.white : COLORS.black;
+  const calendarTextColor = themeColors.textPrimary;
   const selectedColor = CREW_LEAVE_COLORS[leaveType];
   const markedDates = getMarkedRange(startDate, endDate, selectedColor);
 
@@ -214,7 +214,16 @@ export const AddEditCrewLeaveScreen = ({ navigation, route }: any) => {
               ? 'Now tap the final day of leave'
               : `${formatLocalDateString(startDate)} – ${formatLocalDateString(endDate ?? startDate)}`}
         </Text>
-        <View style={[styles.calendarWrap, { backgroundColor: themeColors.surface }]}>
+        <View
+          style={[
+            styles.calendarWrap,
+            {
+              backgroundColor: themeColors.surface,
+              borderColor: themeColors.border,
+              borderWidth: themeColors.isDark ? 1 : 0,
+            },
+          ]}
+        >
           <Calendar
             current={startDate ?? toYYYYMMDD(new Date())}
             markedDates={markedDates}
@@ -229,8 +238,10 @@ export const AddEditCrewLeaveScreen = ({ navigation, route }: any) => {
               selectedDayTextColor: COLORS.white,
               todayTextColor: calendarTextColor,
               dayTextColor: calendarTextColor,
-              textDisabledColor: themeColors.textSecondary,
-              arrowColor: calendarTextColor,
+              textDisabledColor: themeColors.isDark
+                ? themeColors.textMuted
+                : themeColors.textSecondary,
+              arrowColor: themeColors.isDark ? themeColors.accent : calendarTextColor,
               monthTextColor: calendarTextColor,
             }}
           />
@@ -274,7 +285,14 @@ export const AddEditCrewLeaveScreen = ({ navigation, route }: any) => {
       <Modal visible={pickerMode !== null} transparent animationType="fade">
         <Pressable style={styles.modalBackdrop} onPress={() => setPickerMode(null)}>
           <View
-            style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+            style={[
+              styles.modalBox,
+              {
+                backgroundColor: themeColors.surfaceElevated,
+                borderColor: themeColors.border,
+                borderWidth: themeColors.isDark ? 1 : 0,
+              },
+            ]}
             onStartShouldSetResponder={() => true}
           >
             <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
@@ -287,7 +305,12 @@ export const AddEditCrewLeaveScreen = ({ navigation, route }: any) => {
                       key={member.id}
                       style={[
                         styles.modalItem,
-                        crewMemberId === member.id && styles.modalItemSelected,
+                        { borderTopColor: themeColors.border },
+                        crewMemberId === member.id && {
+                          backgroundColor: themeColors.isDark
+                            ? themeColors.accentSoft
+                            : COLORS.primaryLight + '22',
+                        },
                       ]}
                       onPress={() => {
                         setCrewMemberId(member.id);
@@ -305,7 +328,15 @@ export const AddEditCrewLeaveScreen = ({ navigation, route }: any) => {
                 : CREW_LEAVE_TYPES.map((type) => (
                     <TouchableOpacity
                       key={type}
-                      style={[styles.modalItem, leaveType === type && styles.modalItemSelected]}
+                      style={[
+                        styles.modalItem,
+                        { borderTopColor: themeColors.border },
+                        leaveType === type && {
+                          backgroundColor: themeColors.isDark
+                            ? themeColors.accentSoft
+                            : COLORS.primaryLight + '22',
+                        },
+                      ]}
                       onPress={() => {
                         setLeaveType(type);
                         setPickerMode(null);
@@ -336,7 +367,12 @@ const styles = StyleSheet.create({
   message: { fontSize: FONTS.base, textAlign: 'center' },
   label: { fontSize: FONTS.sm, fontWeight: '600', marginTop: SPACING.md, marginBottom: SPACING.xs },
   hint: { fontSize: FONTS.sm, marginBottom: SPACING.sm },
-  calendarWrap: { borderRadius: BORDER_RADIUS.lg, padding: SPACING.sm, marginBottom: SPACING.sm },
+  calendarWrap: {
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.sm,
+    marginBottom: SPACING.sm,
+    borderWidth: 1,
+  },
   clearDate: { alignSelf: 'flex-start', paddingVertical: SPACING.xs, marginBottom: SPACING.lg },
   clearDateText: { fontSize: FONTS.sm },
   notificationHint: {
@@ -351,7 +387,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: SPACING.xl,
   },
-  modalBox: { borderRadius: BORDER_RADIUS.lg, maxHeight: '70%', overflow: 'hidden' },
+  modalBox: {
+    borderRadius: BORDER_RADIUS.lg,
+    maxHeight: '70%',
+    overflow: 'hidden',
+    borderWidth: 1,
+  },
   modalTitle: {
     fontSize: FONTS.lg,
     fontWeight: '700',
@@ -365,7 +406,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
   },
-  modalItemSelected: { backgroundColor: COLORS.primaryLight + '22' },
   modalItemText: { fontSize: FONTS.base, fontWeight: '600' },
   modalItemSubtext: { fontSize: FONTS.sm, marginTop: 3 },
   typeRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },

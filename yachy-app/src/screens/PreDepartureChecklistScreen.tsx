@@ -12,8 +12,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
-  Modal,
-  Pressable,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
@@ -22,7 +20,7 @@ import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../st
 import preDepartureChecklistsService from '../services/preDepartureChecklists';
 import vesselService from '../services/vessel';
 import { PreDepartureChecklist, Department } from '../types';
-import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner, PageHeader, ExportButton, ExportBar, LabeledDropdown } from '../components';
+import { Button, ButtonTagCard, ButtonTagRow, DepartmentSelector, LoadingSpinner, PageHeader, ExportButton, ExportBar } from '../components';
 import { generatePreDepartureChecklistPdf } from '../utils/preDepartureChecklistPdf';
 
 const CAPTAIN_CHECKLIST_MAX_ITEMS = 15;
@@ -47,7 +45,6 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
   const [exportMode, setExportMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [departmentFilter, setDepartmentFilter] = useState<Department | ''>('');
-  const [departmentModalVisible, setDepartmentModalVisible] = useState(false);
 
   const vesselId = user?.vesselId ?? null;
   const isHOD = user?.role === 'HOD';
@@ -321,14 +318,11 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
       )}
       <View style={styles.filterBar}>
         <View style={styles.filterBarContent}>
-          <LabeledDropdown
-            label="Department"
-            value={departmentFilter
-                ? (DEPARTMENT_OPTIONS.find((o) => o.value === departmentFilter)?.label ??
-                  departmentFilter)
-                : 'All departments'}
-            open={departmentModalVisible}
-            onPress={() => setDepartmentModalVisible(true)}
+          <DepartmentSelector
+            value={departmentFilter || null}
+            onChange={(value) => setDepartmentFilter(value ?? '')}
+            includeAll
+            tightTop
           />
         </View>
         {departmentFilter ? (
@@ -363,38 +357,6 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
           hint="Tap checklists to select"
         />
       )}
-      {departmentModalVisible && (
-        <Modal visible transparent animationType="fade">
-          <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentModalVisible(false)}>
-            <View
-              style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
-              onStartShouldSetResponder={() => true}
-            >
-              <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
-                Filter by department
-              </Text>
-              {DEPARTMENT_OPTIONS.map((opt) => (
-                <TouchableOpacity
-                  key={opt.value || 'all'}
-                  style={[
-                    styles.modalItem,
-                    departmentFilter === opt.value && styles.modalItemSelected,
-                  ]}
-                  onPress={() => {
-                    setDepartmentFilter(opt.value);
-                    setDepartmentModalVisible(false);
-                  }}
-                >
-                  <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </Pressable>
-        </Modal>
-      )}
-
       <FlatList
         data={otherChecklists}
         keyExtractor={(c) => c.id}
@@ -463,12 +425,12 @@ const styles = StyleSheet.create({
   },
   exportBtn: { marginTop: SPACING.sm },
   filterBar: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'flex-start',
     paddingTop: SPACING.sm,
     paddingBottom: SPACING.xs,
     marginBottom: SPACING.lg,
-    gap: SPACING.md,
+    gap: SPACING.xs,
   },
   filterBarContent: { flex: 1 },
   filterLabel: {
@@ -490,6 +452,7 @@ const styles = StyleSheet.create({
   dropdownChevron: { fontSize: 10 },
   clearFilters: {
     paddingVertical: SPACING.xs,
+    alignSelf: 'flex-end',
   },
   clearFiltersText: {
     fontSize: FONTS.sm,

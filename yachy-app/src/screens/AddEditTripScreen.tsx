@@ -13,8 +13,6 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Modal,
-  Pressable,
 } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
@@ -23,7 +21,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import tripsService from '../services/trips';
 import { usePostHog } from 'posthog-react-native';
 import { TripType, Department } from '../types';
-import { Input, Button, LoadingSpinner, PageHeader, LabeledDropdown } from '../components';
+import { Input, Button, LoadingSpinner, PageHeader, DepartmentSelector } from '../components';
 import { useVesselTripColors } from '../hooks/useVesselTripColors';
 import { DEFAULT_COLORS } from '../services/tripColors';
 import { parseLocalDate, toYYYYMMDD } from '../utils';
@@ -68,14 +66,6 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
     });
   }, [navigation, tripId, typeLabel]);
 
-  const DEPARTMENT_OPTIONS: { value: Department | null; label: string }[] = [
-    { value: null, label: 'Select' },
-    { value: 'BRIDGE', label: 'Bridge' },
-    { value: 'ENGINEERING', label: 'Engineering' },
-    { value: 'EXTERIOR', label: 'Exterior' },
-    { value: 'INTERIOR', label: 'Interior' },
-    { value: 'GALLEY', label: 'Galley' },
-  ];
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [department, setDepartment] = useState<Department | null>(null);
@@ -84,7 +74,6 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
   const [contactDetails, setContactDetails] = useState('');
   const [startDate, setStartDate] = useState<string | null>(null);
   const [endDate, setEndDate] = useState<string | null>(null);
-  const [departmentModalVisible, setDepartmentModalVisible] = useState(false);
   const [loading, setLoading] = useState(!!tripId);
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState<'start' | 'end'>('start');
@@ -159,17 +148,18 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
   const markedDates: MarkedDates =
     startDate && endDate ? getMarkedRange(startDate, endDate, accentColor) : {};
 
-  const calendarTextColor = themeColors.isDark ? COLORS.white : COLORS.black;
+  const calendarTextColor = themeColors.textPrimary;
   const calendarTheme = {
     backgroundColor: themeColors.surface,
     calendarBackground: themeColors.surface,
     textSectionTitleColor: calendarTextColor,
     selectedDayBackgroundColor: accentColor,
     selectedDayTextColor: COLORS.white,
-    todayTextColor: calendarTextColor,
+    todayTextColor: themeColors.accent,
     dayTextColor: calendarTextColor,
-    textDisabledColor: calendarTextColor,
-    arrowColor: calendarTextColor,
+    textDisabledColor: themeColors.textMuted,
+    textInactiveColor: themeColors.textMuted,
+    arrowColor: themeColors.accent,
     monthTextColor: calendarTextColor,
   };
 
@@ -197,9 +187,10 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
           endDate,
           notes: notes.trim() || undefined,
           department: type === 'YARD_PERIOD' ? (department ?? null) : undefined,
-          yardLocation: type === 'YARD_PERIOD' ? (yardLocation.trim() || null) : undefined,
-          contractorCompanyName: type === 'YARD_PERIOD' ? (contractorCompanyName.trim() || null) : undefined,
-          contactDetails: type === 'YARD_PERIOD' ? (contactDetails.trim() || null) : undefined,
+          yardLocation: type === 'YARD_PERIOD' ? yardLocation.trim() || null : undefined,
+          contractorCompanyName:
+            type === 'YARD_PERIOD' ? contractorCompanyName.trim() || null : undefined,
+          contactDetails: type === 'YARD_PERIOD' ? contactDetails.trim() || null : undefined,
         });
         Alert.alert('Updated', 'Trip updated.', [
           { text: 'OK', onPress: () => navigation.goBack() },
@@ -213,9 +204,10 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
           endDate,
           notes: notes.trim() || undefined,
           department: type === 'YARD_PERIOD' ? (department ?? null) : undefined,
-          yardLocation: type === 'YARD_PERIOD' ? (yardLocation.trim() || null) : undefined,
-          contractorCompanyName: type === 'YARD_PERIOD' ? (contractorCompanyName.trim() || null) : undefined,
-          contactDetails: type === 'YARD_PERIOD' ? (contactDetails.trim() || null) : undefined,
+          yardLocation: type === 'YARD_PERIOD' ? yardLocation.trim() || null : undefined,
+          contractorCompanyName:
+            type === 'YARD_PERIOD' ? contractorCompanyName.trim() || null : undefined,
+          contactDetails: type === 'YARD_PERIOD' ? contactDetails.trim() || null : undefined,
         });
         posthog.capture('trip_created', {
           trip_type: type,
@@ -280,43 +272,12 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
         />
         {type === 'YARD_PERIOD' && (
           <>
-            <LabeledDropdown
-              label="Department"
-              value={DEPARTMENT_OPTIONS.find((o) => o.value === department)?.label ?? 'Select'}
-              open={departmentModalVisible}
-              onPress={() => setDepartmentModalVisible(true)}
+            <DepartmentSelector
+              value={department}
+              onChange={setDepartment}
+              includeAll
+              allLabel="Select"
             />
-            {departmentModalVisible && (
-              <Modal visible transparent animationType="fade">
-                <Pressable
-                  style={styles.modalBackdrop}
-                  onPress={() => setDepartmentModalVisible(false)}
-                >
-                  <View
-                    style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
-                    onStartShouldSetResponder={() => true}
-                  >
-                    {DEPARTMENT_OPTIONS.map((opt) => (
-                      <TouchableOpacity
-                        key={opt.value ?? 'select'}
-                        style={[
-                          styles.modalItem,
-                          department === opt.value && styles.modalItemSelected,
-                        ]}
-                        onPress={() => {
-                          setDepartment(opt.value);
-                          setDepartmentModalVisible(false);
-                        }}
-                      >
-                        <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                          {opt.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </Pressable>
-              </Modal>
-            )}
             <Input
               label="Yard location"
               value={yardLocation}
@@ -338,19 +299,19 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
           </>
         )}
         <Text style={[styles.label, { color: themeColors.textPrimary }]}>Select dates</Text>
-        <Text
-          style={[
-            styles.hint,
-            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-          ]}
-        >
+        <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
           {!startDate
             ? 'Tap a start date on the calendar'
             : !endDate
               ? 'Tap the end date'
               : `${startDate} – ${endDate}`}
         </Text>
-        <View style={[styles.calendarWrap, { backgroundColor: themeColors.surface }]}>
+        <View
+          style={[
+            styles.calendarWrap,
+            { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border },
+          ]}
+        >
           <Calendar
             current={startDate || toYYYYMMDD(new Date())}
             minDate={toYYYYMMDD(new Date())}
@@ -384,14 +345,7 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
             onPress={() => navigation.goBack()}
             disabled={saving}
           >
-            <Text
-              style={[
-                styles.cancelText,
-                { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-              ]}
-            >
-              Cancel
-            </Text>
+            <Text style={[styles.cancelText, { color: themeColors.textSecondary }]}>Cancel</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -469,6 +423,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.sm,
     marginBottom: SPACING.lg,
+    borderWidth: 1,
   },
   actions: {
     marginTop: SPACING.md,

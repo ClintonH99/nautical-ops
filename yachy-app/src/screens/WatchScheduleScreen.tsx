@@ -157,7 +157,7 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
   }
 
   return (
-    <View style={styles.pageWrap}>
+    <View style={[styles.pageWrap, { backgroundColor: themeColors.background }]}>
       <PageHeader
         title="Watch Schedule"
         actions={
@@ -187,14 +187,15 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
           <RefreshControl
             refreshing={loading}
             onRefresh={loadPublished}
-            colors={[COLORS.primary]}
+            colors={[themeColors.accent]}
+            tintColor={themeColors.accent}
           />
         }
       >
         {loading && publishedTimetables.length === 0 ? (
           <ActivityIndicator
             size="small"
-            color={COLORS.primary}
+            color={themeColors.accent}
             style={{ marginVertical: SPACING.xl }}
           />
         ) : publishedTimetables.length === 0 ? (
@@ -206,7 +207,13 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
           publishedTimetables.map((t) => {
             const expanded = isHOD && expandedId === t.id && !exportMode;
             return (
-              <View key={t.id} style={[styles.card, { backgroundColor: themeColors.surface }]}>
+              <View
+                key={t.id}
+                style={[
+                  styles.card,
+                  { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+                ]}
+              >
                 <TouchableOpacity
                   style={styles.cardSummary}
                   onPress={() => {
@@ -264,9 +271,7 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
                     style={[
                       styles.previewPanel,
                       {
-                        borderTopColor: themeColors.isDark
-                          ? 'rgba(255,255,255,0.14)'
-                          : COLORS.border,
+                        borderTopColor: themeColors.border,
                       },
                     ]}
                   >
@@ -297,6 +302,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.lg,
     marginBottom: SPACING.md,
     overflow: 'hidden',
+    borderWidth: 1,
   },
   cardSummary: { padding: SPACING.lg },
   cardHeader: {

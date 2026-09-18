@@ -283,7 +283,16 @@ export const SettingsScreen = ({ navigation }: any) => {
     <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]}>
       <View style={styles.content}>
         {/* User Header */}
-        <View style={[styles.userHeader, { backgroundColor: themeColors.surface }]}>
+        <View
+          style={[
+            styles.userHeader,
+            {
+              backgroundColor: themeColors.surface,
+              borderColor: themeColors.border,
+              borderWidth: themeColors.isDark ? 1 : 0,
+            },
+          ]}
+        >
           <View style={styles.avatarContainer}>
             {profilePhotoUrl && !photoLoadFailed ? (
               <Image
@@ -320,13 +329,22 @@ export const SettingsScreen = ({ navigation }: any) => {
             <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
               {section.title}
             </Text>
-            <View style={[styles.sectionContent, { backgroundColor: themeColors.surface }]}>
+            <View
+              style={[
+                styles.sectionContent,
+                {
+                  backgroundColor: themeColors.surface,
+                  borderColor: themeColors.border,
+                  borderWidth: themeColors.isDark ? 1 : 0,
+                },
+              ]}
+            >
               {section.items.map((item, itemIndex) => (
                 <TouchableOpacity
                   key={itemIndex}
                   style={[
                     styles.settingsItem,
-                    { borderBottomColor: themeColors.surfaceAlt },
+                    { borderBottomColor: themeColors.border },
                     item.disabled && styles.settingsItemDisabled,
                     itemIndex === section.items.length - 1 && styles.settingsItemLast,
                   ]}
@@ -341,7 +359,9 @@ export const SettingsScreen = ({ navigation }: any) => {
                         style={[
                           styles.settingsLabel,
                           {
-                            color: (item as any).destructive ? '#ef4444' : themeColors.textPrimary,
+                            color: (item as any).destructive
+                              ? COLORS.danger
+                              : themeColors.textPrimary,
                           },
                         ]}
                       >
@@ -406,6 +426,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 3,
+    borderWidth: 1,
   },
   avatarContainer: { marginRight: SPACING.md },
   avatar: { width: 64, height: 64, borderRadius: 32 },
@@ -462,6 +483,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 3,
+    borderWidth: 1,
   },
   settingsItem: {
     flexDirection: 'row',

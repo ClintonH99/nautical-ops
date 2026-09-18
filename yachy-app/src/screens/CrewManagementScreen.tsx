@@ -228,7 +228,10 @@ export const CrewManagementScreen = ({ navigation }: any) => {
 
     return (
       <TouchableOpacity
-        style={[styles.crewCard, { backgroundColor: themeColors.surface }]}
+        style={[
+          styles.crewCard,
+          { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+        ]}
         onPress={() => {
           if (isCurrentUser) return;
           Alert.alert('Manage ' + item.name, 'Choose an action', [
@@ -280,7 +283,21 @@ export const CrewManagementScreen = ({ navigation }: any) => {
                   {departmentDisplay}
                 </Text>
               )}
-              {isCurrentUser && <Text style={styles.youBadge}>YOU</Text>}
+              {isCurrentUser && (
+                <Text
+                  style={[
+                    styles.youBadge,
+                    {
+                      color: themeColors.isDark ? themeColors.accent : COLORS.primary,
+                      backgroundColor: themeColors.isDark
+                        ? themeColors.accentSoft
+                        : COLORS.primaryLight,
+                    },
+                  ]}
+                >
+                  YOU
+                </Text>
+              )}
             </View>
             <Text style={[styles.crewPosition, { color: themeColors.textSecondary }]}>
               {item.position}
@@ -352,7 +369,12 @@ export const CrewManagementScreen = ({ navigation }: any) => {
       )}
 
       {/* Rotational Captain Info Banner */}
-      <View style={[styles.rotationalInfoBanner, { backgroundColor: themeColors.surface }]}>
+      <View
+        style={[
+          styles.rotationalInfoBanner,
+          { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+        ]}
+      >
         <Text style={[styles.rotationalInfoTitle, { color: themeColors.textPrimary }]}>
           Adding a Rotational Captain?
         </Text>
@@ -363,17 +385,32 @@ export const CrewManagementScreen = ({ navigation }: any) => {
       </View>
 
       <View style={styles.statsContainer}>
-        <View style={[styles.statBox, { backgroundColor: themeColors.surface }]}>
+        <View
+          style={[
+            styles.statBox,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
           <Text style={[styles.statNumber, { color: themeColors.textPrimary }]}>{crew.length}</Text>
           <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>Total Crew</Text>
         </View>
-        <View style={[styles.statBox, { backgroundColor: themeColors.surface }]}>
+        <View
+          style={[
+            styles.statBox,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
           <Text style={[styles.statNumber, { color: themeColors.textPrimary }]}>
             {crew.filter((c) => c.role === 'HOD').length}
           </Text>
           <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>HODs</Text>
         </View>
-        <View style={[styles.statBox, { backgroundColor: themeColors.surface }]}>
+        <View
+          style={[
+            styles.statBox,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
           <Text style={[styles.statNumber, { color: themeColors.textPrimary }]}>
             {crew.filter((c) => c.role === 'CREW').length}
           </Text>
@@ -381,7 +418,12 @@ export const CrewManagementScreen = ({ navigation }: any) => {
         </View>
       </View>
 
-      <View style={[styles.infoCard, { backgroundColor: themeColors.surface }]}>
+      <View
+        style={[
+          styles.infoCard,
+          { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+        ]}
+      >
         <Text style={[styles.infoText, { color: themeColors.textPrimary }]}>
           💡 Tap any crew member to view details and manage their role
         </Text>
@@ -389,7 +431,10 @@ export const CrewManagementScreen = ({ navigation }: any) => {
 
       {/* Filter row */}
       <TouchableOpacity
-        style={[styles.actionRow, { backgroundColor: themeColors.surface }]}
+        style={[
+          styles.actionRow,
+          { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+        ]}
         onPress={() => {
           Alert.alert('Filter Crew', 'Show crew by contract type:', [
             { text: 'All Crew', onPress: () => setContractFilter('all') },
@@ -409,22 +454,32 @@ export const CrewManagementScreen = ({ navigation }: any) => {
 
       {/* Rotational Groups row */}
       <TouchableOpacity
-        style={[styles.actionRow, { backgroundColor: themeColors.surface }]}
+        style={[
+          styles.actionRow,
+          { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+        ]}
         onPress={() => navigation.navigate('RotationalGroups')}
         activeOpacity={0.7}
       >
-        <Text style={[styles.actionRowLabel, { color: COLORS.primary }]}>Rotational Groups</Text>
-        <Text style={[styles.actionRowChevron, { color: COLORS.primary }]}>›</Text>
+        <Text style={[styles.actionRowLabel, { color: themeColors.accent }]}>
+          Rotational Groups
+        </Text>
+        <Text style={[styles.actionRowChevron, { color: themeColors.accent }]}>›</Text>
       </TouchableOpacity>
 
       {isMOV ? (
         <TouchableOpacity
-          style={[styles.actionRow, { backgroundColor: themeColors.surface }]}
+          style={[
+            styles.actionRow,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
           onPress={() => navigation.navigate('SeaMilesReview')}
           activeOpacity={0.7}
         >
-          <Text style={[styles.actionRowLabel, { color: COLORS.primary }]}>Sign Off Sea Miles</Text>
-          <Text style={[styles.actionRowChevron, { color: COLORS.primary }]}>›</Text>
+          <Text style={[styles.actionRowLabel, { color: themeColors.accent }]}>
+            Sign Off Sea Miles
+          </Text>
+          <Text style={[styles.actionRowChevron, { color: themeColors.accent }]}>›</Text>
         </TouchableOpacity>
       ) : null}
 
@@ -473,7 +528,8 @@ export const CrewManagementScreen = ({ navigation }: any) => {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
-            tintColor={COLORS.primary}
+            tintColor={themeColors.accent}
+            colors={[themeColors.accent]}
           />
         }
       />
@@ -525,6 +581,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    borderWidth: 1,
   },
   statNumber: {
     fontSize: FONTS['2xl'],
@@ -541,6 +598,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
     marginBottom: SPACING.lg,
+    borderWidth: 1,
   },
   infoText: {
     fontSize: FONTS.sm,
@@ -551,6 +609,7 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     marginBottom: SPACING.md,
     borderLeftWidth: 4,
+    borderWidth: 1,
     borderLeftColor: COLORS.primaryLight,
   },
   rotationalInfoTitle: {
@@ -575,6 +634,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 2,
     elevation: 1,
+    borderWidth: 1,
   },
   actionRowLabel: {
     fontSize: FONTS.base,
@@ -602,6 +662,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    borderWidth: 1,
   },
   crewCardLeft: {
     flexDirection: 'row',

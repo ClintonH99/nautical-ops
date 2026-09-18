@@ -24,7 +24,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { PageHeader, ExportButton, LabeledDropdown } from '../components';
+import { DepartmentSelector, PageHeader, ExportButton } from '../components';
 import {
   DayReview,
   DayReviewEntry,
@@ -44,14 +44,6 @@ const STATUS_LABEL: Record<string, string> = {
   confirmed: 'confirmed',
 };
 
-const DEPT_LABEL: Record<Department, string> = {
-  BRIDGE: 'Bridge',
-  ENGINEERING: 'Engineering',
-  EXTERIOR: 'Exterior',
-  INTERIOR: 'Interior',
-  GALLEY: 'Galley',
-};
-
 type DayCategory = 'not_complete' | 'complete' | 'confirmed';
 
 function categorizeDay(entries: DayReviewEntry[]): DayCategory {
@@ -69,15 +61,12 @@ export const RestToBeConfirmedScreen = () => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
 
-  const filterOptions: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
-
   const [tab, setTab] = useState<'current' | 'history'>('current');
   const [selectedMonth, setSelectedMonth] = useState<{ year: number; month: number } | null>(null);
   const [selectedDept, setSelectedDept] = useState<Department | 'All'>('All');
   const [days, setDays] = useState<DayReview[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [exportModalVisible, setExportModalVisible] = useState(false);
   const [selectedExportIds, setSelectedExportIds] = useState<Set<string>>(new Set());
   const [exporting, setExporting] = useState(false);
@@ -212,7 +201,7 @@ export const RestToBeConfirmedScreen = () => {
   };
 
   return (
-    <View style={styles.pageWrap}>
+    <View style={[styles.pageWrap, { backgroundColor: themeColors.background }]}>
       <PageHeader
         title="Rest to be Confirmed"
         actions={
@@ -234,78 +223,67 @@ export const RestToBeConfirmedScreen = () => {
       >
         <View style={styles.tabRow}>
           <TouchableOpacity
-            style={[styles.tab, tab === 'current' && styles.tabActive]}
+            style={[
+              styles.tab,
+              {
+                backgroundColor:
+                  tab === 'current' ? themeColors.controlSelected : themeColors.control,
+                borderColor: themeColors.border,
+              },
+            ]}
             onPress={() => {
               setTab('current');
               setSelectedMonth(null);
               loadCurrent();
             }}
           >
-            <Text style={[styles.tabText, tab === 'current' && styles.tabTextActive]}>Current</Text>
+            <Text
+              style={[
+                styles.tabText,
+                {
+                  color: tab === 'current' ? themeColors.textOnAccent : themeColors.textPrimary,
+                },
+                tab === 'current' && styles.tabTextActive,
+              ]}
+            >
+              Current
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, tab === 'history' && styles.tabActive]}
+            style={[
+              styles.tab,
+              {
+                backgroundColor:
+                  tab === 'history' ? themeColors.controlSelected : themeColors.control,
+                borderColor: themeColors.border,
+              },
+            ]}
             onPress={() => setTab('history')}
           >
-            <Text style={[styles.tabText, tab === 'history' && styles.tabTextActive]}>History</Text>
+            <Text
+              style={[
+                styles.tabText,
+                {
+                  color: tab === 'history' ? themeColors.textOnAccent : themeColors.textPrimary,
+                },
+                tab === 'history' && styles.tabTextActive,
+              ]}
+            >
+              History
+            </Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.filterBar}>
           <View style={styles.filterBarContent}>
-            <LabeledDropdown
-              label="Department"
-              value={selectedDept === 'All' ? 'All Departments' : DEPT_LABEL[selectedDept]}
-              open={filterModalVisible}
-              onPress={() => setFilterModalVisible(true)}
+            <DepartmentSelector
+              value={selectedDept === 'All' ? null : selectedDept}
+              onChange={(value) => setSelectedDept(value ?? 'All')}
+              includeAll
+              tightTop
             />
           </View>
         </View>
-
-        {filterModalVisible && (
-          <Modal
-            visible
-            transparent
-            animationType="fade"
-            onRequestClose={() => !exporting && setExportModalVisible(false)}
-          >
-            <Pressable style={styles.modalBackdrop} onPress={() => setFilterModalVisible(false)}>
-              <View
-                style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
-                onStartShouldSetResponder={() => true}
-              >
-                <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
-                  Filter by department
-                </Text>
-                <TouchableOpacity
-                  style={[styles.modalItem, selectedDept === 'All' && styles.modalItemSelected]}
-                  onPress={() => {
-                    setSelectedDept('All');
-                    setFilterModalVisible(false);
-                  }}
-                >
-                  <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                    All Departments
-                  </Text>
-                </TouchableOpacity>
-                {filterOptions.map((dept) => (
-                  <TouchableOpacity
-                    key={dept}
-                    style={[styles.modalItem, selectedDept === dept && styles.modalItemSelected]}
-                    onPress={() => {
-                      setSelectedDept(dept);
-                      setFilterModalVisible(false);
-                    }}
-                  >
-                    <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                      {DEPT_LABEL[dept]}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </Pressable>
-          </Modal>
-        )}
 
         {tab === 'history' && !selectedMonth && (
           <View style={{ gap: SPACING.sm }}>
@@ -317,7 +295,10 @@ export const RestToBeConfirmedScreen = () => {
               pastMonths.map((m) => (
                 <TouchableOpacity
                   key={`${m.year}-${m.month}`}
-                  style={[styles.monthRow, { borderColor: themeColors.textSecondary }]}
+                  style={[
+                    styles.monthRow,
+                    { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+                  ]}
                   onPress={() => {
                     setSelectedMonth(m);
                     loadMonth(m.year, m.month);
@@ -337,12 +318,12 @@ export const RestToBeConfirmedScreen = () => {
                 onPress={() => setSelectedMonth(null)}
                 style={{ marginBottom: SPACING.md }}
               >
-                <Text style={{ color: COLORS.primary }}>Back to months</Text>
+                <Text style={{ color: themeColors.accent }}>Back to months</Text>
               </TouchableOpacity>
             )}
 
             {loading ? (
-              <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.xl }} />
+              <ActivityIndicator color={themeColors.accent} style={{ marginTop: SPACING.xl }} />
             ) : (
               <>
                 {renderSection('Not Complete', '#dc2626', notComplete)}
@@ -367,7 +348,10 @@ export const RestToBeConfirmedScreen = () => {
                 style={[
                   styles.modalBox,
                   styles.exportModalBox,
-                  { backgroundColor: themeColors.surface },
+                  {
+                    backgroundColor: themeColors.surfaceElevated,
+                    borderColor: themeColors.border,
+                  },
                 ]}
               >
                 <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
@@ -376,7 +360,7 @@ export const RestToBeConfirmedScreen = () => {
 
                 <TouchableOpacity style={styles.modalItem} onPress={toggleSelectAll}>
                   <Text
-                    style={[styles.modalItemText, { color: COLORS.primary, fontWeight: '600' }]}
+                    style={[styles.modalItemText, { color: themeColors.accent, fontWeight: '600' }]}
                   >
                     {selectedExportIds.size === uniqueCrew.length ? 'Deselect all' : 'Select all'}
                   </Text>
@@ -388,27 +372,38 @@ export const RestToBeConfirmedScreen = () => {
                   showsVerticalScrollIndicator
                   nestedScrollEnabled
                 >
-                  {uniqueCrew.map((c) => (
-                    <TouchableOpacity
-                      key={c.userId}
-                      style={[
-                        styles.modalItem,
-                        selectedExportIds.has(c.userId) && styles.modalItemSelected,
-                      ]}
-                      onPress={() => toggleExportSelection(c.userId)}
-                    >
-                      <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                        {selectedExportIds.has(c.userId) ? '\u2713 ' : ''}
-                        {c.userName}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                  {uniqueCrew.map((c) => {
+                    const selected = selectedExportIds.has(c.userId);
+                    return (
+                      <TouchableOpacity
+                        key={c.userId}
+                        style={[
+                          styles.modalItem,
+                          selected && { backgroundColor: themeColors.controlSelected },
+                        ]}
+                        onPress={() => toggleExportSelection(c.userId)}
+                      >
+                        <Text
+                          style={[
+                            styles.modalItemText,
+                            {
+                              color: selected ? themeColors.textOnAccent : themeColors.textPrimary,
+                            },
+                          ]}
+                        >
+                          {selected ? '\u2713 ' : ''}
+                          {c.userName}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </ScrollView>
 
                 <TouchableOpacity
                   style={[
                     styles.reviewButton,
                     {
+                      backgroundColor: themeColors.controlSelected,
                       marginTop: SPACING.md,
                       opacity: exporting || selectedExportIds.size === 0 ? 0.6 : 1,
                     },
@@ -439,7 +434,7 @@ const styles = StyleSheet.create({
     padding: SPACING.sm,
     borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderWidth: 1,
   },
   tabActive: { backgroundColor: COLORS.primary },
   tabText: { fontSize: FONTS.sm },
@@ -478,6 +473,7 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     minWidth: 260,
     maxHeight: 500,
+    borderWidth: 1,
   },
   exportModalBox: {
     width: '100%',

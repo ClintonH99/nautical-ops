@@ -12,8 +12,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Modal,
-  Pressable,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
@@ -26,11 +24,9 @@ import {
   Button,
   LoadingSpinner,
   PageHeader,
-  LabeledDropdown,
+  DepartmentSelector,
   PreviewActionButtons,
 } from '../components';
-
-const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
 const emptyContact: ContractorContact = { name: '', mobile: '', email: '' };
 
@@ -49,7 +45,6 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [departmentDropdownOpen, setDepartmentDropdownOpen] = useState(false);
   const activeOperationRef = useRef<'save' | 'delete' | null>(null);
 
   const vesselId = user?.vesselId ?? null;
@@ -208,50 +203,10 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <LabeledDropdown
-          label="Department"
-          value={department.charAt(0) + department.slice(1).toLowerCase()}
-          open={departmentDropdownOpen}
-          onPress={() => setDepartmentDropdownOpen(true)}
+        <DepartmentSelector
+          value={department}
+          onChange={(value) => value && setDepartment(value)}
         />
-        {departmentDropdownOpen && (
-          <Modal visible transparent animationType="fade">
-            <Pressable
-              style={styles.modalBackdrop}
-              onPress={() => setDepartmentDropdownOpen(false)}
-            >
-              <View
-                style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
-                onStartShouldSetResponder={() => true}
-              >
-                {DEPARTMENTS.map((dept) => (
-                  <TouchableOpacity
-                    key={dept}
-                    style={[
-                      styles.modalItem,
-                      { backgroundColor: themeColors.surface },
-                      department === dept && styles.modalItemSelected,
-                    ]}
-                    onPress={() => {
-                      setDepartment(dept);
-                      setDepartmentDropdownOpen(false);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.modalItemText,
-                        { color: themeColors.textPrimary },
-                        department === dept && styles.modalItemTextSelected,
-                      ]}
-                    >
-                      {dept.charAt(0) + dept.slice(1).toLowerCase()}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </Pressable>
-          </Modal>
-        )}
         <Input
           label="Company Name"
           value={companyName}
@@ -285,13 +240,17 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
           Contact Person(s)
         </Text>
         {contacts.map((contact, index) => (
-          <View key={index} style={[styles.contactBlock, { backgroundColor: themeColors.surface }]}>
-            <Text
-              style={[
-                styles.contactBlockLabel,
-                { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-              ]}
-            >
+          <View
+            key={index}
+            style={[
+              styles.contactBlock,
+              {
+                backgroundColor: themeColors.surfaceElevated,
+                borderColor: themeColors.border,
+              },
+            ]}
+          >
+            <Text style={[styles.contactBlockLabel, { color: themeColors.textSecondary }]}>
               Contact {index + 1}
             </Text>
             <Input
@@ -332,7 +291,7 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
           </View>
         ))}
         <TouchableOpacity onPress={addContact} style={styles.addContactBtn}>
-          <Text style={[styles.addContactText, { color: themeColors.textPrimary }]}>
+          <Text style={[styles.addContactText, { color: themeColors.accent }]}>
             + Add contact person
           </Text>
         </TouchableOpacity>

@@ -5,14 +5,7 @@
 
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import {
-  Pressable,
-  View,
-  Text,
-  StyleSheet,
-  Platform,
-  useWindowDimensions,
-} from 'react-native';
+import { Pressable, View, Text, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useNavigationState } from '@react-navigation/native';
@@ -42,9 +35,9 @@ function CustomPillBar(props: BottomTabBarProps) {
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= DESKTOP_BREAKPOINT;
   const themeColors = useThemeColors();
-  const selectedBg = themeColors.isDark ? 'rgba(255, 255, 255, 0.1)' : themeColors.surfaceAlt;
-  const pillBg = themeColors.isDark ? '#1E293B' : themeColors.surface;
-  const barBg = themeColors.isDark ? '#0F172A' : themeColors.background;
+  const selectedBg = themeColors.controlSelected;
+  const pillBg = themeColors.surface;
+  const barBg = themeColors.background;
 
   if (isDesktop) return null;
 
@@ -59,47 +52,55 @@ function CustomPillBar(props: BottomTabBarProps) {
       ]}
       pointerEvents="box-none"
     >
-    <View
-      style={[
-        styles.pill,
-        {
-          marginHorizontal: PILL_MARGIN_H,
-          backgroundColor: pillBg,
-        },
-      ]}
-    >
-      {state.routes.map((route: { key: string; name: string }, index: number) => {
-        const config = BUTTON_CONFIG[index];
-        const focused = state.index === index;
+      <View
+        style={[
+          styles.pill,
+          {
+            marginHorizontal: PILL_MARGIN_H,
+            backgroundColor: pillBg,
+          },
+        ]}
+      >
+        {state.routes.map((route: { key: string; name: string }, index: number) => {
+          const config = BUTTON_CONFIG[index];
+          const focused = state.index === index;
 
-        return (
-          <Pressable
-            key={route.key}
-            onPress={() => navigation.navigate(route.name)}
-            style={[styles.button, focused && styles.buttonSelected]}
-            accessibilityRole="button"
-            accessibilityState={{ selected: focused }}
-          >
-            <View
-              style={[
-                styles.buttonInner,
-                focused && { backgroundColor: selectedBg, borderRadius: 9999 },
-              ]}
+          return (
+            <Pressable
+              key={route.key}
+              onPress={() => navigation.navigate(route.name)}
+              style={[styles.button, focused && styles.buttonSelected]}
+              accessibilityRole="button"
+              accessibilityState={{ selected: focused }}
             >
-              <Ionicons
-                name={config.icon}
-                size={24}
-                color={themeColors.textPrimary}
-                style={{ opacity: focused ? 1 : 0.65 }}
-              />
-              <Text style={[styles.label, { color: themeColors.textPrimary }, !focused && styles.labelUnselected]}>
-                {config.label}
-              </Text>
-            </View>
-          </Pressable>
-        );
-      })}
-    </View>
+              <View
+                style={[
+                  styles.buttonInner,
+                  focused && { backgroundColor: selectedBg, borderRadius: 9999 },
+                ]}
+              >
+                <Ionicons
+                  name={config.icon}
+                  size={24}
+                  color={focused ? themeColors.textOnAccent : themeColors.textSecondary}
+                  style={{ opacity: focused ? 1 : 0.65 }}
+                />
+                <Text
+                  style={[
+                    styles.label,
+                    {
+                      color: focused ? themeColors.textOnAccent : themeColors.textSecondary,
+                    },
+                    !focused && styles.labelUnselected,
+                  ]}
+                >
+                  {config.label}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -123,16 +124,9 @@ function DesktopSidebar() {
         },
       ]}
     >
-      <View
-        style={[
-          styles.sidebarHeader,
-          { borderBottomColor: themeColors.surfaceAlt },
-        ]}
-      >
-        <Ionicons name="boat-outline" size={28} color={COLORS.primary} />
-        <Text style={[styles.sidebarTitle, { color: themeColors.textPrimary }]}>
-          Nautical Ops
-        </Text>
+      <View style={[styles.sidebarHeader, { borderBottomColor: themeColors.surfaceAlt }]}>
+        <Ionicons name="boat-outline" size={28} color={themeColors.accent} />
+        <Text style={[styles.sidebarTitle, { color: themeColors.textPrimary }]}>Nautical Ops</Text>
       </View>
       {BUTTON_CONFIG.map((config, i) => {
         const focused = index === i;
@@ -140,19 +134,19 @@ function DesktopSidebar() {
           <Pressable
             key={config.route}
             onPress={() => navigation.navigate('MainTabs', { screen: config.route })}
-            style={[styles.sidebarItem, focused && styles.sidebarItemActive]}
+            style={[styles.sidebarItem, focused && { backgroundColor: themeColors.accentSoft }]}
             accessibilityRole="button"
             accessibilityState={{ selected: focused }}
           >
             <Ionicons
               name={config.icon}
               size={22}
-              color={focused ? COLORS.primary : themeColors.textSecondary}
+              color={focused ? themeColors.accent : themeColors.textSecondary}
             />
             <Text
               style={[
                 styles.sidebarLabel,
-                { color: focused ? COLORS.primary : themeColors.textSecondary },
+                { color: focused ? themeColors.accent : themeColors.textSecondary },
               ]}
             >
               {config.label}

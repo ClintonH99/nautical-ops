@@ -20,7 +20,8 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import generalWasteLogsService from '../services/generalWasteLogs';
 import { WeightUnit } from '../types';
-import { Input, Button, LoadingSpinner, PageHeader } from '../components';
+import { DateOnlyPicker, Input, Button, LoadingSpinner, PageHeader } from '../components';
+import { parseLocalDate } from '../utils';
 
 function formatDate(d: Date): string {
   const yyyy = d.getFullYear();
@@ -50,7 +51,6 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
   const now = new Date();
   const [date, setDate] = useState<Date>(now);
   const [time, setTime] = useState<Date>(now);
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [positionLocation, setPositionLocation] = useState('');
   const [descriptionOfGarbage, setDescriptionOfGarbage] = useState('');
@@ -71,7 +71,7 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
       try {
         const log = await generalWasteLogsService.getById(logId);
         if (log) {
-          setDate(new Date(log.logDate));
+          setDate(parseLocalDate(log.logDate));
           const [hh, mm] = log.logTime.split(':').map(Number);
           const t = new Date();
           t.setHours(hh, mm, 0, 0);
@@ -176,49 +176,12 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Date */}
-        <View style={styles.fieldContainer}>
-          <Text style={[styles.label, { color: themeColors.textPrimary }]}>Date</Text>
-          {Platform.OS === 'ios' ? (
-            <View style={[styles.pickerTrigger, { backgroundColor: themeColors.surface }]}>
-              <Text style={[styles.pickerValue, { color: themeColors.textPrimary }]}>
-                {formatDate(date)}
-              </Text>
-              <DateTimePicker
-                value={date}
-                mode="date"
-                display="compact"
-                onChange={(_: DateTimePickerEvent, selected?: Date) => {
-                  if (selected) setDate(selected);
-                }}
-              />
-            </View>
-          ) : (
-            <>
-              <TouchableOpacity
-                style={[styles.pickerTrigger, { backgroundColor: themeColors.surface }]}
-                onPress={() => setShowDatePicker(true)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.pickerValue, { color: themeColors.textPrimary }]}>
-                  {formatDate(date)}
-                </Text>
-                <Text style={styles.pickerIcon}>📅</Text>
-              </TouchableOpacity>
-              {showDatePicker && (
-                <DateTimePicker
-                  value={date}
-                  mode="date"
-                  display="default"
-                  onChange={(_: DateTimePickerEvent, selected?: Date) => {
-                    setShowDatePicker(false);
-                    if (selected) setDate(selected);
-                  }}
-                />
-              )}
-            </>
-          )}
-        </View>
+        <DateOnlyPicker
+          label="Date"
+          value={formatDate(date)}
+          onChange={(nextDate) => setDate(parseLocalDate(nextDate))}
+          title="Select waste log date"
+        />
 
         {/* Time */}
         <View style={styles.fieldContainer}>

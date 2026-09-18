@@ -13,15 +13,13 @@ import {
   Image,
   Alert,
   TextInput,
-  Modal,
-  Pressable,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES, SHADOWS } from '../constants/theme';
 import { useAuthStore, useThemeStore, BACKGROUND_THEMES } from '../store';
 import { supabase } from '../services/supabase';
 import authService from '../services/auth';
-import { Button, LoadingSpinner, PageHeader, LabeledDropdown } from '../components';
+import { Button, LoadingSpinner, PageHeader, DepartmentSelector } from '../components';
 import userService from '../services/user';
 import { Department } from '../types';
 import Constants from 'expo-constants';
@@ -127,7 +125,6 @@ export const ProfileScreen = ({ navigation }: any) => {
   const [name, setName] = useState(user?.name || '');
   const [position, setPosition] = useState(user?.position || '');
   const [department, setDepartment] = useState<Department>(user?.department || 'BRIDGE');
-  const [departmentDropdownOpen, setDepartmentDropdownOpen] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState(user?.profilePhoto);
   const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
   const [localPreviewUri, setLocalPreviewUri] = useState<string | null>(null);
@@ -144,8 +141,6 @@ export const ProfileScreen = ({ navigation }: any) => {
 
   const displayPhotoUri =
     localPreviewUri || profilePhoto || (user?.id ? userService.getProfilePhotoUrl(user.id) : null);
-
-  const departments: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
   const handlePickImage = async () => {
     try {
@@ -283,7 +278,7 @@ export const ProfileScreen = ({ navigation }: any) => {
   }> = [];
 
   return (
-    <View style={styles.pageWrap}>
+    <View style={[styles.pageWrap, { backgroundColor: themeColors.background }]}>
       <PageHeader title="Settings & Profile" />
       <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]}>
         <View style={styles.content}>
@@ -291,7 +286,15 @@ export const ProfileScreen = ({ navigation }: any) => {
           <View style={styles.photoSection}>
             <View style={styles.photoContainer}>
               {isUploadingPhoto ? (
-                <View style={styles.photoLoading}>
+                <View
+                  style={[
+                    styles.photoLoading,
+                    {
+                      backgroundColor: themeColors.surfaceElevated,
+                      borderColor: themeColors.border,
+                    },
+                  ]}
+                >
                   <LoadingSpinner />
                 </View>
               ) : displayPhotoUri && !photoLoadFailed ? (
@@ -301,8 +304,13 @@ export const ProfileScreen = ({ navigation }: any) => {
                   onError={() => !localPreviewUri && setPhotoLoadFailed(true)}
                 />
               ) : (
-                <View style={styles.photoPlaceholder}>
-                  <Text style={styles.photoPlaceholderText}>
+                <View
+                  style={[
+                    styles.photoPlaceholder,
+                    { backgroundColor: themeColors.controlSelected },
+                  ]}
+                >
+                  <Text style={[styles.photoPlaceholderText, { color: themeColors.textOnAccent }]}>
                     {user?.name.charAt(0).toUpperCase()}
                   </Text>
                 </View>
@@ -340,34 +348,29 @@ export const ProfileScreen = ({ navigation }: any) => {
               </Text>
               {!isEditing && (
                 <TouchableOpacity onPress={() => setIsEditing(true)}>
-                  <Text
-                    style={[
-                      styles.editButton,
-                      { color: themeColors.isDark ? COLORS.white : COLORS.primary },
-                    ]}
-                  >
-                    Edit
-                  </Text>
+                  <Text style={[styles.editButton, { color: themeColors.accent }]}>Edit</Text>
                 </TouchableOpacity>
               )}
             </View>
 
-            <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
+            <View
+              style={[
+                styles.card,
+                { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border },
+              ]}
+            >
               {/* Name */}
               <View style={styles.field}>
-                <Text
-                  style={[
-                    styles.label,
-                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                  ]}
-                >
-                  Name
-                </Text>
+                <Text style={[styles.label, { color: themeColors.textSecondary }]}>Name</Text>
                 {isEditing ? (
                   <TextInput
                     style={[
                       styles.input,
-                      { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+                      {
+                        backgroundColor: themeColors.control,
+                        color: themeColors.textPrimary,
+                        borderColor: themeColors.border,
+                      },
                     ]}
                     value={name}
                     onChangeText={setName}
@@ -383,19 +386,16 @@ export const ProfileScreen = ({ navigation }: any) => {
 
               {/* Position */}
               <View style={styles.field}>
-                <Text
-                  style={[
-                    styles.label,
-                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                  ]}
-                >
-                  Position
-                </Text>
+                <Text style={[styles.label, { color: themeColors.textSecondary }]}>Position</Text>
                 {isEditing ? (
                   <TextInput
                     style={[
                       styles.input,
-                      { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+                      {
+                        backgroundColor: themeColors.control,
+                        color: themeColors.textPrimary,
+                        borderColor: themeColors.border,
+                      },
                     ]}
                     value={position}
                     onChangeText={setPosition}
@@ -413,59 +413,15 @@ export const ProfileScreen = ({ navigation }: any) => {
               <View style={styles.field}>
                 {isEditing ? (
                   <>
-                    <LabeledDropdown
-                      label="Department"
-                      value={department.charAt(0) + department.slice(1).toLowerCase()}
-                      open={departmentDropdownOpen}
-                      onPress={() => setDepartmentDropdownOpen(true)}
+                    <DepartmentSelector
+                      value={department}
+                      onChange={(value) => value && setDepartment(value)}
                       tightTop
                     />
-                    {departmentDropdownOpen && (
-                      <Modal visible transparent animationType="fade">
-                        <Pressable
-                          style={styles.modalBackdrop}
-                          onPress={() => setDepartmentDropdownOpen(false)}
-                        >
-                          <View
-                            style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
-                            onStartShouldSetResponder={() => true}
-                          >
-                            {departments.map((dept) => (
-                              <TouchableOpacity
-                                key={dept}
-                                style={[
-                                  styles.modalItem,
-                                  department === dept && styles.modalItemSelected,
-                                ]}
-                                onPress={() => {
-                                  setDepartment(dept);
-                                  setDepartmentDropdownOpen(false);
-                                }}
-                              >
-                                <Text
-                                  style={[
-                                    styles.modalItemText,
-                                    { color: themeColors.textPrimary },
-                                    department === dept && styles.modalItemTextSelected,
-                                  ]}
-                                >
-                                  {dept.charAt(0) + dept.slice(1).toLowerCase()}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-                        </Pressable>
-                      </Modal>
-                    )}
                   </>
                 ) : (
                   <>
-                    <Text
-                      style={[
-                        styles.label,
-                        { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                      ]}
-                    >
+                    <Text style={[styles.label, { color: themeColors.textSecondary }]}>
                       Department
                     </Text>
                     <Text style={[styles.value, { color: themeColors.textPrimary }]}>
@@ -477,14 +433,7 @@ export const ProfileScreen = ({ navigation }: any) => {
 
               {/* Email (read-only) */}
               <View style={[styles.field, styles.fieldLast]}>
-                <Text
-                  style={[
-                    styles.label,
-                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                  ]}
-                >
-                  Email
-                </Text>
+                <Text style={[styles.label, { color: themeColors.textSecondary }]}>Email</Text>
                 <Text
                   style={[styles.value, styles.valueDisabled, { color: themeColors.textSecondary }]}
                 >
@@ -499,16 +448,14 @@ export const ProfileScreen = ({ navigation }: any) => {
             <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
               Account Information
             </Text>
-            <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
+            <View
+              style={[
+                styles.card,
+                { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border },
+              ]}
+            >
               <View style={styles.field}>
-                <Text
-                  style={[
-                    styles.label,
-                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                  ]}
-                >
-                  Role
-                </Text>
+                <Text style={[styles.label, { color: themeColors.textSecondary }]}>Role</Text>
                 <View
                   style={{
                     flexDirection: 'row',
@@ -517,8 +464,15 @@ export const ProfileScreen = ({ navigation }: any) => {
                     flexWrap: 'wrap',
                   }}
                 >
-                  <View style={styles.roleBadge}>
-                    <Text style={[styles.roleText, { textTransform: 'none' }]}>
+                  <View
+                    style={[styles.roleBadge, { backgroundColor: themeColors.controlSelected }]}
+                  >
+                    <Text
+                      style={[
+                        styles.roleText,
+                        { color: themeColors.textOnAccent, textTransform: 'none' },
+                      ]}
+                    >
                       {displaysAsCaptain
                         ? 'MOV (Master of Vessel)'
                         : user?.role === 'HOD'
@@ -539,12 +493,7 @@ export const ProfileScreen = ({ navigation }: any) => {
                 </View>
               </View>
               <View style={[styles.field, styles.fieldLast]}>
-                <Text
-                  style={[
-                    styles.label,
-                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                  ]}
-                >
+                <Text style={[styles.label, { color: themeColors.textSecondary }]}>
                   Member Since
                 </Text>
                 <Text style={[styles.value, { color: themeColors.textPrimary }]}>
@@ -565,9 +514,18 @@ export const ProfileScreen = ({ navigation }: any) => {
             <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
               Personal Records
             </Text>
-            <View style={[styles.settingsCard, { backgroundColor: themeColors.surface }]}>
+            <View
+              style={[
+                styles.settingsCard,
+                { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border },
+              ]}
+            >
               <TouchableOpacity
-                style={[styles.settingsItem, styles.settingsItemLast]}
+                style={[
+                  styles.settingsItem,
+                  styles.settingsItemLast,
+                  { borderBottomColor: themeColors.border },
+                ]}
                 onPress={() => navigation.navigate('MySeaMiles')}
                 activeOpacity={0.7}
               >
@@ -596,9 +554,18 @@ export const ProfileScreen = ({ navigation }: any) => {
             <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
               E-signature
             </Text>
-            <View style={[styles.settingsCard, { backgroundColor: themeColors.surface }]}>
+            <View
+              style={[
+                styles.settingsCard,
+                { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border },
+              ]}
+            >
               <TouchableOpacity
-                style={[styles.settingsItem, styles.settingsItemLast]}
+                style={[
+                  styles.settingsItem,
+                  styles.settingsItemLast,
+                  { borderBottomColor: themeColors.border },
+                ]}
                 onPress={() => navigation.navigate('SignatureSetup')}
                 activeOpacity={0.7}
               >
@@ -626,9 +593,18 @@ export const ProfileScreen = ({ navigation }: any) => {
             <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
               Join Vessel
             </Text>
-            <View style={[styles.settingsCard, { backgroundColor: themeColors.surface }]}>
+            <View
+              style={[
+                styles.settingsCard,
+                { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border },
+              ]}
+            >
               <TouchableOpacity
-                style={[styles.settingsItem, isCaptain ? undefined : styles.settingsItemLast]}
+                style={[
+                  styles.settingsItem,
+                  isCaptain ? undefined : styles.settingsItemLast,
+                  { borderBottomColor: themeColors.border },
+                ]}
                 onPress={() => navigation.navigate('JoinVessel')}
                 activeOpacity={0.7}
               >
@@ -651,7 +627,7 @@ export const ProfileScreen = ({ navigation }: any) => {
               </TouchableOpacity>
               {!!user?.vesselId && (
                 <TouchableOpacity
-                  style={styles.settingsItem}
+                  style={[styles.settingsItem, { borderBottomColor: themeColors.border }]}
                   onPress={handleLeaveVessel}
                   activeOpacity={0.7}
                 >
@@ -675,7 +651,11 @@ export const ProfileScreen = ({ navigation }: any) => {
               )}
               {isCaptain && (
                 <TouchableOpacity
-                  style={[styles.settingsItem, styles.settingsItemLast]}
+                  style={[
+                    styles.settingsItem,
+                    styles.settingsItemLast,
+                    { borderBottomColor: themeColors.border },
+                  ]}
                   onPress={handleDeleteVessel}
                   activeOpacity={0.7}
                 >
@@ -705,7 +685,15 @@ export const ProfileScreen = ({ navigation }: any) => {
               <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
                 {section.title}
               </Text>
-              <View style={[styles.settingsCard, { backgroundColor: themeColors.surface }]}>
+              <View
+                style={[
+                  styles.settingsCard,
+                  {
+                    backgroundColor: themeColors.surfaceElevated,
+                    borderColor: themeColors.border,
+                  },
+                ]}
+              >
                 {section.items.map((item, itemIndex) => (
                   <TouchableOpacity
                     key={itemIndex}
@@ -713,6 +701,7 @@ export const ProfileScreen = ({ navigation }: any) => {
                       styles.settingsItem,
                       item.disabled && styles.settingsItemDisabled,
                       itemIndex === section.items.length - 1 && styles.settingsItemLast,
+                      { borderBottomColor: themeColors.border },
                     ]}
                     onPress={item.onPress}
                     disabled={item.disabled}
@@ -781,7 +770,6 @@ const styles = StyleSheet.create({
   pageWrap: { flex: 1 },
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   content: {
     padding: SPACING.lg,
@@ -844,24 +832,20 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   photoPlaceholderText: {
     fontSize: 48,
     fontWeight: 'bold',
-    color: COLORS.white,
   },
   photoLoading: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: COLORS.background,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: COLORS.border,
   },
   photoActions: {
     flexDirection: 'row',
@@ -891,9 +875,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   card: {
-    backgroundColor: COLORS.white,
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.lg,
+    borderWidth: 1,
     ...SHADOWS.md,
   },
   field: {
@@ -917,10 +901,7 @@ const styles = StyleSheet.create({
   },
   input: {
     fontSize: FONTS.base,
-    color: COLORS.textPrimary,
-    backgroundColor: COLORS.background,
     borderWidth: 1,
-    borderColor: COLORS.border,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
   },
@@ -956,7 +937,6 @@ const styles = StyleSheet.create({
   },
   roleBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: COLORS.primary,
     paddingHorizontal: SPACING.sm,
     paddingVertical: 4,
     borderRadius: BORDER_RADIUS.sm,
@@ -964,7 +944,6 @@ const styles = StyleSheet.create({
   roleText: {
     fontSize: FONTS.sm,
     fontWeight: 'bold',
-    color: COLORS.white,
     textTransform: 'uppercase',
   },
   contractBadgeTemp: {
@@ -997,6 +976,7 @@ const styles = StyleSheet.create({
   settingsCard: {
     borderRadius: BORDER_RADIUS.lg,
     overflow: 'hidden',
+    borderWidth: 1,
     ...SHADOWS.md,
   },
   settingsItem: {
@@ -1005,7 +985,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: SPACING.lg,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   settingsItemLast: {
     borderBottomWidth: 0,

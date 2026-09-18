@@ -20,7 +20,16 @@ import { useAuthStore } from '../store';
 import generalWasteLogsService from '../services/generalWasteLogs';
 import vesselService from '../services/vessel';
 import { GeneralWasteLog } from '../types';
-import { Button, Input, ButtonTagCard, ButtonTagRow, LoadingSpinner, PageHeader, ExportButton, ExportBar } from '../components';
+import {
+  Button,
+  Input,
+  ButtonTagCard,
+  ButtonTagRow,
+  LoadingSpinner,
+  PageHeader,
+  ExportButton,
+  ExportBar,
+} from '../components';
 import { exportGeneralWasteLogPdf } from '../utils/vesselLogsPdf';
 
 export const GeneralWasteLogScreen = ({ navigation }: any) => {
@@ -185,7 +194,9 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
           </View>
           {exportMode && (
             <TouchableOpacity onPress={toggleSelectAll} style={styles.selectAllRow}>
-              <Text style={styles.selectAllText}>{allSelected ? 'Deselect All' : 'Select All'}</Text>
+              <Text style={[styles.selectAllText, { color: themeColors.accent }]}>
+                {allSelected ? 'Deselect All' : 'Select All'}
+              </Text>
             </TouchableOpacity>
           )}
         </>
@@ -201,7 +212,8 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={[COLORS.primary]}
+              colors={[themeColors.accent]}
+              tintColor={themeColors.accent}
             />
           }
         >

@@ -9,8 +9,9 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 
 interface LabeledDropdownProps {
   /** Text on the left, e.g. "Department". */
@@ -37,18 +38,27 @@ export const LabeledDropdown: React.FC<LabeledDropdownProps> = ({
     <View style={[styles.row, tightTop && styles.rowTight]}>
       <Text style={[styles.label, { color: themeColors.textPrimary }]}>{label}</Text>
       <TouchableOpacity
-        style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
+        style={[
+          styles.dropdown,
+          {
+            backgroundColor: themeColors.control,
+            borderColor: open ? themeColors.borderStrong : themeColors.border,
+          },
+        ]}
         onPress={onPress}
         activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel={`${label}: ${value}`}
+        accessibilityState={{ expanded: open }}
       >
-        <Text style={[styles.value, { color: themeColors.textPrimary }]} numberOfLines={1}>
+        <Text style={[styles.value, { color: themeColors.accent }]} numberOfLines={1}>
           {value}
         </Text>
-        <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>
-          {open ? '▲' : '▼'}
-        </Text>
+        <Ionicons
+          name={open ? 'chevron-up' : 'chevron-down'}
+          size={20}
+          color={themeColors.accent}
+        />
       </TouchableOpacity>
     </View>
   );
@@ -75,20 +85,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: SPACING.sm,
+    minHeight: 48,
+    paddingVertical: 10,
     paddingHorizontal: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 8,
+    gap: SPACING.sm,
     flexShrink: 1,
-    minWidth: 140,
+    minWidth: 180,
   },
   value: {
-    fontSize: FONTS.sm,
+    fontSize: FONTS.base,
+    fontWeight: '600',
     flexShrink: 1,
-  },
-  chevron: {
-    fontSize: 10,
   },
 });

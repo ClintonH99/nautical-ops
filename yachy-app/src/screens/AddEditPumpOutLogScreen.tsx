@@ -22,7 +22,8 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import pumpOutLogsService from '../services/pumpOutLogs';
 import { DischargeType } from '../types';
-import { Input, Button, LoadingSpinner, PageHeader } from '../components';
+import { DateOnlyPicker, Input, Button, LoadingSpinner, PageHeader } from '../components';
+import { parseLocalDate } from '../utils';
 
 function formatDate(d: Date): string {
   const yyyy = d.getFullYear();
@@ -57,7 +58,6 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
   const [description, setDescription] = useState('');
   const [date, setDate] = useState<Date>(now);
   const [time, setTime] = useState<Date>(now);
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [loading, setLoading] = useState(!!logId);
   const [saving, setSaving] = useState(false);
@@ -80,7 +80,7 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
           setLocation(log.location);
           setAmountInGallons(String(log.amountInGallons));
           setDescription(log.description);
-          setDate(new Date(log.logDate));
+          setDate(parseLocalDate(log.logDate));
           const [hh, mm] = log.logTime.split(':').map(Number);
           const t = new Date();
           t.setHours(hh, mm, 0, 0);
@@ -259,49 +259,12 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
           numberOfLines={3}
         />
 
-        {/* Date */}
-        <View style={styles.fieldContainer}>
-          <Text style={[styles.label, { color: themeColors.textPrimary }]}>Date</Text>
-          {Platform.OS === 'ios' ? (
-            <View style={[styles.pickerTrigger, { backgroundColor: themeColors.surface }]}>
-              <Text style={[styles.pickerValue, { color: themeColors.textPrimary }]}>
-                {formatDate(date)}
-              </Text>
-              <DateTimePicker
-                value={date}
-                mode="date"
-                display="compact"
-                onChange={(_: DateTimePickerEvent, selected?: Date) => {
-                  if (selected) setDate(selected);
-                }}
-              />
-            </View>
-          ) : (
-            <>
-              <TouchableOpacity
-                style={[styles.pickerTrigger, { backgroundColor: themeColors.surface }]}
-                onPress={() => setShowDatePicker(true)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.pickerValue, { color: themeColors.textPrimary }]}>
-                  {formatDate(date)}
-                </Text>
-                <Text style={styles.pickerIcon}>📅</Text>
-              </TouchableOpacity>
-              {showDatePicker && (
-                <DateTimePicker
-                  value={date}
-                  mode="date"
-                  display="default"
-                  onChange={(_: DateTimePickerEvent, selected?: Date) => {
-                    setShowDatePicker(false);
-                    if (selected) setDate(selected);
-                  }}
-                />
-              )}
-            </>
-          )}
-        </View>
+        <DateOnlyPicker
+          label="Date"
+          value={formatDate(date)}
+          onChange={(nextDate) => setDate(parseLocalDate(nextDate))}
+          title="Select discharge date"
+        />
 
         {/* Time */}
         <View style={styles.fieldContainer}>

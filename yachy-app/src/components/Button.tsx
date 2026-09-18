@@ -42,14 +42,21 @@ export const Button: React.FC<ButtonProps> = ({
   const themeColors = useThemeColors();
   const variantKey = variant === 'outlineLight' ? 'outlineLight' : variant;
   const variantStyle: ViewStyle =
-    variant === 'text' ? styles.textVariant : (styles[variantKey as keyof typeof styles] as ViewStyle);
+    variant === 'text'
+      ? styles.textVariant
+      : (styles[variantKey as keyof typeof styles] as ViewStyle);
   const textKey = `${variantKey}Text`;
   const buttonStyles: ViewStyle[] = [styles.button, variantStyle];
-  const textStyles: TextStyle[] = [styles.baseText, styles[textKey as keyof typeof styles] as TextStyle];
+  const textStyles: TextStyle[] = [
+    styles.baseText,
+    styles[textKey as keyof typeof styles] as TextStyle,
+  ];
 
   if (themeColors.isDark && variant === 'outline') {
     buttonStyles.push(styles.outlineDark);
     textStyles.push(styles.outlineDarkText);
+  } else if (themeColors.isDark && variant === 'primary') {
+    buttonStyles.push({ backgroundColor: themeColors.controlSelected });
   } else if (themeColors.isDark && variant === 'text') {
     textStyles.push(styles.textDarkText);
   }

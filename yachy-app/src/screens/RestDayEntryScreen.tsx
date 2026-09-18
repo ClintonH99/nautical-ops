@@ -21,7 +21,7 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
+import { FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { PageHeader } from '../components';
@@ -313,7 +313,10 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
 
   const renderTimeChip = (label: string, value: string | null, onPress: () => void) => (
     <TouchableOpacity
-      style={[styles.chip, { backgroundColor: themeColors.surface }]}
+      style={[
+        styles.chip,
+        { backgroundColor: themeColors.control, borderColor: themeColors.border },
+      ]}
       onPress={onPress}
       disabled={isLocked}
     >
@@ -324,7 +327,7 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   );
 
   return (
-    <View style={styles.pageWrap}>
+    <View style={[styles.pageWrap, { backgroundColor: themeColors.background }]}>
       <PageHeader title="Rest Entry" />
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
@@ -372,8 +375,10 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
         )}
 
         {status !== 'draft' && isManager && (
-          <View style={styles.editablePill}>
-            <Text style={styles.editablePillText}>You can still make changes</Text>
+          <View style={[styles.editablePill, { backgroundColor: themeColors.accentSoft }]}>
+            <Text style={[styles.editablePillText, { color: themeColors.accent }]}>
+              You can still make changes
+            </Text>
           </View>
         )}
 
@@ -385,12 +390,22 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
         </View>
 
         {watchPeriods.length > 0 && (
-          <View style={[styles.watchCard, { backgroundColor: themeColors.surface }]}>
+          <View
+            style={[
+              styles.watchCard,
+              {
+                backgroundColor: themeColors.surfaceElevated,
+                borderLeftColor: themeColors.accent,
+              },
+            ]}
+          >
             <View style={styles.watchCardHeader}>
               <Text style={[styles.watchCardTitle, { color: themeColors.textPrimary }]}>
                 Watch Keeping
               </Text>
-              <Text style={styles.automaticLabel}>Automatically added</Text>
+              <Text style={[styles.automaticLabel, { color: themeColors.accent }]}>
+                Automatically added
+              </Text>
             </View>
             {watchPeriods.map((period, index) => (
               <View
@@ -448,7 +463,7 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
         ))}
         {!isLocked && restPeriods.length < 2 && (
           <TouchableOpacity onPress={addRestPeriod}>
-            <Text style={{ color: COLORS.primary, marginBottom: SPACING.lg }}>
+            <Text style={{ color: themeColors.accent, marginBottom: SPACING.lg }}>
               + Add another rest period
             </Text>
           </TouchableOpacity>
@@ -468,8 +483,8 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
             styles.commentInput,
             {
               color: themeColors.textPrimary,
-              backgroundColor: themeColors.surface,
-              borderColor: themeColors.isDark ? 'rgba(255,255,255,0.1)' : COLORS.border,
+              backgroundColor: themeColors.control,
+              borderColor: themeColors.border,
             },
           ]}
         />
@@ -489,16 +504,19 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
               value={pendingTime ?? timeStringToDate(getTimeForField(activeField))}
               mode="time"
               display="spinner"
+              themeVariant={themeColors.isDark ? 'dark' : 'light'}
               onChange={handleTimeChange}
             />
             {Platform.OS === 'ios' && (
               <TouchableOpacity
                 accessibilityRole="button"
                 accessibilityLabel="Confirm selected time"
-                style={styles.pickerDoneButton}
+                style={[styles.pickerDoneButton, { backgroundColor: themeColors.accent }]}
                 onPress={confirmPendingTime}
               >
-                <Text style={styles.pickerDoneButtonText}>Done</Text>
+                <Text style={[styles.pickerDoneButtonText, { color: themeColors.textOnAccent }]}>
+                  Done
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -526,13 +544,25 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
         </View>
 
         {isManager ? (
-          <TouchableOpacity style={styles.saveButton} onPress={handleConfirm} disabled={saving}>
-            <Text style={styles.saveButtonText}>{saving ? 'Confirming...' : 'Confirm'}</Text>
+          <TouchableOpacity
+            style={[styles.saveButton, { backgroundColor: themeColors.accent }]}
+            onPress={handleConfirm}
+            disabled={saving}
+          >
+            <Text style={[styles.saveButtonText, { color: themeColors.textOnAccent }]}>
+              {saving ? 'Confirming...' : 'Confirm'}
+            </Text>
           </TouchableOpacity>
         ) : (
           !isLocked && (
-            <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
-              <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save'}</Text>
+            <TouchableOpacity
+              style={[styles.saveButton, { backgroundColor: themeColors.accent }]}
+              onPress={handleSave}
+              disabled={saving}
+            >
+              <Text style={[styles.saveButtonText, { color: themeColors.textOnAccent }]}>
+                {saving ? 'Saving...' : 'Save'}
+              </Text>
             </TouchableOpacity>
           )
         )}
@@ -549,17 +579,11 @@ const styles = StyleSheet.create({
   lockedNote: { marginBottom: SPACING.md, fontSize: FONTS.sm },
   editablePill: {
     alignSelf: 'flex-start',
-    backgroundColor: '#ffffff',
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 14,
     marginTop: 8,
     marginBottom: SPACING.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
-    elevation: 2,
   },
   watchCard: {
     borderRadius: BORDER_RADIUS.md,
@@ -567,7 +591,6 @@ const styles = StyleSheet.create({
     marginTop: SPACING.md,
     marginBottom: SPACING.sm,
     borderLeftWidth: 3,
-    borderLeftColor: COLORS.primary,
   },
   watchCardHeader: {
     flexDirection: 'row',
@@ -577,7 +600,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   watchCardTitle: { fontSize: FONTS.base, fontWeight: '700' },
-  automaticLabel: { color: COLORS.primary, fontSize: FONTS.xs, fontWeight: '600' },
+  automaticLabel: { fontSize: FONTS.xs, fontWeight: '600' },
   watchPeriodRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -593,13 +616,14 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     marginTop: SPACING.sm,
   },
-  editablePillText: { color: '#000000', fontSize: FONTS.sm, fontWeight: '600' },
+  editablePillText: { fontSize: FONTS.sm, fontWeight: '600' },
   sectionLabel: { fontSize: FONTS.base, fontWeight: '600', marginBottom: SPACING.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.md },
   chip: {
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
   },
   complianceBox: {
     padding: SPACING.md,
@@ -607,12 +631,11 @@ const styles = StyleSheet.create({
     marginVertical: SPACING.lg,
   },
   saveButton: {
-    backgroundColor: COLORS.primary,
     padding: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
   },
-  saveButtonText: { color: '#fff', fontWeight: '600' },
+  saveButtonText: { fontWeight: '600' },
   commentInput: {
     borderWidth: 1,
     borderRadius: BORDER_RADIUS.md,
@@ -624,13 +647,11 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   pickerDoneButton: {
-    backgroundColor: COLORS.primary,
     paddingVertical: SPACING.sm,
     borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
   },
   pickerDoneButtonText: {
-    color: '#ffffff',
     fontSize: FONTS.base,
     fontWeight: '700',
   },

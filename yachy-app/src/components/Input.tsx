@@ -36,16 +36,10 @@ export const Input: React.FC<InputProps> = ({
   const themeColors = useThemeColors();
   const [passwordVisible, setPasswordVisible] = useState(false);
   const isSearch = variant === 'search';
-  const bgColor = forceLight
-    ? COLORS.white
-    : isSearch
-      ? COLORS.white
-      : themeColors.isDark
-        ? themeColors.surface
-        : COLORS.surface;
-  const textColor = forceLight ? COLORS.black : isSearch ? COLORS.black : themeColors.textPrimary;
-  const accessoryColor = forceLight || isSearch ? COLORS.gray500 : themeColors.textSecondary;
-  const placeholderColor = forceLight || isSearch ? COLORS.gray500 : themeColors.textSecondary;
+  const bgColor = forceLight ? COLORS.white : themeColors.control;
+  const textColor = forceLight ? COLORS.black : themeColors.textPrimary;
+  const accessoryColor = forceLight ? COLORS.gray500 : themeColors.textSecondary;
+  const placeholderColor = forceLight ? COLORS.gray500 : themeColors.textMuted;
 
   const effectiveSecureTextEntry = showPasswordToggle ? !passwordVisible : secureTextEntry;
   const passwordToggleIcon = showPasswordToggle ? (
@@ -74,7 +68,10 @@ export const Input: React.FC<InputProps> = ({
       <View
         style={[
           styles.inputContainer,
-          { backgroundColor: bgColor },
+          {
+            backgroundColor: bgColor,
+            borderColor: forceLight ? COLORS.border : themeColors.border,
+          },
           multiline && styles.inputContainerMultiline,
           error && styles.inputContainerError,
           isSearch && styles.inputContainerSearch,
@@ -132,7 +129,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.danger,
   },
   inputContainerSearch: {
-    backgroundColor: COLORS.white,
+    // Search inputs use the same semantic control surface as every other input.
   },
   input: {
     flex: 1,
@@ -147,7 +144,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   inputSearch: {
-    color: COLORS.black,
+    // Colour is supplied from the active theme above.
   },
   leftIcon: {
     marginRight: SPACING.sm,

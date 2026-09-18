@@ -12,8 +12,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
-  Modal,
-  Pressable,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,7 +20,7 @@ import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../st
 import { useThemeColors } from '../hooks/useThemeColors';
 import vesselTasksService from '../services/vesselTasks';
 import { VesselTask, TaskCategory, Department } from '../types';
-import { LoadingSpinner, PageHeader } from '../components';
+import { DepartmentSelector, LoadingSpinner, PageHeader } from '../components';
 
 const CATEGORY_LABELS: Record<TaskCategory, string> = {
   DAILY: 'Daily',
@@ -38,7 +36,6 @@ export const OverdueTasksScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [departmentFilter, setDepartmentFilter] = useState<Department | ''>('');
-  const [departmentModalVisible, setDepartmentModalVisible] = useState(false);
 
   const vesselId = user?.vesselId ?? null;
 
@@ -46,15 +43,6 @@ export const OverdueTasksScreen = ({ navigation }: any) => {
     if (!departmentFilter) return tasks;
     return tasks.filter((t) => t.department === departmentFilter);
   }, [tasks, departmentFilter]);
-
-  const DEPARTMENT_OPTIONS: { value: Department | ''; label: string }[] = [
-    { value: '', label: 'All Departments' },
-    { value: 'BRIDGE', label: 'Bridge' },
-    { value: 'ENGINEERING', label: 'Engineering' },
-    { value: 'EXTERIOR', label: 'Exterior' },
-    { value: 'INTERIOR', label: 'Interior' },
-    { value: 'GALLEY', label: 'Galley' },
-  ];
 
   const loadTasks = useCallback(async () => {
     if (!vesselId) return;
@@ -121,7 +109,11 @@ export const OverdueTasksScreen = ({ navigation }: any) => {
     <TouchableOpacity
       style={[
         styles.card,
-        { backgroundColor: themeColors.surface, borderLeftColor: COLORS.danger },
+        {
+          backgroundColor: themeColors.surface,
+          borderColor: themeColors.border,
+          borderLeftColor: COLORS.danger,
+        },
       ]}
       onPress={() => onEdit(item)}
       activeOpacity={0.8}
@@ -151,15 +143,27 @@ export const OverdueTasksScreen = ({ navigation }: any) => {
         <Text style={styles.cardDate}>
           Was due: {item.doneByDate ? formatDate(item.doneByDate) : ''}
         </Text>
-        <Text style={styles.categoryBadge}>{CATEGORY_LABELS[item.category]}</Text>
+        <Text
+          style={[
+            styles.categoryBadge,
+            { color: themeColors.accent, backgroundColor: themeColors.accentSoft },
+          ]}
+        >
+          {CATEGORY_LABELS[item.category]}
+        </Text>
       </View>
       {item.notes ? (
-        <Text style={styles.cardNotes} numberOfLines={2}>
+        <Text style={[styles.cardNotes, { color: themeColors.textMuted }]} numberOfLines={2}>
           {item.notes}
         </Text>
       ) : null}
-      <TouchableOpacity style={styles.completeBtn} onPress={() => onMarkComplete(item)}>
-        <Text style={styles.completeBtnText}>Mark complete</Text>
+      <TouchableOpacity
+        style={[styles.completeBtn, { backgroundColor: themeColors.controlSelected }]}
+        onPress={() => onMarkComplete(item)}
+      >
+        <Text style={[styles.completeBtnText, { color: themeColors.textOnAccent }]}>
+          Mark complete
+        </Text>
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -190,24 +194,12 @@ export const OverdueTasksScreen = ({ navigation }: any) => {
         <>
           <View style={styles.filterBar}>
             <View style={styles.filterBarContent}>
-              <Text style={[styles.filterLabel, { color: themeColors.textPrimary }]}>
-                Department
-              </Text>
-              <TouchableOpacity
-                style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
-                onPress={() => setDepartmentModalVisible(true)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
-                  {departmentFilter
-                    ? (DEPARTMENT_OPTIONS.find((o) => o.value === departmentFilter)?.label ??
-                      departmentFilter)
-                    : 'All departments'}
-                </Text>
-                <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>
-                  {departmentModalVisible ? '▲' : '▼'}
-                </Text>
-              </TouchableOpacity>
+              <DepartmentSelector
+                value={departmentFilter || null}
+                onChange={(value) => setDepartmentFilter(value ?? '')}
+                includeAll
+                tightTop
+              />
             </View>
             {departmentFilter ? (
               <TouchableOpacity onPress={() => setDepartmentFilter('')} style={styles.clearFilters}>
@@ -217,40 +209,6 @@ export const OverdueTasksScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             ) : null}
           </View>
-          {departmentModalVisible && (
-            <Modal visible transparent animationType="fade">
-              <Pressable
-                style={styles.modalBackdrop}
-                onPress={() => setDepartmentModalVisible(false)}
-              >
-                <View
-                  style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
-                  onStartShouldSetResponder={() => true}
-                >
-                  <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
-                    Filter by department
-                  </Text>
-                  {DEPARTMENT_OPTIONS.map((opt) => (
-                    <TouchableOpacity
-                      key={opt.value || 'all'}
-                      style={[
-                        styles.modalItem,
-                        departmentFilter === opt.value && styles.modalItemSelected,
-                      ]}
-                      onPress={() => {
-                        setDepartmentFilter(opt.value);
-                        setDepartmentModalVisible(false);
-                      }}
-                    >
-                      <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                        {opt.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </Pressable>
-            </Modal>
-          )}
           <FlatList
             data={filteredTasks}
             keyExtractor={(t) => t.id}
@@ -308,13 +266,13 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   filterBar: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'flex-start',
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.sm,
     paddingBottom: SPACING.xs,
     marginBottom: SPACING.lg,
-    gap: SPACING.md,
+    gap: SPACING.xs,
   },
   filterBarContent: { flex: 1 },
   filterLabel: {
@@ -336,6 +294,7 @@ const styles = StyleSheet.create({
   dropdownChevron: { fontSize: 10 },
   clearFilters: {
     paddingVertical: SPACING.xs,
+    alignSelf: 'flex-end',
   },
   clearFiltersText: {
     fontSize: FONTS.sm,
@@ -380,6 +339,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.lg,
     marginBottom: SPACING.md,
+    borderWidth: 1,
     borderLeftWidth: 4,
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },

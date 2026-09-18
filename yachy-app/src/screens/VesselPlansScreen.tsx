@@ -269,11 +269,7 @@ export const VesselPlansScreen = ({ navigation }: any) => {
           styles.billingRow,
           {
             backgroundColor: themeColors.surface,
-            borderColor: isSelected
-              ? COLORS.primary
-              : themeColors.isDark
-                ? 'rgba(255,255,255,0.1)'
-                : COLORS.border,
+            borderColor: isSelected ? themeColors.accent : themeColors.border,
             borderWidth: isSelected ? 2 : 1,
           },
         ]}
@@ -289,10 +285,18 @@ export const VesselPlansScreen = ({ navigation }: any) => {
         <View
           style={[
             styles.radioOuter,
-            { borderColor: isSelected ? COLORS.primary : themeColors.textSecondary },
+            {
+              borderColor: isSelected
+                ? themeColors.accent
+                : themeColors.isDark
+                  ? themeColors.borderStrong
+                  : themeColors.textSecondary,
+            },
           ]}
         >
-          {isSelected && <View style={styles.radioInner} />}
+          {isSelected && (
+            <View style={[styles.radioInner, { backgroundColor: themeColors.accent }]} />
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -312,14 +316,10 @@ export const VesselPlansScreen = ({ navigation }: any) => {
           {
             backgroundColor: isSelected
               ? themeColors.isDark
-                ? 'rgba(30,58,138,0.35)'
+                ? themeColors.accentSoft
                 : 'rgba(30,58,138,0.06)'
               : themeColors.surface,
-            borderColor: isSelected
-              ? COLORS.primary
-              : themeColors.isDark
-                ? 'rgba(255,255,255,0.1)'
-                : COLORS.border,
+            borderColor: isSelected ? themeColors.accent : themeColors.border,
             borderWidth: isSelected ? 2 : 1,
             opacity: available ? 1 : 0.5,
           },
@@ -363,10 +363,18 @@ export const VesselPlansScreen = ({ navigation }: any) => {
           <View
             style={[
               styles.radioOuter,
-              { borderColor: isSelected ? COLORS.primary : themeColors.textSecondary },
+              {
+                borderColor: isSelected
+                  ? themeColors.accent
+                  : themeColors.isDark
+                    ? themeColors.borderStrong
+                    : themeColors.textSecondary,
+              },
             ]}
           >
-            {isSelected && <View style={styles.radioInner} />}
+            {isSelected && (
+              <View style={[styles.radioInner, { backgroundColor: themeColors.accent }]} />
+            )}
           </View>
         </View>
       </TouchableOpacity>
@@ -380,7 +388,7 @@ export const VesselPlansScreen = ({ navigation }: any) => {
         styles.boardCard,
         {
           backgroundColor: themeColors.surface,
-          borderColor: themeColors.isDark ? 'rgba(255,255,255,0.1)' : COLORS.border,
+          borderColor: themeColors.border,
         },
       ]}
     >
@@ -426,7 +434,7 @@ export const VesselPlansScreen = ({ navigation }: any) => {
               styles.activeCard,
               {
                 backgroundColor: themeColors.surface,
-                borderColor: themeColors.isDark ? 'rgba(255,255,255,0.1)' : COLORS.border,
+                borderColor: themeColors.border,
               },
             ]}
           >
@@ -488,9 +496,9 @@ export const VesselPlansScreen = ({ navigation }: any) => {
               style={styles.restoreButton}
             >
               {isRestoring ? (
-                <ActivityIndicator size="small" color={COLORS.primary} />
+                <ActivityIndicator size="small" color={themeColors.accent} />
               ) : (
-                <Text style={[styles.restoreText, { color: COLORS.primary }]}>
+                <Text style={[styles.restoreText, { color: themeColors.accent }]}>
                   Restore Purchases
                 </Text>
               )}
@@ -506,7 +514,7 @@ export const VesselPlansScreen = ({ navigation }: any) => {
             </Text>
             <View style={styles.legalLinksRow}>
               <TouchableOpacity onPress={() => navigation.navigate('PrivacyPolicy')}>
-                <Text style={[styles.legalLinkText, { color: COLORS.primary }]}>
+                <Text style={[styles.legalLinkText, { color: themeColors.accent }]}>
                   Privacy Policy
                 </Text>
               </TouchableOpacity>
@@ -521,7 +529,7 @@ export const VesselPlansScreen = ({ navigation }: any) => {
                   )
                 }
               >
-                <Text style={[styles.legalLinkText, { color: COLORS.primary }]}>
+                <Text style={[styles.legalLinkText, { color: themeColors.accent }]}>
                   Terms of Use (EULA)
                 </Text>
               </TouchableOpacity>

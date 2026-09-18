@@ -9,6 +9,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
+import type { BackgroundThemeColors } from '../store';
 import { PreviewActionButtons } from './PreviewActionButtons';
 
 export interface ButtonTagCardProps {
@@ -44,19 +45,21 @@ function Checkbox({
 }: {
   checked: boolean;
   onPress: () => void;
-  themeColors: { surface: string };
+  themeColors: BackgroundThemeColors;
 }) {
   return (
     <TouchableOpacity
       onPress={onPress}
       style={[
         styles.checkbox,
-        !checked && { backgroundColor: themeColors.surface },
-        checked && styles.checkboxChecked,
+        {
+          backgroundColor: checked ? themeColors.controlSelected : themeColors.control,
+          borderColor: checked ? themeColors.accent : themeColors.borderStrong,
+        },
       ]}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
     >
-      {checked && <Text style={styles.checkmark}>✓</Text>}
+      {checked && <Text style={[styles.checkmark, { color: themeColors.textOnAccent }]}>✓</Text>}
     </TouchableOpacity>
   );
 }
@@ -97,9 +100,9 @@ export function ButtonTagCard({
     <TouchableOpacity
       style={[
         styles.card,
-        { backgroundColor: themeColors.surface },
+        { backgroundColor: themeColors.surface, borderColor: themeColors.border },
         accentColor && { borderLeftWidth: 4, borderLeftColor: accentColor },
-        selected && styles.cardSelected,
+        selected && { borderColor: themeColors.accent },
       ]}
       onPress={handlePress}
       activeOpacity={0.85}
@@ -223,7 +226,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
   },
-  cardSelected: { borderColor: COLORS.primary },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -262,6 +264,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  checkboxChecked: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   checkmark: { color: COLORS.white, fontSize: 13, fontWeight: '700' },
 });

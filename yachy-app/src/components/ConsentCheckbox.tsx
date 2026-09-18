@@ -22,24 +22,29 @@ export const ConsentCheckbox = ({
   onToggle,
   onPressTerms,
   onPressPrivacy,
-  textColor = COLORS.textPrimary,
+  textColor,
   error,
 }: ConsentCheckboxProps) => {
   const themeColors = useThemeColors();
-  const linkColor = themeColors.isDark ? COLORS.white : COLORS.primary;
+  const linkColor = themeColors.isDark ? themeColors.accent : COLORS.primary;
+  const resolvedTextColor = textColor ?? themeColors.textPrimary;
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.row}
-        onPress={onToggle}
-        activeOpacity={0.7}
-      >
-        <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
-          {checked && <Text style={styles.check}>✓</Text>}
+      <TouchableOpacity style={styles.row} onPress={onToggle} activeOpacity={0.7}>
+        <View
+          style={[
+            styles.checkbox,
+            {
+              backgroundColor: checked ? themeColors.controlSelected : themeColors.control,
+              borderColor: checked ? themeColors.accent : themeColors.borderStrong,
+            },
+          ]}
+        >
+          {checked && <Text style={[styles.check, { color: themeColors.textOnAccent }]}>✓</Text>}
         </View>
-        <Text style={[styles.text, { color: textColor }]}>
-          I agree to the{' '}
+        <Text style={[styles.text, { color: resolvedTextColor }]}>
+          {'I agree to the '}
           <Text
             style={[styles.link, { color: linkColor }]}
             onPress={(e) => {
@@ -48,8 +53,8 @@ export const ConsentCheckbox = ({
             }}
           >
             Terms & Conditions
-          </Text>
-          {' '}and{' '}
+          </Text>{' '}
+          and{' '}
           <Text
             style={[styles.link, { color: linkColor }]}
             onPress={(e) => {
@@ -84,10 +89,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
   },
   check: {
     color: COLORS.white,

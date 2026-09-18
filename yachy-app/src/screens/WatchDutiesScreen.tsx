@@ -27,7 +27,7 @@ import { User } from '../types';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { PageHeader, LabeledDropdown, EnterToAddHint } from '../components';
+import { DepartmentSelector, PageHeader, EnterToAddHint } from '../components';
 import {
   getRules,
   saveRules,
@@ -54,8 +54,6 @@ const DEPT_LABEL: Record<Department, string> = {
   INTERIOR: 'Interior',
   GALLEY: 'Galley',
 };
-const ALL_DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
-
 function toDateStr(d: Date): string {
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -109,11 +107,9 @@ export const WatchDutiesScreen = () => {
   const [dutyGroups, setDutyGroups] = useState<DutyGroup[]>([]);
   const [selectedDept, setSelectedDept] = useState<Department | 'All'>('All');
   const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(new Set());
-  const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [addGroupModalVisible, setAddGroupModalVisible] = useState(false);
   const [newGroupTitle, setNewGroupTitle] = useState('');
   const [newGroupDept, setNewGroupDept] = useState<Department>('BRIDGE');
-  const [newGroupDeptPickerVisible, setNewGroupDeptPickerVisible] = useState(false);
   const [newGroupItems, setNewGroupItems] = useState<string[]>(['']);
   const [addingItemGroupId, setAddingItemGroupId] = useState<string | null>(null);
   const [newItemText, setNewItemText] = useState('');
@@ -316,7 +312,6 @@ export const WatchDutiesScreen = () => {
   const openAddGroupModal = () => {
     setNewGroupTitle('');
     setNewGroupDept('BRIDGE');
-    setNewGroupDeptPickerVisible(false);
     setNewGroupItems(['']);
     newGroupItemRefs.current = [];
     setAddGroupModalVisible(true);
@@ -324,7 +319,6 @@ export const WatchDutiesScreen = () => {
 
   const closeAddGroupModal = () => {
     if (savingGroup) return;
-    setNewGroupDeptPickerVisible(false);
     setAddGroupModalVisible(false);
   };
 
@@ -368,7 +362,6 @@ export const WatchDutiesScreen = () => {
       setDutyGroups(refreshedGroups);
       setNewGroupTitle('');
       setNewGroupItems(['']);
-      setNewGroupDeptPickerVisible(false);
       setAddGroupModalVisible(false);
     } catch (e) {
       if (createdGroupId) {
@@ -478,7 +471,7 @@ export const WatchDutiesScreen = () => {
           { backgroundColor: themeColors.background, justifyContent: 'center' },
         ]}
       >
-        <ActivityIndicator color={COLORS.primary} />
+        <ActivityIndicator color={themeColors.accent} />
       </View>
     );
   }
@@ -514,7 +507,12 @@ export const WatchDutiesScreen = () => {
             </TouchableOpacity>
           )}
         </View>
-        <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
+        <View
+          style={[
+            styles.card,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
           {weekDates.map((d, i) => {
             const dateStr = toDateStr(d);
             const dayAssignments = assignments.filter((a) => a.date === dateStr);
@@ -540,14 +538,18 @@ export const WatchDutiesScreen = () => {
                   canManage ? (
                     <View
                       style={{
-                        backgroundColor: COLORS.primary + '20',
+                        backgroundColor: themeColors.accentSoft,
                         borderRadius: 12,
                         paddingHorizontal: 10,
                         paddingVertical: 4,
                       }}
                     >
                       <Text
-                        style={{ color: COLORS.primary, fontSize: FONTS.xs, fontWeight: '600' }}
+                        style={{
+                          color: themeColors.accent,
+                          fontSize: FONTS.xs,
+                          fontWeight: '600',
+                        }}
                       >
                         {'\u2192'} Select a crew member
                       </Text>
@@ -584,7 +586,8 @@ export const WatchDutiesScreen = () => {
                 style={[
                   styles.modalBox,
                   {
-                    backgroundColor: themeColors.surface,
+                    backgroundColor: themeColors.surfaceElevated,
+                    borderColor: themeColors.border,
                     // Let short forms stay compact, while giving long assignment
                     // and crew lists room to scroll on smaller phones.
                     maxHeight: '85%',
@@ -608,14 +611,24 @@ export const WatchDutiesScreen = () => {
                           key={c.id}
                           style={[
                             styles.modalItem,
-                            selectedCrewId === c.id && styles.modalItemSelected,
+                            selectedCrewId === c.id && {
+                              backgroundColor: themeColors.controlSelected,
+                            },
                           ]}
                           onPress={() => {
                             setSelectedCrewId(c.id);
                             setCrewPickerVisible(false);
                           }}
                         >
-                          <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base }}>
+                          <Text
+                            style={{
+                              color:
+                                selectedCrewId === c.id
+                                  ? themeColors.textOnAccent
+                                  : themeColors.textPrimary,
+                              fontSize: FONTS.base,
+                            }}
+                          >
                             {c.name}
                           </Text>
                         </TouchableOpacity>
@@ -623,7 +636,10 @@ export const WatchDutiesScreen = () => {
                     </ScrollView>
                     <TouchableOpacity
                       onPress={() => setCrewPickerVisible(false)}
-                      style={[styles.secondaryButton, { marginTop: SPACING.md }]}
+                      style={[
+                        styles.secondaryButton,
+                        { marginTop: SPACING.md, borderColor: themeColors.borderStrong },
+                      ]}
                     >
                       <Text style={{ color: themeColors.textPrimary }}>Back</Text>
                     </TouchableOpacity>
@@ -683,7 +699,11 @@ export const WatchDutiesScreen = () => {
                     <TouchableOpacity
                       style={[
                         styles.dropdown,
-                        { backgroundColor: themeColors.background, marginBottom: SPACING.sm },
+                        {
+                          backgroundColor: themeColors.control,
+                          borderColor: themeColors.border,
+                          marginBottom: SPACING.sm,
+                        },
                       ]}
                       onPress={() => setCrewPickerVisible(true)}
                     >
@@ -700,7 +720,11 @@ export const WatchDutiesScreen = () => {
                       <TouchableOpacity
                         style={[
                           styles.dropdown,
-                          { backgroundColor: themeColors.background, flex: 1 },
+                          {
+                            backgroundColor: themeColors.control,
+                            borderColor: themeColors.border,
+                            flex: 1,
+                          },
                         ]}
                         onPress={() => setActiveTimeField('start')}
                       >
@@ -711,7 +735,11 @@ export const WatchDutiesScreen = () => {
                       <TouchableOpacity
                         style={[
                           styles.dropdown,
-                          { backgroundColor: themeColors.background, flex: 1 },
+                          {
+                            backgroundColor: themeColors.control,
+                            borderColor: themeColors.border,
+                            flex: 1,
+                          },
                         ]}
                         onPress={() => setActiveTimeField('end')}
                       >
@@ -742,7 +770,13 @@ export const WatchDutiesScreen = () => {
                     {activeTimeField && Platform.OS === 'ios' && (
                       <TouchableOpacity
                         onPress={() => setActiveTimeField(null)}
-                        style={[styles.primaryButton, { marginBottom: SPACING.md }]}
+                        style={[
+                          styles.primaryButton,
+                          {
+                            backgroundColor: themeColors.controlSelected,
+                            marginBottom: SPACING.md,
+                          },
+                        ]}
                       >
                         <Text style={{ color: '#fff', fontWeight: '600' }}>Done</Text>
                       </TouchableOpacity>
@@ -750,7 +784,13 @@ export const WatchDutiesScreen = () => {
 
                     {!activeTimeField && (
                       <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
-                        <TouchableOpacity onPress={closeAssignModal} style={styles.secondaryButton}>
+                        <TouchableOpacity
+                          onPress={closeAssignModal}
+                          style={[
+                            styles.secondaryButton,
+                            { borderColor: themeColors.borderStrong },
+                          ]}
+                        >
                           <Text style={{ color: themeColors.textPrimary }}>Close</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -758,7 +798,10 @@ export const WatchDutiesScreen = () => {
                           disabled={savingAssignment || !selectedCrewId}
                           style={[
                             styles.primaryButton,
-                            { opacity: savingAssignment || !selectedCrewId ? 0.6 : 1 },
+                            {
+                              backgroundColor: themeColors.controlSelected,
+                              opacity: savingAssignment || !selectedCrewId ? 0.6 : 1,
+                            },
                           ]}
                         >
                           <Text style={{ color: '#fff', fontWeight: '600' }}>
@@ -775,7 +818,14 @@ export const WatchDutiesScreen = () => {
         )}
 
         <View
-          style={[styles.card, { backgroundColor: themeColors.surface, marginTop: SPACING.lg }]}
+          style={[
+            styles.card,
+            {
+              backgroundColor: themeColors.surface,
+              borderColor: themeColors.border,
+              marginTop: SPACING.lg,
+            },
+          ]}
         >
           <View style={styles.cardHeaderRow}>
             <Text
@@ -792,7 +842,7 @@ export const WatchDutiesScreen = () => {
               >
                 <Text
                   style={{
-                    color: themeColors.isDark ? COLORS.white : COLORS.primary,
+                    color: themeColors.accent,
                     fontSize: FONTS.sm,
                     fontWeight: '600',
                   }}
@@ -810,7 +860,11 @@ export const WatchDutiesScreen = () => {
                 multiline
                 style={[
                   styles.rulesInput,
-                  { color: themeColors.textPrimary, borderColor: themeColors.textSecondary },
+                  {
+                    backgroundColor: themeColors.control,
+                    color: themeColors.textPrimary,
+                    borderColor: themeColors.border,
+                  },
                 ]}
                 placeholder="Enter watch duty rules..."
                 placeholderTextColor={themeColors.textSecondary}
@@ -818,14 +872,14 @@ export const WatchDutiesScreen = () => {
               <View style={{ flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm }}>
                 <TouchableOpacity
                   onPress={() => setEditingRules(false)}
-                  style={styles.secondaryButton}
+                  style={[styles.secondaryButton, { borderColor: themeColors.borderStrong }]}
                 >
                   <Text style={{ color: themeColors.textPrimary }}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={handleSaveRules}
                   disabled={savingRules}
-                  style={styles.primaryButton}
+                  style={[styles.primaryButton, { backgroundColor: themeColors.controlSelected }]}
                 >
                   <Text style={{ color: '#fff', fontWeight: '600' }}>
                     {savingRules ? 'Saving...' : 'Save'}
@@ -864,52 +918,11 @@ export const WatchDutiesScreen = () => {
           )}
         </View>
 
-        <LabeledDropdown
-          label="Department"
-          value={selectedDept === 'All' ? 'All Departments' : DEPT_LABEL[selectedDept]}
-          open={filterModalVisible}
-          onPress={() => setFilterModalVisible(true)}
+        <DepartmentSelector
+          value={selectedDept === 'All' ? null : selectedDept}
+          onChange={(value) => setSelectedDept(value ?? 'All')}
+          includeAll
         />
-
-        {filterModalVisible && (
-          <Modal visible transparent animationType="fade">
-            <Pressable style={styles.modalBackdrop} onPress={() => setFilterModalVisible(false)}>
-              <View
-                style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
-                onStartShouldSetResponder={() => true}
-              >
-                <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
-                  Filter by department
-                </Text>
-                <TouchableOpacity
-                  style={[styles.modalItem, selectedDept === 'All' && styles.modalItemSelected]}
-                  onPress={() => {
-                    setSelectedDept('All');
-                    setFilterModalVisible(false);
-                  }}
-                >
-                  <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base }}>
-                    All Departments
-                  </Text>
-                </TouchableOpacity>
-                {ALL_DEPARTMENTS.map((dept) => (
-                  <TouchableOpacity
-                    key={dept}
-                    style={[styles.modalItem, selectedDept === dept && styles.modalItemSelected]}
-                    onPress={() => {
-                      setSelectedDept(dept);
-                      setFilterModalVisible(false);
-                    }}
-                  >
-                    <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base }}>
-                      {DEPT_LABEL[dept]}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </Pressable>
-          </Modal>
-        )}
 
         <View
           style={{
@@ -925,7 +938,7 @@ export const WatchDutiesScreen = () => {
           </Text>
           {canManage && (
             <TouchableOpacity onPress={openAddGroupModal}>
-              <Text style={{ color: COLORS.primary, fontSize: FONTS.sm, fontWeight: '600' }}>
+              <Text style={{ color: themeColors.accent, fontSize: FONTS.sm, fontWeight: '600' }}>
                 + Add group
               </Text>
             </TouchableOpacity>
@@ -1011,49 +1024,10 @@ export const WatchDutiesScreen = () => {
                     ]}
                   />
 
-                  <LabeledDropdown
-                    label="Department"
-                    value={DEPT_LABEL[newGroupDept]}
-                    open={newGroupDeptPickerVisible}
-                    onPress={() => setNewGroupDeptPickerVisible((visible) => !visible)}
+                  <DepartmentSelector
+                    value={newGroupDept}
+                    onChange={(value) => value && setNewGroupDept(value)}
                   />
-                  {newGroupDeptPickerVisible && (
-                    <View
-                      style={[
-                        styles.groupDepartmentOptions,
-                        {
-                          borderColor: themeColors.textSecondary + '50',
-                          backgroundColor: themeColors.background,
-                        },
-                      ]}
-                    >
-                      {ALL_DEPARTMENTS.map((dept) => (
-                        <TouchableOpacity
-                          key={dept}
-                          style={[
-                            styles.groupDepartmentOption,
-                            newGroupDept === dept && {
-                              backgroundColor: COLORS.primary + '18',
-                            },
-                          ]}
-                          onPress={() => {
-                            setNewGroupDept(dept);
-                            setNewGroupDeptPickerVisible(false);
-                          }}
-                        >
-                          <Text
-                            style={{
-                              color: themeColors.textPrimary,
-                              fontSize: FONTS.base,
-                              fontWeight: newGroupDept === dept ? '600' : '400',
-                            }}
-                          >
-                            {DEPT_LABEL[dept]}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
 
                   <Text
                     style={[
@@ -1111,7 +1085,10 @@ export const WatchDutiesScreen = () => {
                     disabled={savingGroup || !newGroupTitle.trim()}
                     style={[
                       styles.groupCreateButton,
-                      { opacity: savingGroup || !newGroupTitle.trim() ? 0.6 : 1 },
+                      {
+                        backgroundColor: themeColors.controlSelected,
+                        opacity: savingGroup || !newGroupTitle.trim() ? 0.6 : 1,
+                      },
                     ]}
                   >
                     <Text style={styles.groupCreateButtonText}>
@@ -1144,7 +1121,11 @@ export const WatchDutiesScreen = () => {
             key={group.id}
             style={[
               styles.card,
-              { backgroundColor: themeColors.surface, marginBottom: SPACING.sm },
+              {
+                backgroundColor: themeColors.surface,
+                borderColor: themeColors.border,
+                marginBottom: SPACING.sm,
+              },
             ]}
           >
             <TouchableOpacity
@@ -1171,13 +1152,13 @@ export const WatchDutiesScreen = () => {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <View
                   style={{
-                    backgroundColor: COLORS.primary + '20',
+                    backgroundColor: themeColors.accentSoft,
                     borderRadius: 10,
                     paddingHorizontal: 8,
                     paddingVertical: 2,
                   }}
                 >
-                  <Text style={{ color: COLORS.primary, fontSize: FONTS.xs }}>
+                  <Text style={{ color: themeColors.accent, fontSize: FONTS.xs }}>
                     {DEPT_LABEL[group.department]}
                   </Text>
                 </View>
@@ -1270,7 +1251,9 @@ export const WatchDutiesScreen = () => {
                       }}
                       style={{ marginTop: 6 }}
                     >
-                      <Text style={{ color: COLORS.primary, fontSize: FONTS.sm }}>+ Add item</Text>
+                      <Text style={{ color: themeColors.accent, fontSize: FONTS.sm }}>
+                        + Add item
+                      </Text>
                     </TouchableOpacity>
                   ))}
               </>
@@ -1318,7 +1301,11 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: FONTS.xs,
   },
-  card: { borderRadius: BORDER_RADIUS.lg, padding: SPACING.md },
+  card: {
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+    borderWidth: 1,
+  },
   cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   weekRow: {
     flexDirection: 'row',
@@ -1375,6 +1362,7 @@ const styles = StyleSheet.create({
     maxWidth: 440,
     minWidth: 260,
     maxHeight: '85%',
+    borderWidth: 1,
   },
   modalTitle: { fontSize: FONTS.lg, fontWeight: '600', marginBottom: SPACING.md },
   modalItem: {

@@ -4,13 +4,7 @@
  */
 
 import React, { useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeStore, BACKGROUND_THEMES, BackgroundThemeId } from '../store';
@@ -35,7 +29,7 @@ export const ThemeSettingsScreen = () => {
   if (!loaded) return null;
 
   return (
-    <View style={styles.pageWrap}>
+    <View style={[styles.pageWrap, { backgroundColor: themeColors.background }]}>
       <PageHeader title="Appearance" />
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
@@ -47,7 +41,12 @@ export const ThemeSettingsScreen = () => {
           Background theme: Day or Night Mode
         </Text>
 
-        <View style={[styles.section, { backgroundColor: themeColors.surface }]}>
+        <View
+          style={[
+            styles.section,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
           {THEMES.map((theme, index) => {
             const isSelected = backgroundTheme === theme.id;
             const colors = BACKGROUND_THEMES[theme.id];
@@ -56,19 +55,46 @@ export const ThemeSettingsScreen = () => {
             return (
               <TouchableOpacity
                 key={theme.id}
-                style={[styles.row, isLast && styles.rowLast, { borderBottomColor: themeColors.surfaceAlt }]}
+                style={[
+                  styles.row,
+                  isLast && styles.rowLast,
+                  { borderBottomColor: themeColors.border },
+                ]}
                 onPress={() => setBackgroundTheme(theme.id)}
                 activeOpacity={0.7}
               >
-                <View style={[styles.preview, { backgroundColor: colors.background }]}>
-                  <View style={[styles.previewDot, { backgroundColor: colors.surface }]} />
+                <View
+                  style={[
+                    styles.preview,
+                    { backgroundColor: colors.background, borderColor: colors.border },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.previewDot,
+                      { backgroundColor: colors.surface, borderColor: colors.borderStrong },
+                    ]}
+                  />
                 </View>
                 <View style={styles.rowText}>
-                  <Text style={[styles.rowLabel, { color: themeColors.textPrimary }]}>{theme.label}</Text>
-                  <Text style={[styles.rowDesc, { color: themeColors.textSecondary }]}>{theme.description}</Text>
+                  <Text style={[styles.rowLabel, { color: themeColors.textPrimary }]}>
+                    {theme.label}
+                  </Text>
+                  <Text style={[styles.rowDesc, { color: themeColors.textSecondary }]}>
+                    {theme.description}
+                  </Text>
                 </View>
-                <View style={[styles.radio, isSelected && styles.radioSelected]}>
-                  {isSelected && <View style={styles.radioDot} />}
+                <View
+                  style={[
+                    styles.radio,
+                    {
+                      borderColor: isSelected ? themeColors.accent : themeColors.borderStrong,
+                    },
+                  ]}
+                >
+                  {isSelected && (
+                    <View style={[styles.radioDot, { backgroundColor: themeColors.accent }]} />
+                  )}
                 </View>
               </TouchableOpacity>
             );
@@ -100,6 +126,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 6,
     elevation: 3,
+    borderWidth: 1,
   },
   row: {
     flexDirection: 'row',

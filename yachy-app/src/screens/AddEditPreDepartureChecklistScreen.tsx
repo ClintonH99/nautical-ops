@@ -30,6 +30,7 @@ import {
   LoadingSpinner,
   PageHeader,
   LabeledDropdown,
+  DepartmentSelector,
   EnterToAddHint,
 } from '../components';
 import { Trip } from '../types';
@@ -76,7 +77,6 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
   const [saving, setSaving] = useState(false);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [tripModalVisible, setTripModalVisible] = useState(false);
-  const [departmentModalVisible, setDepartmentModalVisible] = useState(false);
 
   const vesselId = user?.vesselId ?? null;
 
@@ -213,8 +213,6 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
   };
 
   const selectedTrip = trips.find((t) => t.id === tripId);
-  const selectedDeptLabel =
-    DEPARTMENT_OPTIONS.find((o) => o.value === department)?.label ?? 'All Departments';
 
   if (!vesselId) {
     return (
@@ -295,12 +293,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
         {showEditableFields && (
           <>
             <View style={styles.fieldContainer}>
-              <LabeledDropdown
-                label="Department"
-                value={selectedDeptLabel}
-                open={departmentModalVisible}
-                onPress={() => setDepartmentModalVisible(true)}
-              />
+              <DepartmentSelector value={department} onChange={setDepartment} includeAll />
             </View>
             <View style={styles.fieldContainer}>
               <LabeledDropdown
@@ -311,84 +304,85 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
               />
             </View>
 
-            {departmentModalVisible && (
-              <Modal visible transparent animationType="fade">
-                <Pressable
-                  style={styles.modalBackdrop}
-                  onPress={() => setDepartmentModalVisible(false)}
-                >
-                  <View
-                    style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
-                    onStartShouldSetResponder={() => true}
-                  >
-                    <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
-                      Select department
-                    </Text>
-                    {DEPARTMENT_OPTIONS.map((opt) => (
-                      <TouchableOpacity
-                        key={opt.value ?? 'all'}
-                        style={[
-                          styles.modalItem,
-                          department === opt.value && styles.modalItemSelected,
-                        ]}
-                        onPress={() => {
-                          setDepartment(opt.value);
-                          setDepartmentModalVisible(false);
-                        }}
-                      >
-                        <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                          {opt.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </Pressable>
-              </Modal>
-            )}
-
             {tripModalVisible && (
               <Modal visible transparent animationType="fade">
                 <Pressable style={styles.modalBackdrop} onPress={() => setTripModalVisible(false)}>
                   <View
-                    style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+                    style={[
+                      styles.modalBox,
+                      {
+                        backgroundColor: themeColors.surfaceElevated,
+                        borderColor: themeColors.border,
+                      },
+                    ]}
                     onStartShouldSetResponder={() => true}
                   >
                     <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
                       Select linked trip
                     </Text>
                     <TouchableOpacity
-                      style={[styles.modalItem, !tripId && styles.modalItemSelected]}
+                      style={[
+                        styles.modalItem,
+                        !tripId && { backgroundColor: themeColors.controlSelected },
+                      ]}
                       onPress={() => {
                         setTripId(null);
                         setTripModalVisible(false);
                       }}
                     >
-                      <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
+                      <Text
+                        style={[
+                          styles.modalItemText,
+                          {
+                            color: !tripId ? themeColors.textOnAccent : themeColors.textPrimary,
+                          },
+                        ]}
+                      >
                         No linked trip
                       </Text>
-                      {!tripId && <Text style={styles.selectedMark}>✓</Text>}
+                      {!tripId && (
+                        <Text style={[styles.selectedMark, { color: themeColors.textOnAccent }]}>
+                          ✓
+                        </Text>
+                      )}
                     </TouchableOpacity>
                     <ScrollView style={styles.tripOptions} nestedScrollEnabled>
                       {trips.map((t) => (
                         <TouchableOpacity
                           key={t.id}
-                          style={[styles.modalItem, tripId === t.id && styles.modalItemSelected]}
+                          style={[
+                            styles.modalItem,
+                            tripId === t.id && {
+                              backgroundColor: themeColors.controlSelected,
+                            },
+                          ]}
                           onPress={() => {
                             setTripId(t.id);
                             setTripModalVisible(false);
                           }}
                         >
                           <View style={styles.modalItemContent}>
-                            <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
+                            <Text
+                              style={[
+                                styles.modalItemText,
+                                {
+                                  color:
+                                    tripId === t.id
+                                      ? themeColors.textOnAccent
+                                      : themeColors.textPrimary,
+                                },
+                              ]}
+                            >
                               {t.title}
                             </Text>
                             <Text
                               style={[
                                 styles.modalItemSub,
                                 {
-                                  color: themeColors.isDark
-                                    ? COLORS.white
-                                    : themeColors.textSecondary,
+                                  color:
+                                    tripId === t.id
+                                      ? themeColors.textOnAccent
+                                      : themeColors.textSecondary,
                                 },
                               ]}
                             >
@@ -396,7 +390,13 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
                               {formatLocalDateString(t.endDate)}
                             </Text>
                           </View>
-                          {tripId === t.id && <Text style={styles.selectedMark}>✓</Text>}
+                          {tripId === t.id && (
+                            <Text
+                              style={[styles.selectedMark, { color: themeColors.textOnAccent }]}
+                            >
+                              ✓
+                            </Text>
+                          )}
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
@@ -415,7 +415,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
           {isEdit
             ? items.map((item, idx) => (
                 <View key={item.id} style={styles.itemRow}>
-                  <Text style={styles.itemBullet}>{idx + 1}.</Text>
+                  <Text style={[styles.itemBullet, { color: themeColors.accent }]}>{idx + 1}.</Text>
                   <Text style={[styles.itemLabel, { color: themeColors.textPrimary }]}>
                     {item.label}
                   </Text>
@@ -431,7 +431,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
               ))
             : draftItems.map((label, idx) => (
                 <View key={`${label}-${idx}`} style={styles.itemRow}>
-                  <Text style={styles.itemBullet}>{idx + 1}.</Text>
+                  <Text style={[styles.itemBullet, { color: themeColors.accent }]}>{idx + 1}.</Text>
                   <Text style={[styles.itemLabel, { color: themeColors.textPrimary }]}>
                     {label}
                   </Text>
@@ -475,14 +475,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
               onPress={() => navigation.goBack()}
               disabled={saving}
             >
-              <Text
-                style={[
-                  styles.cancelText,
-                  { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                ]}
-              >
-                Cancel
-              </Text>
+              <Text style={[styles.cancelText, { color: themeColors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -512,6 +505,7 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     minWidth: 280,
     maxHeight: 400,
+    borderWidth: 1,
   },
   modalTitle: { fontSize: FONTS.lg, fontWeight: '600', marginBottom: SPACING.md },
   modalItem: {
@@ -543,7 +537,6 @@ const styles = StyleSheet.create({
   itemBullet: {
     fontSize: FONTS.base,
     fontWeight: '600',
-    color: COLORS.primary,
     minWidth: 24,
   },
   itemLabel: { flex: 1, fontSize: FONTS.base },

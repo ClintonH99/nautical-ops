@@ -74,7 +74,10 @@ export const FAQScreen = ({ navigation }: any) => {
       });
       if (error) throw error;
       setQuestion('');
-      Alert.alert('Question Submitted', 'Your question has been received. We will get back to you as soon as possible.');
+      Alert.alert(
+        'Question Submitted',
+        'Your question has been received. We will get back to you as soon as possible.'
+      );
     } catch (e) {
       Alert.alert('Error', 'Could not submit your question. Please try again.');
     } finally {
@@ -83,7 +86,7 @@ export const FAQScreen = ({ navigation }: any) => {
   };
 
   return (
-    <View style={styles.pageWrap}>
+    <View style={[styles.pageWrap, { backgroundColor: themeColors.background }]}>
       <PageHeader title="FAQ & Help" />
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
@@ -95,7 +98,7 @@ export const FAQScreen = ({ navigation }: any) => {
         </Text>
 
         {loading ? (
-          <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.xl }} />
+          <ActivityIndicator color={themeColors.accent} style={{ marginTop: SPACING.xl }} />
         ) : (
           <View style={styles.faqList}>
             {faqs.map((faq) => {
@@ -103,7 +106,13 @@ export const FAQScreen = ({ navigation }: any) => {
               return (
                 <TouchableOpacity
                   key={faq.id}
-                  style={[styles.faqItem, { backgroundColor: themeColors.surface, borderColor: themeColors.isDark ? 'rgba(255,255,255,0.08)' : COLORS.border }]}
+                  style={[
+                    styles.faqItem,
+                    {
+                      backgroundColor: themeColors.surface,
+                      borderColor: themeColors.border,
+                    },
+                  ]}
                   onPress={() => setExpandedId(isOpen ? null : faq.id)}
                   activeOpacity={0.8}
                 >
@@ -129,7 +138,12 @@ export const FAQScreen = ({ navigation }: any) => {
           </View>
         )}
 
-        <View style={[styles.submitCard, { backgroundColor: themeColors.surface, borderColor: themeColors.isDark ? 'rgba(255,255,255,0.08)' : COLORS.border }]}>
+        <View
+          style={[
+            styles.submitCard,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
           <Text style={[styles.submitTitle, { color: themeColors.textPrimary }]}>
             Still have a question?
           </Text>
@@ -137,7 +151,14 @@ export const FAQScreen = ({ navigation }: any) => {
             Can't find what you're looking for? Submit your question and we'll get back to you.
           </Text>
           <TextInput
-            style={[styles.input, { backgroundColor: themeColors.surface, color: themeColors.textPrimary, borderColor: themeColors.isDark ? 'rgba(255,255,255,0.12)' : COLORS.border }]}
+            style={[
+              styles.input,
+              {
+                backgroundColor: themeColors.control,
+                color: themeColors.textPrimary,
+                borderColor: themeColors.isDark ? themeColors.borderStrong : COLORS.border,
+              },
+            ]}
             placeholder="Type your question here..."
             placeholderTextColor={themeColors.textSecondary}
             value={question}
@@ -147,7 +168,10 @@ export const FAQScreen = ({ navigation }: any) => {
             textAlignVertical="top"
           />
           <TouchableOpacity
-            style={[styles.submitButton, { backgroundColor: COLORS.primary, opacity: submitting ? 0.7 : 1 }]}
+            style={[
+              styles.submitButton,
+              { backgroundColor: COLORS.primary, opacity: submitting ? 0.7 : 1 },
+            ]}
             onPress={handleSubmit}
             disabled={submitting}
           >
@@ -159,13 +183,11 @@ export const FAQScreen = ({ navigation }: any) => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.websiteButton, { borderColor: COLORS.primary }]}
-            onPress={() =>
-              Linking.openURL('https://www.nautical-ops.com/support').catch(() => {})
-            }
+            style={[styles.websiteButton, { borderColor: themeColors.accent }]}
+            onPress={() => Linking.openURL('https://www.nautical-ops.com/support').catch(() => {})}
             activeOpacity={0.8}
           >
-            <Text style={[styles.websiteButtonText, { color: COLORS.primary }]}>
+            <Text style={[styles.websiteButtonText, { color: themeColors.accent }]}>
               Visit Website
             </Text>
           </TouchableOpacity>

@@ -17,7 +17,6 @@ import {
   Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Calendar } from 'react-native-calendars';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -25,7 +24,7 @@ import userService from '../services/user';
 import watchKeepingService, { getWatchDateTime, TimetableSlot } from '../services/watchKeeping';
 import { User } from '../types';
 import { formatLocalDateString, toYYYYMMDD } from '../utils';
-import { Input, Button, LoadingSpinner, PageHeader } from '../components';
+import { DateOnlyPicker, Input, Button, LoadingSpinner, PageHeader } from '../components';
 
 function generateWatchTimetable(
   watchIntervalHours: number,
@@ -101,7 +100,6 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
   const [editingTimetableId, setEditingTimetableId] = useState<string | null>(null);
   const [watchTitle, setWatchTitle] = useState('');
   const [forDate, setForDate] = useState(() => toYYYYMMDD(new Date()));
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [startTime, setStartTime] = useState('06:00');
   const [startLocation, setStartLocation] = useState('');
   const [destination, setDestination] = useState('');
@@ -453,68 +451,18 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
           placeholder="e.g. Morning Watch"
           autoCapitalize="words"
         />
-        <Text style={[styles.label, { color: themeColors.textPrimary }]}>Voyage Start Date</Text>
-        <TouchableOpacity
-          style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
-          onPress={() => setDatePickerOpen(true)}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
-            {forDate
-              ? formatLocalDateString(forDate, {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })
-              : 'Select voyage start date'}
-          </Text>
-          <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>▼</Text>
-        </TouchableOpacity>
-        {datePickerOpen && (
-          <Modal visible transparent animationType="fade">
-            <Pressable style={styles.modalBackdrop} onPress={() => setDatePickerOpen(false)}>
-              <View
-                style={[styles.calendarModal, { backgroundColor: themeColors.surface }]}
-                onStartShouldSetResponder={() => true}
-              >
-                <Text style={[styles.calendarTitle, { color: themeColors.textPrimary }]}>
-                  Voyage Start Date
-                </Text>
-                <Calendar
-                  current={forDate || undefined}
-                  markedDates={
-                    forDate
-                      ? {
-                          [forDate]: {
-                            selected: true,
-                            selectedColor: COLORS.primary,
-                            selectedTextColor: COLORS.white,
-                          },
-                        }
-                      : {}
-                  }
-                  onDayPress={(day: { dateString: string }) => {
-                    setForDate(day.dateString);
-                    setDatePickerOpen(false);
-                  }}
-                  theme={{
-                    backgroundColor: themeColors.surface,
-                    calendarBackground: themeColors.surface,
-                    dayTextColor: themeColors.textPrimary,
-                    monthTextColor: themeColors.textPrimary,
-                    textSectionTitleColor: themeColors.textSecondary,
-                    todayTextColor: COLORS.primary,
-                    arrowColor: COLORS.primary,
-                  }}
-                />
-              </View>
-            </Pressable>
-          </Modal>
-        )}
+        <DateOnlyPicker
+          label="Voyage Start Date"
+          value={forDate}
+          onChange={setForDate}
+          title="Select voyage start date"
+        />
         <Text style={[styles.label, { color: themeColors.textPrimary }]}>Start Time</Text>
         <TouchableOpacity
-          style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
+          style={[
+            styles.dropdown,
+            { backgroundColor: themeColors.control, borderColor: themeColors.border },
+          ]}
           onPress={() => setStartTimeDropdownOpen(!startTimeDropdownOpen)}
           activeOpacity={0.7}
         >
@@ -527,14 +475,25 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
           <Modal visible transparent animationType="fade">
             <Pressable style={styles.modalBackdrop} onPress={() => setStartTimeDropdownOpen(false)}>
               <View
-                style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+                style={[
+                  styles.modalBox,
+                  {
+                    backgroundColor: themeColors.surfaceElevated,
+                    borderColor: themeColors.border,
+                  },
+                ]}
                 onStartShouldSetResponder={() => true}
               >
                 <ScrollView style={styles.timeList} nestedScrollEnabled>
                   {TIME_OPTIONS.map((time) => (
                     <TouchableOpacity
                       key={time}
-                      style={[styles.modalItem, startTime === time && styles.modalItemSelected]}
+                      style={[
+                        styles.modalItem,
+                        startTime === time && {
+                          backgroundColor: themeColors.controlSelected,
+                        },
+                      ]}
                       onPress={() => {
                         setStartTime(time);
                         setStartTimeDropdownOpen(false);
@@ -544,6 +503,12 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
                         style={[
                           styles.modalItemText,
                           startTime === time && styles.modalItemTextSelected,
+                          {
+                            color:
+                              startTime === time
+                                ? themeColors.textOnAccent
+                                : themeColors.textPrimary,
+                          },
                         ]}
                       >
                         {time}
@@ -587,21 +552,19 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
           onChangeText={setHoursOfRest}
           placeholder="e.g. 8"
         />
-        <Text
-          style={[
-            styles.hint,
-            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-          ]}
-        >
+        <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
           Watch time per crew is calculated from crew count, rest hours & total running time.
         </Text>
         <Text style={[styles.label, { color: themeColors.textPrimary }]}>Crew</Text>
         <TouchableOpacity
-          style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
+          style={[
+            styles.dropdown,
+            { backgroundColor: themeColors.control, borderColor: themeColors.border },
+          ]}
           onPress={() => setCrewDropdownOpen(!crewDropdownOpen)}
           activeOpacity={0.7}
         >
-          <Text style={styles.dropdownText} numberOfLines={2}>
+          <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]} numberOfLines={2}>
             {crewDisplayText}
           </Text>
           <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>
@@ -612,16 +575,17 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
           <Modal visible transparent animationType="fade">
             <Pressable style={styles.modalBackdrop} onPress={() => setCrewDropdownOpen(false)}>
               <View
-                style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+                style={[
+                  styles.modalBox,
+                  {
+                    backgroundColor: themeColors.surfaceElevated,
+                    borderColor: themeColors.border,
+                  },
+                ]}
                 onStartShouldSetResponder={() => true}
               >
                 {crew.length === 0 ? (
-                  <Text
-                    style={[
-                      styles.emptyCrew,
-                      { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                    ]}
-                  >
+                  <Text style={[styles.emptyCrew, { color: themeColors.textSecondary }]}>
                     No crew members on vessel
                   </Text>
                 ) : (
@@ -631,13 +595,21 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
                       return (
                         <TouchableOpacity
                           key={member.id}
-                          style={[styles.modalItem, isSelected && styles.modalItemSelected]}
+                          style={[
+                            styles.modalItem,
+                            isSelected && { backgroundColor: themeColors.controlSelected },
+                          ]}
                           onPress={() => toggleCrewMember(member)}
                         >
                           <Text
                             style={[
                               styles.modalItemText,
                               isSelected && styles.modalItemTextSelected,
+                              {
+                                color: isSelected
+                                  ? themeColors.textOnAccent
+                                  : themeColors.textPrimary,
+                              },
                             ]}
                           >
                             {member.name}
@@ -647,8 +619,8 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
                               style={[
                                 styles.modalItemSubtext,
                                 {
-                                  color: themeColors.isDark
-                                    ? COLORS.white
+                                  color: isSelected
+                                    ? themeColors.textOnAccent
                                     : themeColors.textSecondary,
                                 },
                               ]}
@@ -700,50 +672,33 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
       {timetableSlots !== null && timetablePreviewOpen && (
         <Modal visible transparent animationType="slide">
           <View style={[styles.timetableModal, { backgroundColor: themeColors.background }]}>
-            <View style={[styles.timetableHeader, { backgroundColor: themeColors.surface }]}>
-              <Text
-                style={[
-                  styles.timetableTitle,
-                  { color: themeColors.isDark ? COLORS.white : COLORS.primary },
-                ]}
-              >
+            <View
+              style={[
+                styles.timetableHeader,
+                {
+                  backgroundColor: themeColors.surfaceElevated,
+                  borderBottomColor: themeColors.border,
+                },
+              ]}
+            >
+              <Text style={[styles.timetableTitle, { color: themeColors.accent }]}>
                 Watch Keeping Timetable
               </Text>
-              <Text
-                style={[
-                  styles.timetableSubtitle,
-                  { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                ]}
-              >
+              <Text style={[styles.timetableSubtitle, { color: themeColors.textPrimary }]}>
                 {watchTitle}
               </Text>
               {calculatedWatchHours != null && (
-                <Text
-                  style={[
-                    styles.timetableMeta,
-                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                  ]}
-                >
+                <Text style={[styles.timetableMeta, { color: themeColors.textSecondary }]}>
                   Watch: {calculatedWatchHours} hr{calculatedWatchHours !== 1 ? 's' : ''} per crew
                 </Text>
               )}
               {startLocation ? (
-                <Text
-                  style={[
-                    styles.timetableMeta,
-                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                  ]}
-                >
+                <Text style={[styles.timetableMeta, { color: themeColors.textSecondary }]}>
                   From: {startLocation}
                 </Text>
               ) : null}
               {destination ? (
-                <Text
-                  style={[
-                    styles.timetableMeta,
-                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                  ]}
-                >
+                <Text style={[styles.timetableMeta, { color: themeColors.textSecondary }]}>
                   To: {destination}
                 </Text>
               ) : null}
@@ -755,7 +710,13 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
               {timetableSlots.map((slot, idx) => (
                 <View
                   key={idx}
-                  style={[styles.timetableRow, { backgroundColor: themeColors.surface }]}
+                  style={[
+                    styles.timetableRow,
+                    {
+                      backgroundColor: themeColors.surfaceElevated,
+                      borderColor: themeColors.border,
+                    },
+                  ]}
                 >
                   <View style={styles.timetableRowLeft}>
                     <View
@@ -772,10 +733,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
                     </View>
                     {slot.crew.position ? (
                       <Text
-                        style={[
-                          styles.timetableCrewRole,
-                          { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                        ]}
+                        style={[styles.timetableCrewRole, { color: themeColors.textSecondary }]}
                       >
                         {slot.crew.position}
                       </Text>
@@ -799,12 +757,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
                     <Text style={[styles.timetableTime, { color: themeColors.textPrimary }]}>
                       {slot.startTimeStr} – {slot.endTimeStr}
                     </Text>
-                    <Text
-                      style={[
-                        styles.timetableDuration,
-                        { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                      ]}
-                    >
+                    <Text style={[styles.timetableDuration, { color: themeColors.textSecondary }]}>
                       {slot.durationHours < 1
                         ? `${Math.round(slot.durationHours * 60)} min`
                         : `${slot.durationHours} hr${slot.durationHours !== 1 ? 's' : ''}`}
@@ -813,13 +766,21 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
                 </View>
               ))}
             </ScrollView>
-            <View style={styles.timetableActions}>
+            <View
+              style={[
+                styles.timetableActions,
+                {
+                  backgroundColor: themeColors.surfaceElevated,
+                  borderTopColor: themeColors.border,
+                },
+              ]}
+            >
               <TouchableOpacity
-                style={styles.timetableExportBtn}
+                style={[styles.timetableExportBtn, { backgroundColor: themeColors.accent }]}
                 onPress={() => handlePublish()}
                 disabled={publishing}
               >
-                <Text style={styles.timetableExportText}>
+                <Text style={[styles.timetableExportText, { color: themeColors.textOnAccent }]}>
                   {publishing
                     ? editingTimetableId
                       ? 'Saving...'
@@ -835,12 +796,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
                   setTimetablePreviewOpen(false);
                 }}
               >
-                <Text
-                  style={[
-                    styles.timetableCloseText,
-                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                  ]}
-                >
+                <Text style={[styles.timetableCloseText, { color: themeColors.accent }]}>
                   Close
                 </Text>
               </TouchableOpacity>
@@ -887,18 +843,7 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
     minWidth: 280,
     maxHeight: 320,
-  },
-  calendarModal: {
-    width: '100%',
-    maxWidth: 420,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.md,
-  },
-  calendarTitle: {
-    fontSize: FONTS.lg,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: SPACING.sm,
+    borderWidth: 1,
   },
   crewList: { maxHeight: 280 },
   timeList: { maxHeight: 280 },
@@ -940,6 +885,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 2,
+    borderWidth: 1,
   },
   timetableRowLeft: { flex: 1 },
   timetableRowCenter: { alignItems: 'flex-end' },
@@ -958,11 +904,10 @@ const styles = StyleSheet.create({
   timetableExportBtn: {
     flex: 1,
     paddingVertical: SPACING.md,
-    backgroundColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
   },
-  timetableExportText: { fontSize: FONTS.base, fontWeight: '600', color: COLORS.white },
+  timetableExportText: { fontSize: FONTS.base, fontWeight: '600' },
   timetableCloseBtn: {
     flex: 1,
     paddingVertical: SPACING.md,

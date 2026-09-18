@@ -10,7 +10,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { SPACING, BORDER_RADIUS } from '../constants/theme';
 
 interface ExportBarProps {
   /** How many items are currently ticked. */
@@ -32,16 +32,24 @@ export const ExportBar: React.FC<ExportBarProps> = ({
   const disabled = exporting || count === 0;
 
   return (
-    <View style={[styles.bar, { backgroundColor: themeColors.surface }]}>
+    <View
+      style={[
+        styles.bar,
+        { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+      ]}
+    >
       <Text style={[styles.hint, { color: themeColors.textSecondary }]}>{hint}</Text>
       <TouchableOpacity
         onPress={onConfirm}
         disabled={disabled}
-        style={[styles.confirm, { opacity: disabled ? 0.5 : 1 }]}
+        style={[
+          styles.confirm,
+          { backgroundColor: themeColors.controlSelected, opacity: disabled ? 0.5 : 1 },
+        ]}
         accessibilityRole="button"
         accessibilityLabel={`Export ${count} selected to PDF`}
       >
-        <Text style={styles.confirmText}>
+        <Text style={[styles.confirmText, { color: themeColors.textOnAccent }]}>
           {exporting ? 'Exporting…' : `Export to PDF (${count})`}
         </Text>
       </TouchableOpacity>
@@ -59,18 +67,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginHorizontal: SPACING.lg,
     marginTop: SPACING.xs,
+    borderWidth: 1,
   },
   hint: {
     fontSize: 11,
   },
   confirm: {
-    backgroundColor: COLORS.primary,
     borderRadius: 14,
     paddingVertical: 5,
     paddingHorizontal: 12,
   },
   confirmText: {
-    color: COLORS.white,
     fontSize: 12,
     fontWeight: '500',
   },

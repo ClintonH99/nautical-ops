@@ -13,15 +13,13 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Modal,
-  Pressable,
 } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import yardJobsService from '../services/yardJobs';
-import { Input, Button, LoadingSpinner, PageHeader, LabeledDropdown } from '../components';
+import { Input, Button, LoadingSpinner, PageHeader, DepartmentSelector } from '../components';
 import { Department, YardJobPriority } from '../types';
 import { formatLocalDateString, parseLocalDate, toYYYYMMDD } from '../utils';
 
@@ -34,7 +32,7 @@ type MarkedDates = {
   };
 };
 
-function getMarkedRange(start: string, end: string): MarkedDates {
+function getMarkedRange(start: string, end: string, color: string, textColor: string): MarkedDates {
   const marked: MarkedDates = {};
   const startDate = parseLocalDate(start);
   const endDate = parseLocalDate(end);
@@ -43,8 +41,8 @@ function getMarkedRange(start: string, end: string): MarkedDates {
     marked[key] = {
       startingDay: key === start,
       endingDay: key === end,
-      color: COLORS.primary,
-      textColor: COLORS.white,
+      color,
+      textColor,
     };
   }
   return marked;
@@ -62,7 +60,6 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
   const [defectLocation, setDefectLocation] = useState('');
   const [equipmentSerial, setEquipmentSerial] = useState('');
   const [department, setDepartment] = useState<Department>(user?.department ?? 'INTERIOR');
-  const [departmentDropdownOpen, setDepartmentDropdownOpen] = useState(false);
   const [priority, setPriority] = useState<YardJobPriority>('GREEN');
   const [yardLocation, setYardLocation] = useState('');
   const [contractorCompanyName, setContractorCompanyName] = useState('');
@@ -111,7 +108,10 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
     })();
   }, [jobId, user?.department]);
 
-  const markedDates = startDate && endDate ? getMarkedRange(startDate, endDate) : {};
+  const markedDates =
+    startDate && endDate
+      ? getMarkedRange(startDate, endDate, themeColors.controlSelected, themeColors.textOnAccent)
+      : {};
 
   const handleDatePress = (dateString: string) => {
     if (dateSelectionStep === 'start') {
@@ -130,17 +130,18 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
     setDateSelectionStep('start');
   };
 
-  const calendarTextColor = themeColors.isDark ? COLORS.white : COLORS.black;
+  const calendarTextColor = themeColors.textPrimary;
   const calendarTheme = {
     backgroundColor: themeColors.surface,
     calendarBackground: themeColors.surface,
     textSectionTitleColor: calendarTextColor,
-    selectedDayBackgroundColor: COLORS.primary,
-    selectedDayTextColor: COLORS.white,
-    todayTextColor: calendarTextColor,
+    selectedDayBackgroundColor: themeColors.controlSelected,
+    selectedDayTextColor: themeColors.textOnAccent,
+    todayTextColor: themeColors.accent,
     dayTextColor: calendarTextColor,
-    textDisabledColor: calendarTextColor,
-    arrowColor: calendarTextColor,
+    textDisabledColor: themeColors.textMuted,
+    textInactiveColor: themeColors.textMuted,
+    arrowColor: themeColors.accent,
     monthTextColor: calendarTextColor,
   };
 
@@ -236,10 +237,9 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="always"
       >
-        <LabeledDropdown
-          label="Department"
-          value={department.charAt(0) + department.slice(1).toLowerCase()}
-          onPress={() => setDepartmentDropdownOpen(true)}
+        <DepartmentSelector
+          value={department}
+          onChange={(value) => value && setDepartment(value)}
         />
         <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
           Which department is this job for?
@@ -279,49 +279,8 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
           onChangeText={setEquipmentSerial}
           placeholder="e.g. BESENZONI PA284 / SN 44219"
         />
-        {departmentDropdownOpen && (
-          <Modal visible transparent animationType="fade">
-            <Pressable
-              style={styles.modalBackdrop}
-              onPress={() => setDepartmentDropdownOpen(false)}
-            >
-              <View
-                style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
-                onStartShouldSetResponder={() => true}
-              >
-                {(['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'] as Department[]).map(
-                  (dept) => (
-                    <TouchableOpacity
-                      key={dept}
-                      style={[styles.modalItem, department === dept && styles.modalItemSelected]}
-                      onPress={() => {
-                        setDepartment(dept);
-                        setDepartmentDropdownOpen(false);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.modalItemText,
-                          { color: themeColors.textPrimary },
-                          department === dept && styles.modalItemTextSelected,
-                        ]}
-                      >
-                        {dept.charAt(0) + dept.slice(1).toLowerCase()}
-                      </Text>
-                    </TouchableOpacity>
-                  )
-                )}
-              </View>
-            </Pressable>
-          </Modal>
-        )}
         <Text style={[styles.label, { color: themeColors.textPrimary }]}>Urgency / Priority</Text>
-        <Text
-          style={[
-            styles.hint,
-            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-          ]}
-        >
+        <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
           How urgent is this job?
         </Text>
         <View style={styles.priorityRow}>
@@ -389,19 +348,19 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
           placeholder="Phone, email, or other contact info"
         />
         <Text style={[styles.label, { color: themeColors.textPrimary }]}>Job dates</Text>
-        <Text
-          style={[
-            styles.hint,
-            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-          ]}
-        >
+        <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
           {!startDate
             ? 'Tap the first day of this job'
             : dateSelectionStep === 'end'
               ? 'Now tap the final day of this job'
               : `${formatLocalDateString(startDate)} – ${formatLocalDateString(endDate ?? startDate)}`}
         </Text>
-        <View style={[styles.calendarWrap, { backgroundColor: themeColors.surface }]}>
+        <View
+          style={[
+            styles.calendarWrap,
+            { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border },
+          ]}
+        >
           <Calendar
             current={startDate || toYYYYMMDD(new Date())}
             minDate={isEdit ? undefined : toYYYYMMDD(new Date())}
@@ -422,12 +381,7 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
               setDateSelectionStep('start');
             }}
           >
-            <Text
-              style={[
-                styles.clearDateText,
-                { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-              ]}
-            >
+            <Text style={[styles.clearDateText, { color: themeColors.textSecondary }]}>
               Clear dates
             </Text>
           </TouchableOpacity>
@@ -446,14 +400,7 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
             onPress={() => navigation.goBack()}
             disabled={saving}
           >
-            <Text
-              style={[
-                styles.cancelText,
-                { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-              ]}
-            >
-              Cancel
-            </Text>
+            <Text style={[styles.cancelText, { color: themeColors.textSecondary }]}>Cancel</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -496,6 +443,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.sm,
     marginBottom: SPACING.sm,
+    borderWidth: 1,
   },
   clearDate: {
     alignSelf: 'flex-start',

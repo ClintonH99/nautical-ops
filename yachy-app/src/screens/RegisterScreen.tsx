@@ -11,25 +11,14 @@ import {
   Platform,
   ScrollView,
   Alert,
-  Modal,
-  Pressable,
-  TouchableOpacity,
 } from 'react-native';
-import { Button, Input, ConsentCheckbox, LabeledDropdown } from '../components';
+import { Button, Input, ConsentCheckbox, DepartmentSelector } from '../components';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { Department } from '../types';
 import authService from '../services/auth';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { usePostHog } from 'posthog-react-native';
-
-const DEPARTMENTS = [
-  { label: 'Bridge', value: 'BRIDGE' },
-  { label: 'Engineering', value: 'ENGINEERING' },
-  { label: 'Exterior', value: 'EXTERIOR' },
-  { label: 'Interior', value: 'INTERIOR' },
-  { label: 'Galley', value: 'GALLEY' },
-];
 
 export const RegisterScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
@@ -46,7 +35,6 @@ export const RegisterScreen = ({ navigation, route }: any) => {
   const [errors, setErrors] = useState<any>({});
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [confirmSentEmail, setConfirmSentEmail] = useState<string | null>(null);
-  const [departmentDropdownOpen, setDepartmentDropdownOpen] = useState(false);
 
   const setUser = useAuthStore((state) => state.setUser);
   const posthog = usePostHog();
@@ -175,20 +163,15 @@ export const RegisterScreen = ({ navigation, route }: any) => {
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Create Account</Text>
-            <Text
-              style={[
-                styles.subtitle,
-                { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-              ]}
-            >
+            <Text style={[styles.title, { color: themeColors.accent }]}>Create Account</Text>
+            <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
               Join the crew
             </Text>
           </View>
 
           {confirmSentEmail ? (
             <View style={styles.confirmBanner}>
-              <Text style={styles.confirmBannerText}>
+              <Text style={[styles.confirmBannerText, { color: themeColors.textPrimary }]}>
                 Confirmation email has been sent to {confirmSentEmail}. Please verify your email
                 before signing in.
               </Text>
@@ -258,62 +241,16 @@ export const RegisterScreen = ({ navigation, route }: any) => {
 
                 {/* Department Selection */}
                 <View style={styles.departmentSection}>
-                  <LabeledDropdown
-                    label="Department"
-                    value={
-                      DEPARTMENTS.find((dept) => dept.value === formData.department)?.label ??
-                      'Select department'
-                    }
-                    open={departmentDropdownOpen}
-                    onPress={() => setDepartmentDropdownOpen(true)}
+                  <DepartmentSelector
+                    value={formData.department || null}
+                    onChange={(value) => value && updateField('department', value)}
                     tightTop
                   />
                   {errors.department && <Text style={styles.error}>{errors.department}</Text>}
                 </View>
 
-                <Modal visible={departmentDropdownOpen} transparent animationType="fade">
-                  <Pressable
-                    style={styles.modalBackdrop}
-                    onPress={() => setDepartmentDropdownOpen(false)}
-                  >
-                    <View
-                      style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
-                      onStartShouldSetResponder={() => true}
-                    >
-                      {DEPARTMENTS.map((dept) => (
-                        <TouchableOpacity
-                          key={dept.value}
-                          style={[
-                            styles.modalItem,
-                            formData.department === dept.value && styles.modalItemSelected,
-                          ]}
-                          onPress={() => {
-                            updateField('department', dept.value);
-                            setDepartmentDropdownOpen(false);
-                          }}
-                        >
-                          <Text
-                            style={[
-                              styles.modalItemText,
-                              { color: themeColors.textPrimary },
-                              formData.department === dept.value && styles.modalItemTextSelected,
-                            ]}
-                          >
-                            {dept.label}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </Pressable>
-                </Modal>
-
-                <View style={styles.inviteCodeInfo}>
-                  <Text
-                    style={[
-                      styles.inviteCodeInfoText,
-                      { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                    ]}
-                  >
+                <View style={[styles.inviteCodeInfo, { backgroundColor: themeColors.accentSoft }]}>
+                  <Text style={[styles.inviteCodeInfoText, { color: themeColors.accent }]}>
                     💡 You can join a vessel after creating your account
                   </Text>
                 </View>
@@ -375,7 +312,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FONTS['3xl'],
     fontWeight: 'bold',
-    color: COLORS.primary,
     marginBottom: SPACING.xs,
   },
   subtitle: {
@@ -419,14 +355,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   inviteCodeInfo: {
-    backgroundColor: COLORS.primaryLight,
     padding: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
     marginBottom: SPACING.md,
   },
   inviteCodeInfoText: {
     fontSize: FONTS.sm,
-    color: COLORS.primary,
     fontWeight: '500',
     textAlign: 'center',
   },
@@ -481,7 +415,6 @@ const styles = StyleSheet.create({
   },
   confirmBannerText: {
     fontSize: FONTS.base,
-    color: COLORS.textPrimary,
     marginBottom: SPACING.md,
     lineHeight: 22,
   },

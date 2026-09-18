@@ -206,17 +206,18 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
     return { tasks: dayTasks, yardJobs: dayJobs };
   }, [filteredTasks, filteredYardJobs, selectedDate]);
 
-  const calendarTextColor = themeColors.isDark ? COLORS.white : COLORS.black;
+  const calendarTextColor = themeColors.textPrimary;
   const calendarTheme = {
     backgroundColor: themeColors.surface,
     calendarBackground: themeColors.surface,
     textSectionTitleColor: calendarTextColor,
-    selectedDayBackgroundColor: COLORS.primary,
-    selectedDayTextColor: COLORS.white,
-    todayTextColor: calendarTextColor,
+    selectedDayBackgroundColor: themeColors.controlSelected,
+    selectedDayTextColor: themeColors.textOnAccent,
+    todayTextColor: themeColors.accent,
     dayTextColor: calendarTextColor,
-    textDisabledColor: calendarTextColor,
-    arrowColor: calendarTextColor,
+    textDisabledColor: themeColors.textMuted,
+    textInactiveColor: themeColors.textMuted,
+    arrowColor: themeColors.accent,
     monthTextColor: calendarTextColor,
     textDayHeaderFontSize: FONTS.sm,
     textMonthFontSize: FONTS.lg,
@@ -268,7 +269,7 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
   }
 
   return (
-    <View style={styles.pageWrap}>
+    <View style={[styles.pageWrap, { backgroundColor: themeColors.background }]}>
       <PageHeader title="Yard Period Calendar" />
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
@@ -281,7 +282,10 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
           Urgency / Priority
         </Text>
         <TouchableOpacity
-          style={[styles.dropdown, { backgroundColor: themeColors.surface }]}
+          style={[
+            styles.dropdown,
+            { backgroundColor: themeColors.control, borderColor: themeColors.border },
+          ]}
           onPress={() => setUrgencyDropdownOpen(!urgencyDropdownOpen)}
           activeOpacity={0.7}
         >
@@ -296,7 +300,13 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
           <Modal visible transparent animationType="fade">
             <Pressable style={styles.modalBackdrop} onPress={() => setUrgencyDropdownOpen(false)}>
               <View
-                style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+                style={[
+                  styles.modalBox,
+                  {
+                    backgroundColor: themeColors.surfaceElevated,
+                    borderColor: themeColors.border,
+                  },
+                ]}
                 onStartShouldSetResponder={() => true}
               >
                 {URGENCY_OPTIONS.map((opt) => (
@@ -304,14 +314,26 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
                     key={opt.value}
                     style={[
                       styles.modalItem,
-                      urgencyFilter === opt.value && styles.modalItemSelected,
+                      urgencyFilter === opt.value && {
+                        backgroundColor: themeColors.controlSelected,
+                      },
                     ]}
                     onPress={() => {
                       setUrgencyFilter(opt.value);
                       setUrgencyDropdownOpen(false);
                     }}
                   >
-                    <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
+                    <Text
+                      style={[
+                        styles.modalItemText,
+                        {
+                          color:
+                            urgencyFilter === opt.value
+                              ? themeColors.textOnAccent
+                              : themeColors.textPrimary,
+                        },
+                      ]}
+                    >
                       {opt.label}
                     </Text>
                   </TouchableOpacity>
@@ -333,7 +355,10 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
               key={dept}
               style={[
                 styles.deptChip,
-                { borderColor: getDeptColor(dept) ?? COLORS.primary },
+                {
+                  backgroundColor: themeColors.control,
+                  borderColor: getDeptColor(dept) ?? themeColors.accent,
+                },
                 !visibleDepartments[dept] && styles.deptChipHidden,
               ]}
               onPress={() => toggleDepartment(dept)}
@@ -361,7 +386,12 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
         <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
           Yard Period Calendar
         </Text>
-        <View style={[styles.calendarCard, { backgroundColor: themeColors.surface }]}>
+        <View
+          style={[
+            styles.calendarCard,
+            { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border },
+          ]}
+        >
           {loading ? (
             <LoadingSpinner />
           ) : (
@@ -376,8 +406,8 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
                       [selectedDate]: {
                         ...(markedDates[selectedDate] ?? {}),
                         selected: true,
-                        selectedColor: COLORS.primary,
-                        selectedTextColor: COLORS.white,
+                        selectedColor: themeColors.controlSelected,
+                        selectedTextColor: themeColors.textOnAccent,
                         segmentColors: markedDates[selectedDate]?.segmentColors,
                       },
                     }),
@@ -389,7 +419,7 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
                 hideExtraDays
                 hideArrows={false}
               />
-              <View style={styles.legend}>
+              <View style={[styles.legend, { borderTopColor: themeColors.border }]}>
                 {DEPARTMENTS.filter((d) => visibleDepartments[d]).map((dept) => (
                   <View key={dept} style={styles.legendRow}>
                     <View style={[styles.legendDot, { backgroundColor: getDeptColor(dept) }]} />
@@ -427,7 +457,10 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
                       key={`task-${task.id}`}
                       style={[
                         styles.taskCard,
-                        { backgroundColor: themeColors.surface, borderLeftColor: urgencyColor },
+                        {
+                          backgroundColor: themeColors.surfaceElevated,
+                          borderLeftColor: urgencyColor,
+                        },
                       ]}
                       onPress={() => onEdit(task)}
                       activeOpacity={0.8}
@@ -468,10 +501,14 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
                       ) : null}
                       {!isComplete && (
                         <TouchableOpacity
-                          style={styles.completeBtn}
+                          style={[styles.completeBtn, { backgroundColor: themeColors.accent }]}
                           onPress={() => onMarkComplete(task)}
                         >
-                          <Text style={styles.completeBtnText}>Mark complete</Text>
+                          <Text
+                            style={[styles.completeBtnText, { color: themeColors.textOnAccent }]}
+                          >
+                            Mark complete
+                          </Text>
                         </TouchableOpacity>
                       )}
                     </TouchableOpacity>
@@ -486,7 +523,10 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
                       key={`job-${job.id}`}
                       style={[
                         styles.taskCard,
-                        { backgroundColor: themeColors.surface, borderLeftColor: priorityColor },
+                        {
+                          backgroundColor: themeColors.surfaceElevated,
+                          borderLeftColor: priorityColor,
+                        },
                       ]}
                       onPress={() => onEditYardJob(job)}
                       activeOpacity={0.8}
@@ -600,6 +640,7 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     minWidth: 260,
     maxHeight: 400,
+    borderWidth: 1,
   },
   modalItem: {
     paddingVertical: SPACING.md,
@@ -647,6 +688,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.md,
     marginBottom: SPACING.xl,
+    borderWidth: 1,
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,

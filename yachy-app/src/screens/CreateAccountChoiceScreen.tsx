@@ -11,27 +11,36 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  Platform,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../components';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
+import { FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 
-const ROLE_COLORS = {
-  captainAccent: '#c9a227',
-  captainCardBg: 'rgba(201, 162, 39, 0.12)',
-  captainCardBorder: 'rgba(201, 162, 39, 0.4)',
-  crewAccent: '#0d9488',
-  crewCardBg: 'rgba(13, 148, 136, 0.12)',
-  crewCardBorder: 'rgba(13, 148, 136, 0.4)',
-};
-
-const CAPTAIN_BENEFITS = ['Master of Vessel (MOV)', 'Create & manage your vessel', 'Generate invite codes for crew', 'Full operations control'];
-const CREW_BENEFITS = ['Join with captain\'s invite code', 'Access tasks & maintenance logs', 'Stay connected onboard'];
+const CAPTAIN_BENEFITS = [
+  'Set up vessel operations',
+  'Invite and manage crew',
+  'Review vessel records',
+];
+const CREW_BENEFITS = [
+  'Track your own records',
+  'Join with an invite code anytime',
+  'Access assigned vessel duties',
+];
+// React Native resolves bundled bitmap assets through a static require.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const APP_ICON = require('../../assets/icon.png');
+const MIN_CONTENT_TOP_PADDING = 52;
+const MIN_BACK_BUTTON_TOP = 48;
 
 export const CreateAccountChoiceScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
+  const insets = useSafeAreaInsets();
+  const contentTopPadding = Math.max(MIN_CONTENT_TOP_PADDING, insets.top + SPACING.md);
+  const backButtonTop = Math.max(MIN_BACK_BUTTON_TOP, insets.top + SPACING.sm);
+  const contentBottomPadding = Math.max(SPACING['2xl'], insets.bottom + SPACING.md);
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
@@ -40,37 +49,72 @@ export const CreateAccountChoiceScreen = ({ navigation }: any) => {
         backgroundColor={themeColors.background}
       />
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: contentTopPadding, paddingBottom: contentBottomPadding },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <TouchableOpacity
-          style={styles.backButton}
+          style={[styles.backButton, { top: backButtonTop }]}
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Ionicons name="chevron-back" size={28} color={themeColors.textPrimary} />
         </TouchableOpacity>
 
+        <View style={styles.brand}>
+          <Image source={APP_ICON} style={styles.appIcon} />
+          <Text style={[styles.appName, { color: themeColors.accent }]}>Nautical Ops</Text>
+        </View>
+
         <Text style={[styles.title, { color: themeColors.textPrimary }]}>Welcome aboard</Text>
         <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-          Nautical Ops helps yacht crews manage trips, tasks, maintenance, and more. Choose your role to get started.
+          Choose how you’ll use Nautical Ops
         </Text>
 
         <View style={styles.cardsContainer}>
-          <View style={[styles.optionCard, { backgroundColor: ROLE_COLORS.captainCardBg, borderColor: ROLE_COLORS.captainCardBorder }]}>
-            <View style={[styles.iconBadge, { backgroundColor: ROLE_COLORS.captainCardBorder }]}>
-              <Ionicons name="boat-outline" size={28} color={ROLE_COLORS.captainAccent} />
+          <View
+            style={[
+              styles.optionCard,
+              styles.optionCardUpdated,
+              { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+            ]}
+          >
+            <View style={styles.roleHeader}>
+              <View
+                style={[
+                  styles.iconBadge,
+                  styles.iconBadgeUpdated,
+                  { backgroundColor: themeColors.accentSoft },
+                ]}
+              >
+                <Ionicons name="boat-outline" size={36} color={themeColors.accent} />
+              </View>
+              <View style={styles.roleText}>
+                <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>
+                  Captain (MOV)
+                </Text>
+                <Text
+                  style={[
+                    styles.optionSubtitle,
+                    styles.optionSubtitleUpdated,
+                    { color: themeColors.textSecondary },
+                  ]}
+                >
+                  Create and manage a vessel
+                </Text>
+              </View>
             </View>
-            <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>Captain (MOV)</Text>
-            <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>Vessel owner or person in charge</Text>
-            <Text style={[styles.optionDescription, { color: themeColors.textSecondary }]}>
-              Set up your vessel, add your crew, and manage day‑to‑day operations from one place.
-            </Text>
             <View style={styles.benefitsList}>
               {CAPTAIN_BENEFITS.map((item, i) => (
                 <View key={i} style={styles.benefitRow}>
-                  <Ionicons name="checkmark-circle" size={16} color={ROLE_COLORS.captainAccent} style={styles.benefitIcon} />
-                  <Text style={[styles.benefitText, { color: themeColors.textPrimary }]}>{item}</Text>
+                  <View style={[styles.checkBadge, { backgroundColor: themeColors.accentSoft }]}>
+                    <Ionicons name="checkmark" size={16} color={themeColors.accent} />
+                  </View>
+                  <Text style={[styles.benefitText, { color: themeColors.textPrimary }]}>
+                    {item}
+                  </Text>
                 </View>
               ))}
             </View>
@@ -83,20 +127,47 @@ export const CreateAccountChoiceScreen = ({ navigation }: any) => {
             />
           </View>
 
-          <View style={[styles.optionCard, { backgroundColor: ROLE_COLORS.crewCardBg, borderColor: ROLE_COLORS.crewCardBorder }]}>
-            <View style={[styles.iconBadge, { backgroundColor: ROLE_COLORS.crewCardBorder }]}>
-              <Ionicons name="people-outline" size={28} color={ROLE_COLORS.crewAccent} />
+          <View
+            style={[
+              styles.optionCard,
+              styles.optionCardUpdated,
+              { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+            ]}
+          >
+            <View style={styles.roleHeader}>
+              <View
+                style={[
+                  styles.iconBadge,
+                  styles.iconBadgeUpdated,
+                  { backgroundColor: themeColors.accentSoft },
+                ]}
+              >
+                <Ionicons name="people-outline" size={36} color={themeColors.accent} />
+              </View>
+              <View style={styles.roleText}>
+                <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>
+                  Crew Member
+                </Text>
+                <Text
+                  style={[
+                    styles.optionSubtitle,
+                    styles.optionSubtitleUpdated,
+                    { color: themeColors.textSecondary },
+                  ]}
+                >
+                  Start independently or join a vessel later
+                </Text>
+              </View>
             </View>
-            <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>Crew member</Text>
-            <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>Joining an existing vessel</Text>
-            <Text style={[styles.optionDescription, { color: themeColors.textSecondary }]}>
-              Connect to your vessel using the invite code from your captain. Access your duties and stay in sync.
-            </Text>
             <View style={styles.benefitsList}>
               {CREW_BENEFITS.map((item, i) => (
                 <View key={i} style={styles.benefitRow}>
-                  <Ionicons name="checkmark-circle" size={16} color={ROLE_COLORS.crewAccent} style={styles.benefitIcon} />
-                  <Text style={[styles.benefitText, { color: themeColors.textPrimary }]}>{item}</Text>
+                  <View style={[styles.checkBadge, { backgroundColor: themeColors.accentSoft }]}>
+                    <Ionicons name="checkmark" size={16} color={themeColors.accent} />
+                  </View>
+                  <Text style={[styles.benefitText, { color: themeColors.textPrimary }]}>
+                    {item}
+                  </Text>
                 </View>
               ))}
             </View>
@@ -110,9 +181,18 @@ export const CreateAccountChoiceScreen = ({ navigation }: any) => {
           </View>
         </View>
 
-        <Text style={[styles.footerHint, { color: themeColors.textSecondary }]}>
-          Not sure? Captains (MOV) create vessels and invite others. Crew join with a code.
-        </Text>
+        <View style={[styles.signInSection, { borderTopColor: themeColors.border }]}>
+          <Text style={[styles.signInPrompt, { color: themeColors.textSecondary }]}>
+            Already have an account?
+          </Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Login')}
+            accessibilityRole="button"
+            accessibilityLabel="Sign in"
+          >
+            <Text style={[styles.signInLink, { color: themeColors.accent }]}>Sign In</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </View>
   );
@@ -124,93 +204,124 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: SPACING.xl,
-    paddingTop: 60,
-    paddingBottom: SPACING['2xl'],
+    paddingHorizontal: SPACING.md,
   },
   backButton: {
     position: 'absolute',
-    top: 56,
-    left: SPACING.lg,
+    left: SPACING.md,
     zIndex: 10,
   },
   title: {
-    fontSize: FONTS['2xl'],
-    fontWeight: '700',
+    fontSize: FONTS['3xl'],
+    fontWeight: '800',
     textAlign: 'center',
-    marginTop: SPACING.lg,
-    marginBottom: SPACING.sm,
-    letterSpacing: -0.3,
+    marginBottom: SPACING.xs,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: FONTS.base,
+    fontSize: FONTS.lg,
     textAlign: 'center',
     marginBottom: SPACING.xl,
-    lineHeight: 24,
-    maxWidth: 320,
     alignSelf: 'center',
   },
   cardsContainer: {
-    marginBottom: SPACING.lg,
+    gap: SPACING.md,
   },
   optionCard: {
     borderRadius: BORDER_RADIUS.xl,
-    padding: SPACING.xl,
-    marginBottom: SPACING.lg,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    ...(Platform.OS === 'ios' ? SHADOWS.md : { elevation: 6 }),
+    padding: SPACING.md,
+    borderWidth: 1,
+    ...SHADOWS.md,
+  },
+  optionCardUpdated: {
+    marginBottom: 0,
   },
   iconBadge: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: SPACING.md,
+  },
+  iconBadgeUpdated: {
+    marginBottom: 0,
+  },
+  brand: {
+    alignItems: 'center',
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.lg,
+  },
+  appIcon: {
+    width: 62,
+    height: 62,
+    borderRadius: BORDER_RADIUS.lg,
+    marginBottom: SPACING.xs,
+  },
+  appName: {
+    fontSize: FONTS.lg,
+    fontWeight: '700',
+  },
+  roleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: SPACING.md,
+  },
+  roleText: {
+    flex: 1,
   },
   optionTitle: {
     fontSize: FONTS.xl,
     fontWeight: '700',
-    marginBottom: 2,
-    textAlign: 'center',
+    marginBottom: 4,
     letterSpacing: -0.2,
   },
   optionSubtitle: {
-    fontSize: FONTS.xs,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: SPACING.sm,
+    fontSize: FONTS.base,
+    lineHeight: 21,
   },
-  optionDescription: {
-    fontSize: FONTS.sm,
-    marginBottom: SPACING.md,
-    textAlign: 'center',
-    lineHeight: 20,
+  optionSubtitleUpdated: {
+    textTransform: 'none',
+    letterSpacing: 0,
+    marginBottom: 0,
   },
   benefitsList: {
     alignSelf: 'stretch',
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
+    gap: SPACING.sm,
   },
   benefitRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.xs,
+    marginBottom: 0,
   },
-  benefitIcon: {
-    marginRight: SPACING.sm,
+  checkBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.md,
   },
   benefitText: {
     fontSize: FONTS.sm,
     flex: 1,
   },
   optionButton: {
-    marginTop: 0,
+    marginTop: SPACING.xs,
   },
-  footerHint: {
-    fontSize: FONTS.xs,
-    textAlign: 'center',
-    fontStyle: 'italic',
-    lineHeight: 18,
+  signInSection: {
+    borderTopWidth: 1,
+    alignItems: 'center',
+    marginTop: SPACING.xl,
+    paddingTop: SPACING.lg,
+  },
+  signInPrompt: {
+    fontSize: FONTS.base,
+    marginBottom: SPACING.xs,
+  },
+  signInLink: {
+    fontSize: FONTS.lg,
+    fontWeight: '700',
   },
 });

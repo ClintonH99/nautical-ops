@@ -67,7 +67,11 @@ export const SignatureSetupScreen = () => {
     }
   }, [user?.id]);
 
-  useFocusEffect(useCallback(() => { loadSignature(); }, [loadSignature]));
+  useFocusEffect(
+    useCallback(() => {
+      loadSignature();
+    }, [loadSignature])
+  );
 
   const handleOK = async (signatureData: string) => {
     if (!user?.id) return;
@@ -117,8 +121,13 @@ export const SignatureSetupScreen = () => {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: themeColors.background, justifyContent: 'center' }]}>
-        <ActivityIndicator color={COLORS.primary} />
+      <View
+        style={[
+          styles.container,
+          { backgroundColor: themeColors.background, justifyContent: 'center' },
+        ]}
+      >
+        <ActivityIndicator color={themeColors.accent} />
       </View>
     );
   }
@@ -133,8 +142,11 @@ export const SignatureSetupScreen = () => {
             style={[
               styles.previewBox,
               {
-                borderColor: themeColors.textSecondary + '40',
-                backgroundColor: themeColors.surface,
+                borderColor: themeColors.isDark
+                  ? themeColors.border
+                  : themeColors.textSecondary + '40',
+                backgroundColor:
+                  saved.signatureType === 'drawn' ? COLORS.white : themeColors.surfaceElevated,
               },
             ]}
           >
@@ -176,38 +188,93 @@ export const SignatureSetupScreen = () => {
     >
       <PageHeader title="E-Signature" />
       <View style={{ padding: SPACING.lg, flex: 1 }}>
-        <View style={[styles.tabRow, { backgroundColor: themeColors.surface }]}>
+        <View
+          style={[
+            styles.tabRow,
+            {
+              backgroundColor: themeColors.isDark ? themeColors.surfaceAlt : themeColors.surface,
+            },
+          ]}
+        >
           <TouchableOpacity
             onPress={() => setActiveTab('draw')}
-            style={[styles.tab, activeTab === 'draw' && { backgroundColor: themeColors.background }]}
+            style={[
+              styles.tab,
+              activeTab === 'draw' && {
+                backgroundColor: themeColors.isDark
+                  ? themeColors.controlSelected
+                  : themeColors.background,
+              },
+            ]}
           >
-            <Text style={{ color: themeColors.textPrimary, fontWeight: '500', fontSize: FONTS.sm }}>Draw</Text>
+            <Text
+              style={{
+                color:
+                  activeTab === 'draw' && themeColors.isDark
+                    ? themeColors.textOnAccent
+                    : themeColors.textPrimary,
+                fontWeight: '500',
+                fontSize: FONTS.sm,
+              }}
+            >
+              Draw
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setActiveTab('type')}
-            style={[styles.tab, activeTab === 'type' && { backgroundColor: themeColors.background }]}
+            style={[
+              styles.tab,
+              activeTab === 'type' && {
+                backgroundColor: themeColors.isDark
+                  ? themeColors.controlSelected
+                  : themeColors.background,
+              },
+            ]}
           >
-            <Text style={{ color: themeColors.textPrimary, fontWeight: '500', fontSize: FONTS.sm }}>Type</Text>
+            <Text
+              style={{
+                color:
+                  activeTab === 'type' && themeColors.isDark
+                    ? themeColors.textOnAccent
+                    : themeColors.textPrimary,
+                fontWeight: '500',
+                fontSize: FONTS.sm,
+              }}
+            >
+              Type
+            </Text>
           </TouchableOpacity>
         </View>
 
         {activeTab === 'draw' ? (
           <>
-            <View style={[styles.canvasBox, { borderColor: themeColors.textSecondary + '60', backgroundColor: themeColors.surface }]}>
+            <View
+              style={[
+                styles.canvasBox,
+                {
+                  borderColor: themeColors.isDark
+                    ? themeColors.borderStrong
+                    : themeColors.textSecondary + '60',
+                  backgroundColor: COLORS.white,
+                },
+              ]}
+            >
               <SignatureCanvas
                 ref={signatureRef}
                 onOK={handleOK}
                 onEmpty={handleEmpty}
                 webStyle={HIDE_FOOTER_STYLE}
-                backgroundColor="transparent"
-                penColor={themeColors.textPrimary}
+                backgroundColor={COLORS.white}
+                penColor={COLORS.black}
                 trimWhitespace
                 style={{ flex: 1 }}
               />
             </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: SPACING.lg }}>
+            <View
+              style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: SPACING.lg }}
+            >
               <TouchableOpacity onPress={() => signatureRef.current?.clearSignature()}>
-                <Text style={{ color: COLORS.primary, fontSize: FONTS.sm }}>Clear</Text>
+                <Text style={{ color: themeColors.accent, fontSize: FONTS.sm }}>Clear</Text>
               </TouchableOpacity>
             </View>
           </>
@@ -218,25 +285,61 @@ export const SignatureSetupScreen = () => {
               onChangeText={setTypedName}
               placeholder="Enter your full name"
               placeholderTextColor={themeColors.textSecondary}
-              style={[styles.textInput, { color: themeColors.textPrimary, borderColor: themeColors.textSecondary + '60' }]}
+              style={[
+                styles.textInput,
+                {
+                  color: themeColors.textPrimary,
+                  borderColor: themeColors.isDark
+                    ? themeColors.border
+                    : themeColors.textSecondary + '60',
+                  backgroundColor: themeColors.isDark ? themeColors.control : 'transparent',
+                },
+              ]}
             />
-            <View style={[styles.previewBox, { borderColor: themeColors.textSecondary + '40', backgroundColor: themeColors.surface, marginBottom: SPACING.lg }]}>
-              <Text style={[styles.typedPreview, { color: themeColors.textPrimary }]}>{typedName || ' '}</Text>
+            <View
+              style={[
+                styles.previewBox,
+                {
+                  borderColor: themeColors.isDark
+                    ? themeColors.border
+                    : themeColors.textSecondary + '40',
+                  backgroundColor: themeColors.surfaceElevated,
+                  marginBottom: SPACING.lg,
+                },
+              ]}
+            >
+              <Text style={[styles.typedPreview, { color: themeColors.textPrimary }]}>
+                {typedName || ' '}
+              </Text>
             </View>
           </>
         )}
 
         {saved && (
-          <TouchableOpacity onPress={handleCancelEdit} style={[styles.secondaryButton, { marginBottom: SPACING.sm }]}>
+          <TouchableOpacity
+            onPress={handleCancelEdit}
+            style={[
+              styles.secondaryButton,
+              {
+                marginBottom: SPACING.sm,
+                borderColor: themeColors.isDark ? themeColors.borderStrong : COLORS.border,
+              },
+            ]}
+          >
             <Text style={{ color: themeColors.textPrimary }}>Cancel</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity
           onPress={handleSave}
           disabled={saving || (activeTab === 'type' && !typedName.trim())}
-          style={[styles.primaryButton, { opacity: saving || (activeTab === 'type' && !typedName.trim()) ? 0.6 : 1 }]}
+          style={[
+            styles.primaryButton,
+            { opacity: saving || (activeTab === 'type' && !typedName.trim()) ? 0.6 : 1 },
+          ]}
         >
-          <Text style={{ color: '#fff', fontWeight: '600' }}>{saving ? 'Saving...' : 'Save signature'}</Text>
+          <Text style={{ color: '#fff', fontWeight: '600' }}>
+            {saving ? 'Saving...' : 'Save signature'}
+          </Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -283,6 +386,17 @@ const styles = StyleSheet.create({
     fontSize: FONTS.base,
     marginBottom: SPACING.md,
   },
-  primaryButton: { backgroundColor: COLORS.primary, padding: SPACING.md, borderRadius: BORDER_RADIUS.md, alignItems: 'center' },
-  secondaryButton: { borderWidth: 1, borderColor: COLORS.border, padding: SPACING.md, borderRadius: BORDER_RADIUS.md, alignItems: 'center' },
+  primaryButton: {
+    backgroundColor: COLORS.primary,
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+  },
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+  },
 });

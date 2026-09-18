@@ -22,7 +22,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import contractorsService, { Contractor } from '../services/contractors';
 import { Department } from '../types';
-import { Button, Input, PageHeader, LabeledDropdown } from '../components';
+import { Button, DepartmentMultiSelector, Input, PageHeader } from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -75,7 +75,6 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
   const [refreshing, setRefreshing] = useState(false);
   const [visibleDepartments, setVisibleDepartments] =
     useState<Record<Department, boolean>>(allDeptsVisible);
-  const [departmentDropdownOpen, setDepartmentDropdownOpen] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchFilter, setSearchFilter] = useState<SearchFilter>('all');
   const [searchFilterOpen, setSearchFilterOpen] = useState(false);
@@ -118,12 +117,6 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
   const filteredContractors = contractors
     .filter((c) => visibleDepartments[c.department ?? 'INTERIOR'])
     .filter(matchesKeyword);
-  const departmentDisplayText = DEPARTMENTS.every((d) => visibleDepartments[d])
-    ? 'All departments'
-    : DEPARTMENTS.filter((d) => visibleDepartments[d])
-        .map((d) => d.charAt(0) + d.slice(1).toLowerCase())
-        .join(', ');
-
   const loadContractors = useCallback(async () => {
     if (!vesselId) return;
     setLoading(true);
@@ -267,68 +260,19 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
 
         {contractors.length > 0 && !loading && (
           <>
-            <LabeledDropdown
-              label="Department"
-              value={departmentDisplayText}
-              open={departmentDropdownOpen}
-              onPress={() => setDepartmentDropdownOpen(!departmentDropdownOpen)}
+            <DepartmentMultiSelector
+              value={DEPARTMENTS.filter((department) => visibleDepartments[department])}
+              onChange={(departments) =>
+                setVisibleDepartments(
+                  DEPARTMENTS.reduce(
+                    (next, department) => ({ ...next, [department]: departments.includes(department) }),
+                    {} as Record<Department, boolean>
+                  )
+                )
+              }
+              includeAll
+              minSelections={1}
             />
-            {departmentDropdownOpen && (
-              <Modal visible transparent animationType="fade">
-                <Pressable
-                  style={styles.modalBackdrop}
-                  onPress={() => setDepartmentDropdownOpen(false)}
-                >
-                  <View
-                    style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
-                    onStartShouldSetResponder={() => true}
-                  >
-                    <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
-                      Filter by department
-                    </Text>
-                    <TouchableOpacity
-                      style={[
-                        styles.modalItem,
-                        DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected,
-                      ]}
-                      onPress={() => {
-                        setVisibleDepartments(allDeptsVisible);
-                        setDepartmentDropdownOpen(false);
-                      }}
-                    >
-                      <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                        All Departments
-                      </Text>
-                    </TouchableOpacity>
-                    {DEPARTMENTS.map((dept) => (
-                      <TouchableOpacity
-                        key={dept}
-                        style={[
-                          styles.modalItem,
-                          visibleDepartments[dept] &&
-                            !DEPARTMENTS.every((d) => visibleDepartments[d]) &&
-                            styles.modalItemSelected,
-                        ]}
-                        onPress={() => {
-                          setVisibleDepartments({
-                            BRIDGE: dept === 'BRIDGE',
-                            ENGINEERING: dept === 'ENGINEERING',
-                            EXTERIOR: dept === 'EXTERIOR',
-                            INTERIOR: dept === 'INTERIOR',
-                            GALLEY: dept === 'GALLEY',
-                          });
-                          setDepartmentDropdownOpen(false);
-                        }}
-                      >
-                        <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                          {dept.charAt(0) + dept.slice(1).toLowerCase()}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </Pressable>
-              </Modal>
-            )}
           </>
         )}
 

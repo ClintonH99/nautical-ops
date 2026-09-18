@@ -151,7 +151,7 @@ export const NotificationSettingsScreen = () => {
   }
 
   return (
-    <View style={styles.pageWrap}>
+    <View style={[styles.pageWrap, { backgroundColor: themeColors.background }]}>
       <PageHeader title="Notifications" />
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
@@ -163,18 +163,30 @@ export const NotificationSettingsScreen = () => {
           Receive push notifications for tasks, trips, and important updates.
         </Text>
 
-        <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: themeColors.surface,
+              borderColor: themeColors.border,
+              borderWidth: themeColors.isDark ? 1 : 0,
+            },
+          ]}
+        >
           <View style={styles.row}>
             <Text style={[styles.rowLabel, { color: themeColors.textPrimary }]}>
               Push notifications
             </Text>
             {loading ? (
-              <ActivityIndicator size="small" color={COLORS.primary} />
+              <ActivityIndicator size="small" color={themeColors.accent} />
             ) : (
               <Switch
                 value={enabled}
                 onValueChange={handleToggle}
-                trackColor={{ false: COLORS.gray200, true: COLORS.primary }}
+                trackColor={{
+                  false: themeColors.isDark ? themeColors.borderStrong : COLORS.gray200,
+                  true: themeColors.isDark ? themeColors.controlSelected : COLORS.primary,
+                }}
                 thumbColor={COLORS.white}
               />
             )}
@@ -194,13 +206,25 @@ export const NotificationSettingsScreen = () => {
             <Text style={[styles.preferencesSubtitle, { color: themeColors.textSecondary }]}>
               Choose which updates you want to be notified about.
             </Text>
-            <View style={[styles.preferencesCard, { backgroundColor: themeColors.surface }]}>
+            <View
+              style={[
+                styles.preferencesCard,
+                {
+                  backgroundColor: themeColors.surface,
+                  borderColor: themeColors.border,
+                  borderWidth: themeColors.isDark ? 1 : 0,
+                },
+              ]}
+            >
               {PREFERENCE_ORDER.map((key, index) => (
                 <View
                   key={key}
                   style={[
                     styles.preferenceRow,
-                    index < PREFERENCE_ORDER.length - 1 && styles.preferenceRowBorder,
+                    index < PREFERENCE_ORDER.length - 1 && {
+                      borderBottomWidth: 1,
+                      borderBottomColor: themeColors.border,
+                    },
                   ]}
                 >
                   <Text style={[styles.preferenceLabel, { color: themeColors.textPrimary }]}>
@@ -209,7 +233,10 @@ export const NotificationSettingsScreen = () => {
                   <Switch
                     value={preferences[key] ?? true}
                     onValueChange={(v) => handlePreferenceToggle(key, v)}
-                    trackColor={{ false: COLORS.gray200, true: COLORS.primary }}
+                    trackColor={{
+                      false: themeColors.isDark ? themeColors.borderStrong : COLORS.gray200,
+                      true: themeColors.isDark ? themeColors.controlSelected : COLORS.primary,
+                    }}
                     thumbColor={COLORS.white}
                   />
                 </View>
@@ -259,6 +286,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    borderWidth: 1,
   },
   row: {
     flexDirection: 'row',
@@ -293,16 +321,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    borderWidth: 1,
   },
   preferenceRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: SPACING.lg,
-  },
-  preferenceRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   preferenceLabel: { fontSize: FONTS.base },
   warning: {

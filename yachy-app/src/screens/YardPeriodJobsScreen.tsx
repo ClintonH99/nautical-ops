@@ -26,6 +26,7 @@ import {
   ButtonTagRow,
   ExportBar,
   ExportButton,
+  DepartmentMultiSelector,
   Input,
   LabeledDropdown,
   LoadingSpinner,
@@ -94,7 +95,6 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [visibleDepartments, setVisibleDepartments] =
     useState<Record<Department, boolean>>(allDepartments);
-  const [departmentDropdownOpen, setDepartmentDropdownOpen] = useState(false);
   const [selectedFolderId, setSelectedFolderId] =
     useState<ShipyardRecordFolderFilter>(ALL_SHIPYARD_RECORDS);
   const [folderPickerOpen, setFolderPickerOpen] = useState(false);
@@ -184,12 +184,6 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
         : selectedFolder
           ? `${selectedFolder.name} (${recordCounts.byFolder[selectedFolder.id] ?? 0})`
           : `All Records (${recordCounts.all})`;
-  const departmentDisplayText = DEPARTMENTS.every((department) => visibleDepartments[department])
-    ? 'All departments'
-    : DEPARTMENTS.filter((department) => visibleDepartments[department])
-        .map(departmentLabel)
-        .join(', ');
-
   const resetSelection = () => {
     setExpandedId(null);
     setSelectedIds(new Set());
@@ -200,22 +194,6 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
     if (nextView === pageView) return;
     setPageView(nextView);
     resetSelection();
-  };
-
-  const selectDepartment = (department: Department | null) => {
-    if (department === null) {
-      setVisibleDepartments(allDepartments());
-    } else {
-      setVisibleDepartments({
-        BRIDGE: department === 'BRIDGE',
-        ENGINEERING: department === 'ENGINEERING',
-        EXTERIOR: department === 'EXTERIOR',
-        INTERIOR: department === 'INTERIOR',
-        GALLEY: department === 'GALLEY',
-      });
-    }
-    setDepartmentDropdownOpen(false);
-    setSelectedIds(new Set());
   };
 
   const selectFolderView = (folderId: ShipyardRecordFolderFilter) => {
@@ -630,11 +608,19 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
         </>
       )}
 
-      <LabeledDropdown
-        label="Department"
-        value={departmentDisplayText}
-        open={departmentDropdownOpen}
-        onPress={() => setDepartmentDropdownOpen(true)}
+      <DepartmentMultiSelector
+        value={DEPARTMENTS.filter((department) => visibleDepartments[department])}
+        onChange={(departments) => {
+          setVisibleDepartments(
+            DEPARTMENTS.reduce(
+              (next, department) => ({ ...next, [department]: departments.includes(department) }),
+              {} as Record<Department, boolean>
+            )
+          );
+          setSelectedIds(new Set());
+        }}
+        includeAll
+        minSelections={1}
         tightTop={pageView === 'ACTIVE'}
       />
     </>
@@ -694,33 +680,6 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
           }
         />
       )}
-
-      <Modal visible={departmentDropdownOpen} transparent animationType="fade">
-        <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentDropdownOpen(false)}>
-          <View
-            style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
-            onStartShouldSetResponder={() => true}
-          >
-            <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Department</Text>
-            <TouchableOpacity style={styles.modalItem} onPress={() => selectDepartment(null)}>
-              <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                All departments
-              </Text>
-            </TouchableOpacity>
-            {DEPARTMENTS.map((department) => (
-              <TouchableOpacity
-                key={department}
-                style={styles.modalItem}
-                onPress={() => selectDepartment(department)}
-              >
-                <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                  {departmentLabel(department)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </Pressable>
-      </Modal>
 
       <Modal visible={folderPickerOpen} transparent animationType="fade">
         <Pressable style={styles.modalBackdrop} onPress={() => setFolderPickerOpen(false)}>

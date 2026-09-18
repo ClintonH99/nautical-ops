@@ -1,12 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-} from 'react-native';
+import { Modal, View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -53,17 +46,26 @@ export const InfoModal: React.FC<InfoModalProps> = ({ screenKey, content, autoSh
     <>
       <TouchableOpacity
         onPress={() => setVisible(true)}
-        style={[
-          styles.infoButton,
-          { backgroundColor: themeColors.isDark ? '#FFFFFF' : '#1e3a5f' },
-        ]}
+        style={[styles.infoButton, { backgroundColor: themeColors.isDark ? '#FFFFFF' : '#1e3a5f' }]}
       >
-        <Text style={[styles.infoButtonText, { color: themeColors.isDark ? '#1e3a5f' : '#FFFFFF' }]}>i</Text>
+        <Text
+          style={[styles.infoButtonText, { color: themeColors.isDark ? '#1e3a5f' : '#FFFFFF' }]}
+        >
+          i
+        </Text>
       </TouchableOpacity>
 
       <Modal visible={visible} transparent animationType="fade">
         <View style={styles.overlay}>
-          <View style={[styles.modal, { backgroundColor: themeColors.surface }]}>
+          <View
+            style={[
+              styles.modal,
+              {
+                backgroundColor: themeColors.surfaceElevated,
+                borderColor: themeColors.border,
+              },
+            ]}
+          >
             <Text style={[styles.title, { color: themeColors.textPrimary }]}>{content.title}</Text>
             <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll}>
               <Text style={[styles.description, { color: themeColors.textSecondary }]}>
@@ -132,6 +134,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 8,
+    borderWidth: 1,
   },
   scroll: {
     marginBottom: SPACING.md,

@@ -11,14 +11,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { Button, Input, LabeledDropdown, LoadingSpinner, PageHeader } from '../components';
+import { Button, DateOnlyPicker, Input, LabeledDropdown, LoadingSpinner, PageHeader } from '../components';
 import { BORDER_RADIUS, COLORS, FONTS, SPACING, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import seaMilesService, { SeaMileEntryFields } from '../services/seaMiles';
 import { useAuthStore } from '../store';
 import type { SeaMileEntry } from '../types';
-import { formatLocalDateString, parseLocalDate, toYYYYMMDD } from '../utils';
+import { toYYYYMMDD } from '../utils';
 import { isMasterOfVessel } from '../utils/access';
 
 type VesselLengthUnit = 'ft' | 'm';
@@ -52,7 +51,6 @@ export const AddEditSeaMileScreen = ({ navigation, route }: any) => {
   const [entry, setEntry] = useState<SeaMileEntry | null>(null);
   const [loading, setLoading] = useState(!!entryId);
   const [saving, setSaving] = useState(false);
-  const [showAndroidDate, setShowAndroidDate] = useState(false);
   const [lengthUnitPickerOpen, setLengthUnitPickerOpen] = useState(false);
   const [tidalPickerOpen, setTidalPickerOpen] = useState(false);
   const [voyageDate, setVoyageDate] = useState(toYYYYMMDD(new Date()));
@@ -224,11 +222,6 @@ export const AddEditSeaMileScreen = ({ navigation, route }: any) => {
     }
   };
 
-  const handleDateChange = (_event: DateTimePickerEvent, date?: Date) => {
-    if (Platform.OS === 'android') setShowAndroidDate(false);
-    if (date) setVoyageDate(toYYYYMMDD(date));
-  };
-
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
@@ -259,42 +252,13 @@ export const AddEditSeaMileScreen = ({ navigation, route }: any) => {
           </View>
         ) : null}
 
-        <Text style={[styles.label, { color: themeColors.textPrimary }]}>Date</Text>
-        {Platform.OS === 'ios' ? (
-          <View style={[styles.dateRow, { backgroundColor: themeColors.surface }]}>
-            <Text style={[styles.dateText, { color: themeColors.textPrimary }]}>
-              {formatLocalDateString(voyageDate)}
-            </Text>
-            <DateTimePicker
-              value={parseLocalDate(voyageDate)}
-              mode="date"
-              display="compact"
-              maximumDate={new Date()}
-              onChange={handleDateChange}
-            />
-          </View>
-        ) : (
-          <>
-            <TouchableOpacity
-              style={[styles.dateRow, { backgroundColor: themeColors.surface }]}
-              onPress={() => setShowAndroidDate(true)}
-            >
-              <Text style={[styles.dateText, { color: themeColors.textPrimary }]}>
-                {formatLocalDateString(voyageDate)}
-              </Text>
-              <Text style={{ color: themeColors.textSecondary }}>Change</Text>
-            </TouchableOpacity>
-            {showAndroidDate ? (
-              <DateTimePicker
-                value={parseLocalDate(voyageDate)}
-                mode="date"
-                display="default"
-                maximumDate={new Date()}
-                onChange={handleDateChange}
-              />
-            ) : null}
-          </>
-        )}
+        <DateOnlyPicker
+          label="Date"
+          value={voyageDate}
+          onChange={setVoyageDate}
+          title="Select voyage date"
+          maximumDate={toYYYYMMDD(new Date())}
+        />
 
         <Input
           label="Vessel Name"
@@ -476,18 +440,6 @@ const styles = StyleSheet.create({
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   label: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs },
-  dateRow: {
-    minHeight: 52,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: BORDER_RADIUS.md,
-    paddingHorizontal: SPACING.md,
-    marginBottom: SPACING.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  dateText: { fontSize: FONTS.base },
   lengthRow: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.md },
   lengthInput: { flex: 1.8 },
   lengthUnit: { flex: 1, marginBottom: SPACING.md },

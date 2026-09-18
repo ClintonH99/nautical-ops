@@ -13,17 +13,21 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Modal,
-  Pressable,
 } from 'react-native';
-import { Calendar } from 'react-native-calendars';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import vesselTasksService from '../services/vesselTasks';
 import { usePostHog } from 'posthog-react-native';
 import { TaskCategory, TaskRecurring, Department } from '../types';
-import { Input, Button, LoadingSpinner, PageHeader, LabeledDropdown } from '../components';
+import {
+  Input,
+  Button,
+  LoadingSpinner,
+  PageHeader,
+  DepartmentSelector,
+  DateOnlyPicker,
+} from '../components';
 import { formatLocalDateString, toYYYYMMDD } from '../utils';
 import {
   calculateRecurringTaskDueDate,
@@ -48,7 +52,6 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
 
   const [category, setCategory] = useState<TaskCategory>(categoryFromRoute ?? 'DAILY');
   const [department, setDepartment] = useState<Department>(user?.department ?? 'INTERIOR');
-  const [departmentDropdownOpen, setDepartmentDropdownOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [doneByDate, setDoneByDate] = useState<string | null>(null);
@@ -97,24 +100,6 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
       }
     })();
   }, [taskId, user?.department]);
-
-  const markedDates: Record<string, { selected?: boolean; selectedColor?: string }> = doneByDate
-    ? { [doneByDate]: { selected: true, selectedColor: COLORS.primary } }
-    : {};
-
-  const calendarTextColor = themeColors.isDark ? COLORS.white : COLORS.black;
-  const calendarTheme = {
-    backgroundColor: themeColors.surface,
-    calendarBackground: themeColors.surface,
-    textSectionTitleColor: calendarTextColor,
-    selectedDayBackgroundColor: COLORS.primary,
-    selectedDayTextColor: COLORS.white,
-    todayTextColor: calendarTextColor,
-    dayTextColor: calendarTextColor,
-    textDisabledColor: calendarTextColor,
-    arrowColor: calendarTextColor,
-    monthTextColor: calendarTextColor,
-  };
 
   const handleCategoryChange = (nextCategory: TaskCategory) => {
     if (nextCategory === category) return;
@@ -203,12 +188,7 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text
-          style={[
-            styles.message,
-            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-          ]}
-        >
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
           Join a vessel to add tasks.
         </Text>
       </View>
@@ -235,48 +215,14 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <LabeledDropdown
-          label="Department"
-          value={department.charAt(0) + department.slice(1).toLowerCase()}
-          onPress={() => setDepartmentDropdownOpen(true)}
+        <DepartmentSelector
+          value={department}
+          onChange={(value) => value && setDepartment(value)}
         />
         <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
           Tasks are scoped by department. Crew will filter by their department to see only relevant
           tasks.
         </Text>
-        {departmentDropdownOpen && (
-          <Modal visible transparent animationType="fade">
-            <Pressable
-              style={styles.modalBackdrop}
-              onPress={() => setDepartmentDropdownOpen(false)}
-            >
-              <View
-                style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
-                onStartShouldSetResponder={() => true}
-              >
-                <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
-                  Select department
-                </Text>
-                {(['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'] as Department[]).map(
-                  (dept) => (
-                    <TouchableOpacity
-                      key={dept}
-                      style={[styles.modalItem, department === dept && styles.modalItemSelected]}
-                      onPress={() => {
-                        setDepartment(dept);
-                        setDepartmentDropdownOpen(false);
-                      }}
-                    >
-                      <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                        {dept.charAt(0) + dept.slice(1).toLowerCase()}
-                      </Text>
-                    </TouchableOpacity>
-                  )
-                )}
-              </View>
-            </Pressable>
-          </Modal>
-        )}
         {showCategoryPicker && (
           <>
             <Text style={[styles.label, { color: themeColors.textPrimary }]}>Task category</Text>
@@ -286,16 +232,20 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
                   key={cat}
                   style={[
                     styles.categoryChip,
-                    { backgroundColor: category === cat ? undefined : themeColors.surface },
-                    category === cat && styles.categoryChipSelected,
+                    {
+                      backgroundColor:
+                        category === cat ? themeColors.controlSelected : themeColors.control,
+                    },
                   ]}
                   onPress={() => handleCategoryChange(cat)}
                 >
                   <Text
                     style={[
                       styles.categoryChipText,
-                      { color: category === cat ? COLORS.white : themeColors.textPrimary },
-                      category === cat && styles.categoryChipTextSelected,
+                      {
+                        color:
+                          category === cat ? themeColors.textOnAccent : themeColors.textPrimary,
+                      },
                     ]}
                   >
                     {CATEGORY_LABELS[cat]}
@@ -324,34 +274,52 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
           <>
             <Text style={[styles.label, { color: themeColors.textPrimary }]}>Repeat every</Text>
             <TouchableOpacity
-              style={[styles.recurringToggle, { backgroundColor: themeColors.surfaceAlt }]}
+              style={[
+                styles.recurringToggle,
+                { backgroundColor: themeColors.control, borderColor: themeColors.border },
+              ]}
               onPress={() => setRecurringExpanded(!recurringExpanded)}
             >
               <Text style={[styles.recurringToggleText, { color: themeColors.textPrimary }]}>
                 {recurring ? TASK_RECURRENCE_LABELS[recurring] : 'Choose frequency'}
               </Text>
-              <Text
-                style={[
-                  styles.recurringChevron,
-                  { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                ]}
-              >
+              <Text style={[styles.recurringChevron, { color: themeColors.textSecondary }]}>
                 {recurringExpanded ? '▲' : '▼'}
               </Text>
             </TouchableOpacity>
             {recurringExpanded && (
-              <View style={[styles.recurringOptions, { backgroundColor: themeColors.surface }]}>
+              <View
+                style={[
+                  styles.recurringOptions,
+                  { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border },
+                ]}
+              >
                 {recurrenceOptions.map((option, index) => (
                   <TouchableOpacity
                     key={option}
                     style={[
                       styles.recurringOption,
-                      index < recurrenceOptions.length - 1 && styles.recurringOptionBorder,
-                      recurring === option && styles.recurringOptionSelected,
+                      index < recurrenceOptions.length - 1 && {
+                        borderBottomWidth: 1,
+                        borderBottomColor: themeColors.border,
+                      },
+                      recurring === option && {
+                        backgroundColor: themeColors.controlSelected,
+                      },
                     ]}
                     onPress={() => handleRecurrenceChange(option)}
                   >
-                    <Text style={[styles.recurringOptionText, { color: themeColors.textPrimary }]}>
+                    <Text
+                      style={[
+                        styles.recurringOptionText,
+                        {
+                          color:
+                            recurring === option
+                              ? themeColors.textOnAccent
+                              : themeColors.textPrimary,
+                        },
+                      ]}
+                    >
                       {TASK_RECURRENCE_LABELS[option]}
                     </Text>
                   </TouchableOpacity>
@@ -367,35 +335,17 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
         )}
         {category === 'DAILY' && (
           <>
-            <Text style={[styles.label, { color: themeColors.textPrimary }]}>
-              Done by date (optional)
-            </Text>
-            <Text
-              style={[
-                styles.hint,
-                { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-              ]}
-            >
+            <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
               Tasks with a deadline change color as time passes (green → yellow → red).
             </Text>
-            <View style={[styles.calendarWrap, { backgroundColor: themeColors.surface }]}>
-              <Calendar
-                current={doneByDate || toYYYYMMDD(new Date())}
-                minDate={toYYYYMMDD(new Date())}
-                markedDates={markedDates}
-                onDayPress={({ dateString }) =>
-                  setDoneByDate(doneByDate === dateString ? null : dateString)
-                }
-                theme={calendarTheme}
-                hideExtraDays
-                hideArrows={false}
-              />
-            </View>
-            {doneByDate && (
-              <TouchableOpacity style={styles.clearDate} onPress={() => setDoneByDate(null)}>
-                <Text style={styles.clearDateText}>Clear deadline</Text>
-              </TouchableOpacity>
-            )}
+            <DateOnlyPicker
+              label="Done by date (optional)"
+              value={doneByDate}
+              onChange={setDoneByDate}
+              onClear={() => setDoneByDate(null)}
+              title="Select deadline"
+              minimumDate={toYYYYMMDD(new Date())}
+            />
           </>
         )}
         <View style={styles.actions}>
@@ -412,14 +362,7 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
             onPress={() => navigation.goBack()}
             disabled={saving}
           >
-            <Text
-              style={[
-                styles.cancelText,
-                { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-              ]}
-            >
-              Cancel
-            </Text>
+            <Text style={[styles.cancelText, { color: themeColors.textSecondary }]}>Cancel</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -457,21 +400,6 @@ const styles = StyleSheet.create({
   hint: {
     fontSize: FONTS.sm,
     marginBottom: SPACING.sm,
-  },
-  calendarWrap: {
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.sm,
-    marginBottom: SPACING.sm,
-  },
-  clearDate: {
-    alignSelf: 'flex-start',
-    paddingVertical: SPACING.xs,
-    paddingHorizontal: SPACING.sm,
-    marginBottom: SPACING.lg,
-  },
-  clearDateText: {
-    fontSize: FONTS.sm,
-    color: COLORS.danger,
   },
   actions: {
     marginTop: SPACING.md,

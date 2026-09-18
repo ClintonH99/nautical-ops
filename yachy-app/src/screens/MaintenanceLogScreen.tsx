@@ -24,6 +24,7 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
+import type { BackgroundThemeColors } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import maintenanceLogsService from '../services/maintenanceLogs';
 import vesselService from '../services/vessel';
@@ -92,7 +93,7 @@ function Checkbox({
   checked: boolean;
   onPress: () => void;
   disabled?: boolean;
-  themeColors: { surface: string };
+  themeColors: BackgroundThemeColors;
 }) {
   return (
     <TouchableOpacity
@@ -100,12 +101,14 @@ function Checkbox({
       disabled={disabled}
       style={[
         styles.checkbox,
-        { backgroundColor: checked ? undefined : themeColors.surface },
-        checked && styles.checkboxChecked,
+        {
+          backgroundColor: checked ? themeColors.controlSelected : themeColors.control,
+          borderColor: checked ? themeColors.accent : themeColors.borderStrong,
+        },
       ]}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
     >
-      {checked && <Text style={styles.checkmark}>✓</Text>}
+      {checked && <Text style={[styles.checkmark, { color: themeColors.textOnAccent }]}>✓</Text>}
     </TouchableOpacity>
   );
 }
@@ -420,7 +423,7 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               style={styles.selectAllWrap}
             >
-              <Text style={styles.selectAllLink}>
+              <Text style={[styles.selectAllLink, { color: themeColors.accent }]}>
                 {filteredLogs.length > 0 && filteredLogs.every((l) => selectedIds.has(l.id))
                   ? 'Deselect All'
                   : 'Select All'}
@@ -434,31 +437,52 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
         <Modal visible transparent animationType="fade">
           <Pressable style={styles.filterModalBackdrop} onPress={() => setFilterDropdownKey(null)}>
             <View
-              style={[styles.filterModalBox, { backgroundColor: themeColors.surface }]}
+              style={[
+                styles.filterModalBox,
+                { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border },
+              ]}
               onStartShouldSetResponder={() => true}
             >
-              <Text style={[styles.filterModalTitle, { color: themeColors.textPrimary }]}>
+              <Text
+                style={[
+                  styles.filterModalTitle,
+                  { color: themeColors.textPrimary, borderBottomColor: themeColors.border },
+                ]}
+              >
                 {FILTER_KEYS.find((f) => f.key === filterDropdownKey)?.label ?? filterDropdownKey}
               </Text>
               <FlatList
                 data={['', ...uniqueValuesByKey[filterDropdownKey]]}
                 keyExtractor={(item, i) => (item || 'all') + i}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[
-                      styles.filterModalItem,
-                      filters[filterDropdownKey] === item && styles.filterModalItemSelected,
-                    ]}
-                    onPress={() => {
-                      setFilters((prev) => ({ ...prev, [filterDropdownKey]: item }));
-                      setFilterDropdownKey(null);
-                    }}
-                  >
-                    <Text style={[styles.filterModalItemText, { color: themeColors.textPrimary }]}>
-                      {item || 'All'}
-                    </Text>
-                  </TouchableOpacity>
-                )}
+                renderItem={({ item }) => {
+                  const selected = filters[filterDropdownKey] === item;
+                  return (
+                    <TouchableOpacity
+                      style={[
+                        styles.filterModalItem,
+                        {
+                          backgroundColor: selected
+                            ? themeColors.controlSelected
+                            : themeColors.surfaceElevated,
+                          borderBottomColor: themeColors.border,
+                        },
+                      ]}
+                      onPress={() => {
+                        setFilters((prev) => ({ ...prev, [filterDropdownKey]: item }));
+                        setFilterDropdownKey(null);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.filterModalItemText,
+                          { color: selected ? themeColors.textOnAccent : themeColors.textPrimary },
+                        ]}
+                      >
+                        {item || 'All'}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                }}
               />
             </View>
           </Pressable>
@@ -474,7 +498,8 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={[COLORS.primary]}
+              colors={[themeColors.accent]}
+              tintColor={themeColors.accent}
             />
           }
         >
@@ -502,13 +527,23 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={[COLORS.primary]}
+              colors={[themeColors.accent]}
+              tintColor={themeColors.accent}
             />
           }
           showsVerticalScrollIndicator
         >
           <View style={styles.table}>
-            <View style={[styles.row, styles.headerRow]}>
+            <View
+              style={[
+                styles.row,
+                styles.headerRow,
+                {
+                  backgroundColor: themeColors.controlSelected,
+                  borderBottomColor: themeColors.accent,
+                },
+              ]}
+            >
               <View
                 style={[
                   styles.cellView,
@@ -541,7 +576,7 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
               filteredLogs.map((log) => (
                 <View key={log.id}>
                   <TouchableOpacity
-                    style={styles.row}
+                    style={[styles.row, { borderBottomColor: themeColors.border }]}
                     activeOpacity={0.7}
                     onPress={() => setExpandedId(expandedId === log.id ? null : log.id)}
                   >
@@ -582,8 +617,18 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
                     </Text>
                   </TouchableOpacity>
                   {expandedId === log.id && (
-                    <View style={[styles.previewPanel, { backgroundColor: themeColors.surface }]}>
-                      <View style={styles.previewHeader}>
+                    <View
+                      style={[
+                        styles.previewPanel,
+                        {
+                          backgroundColor: themeColors.surface,
+                          borderBottomColor: themeColors.accent,
+                        },
+                      ]}
+                    >
+                      <View
+                        style={[styles.previewHeader, { borderBottomColor: themeColors.border }]}
+                      >
                         <Text style={[styles.previewTitle, { color: themeColors.textPrimary }]}>
                           {log.equipment}
                         </Text>
@@ -759,6 +804,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 320,
     overflow: 'hidden',
+    borderWidth: 1,
   },
   filterModalTitle: {
     fontSize: FONTS.lg,

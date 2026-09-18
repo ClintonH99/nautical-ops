@@ -75,7 +75,7 @@ export const VesselCrewSafetyScreen = ({ navigation }: any) => {
   }
 
   return (
-    <View style={styles.pageWrap}>
+    <View style={[styles.pageWrap, { backgroundColor: themeColors.background }]}>
       <PageHeader
         title="Vessel & Crew Safety"
         info={VESSEL_CREW_SAFETY_INFO}
@@ -90,7 +90,11 @@ export const VesselCrewSafetyScreen = ({ navigation }: any) => {
             key={category.label}
             style={[
               styles.card,
-              { backgroundColor: themeColors.surface },
+              {
+                backgroundColor: themeColors.surface,
+                borderColor: themeColors.border,
+                borderWidth: themeColors.isDark ? 1 : 0,
+              },
               !category.enabled && styles.cardDisabled,
             ]}
             onPress={() => category.enabled && category.nav && navigation.navigate(category.nav)}
@@ -110,7 +114,7 @@ export const VesselCrewSafetyScreen = ({ navigation }: any) => {
             {category.enabled ? (
               <Text style={[styles.cardChevron, { color: themeColors.textSecondary }]}>›</Text>
             ) : (
-              <Text style={styles.comingSoon}>Coming soon</Text>
+              <Text style={[styles.comingSoon, { color: themeColors.textMuted }]}>Coming soon</Text>
             )}
           </TouchableOpacity>
         ))}
@@ -136,6 +140,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    borderWidth: 1,
   },
   cardDisabled: { opacity: 0.7 },
   cardIcon: { fontSize: FONTS['2xl'], marginRight: SPACING.lg },

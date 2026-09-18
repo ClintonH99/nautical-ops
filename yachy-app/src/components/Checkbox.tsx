@@ -11,6 +11,7 @@
 import React from 'react';
 import { Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { COLORS, BORDER_RADIUS } from '../constants/theme';
+import { useThemeColors } from '../hooks/useThemeColors';
 
 interface CheckboxProps {
   checked: boolean;
@@ -19,21 +20,27 @@ interface CheckboxProps {
   surface?: string;
 }
 
-export const Checkbox: React.FC<CheckboxProps> = ({ checked, onPress, surface }) => (
-  <TouchableOpacity
-    onPress={onPress}
-    style={[
-      styles.checkbox,
-      !checked && surface ? { backgroundColor: surface } : null,
-      checked && styles.checked,
-    ]}
-    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-    accessibilityRole="checkbox"
-    accessibilityState={{ checked }}
-  >
-    {checked && <Text style={styles.mark}>✓</Text>}
-  </TouchableOpacity>
-);
+export const Checkbox: React.FC<CheckboxProps> = ({ checked, onPress, surface }) => {
+  const themeColors = useThemeColors();
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={[
+        styles.checkbox,
+        {
+          backgroundColor: checked ? themeColors.controlSelected : (surface ?? themeColors.control),
+          borderColor: checked ? themeColors.accent : themeColors.borderStrong,
+        },
+      ]}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked }}
+    >
+      {checked && <Text style={[styles.mark, { color: themeColors.textOnAccent }]}>✓</Text>}
+    </TouchableOpacity>
+  );
+};
 
 const styles = StyleSheet.create({
   checkbox: {
@@ -44,10 +51,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.gray300,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  checked: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
   },
   mark: {
     color: COLORS.white,

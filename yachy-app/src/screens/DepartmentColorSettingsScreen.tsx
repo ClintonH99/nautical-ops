@@ -60,7 +60,7 @@ export const DepartmentColorSettingsScreen = () => {
   }
 
   return (
-    <View style={styles.pageWrap}>
+    <View style={[styles.pageWrap, { backgroundColor: themeColors.background }]}>
       <PageHeader title="Department colors" />
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
@@ -72,7 +72,16 @@ export const DepartmentColorSettingsScreen = () => {
           Choose a color for each department, or No color for neutral.
         </Text>
 
-        <View style={[styles.section, { backgroundColor: themeColors.surface }]}>
+        <View
+          style={[
+            styles.section,
+            {
+              backgroundColor: themeColors.surface,
+              borderColor: themeColors.border,
+              borderWidth: themeColors.isDark ? 1 : 0,
+            },
+          ]}
+        >
           {DEPARTMENTS.map((dept, index) => {
             const effectiveColor = getDepartmentColor(dept, overrides);
             const isNoColor = overrides[dept] === null;
@@ -80,7 +89,11 @@ export const DepartmentColorSettingsScreen = () => {
             return (
               <TouchableOpacity
                 key={dept}
-                style={[styles.row, isLast && styles.rowLast]}
+                style={[
+                  styles.row,
+                  { borderBottomColor: themeColors.border },
+                  isLast && styles.rowLast,
+                ]}
                 onPress={() => setPickingDepartment(dept)}
                 activeOpacity={0.7}
               >
@@ -105,7 +118,14 @@ export const DepartmentColorSettingsScreen = () => {
         <Modal visible={!!pickingDepartment} transparent animationType="fade">
           <Pressable style={styles.modalBackdrop} onPress={() => setPickingDepartment(null)}>
             <View
-              style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+              style={[
+                styles.modalBox,
+                {
+                  backgroundColor: themeColors.surfaceElevated,
+                  borderColor: themeColors.border,
+                  borderWidth: themeColors.isDark ? 1 : 0,
+                },
+              ]}
               onStartShouldSetResponder={() => true}
             >
               {pickingDepartment && (
@@ -117,7 +137,20 @@ export const DepartmentColorSettingsScreen = () => {
                     style={styles.modalOption}
                     onPress={() => handleSelectColor(pickingDepartment, null)}
                   >
-                    <View style={[styles.swatch, styles.swatchNoColor]} />
+                    <View
+                      style={[
+                        styles.swatch,
+                        styles.swatchNoColor,
+                        {
+                          backgroundColor: themeColors.isDark
+                            ? themeColors.surfaceAlt
+                            : COLORS.gray300,
+                          borderColor: themeColors.isDark
+                            ? themeColors.borderStrong
+                            : COLORS.border,
+                        },
+                      ]}
+                    />
                     <Text style={[styles.modalOptionText, { color: themeColors.textPrimary }]}>
                       No color
                     </Text>
@@ -174,6 +207,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 6,
     elevation: 3,
+    borderWidth: 1,
   },
   row: {
     flexDirection: 'row',
@@ -213,6 +247,7 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
     width: '100%',
     maxWidth: 320,
+    borderWidth: 1,
   },
   modalTitle: {
     fontSize: FONTS.lg,

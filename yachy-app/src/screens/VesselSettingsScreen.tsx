@@ -252,12 +252,7 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: themeColors.background }]}>
         <LoadingSpinner />
-        <Text
-          style={[
-            styles.loadingText,
-            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-          ]}
-        >
+        <Text style={[styles.loadingText, { color: themeColors.textSecondary }]}>
           Loading vessel settings...
         </Text>
       </View>
@@ -274,13 +269,22 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
   }
 
   return (
-    <View style={styles.pageWrap}>
+    <View style={[styles.pageWrap, { backgroundColor: themeColors.background }]}>
       <PageHeader title="Vessel Settings" />
       <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]}>
         <View style={styles.content}>
           {/* Subscription / Vessel Plans Link */}
           <View style={styles.section}>
-            <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
+            <View
+              style={[
+                styles.card,
+                {
+                  backgroundColor: themeColors.surface,
+                  borderColor: themeColors.border,
+                  borderWidth: themeColors.isDark ? 1 : 0,
+                },
+              ]}
+            >
               {hasActiveSubscription ? (
                 <>
                   <Text style={[styles.currentPlanLabel, { color: themeColors.textPrimary }]}>
@@ -340,7 +344,16 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
             <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
               Vessel Photo
             </Text>
-            <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
+            <View
+              style={[
+                styles.card,
+                {
+                  backgroundColor: themeColors.surface,
+                  borderColor: themeColors.border,
+                  borderWidth: themeColors.isDark ? 1 : 0,
+                },
+              ]}
+            >
               <Button
                 title={isUploadingBanner ? 'Uploading...' : '📷 Change vessel photo'}
                 onPress={handleChangeVesselPhoto}
@@ -348,12 +361,7 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                 fullWidth
                 disabled={isUploadingBanner}
               />
-              <Text
-                style={[
-                  styles.photoHint,
-                  { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                ]}
-              >
+              <Text style={[styles.photoHint, { color: themeColors.textSecondary }]}>
                 Updates the banner shown on the home screen. Changes appear when you return to Home.
               </Text>
             </View>
@@ -367,24 +375,30 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
               </Text>
               {!isEditingName && (
                 <TouchableOpacity onPress={() => setIsEditingName(true)}>
-                  <Text
-                    style={[
-                      styles.editButton,
-                      { color: themeColors.isDark ? COLORS.white : COLORS.primary },
-                    ]}
-                  >
-                    Edit
-                  </Text>
+                  <Text style={[styles.editButton, { color: themeColors.accent }]}>Edit</Text>
                 </TouchableOpacity>
               )}
             </View>
-            <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
+            <View
+              style={[
+                styles.card,
+                {
+                  backgroundColor: themeColors.surface,
+                  borderColor: themeColors.border,
+                  borderWidth: themeColors.isDark ? 1 : 0,
+                },
+              ]}
+            >
               {isEditingName ? (
                 <>
                   <TextInput
                     style={[
                       styles.input,
-                      { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+                      {
+                        backgroundColor: themeColors.control,
+                        color: themeColors.textPrimary,
+                        borderColor: themeColors.isDark ? themeColors.borderStrong : COLORS.border,
+                      },
                     ]}
                     value={vesselName}
                     onChangeText={setVesselName}
@@ -427,24 +441,30 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
               </Text>
               {!isEditingImo && (
                 <TouchableOpacity onPress={() => setIsEditingImo(true)}>
-                  <Text
-                    style={[
-                      styles.editButton,
-                      { color: themeColors.isDark ? COLORS.white : COLORS.primary },
-                    ]}
-                  >
-                    Edit
-                  </Text>
+                  <Text style={[styles.editButton, { color: themeColors.accent }]}>Edit</Text>
                 </TouchableOpacity>
               )}
             </View>
-            <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
+            <View
+              style={[
+                styles.card,
+                {
+                  backgroundColor: themeColors.surface,
+                  borderColor: themeColors.border,
+                  borderWidth: themeColors.isDark ? 1 : 0,
+                },
+              ]}
+            >
               {isEditingImo ? (
                 <>
                   <TextInput
                     style={[
                       styles.input,
-                      { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+                      {
+                        backgroundColor: themeColors.control,
+                        color: themeColors.textPrimary,
+                        borderColor: themeColors.isDark ? themeColors.borderStrong : COLORS.border,
+                      },
                     ]}
                     value={imoNumber}
                     onChangeText={setImoNumber}
@@ -488,25 +508,35 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
 
             {hasActiveSubscription && !crewLimitReached ? (
               <>
-                <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
+                <View
+                  style={[
+                    styles.card,
+                    {
+                      backgroundColor: themeColors.surface,
+                      borderColor: themeColors.border,
+                      borderWidth: themeColors.isDark ? 1 : 0,
+                    },
+                  ]}
+                >
                   <View style={styles.codeContainer}>
-                    <Text
-                      style={[
-                        styles.codeLabel,
-                        { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                      ]}
-                    >
+                    <Text style={[styles.codeLabel, { color: themeColors.textSecondary }]}>
                       Current Code
                     </Text>
-                    <View style={styles.codeBox}>
-                      <Text style={styles.codeText}>{vessel.inviteCode}</Text>
-                    </View>
-                    <Text
-                      style={[
-                        styles.expiryText,
-                        { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                      ]}
+                    <View
+                      style={[styles.codeBox, { backgroundColor: themeColors.controlSelected }]}
                     >
+                      <Text
+                        style={[
+                          styles.codeText,
+                          {
+                            color: themeColors.isDark ? themeColors.textOnAccent : COLORS.primary,
+                          },
+                        ]}
+                      >
+                        {vessel.inviteCode}
+                      </Text>
+                    </View>
+                    <Text style={[styles.expiryText, { color: themeColors.textSecondary }]}>
                       {formatExpiry(vessel.inviteExpiry)}
                     </Text>
                   </View>
@@ -526,7 +556,9 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                       style={styles.codeButton}
                     />
                   </View>
-                  <View style={styles.regenerateContainer}>
+                  <View
+                    style={[styles.regenerateContainer, { borderTopColor: themeColors.border }]}
+                  >
                     <Button
                       title={isRegeneratingCode ? 'Generating...' : '🔄 Regenerate Code'}
                       onPress={handleRegenerateCode}
@@ -534,17 +566,21 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                       fullWidth
                       disabled={isRegeneratingCode}
                     />
-                    <Text
-                      style={[
-                        styles.regenerateWarning,
-                        { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                      ]}
-                    >
+                    <Text style={[styles.regenerateWarning, { color: themeColors.textSecondary }]}>
                       ⚠️ This will expire the current code
                     </Text>
                   </View>
                 </View>
-                <View style={[styles.infoCard, { backgroundColor: themeColors.surfaceAlt }]}>
+                <View
+                  style={[
+                    styles.infoCard,
+                    {
+                      backgroundColor: themeColors.surfaceAlt,
+                      borderColor: themeColors.border,
+                      borderWidth: themeColors.isDark ? 1 : 0,
+                    },
+                  ]}
+                >
                   <Text style={[styles.infoTitle, { color: themeColors.textPrimary }]}>
                     💡 About Invite Codes
                   </Text>
@@ -564,7 +600,15 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
               </>
             ) : hasActiveSubscription && crewLimitReached ? (
               <View
-                style={[styles.card, styles.gatedCard, { backgroundColor: themeColors.surface }]}
+                style={[
+                  styles.card,
+                  styles.gatedCard,
+                  {
+                    backgroundColor: themeColors.surface,
+                    borderColor: themeColors.border,
+                    borderWidth: themeColors.isDark ? 1 : 0,
+                  },
+                ]}
               >
                 <Text style={[styles.gatedText, { color: themeColors.textPrimary }]}>
                   You have reached your crew limit of{' '}
@@ -574,7 +618,15 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
               </View>
             ) : subscriptionAccessState === 'unavailable' ? (
               <View
-                style={[styles.card, styles.gatedCard, { backgroundColor: themeColors.surface }]}
+                style={[
+                  styles.card,
+                  styles.gatedCard,
+                  {
+                    backgroundColor: themeColors.surface,
+                    borderColor: themeColors.border,
+                    borderWidth: themeColors.isDark ? 1 : 0,
+                  },
+                ]}
               >
                 <Text style={[styles.gatedText, { color: themeColors.textPrimary }]}>
                   The subscription service is temporarily unavailable. Your payment status has not
@@ -583,7 +635,15 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
               </View>
             ) : (
               <View
-                style={[styles.card, styles.gatedCard, { backgroundColor: themeColors.surface }]}
+                style={[
+                  styles.card,
+                  styles.gatedCard,
+                  {
+                    backgroundColor: themeColors.surface,
+                    borderColor: themeColors.border,
+                    borderWidth: themeColors.isDark ? 1 : 0,
+                  },
+                ]}
               >
                 <Text style={[styles.gatedText, { color: themeColors.textPrimary }]}>
                   In order to invite Crew Members to the Vessel, please refer to{' '}
@@ -600,27 +660,26 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
             <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
               Vessel Information
             </Text>
-            <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
-              <View style={styles.infoRow}>
-                <Text
-                  style={[
-                    styles.infoRowLabel,
-                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                  ]}
-                >
+            <View
+              style={[
+                styles.card,
+                {
+                  backgroundColor: themeColors.surface,
+                  borderColor: themeColors.border,
+                  borderWidth: themeColors.isDark ? 1 : 0,
+                },
+              ]}
+            >
+              <View style={[styles.infoRow, { borderBottomColor: themeColors.border }]}>
+                <Text style={[styles.infoRowLabel, { color: themeColors.textSecondary }]}>
                   Vessel ID
                 </Text>
                 <Text style={[styles.infoRowValue, { color: themeColors.textPrimary }]}>
                   {vessel.id.slice(0, 8)}...
                 </Text>
               </View>
-              <View style={styles.infoRow}>
-                <Text
-                  style={[
-                    styles.infoRowLabel,
-                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                  ]}
-                >
+              <View style={[styles.infoRow, { borderBottomColor: themeColors.border }]}>
+                <Text style={[styles.infoRowLabel, { color: themeColors.textSecondary }]}>
                   Created
                 </Text>
                 <Text style={[styles.infoRowValue, { color: themeColors.textPrimary }]}>
@@ -632,12 +691,7 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                 </Text>
               </View>
               <View style={[styles.infoRow, styles.infoRowLast]}>
-                <Text
-                  style={[
-                    styles.infoRowLabel,
-                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                  ]}
-                >
+                <Text style={[styles.infoRowLabel, { color: themeColors.textSecondary }]}>
                   Last Updated
                 </Text>
                 <Text style={[styles.infoRowValue, { color: themeColors.textPrimary }]}>
@@ -726,6 +780,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    borderWidth: 1,
   },
   vesselNameDisplay: { fontSize: FONTS.xl, fontWeight: 'bold' },
   input: {
@@ -763,6 +818,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.lg,
     marginTop: SPACING.md,
+    borderWidth: 1,
   },
   infoTitle: {
     fontSize: FONTS.base,

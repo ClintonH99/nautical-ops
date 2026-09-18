@@ -13,11 +13,8 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Modal,
-  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Calendar } from 'react-native-calendars';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
@@ -27,7 +24,7 @@ import safetyEquipmentService, {
 } from '../services/safetyEquipment';
 import type { SafetyEquipmentData, SafetyItem } from '../services/safetyEquipment';
 import vesselService from '../services/vessel';
-import { Button, LoadingSpinner, PageHeader, ExportButton } from '../components';
+import { Button, DateOnlyPicker, LoadingSpinner, PageHeader, ExportButton } from '../components';
 import { generateSafetyEquipmentPdf } from '../utils/safetyEquipmentPdf';
 
 const DEFAULT_CATEGORIES = [
@@ -66,10 +63,6 @@ function getLabel(key: string, customLabels: Record<string, string>): string {
   return LABELS[key] ?? customLabels[key] ?? key;
 }
 
-function toYYYYMMDD(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
 function emptyItem(): SafetyItem {
   return {
     location: '',
@@ -79,8 +72,6 @@ function emptyItem(): SafetyItem {
     expiryDateNA: false,
   };
 }
-
-type ActiveDateField = { key: string; index: number; field: 'lastChecked' | 'expiryDate' } | null;
 
 export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
@@ -100,7 +91,6 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
   const [data, setData] = useState<Record<string, SafetyItem[]>>(
     Object.fromEntries(DEFAULT_CATEGORIES.map((c) => [c, [emptyItem()]]))
   );
-  const [activeDateField, setActiveDateField] = useState<ActiveDateField>(null);
 
   useEffect(() => {
     navigation.setOptions({ title: isEdit ? 'Edit Safety Equipment' : 'Create Safety Equipment' });
@@ -267,13 +257,6 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
     }
   };
 
-  const openDatePicker = (key: string, index: number, field: 'lastChecked' | 'expiryDate') => {
-    setActiveDateField({ key, index, field });
-  };
-
-  const activeItem = activeDateField ? data[activeDateField.key]?.[activeDateField.index] : null;
-  const activeValue = activeDateField && activeItem ? activeItem[activeDateField.field] : null;
-
   if (!vesselId)
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
@@ -309,31 +292,31 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <Text
-          style={[
-            styles.label,
-            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-          ]}
-        >
-          Plan title
-        </Text>
+        <Text style={[styles.label, { color: themeColors.textSecondary }]}>Plan title</Text>
         <TextInput
           style={[
             styles.input,
-            { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+            {
+              backgroundColor: themeColors.control,
+              color: themeColors.textPrimary,
+              borderColor: themeColors.border,
+            },
           ]}
           value={title}
           onChangeText={setTitle}
           placeholder="Safety Equipment Locations"
           placeholderTextColor={themeColors.textSecondary}
         />
-        <View style={[styles.addSection, { borderColor: themeColors.surfaceAlt }]}>
-          <Text
-            style={[
-              styles.addSectionLabel,
-              { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-            ]}
-          >
+        <View
+          style={[
+            styles.addSection,
+            {
+              backgroundColor: themeColors.accentSoft,
+              borderColor: themeColors.borderStrong,
+            },
+          ]}
+        >
+          <Text style={[styles.addSectionLabel, { color: themeColors.textPrimary }]}>
             Add equipment type
           </Text>
           <View style={styles.addSectionRow}>
@@ -341,7 +324,11 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
               style={[
                 styles.input,
                 styles.flex,
-                { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+                {
+                  backgroundColor: themeColors.control,
+                  color: themeColors.textPrimary,
+                  borderColor: themeColors.border,
+                },
               ]}
               value={newCategoryName}
               onChangeText={setNewCategoryName}
@@ -376,8 +363,8 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
                 style={[
                   styles.itemCard,
                   {
-                    backgroundColor: themeColors.surface,
-                    borderColor: themeColors.isDark ? 'rgba(255,255,255,0.1)' : COLORS.border,
+                    backgroundColor: themeColors.surfaceElevated,
+                    borderColor: themeColors.border,
                   },
                 ]}
               >
@@ -386,7 +373,11 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
                     style={[
                       styles.input,
                       styles.flex,
-                      { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+                      {
+                        backgroundColor: themeColors.control,
+                        color: themeColors.textPrimary,
+                        borderColor: themeColors.border,
+                      },
                     ]}
                     value={item.location}
                     onChangeText={(v) => setLoc(key, i, v)}
@@ -394,42 +385,19 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
                     placeholderTextColor={themeColors.textSecondary}
                   />
                   <TouchableOpacity onPress={() => remLoc(key, i)}>
-                    <Text style={styles.rm}>✕</Text>
+                    <Text style={[styles.rm, { color: COLORS.danger }]}>✕</Text>
                   </TouchableOpacity>
                 </View>
                 <View style={styles.dateRow}>
                   <View style={styles.dateCol}>
-                    <Text style={[styles.dateLabel, { color: themeColors.textSecondary }]}>
-                      Last checked
-                    </Text>
-                    <TouchableOpacity
+                    <DateOnlyPicker
+                      label="Last checked"
+                      value={item.lastChecked}
+                      onChange={(value) => setDateField(key, i, 'lastChecked', value)}
+                      title="Select last checked date"
+                      placeholder={item.lastCheckedNA ? 'N/A' : 'Select date'}
                       disabled={item.lastCheckedNA}
-                      onPress={() => openDatePicker(key, i, 'lastChecked')}
-                      style={[
-                        styles.dateChip,
-                        {
-                          backgroundColor: item.lastCheckedNA
-                            ? themeColors.background
-                            : themeColors.background,
-                          borderColor: themeColors.isDark ? 'rgba(255,255,255,0.1)' : COLORS.border,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.dateChipText,
-                          {
-                            color:
-                              item.lastCheckedNA || !item.lastChecked
-                                ? themeColors.textSecondary
-                                : themeColors.textPrimary,
-                            fontStyle: item.lastCheckedNA ? 'italic' : 'normal',
-                          },
-                        ]}
-                      >
-                        {item.lastCheckedNA ? 'N/A' : item.lastChecked || 'Not set'}
-                      </Text>
-                    </TouchableOpacity>
+                    />
                     <TouchableOpacity
                       style={styles.naRow}
                       onPress={() => toggleNA(key, i, 'lastChecked')}
@@ -437,7 +405,7 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
                       <Ionicons
                         name={item.lastCheckedNA ? 'checkbox' : 'square-outline'}
                         size={15}
-                        color={item.lastCheckedNA ? COLORS.primary : themeColors.textSecondary}
+                        color={item.lastCheckedNA ? themeColors.accent : themeColors.textSecondary}
                       />
                       <Text style={[styles.naLabel, { color: themeColors.textSecondary }]}>
                         Mark N/A
@@ -445,35 +413,14 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
                     </TouchableOpacity>
                   </View>
                   <View style={styles.dateCol}>
-                    <Text style={[styles.dateLabel, { color: themeColors.textSecondary }]}>
-                      Expiry / replace by
-                    </Text>
-                    <TouchableOpacity
+                    <DateOnlyPicker
+                      label="Expiry / replace by"
+                      value={item.expiryDate}
+                      onChange={(value) => setDateField(key, i, 'expiryDate', value)}
+                      title="Select expiry date"
+                      placeholder={item.expiryDateNA ? 'N/A' : 'Select date'}
                       disabled={item.expiryDateNA}
-                      onPress={() => openDatePicker(key, i, 'expiryDate')}
-                      style={[
-                        styles.dateChip,
-                        {
-                          backgroundColor: themeColors.background,
-                          borderColor: themeColors.isDark ? 'rgba(255,255,255,0.1)' : COLORS.border,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.dateChipText,
-                          {
-                            color:
-                              item.expiryDateNA || !item.expiryDate
-                                ? themeColors.textSecondary
-                                : themeColors.textPrimary,
-                            fontStyle: item.expiryDateNA ? 'italic' : 'normal',
-                          },
-                        ]}
-                      >
-                        {item.expiryDateNA ? 'N/A' : item.expiryDate || 'Not set'}
-                      </Text>
-                    </TouchableOpacity>
+                    />
                     <TouchableOpacity
                       style={styles.naRow}
                       onPress={() => toggleNA(key, i, 'expiryDate')}
@@ -481,7 +428,7 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
                       <Ionicons
                         name={item.expiryDateNA ? 'checkbox' : 'square-outline'}
                         size={15}
-                        color={item.expiryDateNA ? COLORS.primary : themeColors.textSecondary}
+                        color={item.expiryDateNA ? themeColors.accent : themeColors.textSecondary}
                       />
                       <Text style={[styles.naLabel, { color: themeColors.textSecondary }]}>
                         Mark N/A
@@ -492,7 +439,7 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
               </View>
             ))}
             <TouchableOpacity onPress={() => addLoc(key)}>
-              <Text style={styles.add}>+ Add location</Text>
+              <Text style={[styles.add, { color: themeColors.accent }]}>+ Add location</Text>
             </TouchableOpacity>
           </View>
         ))}
@@ -506,54 +453,6 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
           />
         </View>
       </ScrollView>
-
-      {activeDateField && (
-        <Modal visible transparent animationType="fade">
-          <Pressable style={styles.modalBackdrop} onPress={() => setActiveDateField(null)}>
-            <View
-              style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
-              onStartShouldSetResponder={() => true}
-            >
-              <Calendar
-                current={activeValue || toYYYYMMDD(new Date())}
-                markedDates={
-                  activeValue
-                    ? { [activeValue]: { selected: true, selectedColor: COLORS.primary } }
-                    : {}
-                }
-                onDayPress={({ dateString }: { dateString: string }) => {
-                  if (activeDateField) {
-                    setDateField(
-                      activeDateField.key,
-                      activeDateField.index,
-                      activeDateField.field,
-                      dateString
-                    );
-                  }
-                  setActiveDateField(null);
-                }}
-                theme={{
-                  backgroundColor: themeColors.surface,
-                  calendarBackground: themeColors.surface,
-                  textSectionTitleColor: themeColors.isDark ? COLORS.white : COLORS.black,
-                  selectedDayBackgroundColor: COLORS.primary,
-                  selectedDayTextColor: COLORS.white,
-                  todayTextColor: COLORS.primary,
-                  dayTextColor: themeColors.isDark ? COLORS.white : COLORS.black,
-                  arrowColor: themeColors.textPrimary,
-                  monthTextColor: themeColors.textPrimary,
-                }}
-              />
-              <Button
-                title="Close"
-                onPress={() => setActiveDateField(null)}
-                variant="outline"
-                fullWidth
-              />
-            </View>
-          </Pressable>
-        </Modal>
-      )}
     </KeyboardAvoidingView>
   );
 };
@@ -598,33 +497,12 @@ const styles = StyleSheet.create({
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.md },
   flex: { flex: 1 },
-  rm: { color: COLORS.primary },
+  rm: {},
   dateRow: { flexDirection: 'row', gap: SPACING.md },
   dateCol: { flex: 1 },
-  dateLabel: { fontSize: FONTS.xs, marginBottom: 4 },
-  dateChip: {
-    borderWidth: 1,
-    borderRadius: BORDER_RADIUS.sm,
-    padding: SPACING.sm,
-    marginBottom: 6,
-  },
-  dateChipText: { fontSize: FONTS.sm },
   naRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   naLabel: { fontSize: FONTS.xs },
-  add: { fontSize: FONTS.base, color: COLORS.primary, fontWeight: '600', marginBottom: SPACING.sm },
+  add: { fontSize: FONTS.base, fontWeight: '600', marginBottom: SPACING.sm },
   actions: { marginTop: SPACING.xl, gap: SPACING.md },
   btn: { marginBottom: SPACING.sm },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.lg,
-  },
-  modalBox: {
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.md,
-    width: '100%',
-    gap: SPACING.md,
-  },
 });

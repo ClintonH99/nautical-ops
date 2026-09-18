@@ -14,8 +14,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Modal,
-  Pressable,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
@@ -28,11 +26,9 @@ import {
   Button,
   LoadingSpinner,
   PageHeader,
-  LabeledDropdown,
+  DepartmentSelector,
   EnterToAddHint,
 } from '../components';
-
-const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
 const defaultRow: InventoryItemRow = { amount: '', item: '' };
 
@@ -43,7 +39,6 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
   const isEdit = !!itemId;
 
   const [department, setDepartment] = useState<Department>(user?.department ?? 'INTERIOR');
-  const [departmentDropdownOpen, setDepartmentDropdownOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
@@ -189,50 +184,10 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <LabeledDropdown
-          label="Department"
-          value={department.charAt(0) + department.slice(1).toLowerCase()}
-          open={departmentDropdownOpen}
-          onPress={() => setDepartmentDropdownOpen(!departmentDropdownOpen)}
+        <DepartmentSelector
+          value={department}
+          onChange={(value) => value && setDepartment(value)}
         />
-        {departmentDropdownOpen && (
-          <Modal visible transparent animationType="fade">
-            <Pressable
-              style={styles.modalBackdrop}
-              onPress={() => setDepartmentDropdownOpen(false)}
-            >
-              <View
-                style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
-                onStartShouldSetResponder={() => true}
-              >
-                {DEPARTMENTS.map((dept) => (
-                  <TouchableOpacity
-                    key={dept}
-                    style={[
-                      styles.modalItem,
-                      { backgroundColor: themeColors.surface },
-                      department === dept && styles.modalItemSelected,
-                    ]}
-                    onPress={() => {
-                      setDepartment(dept);
-                      setDepartmentDropdownOpen(false);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.modalItemText,
-                        { color: themeColors.textPrimary },
-                        department === dept && styles.modalItemTextSelected,
-                      ]}
-                    >
-                      {dept.charAt(0) + dept.slice(1).toLowerCase()}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </Pressable>
-          </Modal>
-        )}
 
         <Input
           label="Title"
@@ -258,18 +213,16 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
           style={styles.descriptionInput}
         />
 
-        <Text
+        <Text style={[styles.tableLabel, { color: themeColors.textSecondary }]}>Amount & Item</Text>
+        <View
           style={[
-            styles.tableLabel,
-            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+            styles.table,
+            { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border },
           ]}
         >
-          Amount & Item
-        </Text>
-        <View style={[styles.table, { backgroundColor: themeColors.surface }]}>
           {rows.map((row, index) => (
             <React.Fragment key={index}>
-              <View style={styles.tableRow}>
+              <View style={[styles.tableRow, { borderBottomColor: themeColors.border }]}>
                 <TextInput
                   ref={(el) => {
                     amountInputRefs.current[index] = el;
@@ -277,7 +230,11 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
                   style={[
                     styles.tableInput,
                     styles.amountCol,
-                    { color: themeColors.textPrimary, backgroundColor: themeColors.surface },
+                    {
+                      color: themeColors.textPrimary,
+                      backgroundColor: themeColors.control,
+                      borderColor: themeColors.border,
+                    },
                   ]}
                   value={row.amount}
                   onChangeText={(v) => setRowAt(index, 'amount', v)}
@@ -291,7 +248,11 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
                   style={[
                     styles.tableInput,
                     styles.itemCol,
-                    { color: themeColors.textPrimary, backgroundColor: themeColors.surface },
+                    {
+                      color: themeColors.textPrimary,
+                      backgroundColor: themeColors.control,
+                      borderColor: themeColors.border,
+                    },
                   ]}
                   value={row.item}
                   onChangeText={(v) => setRowAt(index, 'item', v)}
@@ -311,7 +272,12 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
                   disabled={rows.length <= 1}
                 >
                   <Text
-                    style={[styles.removeBtnText, rows.length <= 1 && styles.removeBtnDisabled]}
+                    style={[
+                      styles.removeBtnText,
+                      {
+                        color: rows.length <= 1 ? themeColors.textMuted : themeColors.accent,
+                      },
+                    ]}
                   >
                     Remove
                   </Text>

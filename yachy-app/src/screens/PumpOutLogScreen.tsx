@@ -202,7 +202,7 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
           </View>
           {exportMode && (
             <TouchableOpacity onPress={toggleSelectAll} style={styles.selectAllRow}>
-              <Text style={styles.selectAllText}>
+              <Text style={[styles.selectAllText, { color: themeColors.accent }]}>
                 {allSelected ? 'Deselect All' : 'Select All'}
               </Text>
             </TouchableOpacity>
@@ -220,7 +220,8 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={[COLORS.primary]}
+              colors={[themeColors.accent]}
+              tintColor={themeColors.accent}
             />
           }
         >

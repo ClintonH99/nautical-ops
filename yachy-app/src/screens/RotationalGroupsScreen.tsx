@@ -248,10 +248,10 @@ export const RotationalGroupsScreen = () => {
           styles.memberRow,
           {
             backgroundColor: themeColors.surface,
-            borderBottomColor: themeColors.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+            borderBottomColor: themeColors.isDark ? themeColors.border : 'rgba(0,0,0,0.06)',
           },
           isSelected && {
-            backgroundColor: themeColors.isDark ? 'rgba(30,58,138,0.25)' : 'rgba(30,58,138,0.08)',
+            backgroundColor: themeColors.isDark ? themeColors.accentSoft : 'rgba(30,58,138,0.08)',
           },
         ]}
         onPress={() => {
@@ -301,13 +301,23 @@ export const RotationalGroupsScreen = () => {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
-            tintColor={COLORS.primary}
+            tintColor={themeColors.accent}
+            colors={[themeColors.accent]}
           />
         }
         contentContainerStyle={styles.scrollContent}
       >
         {/* Info banner */}
-        <View style={[styles.infoBanner, { backgroundColor: themeColors.surface }]}>
+        <View
+          style={[
+            styles.infoBanner,
+            {
+              backgroundColor: themeColors.surface,
+              borderColor: themeColors.border,
+              borderWidth: themeColors.isDark ? 1 : 0,
+            },
+          ]}
+        >
           <Text style={[styles.infoBannerTitle, { color: themeColors.textPrimary }]}>
             About Rotation Groups
           </Text>
@@ -334,7 +344,7 @@ export const RotationalGroupsScreen = () => {
                   styles.crewPickerCard,
                   {
                     backgroundColor: themeColors.surface,
-                    borderColor: themeColors.isDark ? 'rgba(255,255,255,0.12)' : COLORS.border,
+                    borderColor: themeColors.border,
                   },
                 ]}
               >
@@ -355,9 +365,7 @@ export const RotationalGroupsScreen = () => {
                       style={[
                         styles.crewPickerRow,
                         {
-                          borderTopColor: themeColors.isDark
-                            ? 'rgba(255,255,255,0.08)'
-                            : COLORS.border,
+                          borderTopColor: themeColors.border,
                         },
                       ]}
                       onPress={() => handleAddCrewRotation(member)}
@@ -381,7 +389,7 @@ export const RotationalGroupsScreen = () => {
                             .join(' · ')}
                         </Text>
                       </View>
-                      <Text style={[styles.addCrewLabel, { color: COLORS.primary }]}>
+                      <Text style={[styles.addCrewLabel, { color: themeColors.accent }]}>
                         {addingRotationId === member.id ? 'Adding…' : 'Add'}
                       </Text>
                     </TouchableOpacity>
@@ -426,20 +434,15 @@ export const RotationalGroupsScreen = () => {
                       </TouchableOpacity>
                     )}
                   </View>
-                  <View
-                    style={[
-                      styles.card,
-                      { borderColor: themeColors.isDark ? 'rgba(255,255,255,0.1)' : COLORS.border },
-                    ]}
-                  >
+                  <View style={[styles.card, { borderColor: themeColors.border }]}>
                     {members.map((m) => renderMember(m, true))}
                     {/* Add selected ungrouped members to this group */}
                     {canEdit && selectedIds.size > 0 && (
                       <TouchableOpacity
-                        style={[styles.addToGroupBtn, { borderColor: COLORS.primary }]}
+                        style={[styles.addToGroupBtn, { borderColor: themeColors.accent }]}
                         onPress={() => handleAddToExistingGroup(group.id, group.name)}
                       >
-                        <Text style={[styles.addToGroupText, { color: COLORS.primary }]}>
+                        <Text style={[styles.addToGroupText, { color: themeColors.accent }]}>
                           + Add selected to "{group.name}"
                         </Text>
                       </TouchableOpacity>
@@ -462,12 +465,7 @@ export const RotationalGroupsScreen = () => {
                     Tap crew members to select them, then tap "Create Group".
                   </Text>
                 )}
-                <View
-                  style={[
-                    styles.card,
-                    { borderColor: themeColors.isDark ? 'rgba(255,255,255,0.1)' : COLORS.border },
-                  ]}
-                >
+                <View style={[styles.card, { borderColor: themeColors.border }]}>
                   {ungrouped.map((m) => renderMember(m, false))}
                 </View>
               </View>
@@ -496,7 +494,16 @@ export const RotationalGroupsScreen = () => {
           style={styles.modalOverlay}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          <View style={[styles.modalCard, { backgroundColor: themeColors.surface }]}>
+          <View
+            style={[
+              styles.modalCard,
+              {
+                backgroundColor: themeColors.surfaceElevated,
+                borderColor: themeColors.border,
+                borderWidth: themeColors.isDark ? 1 : 0,
+              },
+            ]}
+          >
             <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
               {nameModalMode === 'create' ? 'Name this Group' : 'Rename Group'}
             </Text>
@@ -510,9 +517,9 @@ export const RotationalGroupsScreen = () => {
               style={[
                 styles.modalInput,
                 {
-                  backgroundColor: themeColors.isDark ? 'rgba(255,255,255,0.08)' : COLORS.surface,
+                  backgroundColor: themeColors.control,
                   color: themeColors.textPrimary,
-                  borderColor: themeColors.isDark ? 'rgba(255,255,255,0.15)' : COLORS.border,
+                  borderColor: themeColors.isDark ? themeColors.borderStrong : COLORS.border,
                 },
               ]}
               placeholder="e.g. Bridge Team, Stew Team..."
@@ -528,7 +535,9 @@ export const RotationalGroupsScreen = () => {
                 style={[
                   styles.modalBtn,
                   styles.modalBtnCancel,
-                  { borderColor: themeColors.isDark ? 'rgba(255,255,255,0.15)' : COLORS.border },
+                  {
+                    borderColor: themeColors.isDark ? themeColors.borderStrong : COLORS.border,
+                  },
                 ]}
                 onPress={() => setNameModalVisible(false)}
               >
@@ -564,6 +573,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.md,
     marginBottom: SPACING.lg,
+    borderWidth: 1,
   },
   infoBannerTitle: {
     fontSize: FONTS.sm,
@@ -726,6 +736,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 16,
     elevation: 10,
+    borderWidth: 1,
   },
   modalTitle: {
     fontSize: FONTS.xl,

@@ -9,11 +9,8 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Modal,
-  Pressable,
   Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -31,7 +28,7 @@ import {
   PageHeader,
   ExportButton,
   ExportBar,
-  LabeledDropdown,
+  DepartmentMultiSelector,
 } from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
@@ -50,7 +47,6 @@ export const UniformsScreen = ({ navigation }: any) => {
     INTERIOR: true,
     GALLEY: true,
   });
-  const [departmentDropdownOpen, setDepartmentDropdownOpen] = useState(false);
   const [exportMode, setExportMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exporting, setExporting] = useState(false);
@@ -102,26 +98,6 @@ export const UniformsScreen = ({ navigation }: any) => {
     }
   };
 
-  const selectDepartment = (dept: Department) => {
-    setVisibleDepartments({
-      BRIDGE: dept === 'BRIDGE',
-      ENGINEERING: dept === 'ENGINEERING',
-      EXTERIOR: dept === 'EXTERIOR',
-      INTERIOR: dept === 'INTERIOR',
-      GALLEY: dept === 'GALLEY',
-    });
-  };
-
-  const selectAllDepartments = () => {
-    setVisibleDepartments({
-      BRIDGE: true,
-      ENGINEERING: true,
-      EXTERIOR: true,
-      INTERIOR: true,
-      GALLEY: true,
-    });
-  };
-
   const handleDelete = (u: Uniform) => {
     Alert.alert('Remove label', `Remove "${u.label}" and all its entries?`, [
       { text: 'Cancel', style: 'cancel' },
@@ -165,12 +141,6 @@ export const UniformsScreen = ({ navigation }: any) => {
     setRefreshing(true);
     loadUniforms();
   };
-
-  const departmentDisplayText = DEPARTMENTS.every((d) => visibleDepartments[d])
-    ? 'All departments'
-    : DEPARTMENTS.filter((d) => visibleDepartments[d])
-        .map((d) => d.charAt(0) + d.slice(1).toLowerCase())
-        .join(', ');
 
   if (!vesselId) {
     return (
@@ -230,62 +200,19 @@ export const UniformsScreen = ({ navigation }: any) => {
             fullWidth
           />
         </View>
-        <LabeledDropdown
-          label="Department"
-          value={departmentDisplayText}
-          open={departmentDropdownOpen}
-          onPress={() => setDepartmentDropdownOpen(!departmentDropdownOpen)}
+        <DepartmentMultiSelector
+          value={DEPARTMENTS.filter((department) => visibleDepartments[department])}
+          onChange={(departments) =>
+            setVisibleDepartments(
+              DEPARTMENTS.reduce(
+                (next, department) => ({ ...next, [department]: departments.includes(department) }),
+                {} as Record<Department, boolean>
+              )
+            )
+          }
+          includeAll
+          minSelections={1}
         />
-        {departmentDropdownOpen && (
-          <Modal visible transparent animationType="fade">
-            <Pressable
-              style={styles.modalBackdrop}
-              onPress={() => setDepartmentDropdownOpen(false)}
-            >
-              <View
-                style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
-                onStartShouldSetResponder={() => true}
-              >
-                <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
-                  Filter by department
-                </Text>
-                <TouchableOpacity
-                  style={[
-                    styles.modalItem,
-                    DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected,
-                  ]}
-                  onPress={() => {
-                    selectAllDepartments();
-                    setDepartmentDropdownOpen(false);
-                  }}
-                >
-                  <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                    All Departments
-                  </Text>
-                </TouchableOpacity>
-                {DEPARTMENTS.map((dept) => (
-                  <TouchableOpacity
-                    key={dept}
-                    style={[
-                      styles.modalItem,
-                      visibleDepartments[dept] &&
-                        !DEPARTMENTS.every((d) => visibleDepartments[d]) &&
-                        styles.modalItemSelected,
-                    ]}
-                    onPress={() => {
-                      selectDepartment(dept);
-                      setDepartmentDropdownOpen(false);
-                    }}
-                  >
-                    <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                      {dept.charAt(0) + dept.slice(1).toLowerCase()}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </Pressable>
-          </Modal>
-        )}
 
         {loading ? (
           <ActivityIndicator size="small" color={COLORS.primary} style={styles.loader} />

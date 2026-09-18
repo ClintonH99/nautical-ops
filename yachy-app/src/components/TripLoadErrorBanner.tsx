@@ -14,7 +14,7 @@ export const TripLoadErrorBanner = ({ onRetry }: TripLoadErrorBannerProps) => {
     <View
       style={[
         styles.container,
-        { backgroundColor: themeColors.surface, borderColor: COLORS.border },
+        { backgroundColor: themeColors.surface, borderColor: themeColors.border },
       ]}
     >
       <Text style={[styles.message, { color: themeColors.textPrimary }]}>

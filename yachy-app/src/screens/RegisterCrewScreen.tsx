@@ -16,20 +16,12 @@ import {
   StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, Input, ConsentCheckbox } from '../components';
+import { Button, DepartmentMultiSelector, Input, ConsentCheckbox } from '../components';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { Department } from '../types';
 import authService from '../services/auth';
 import { useAuthStore } from '../store';
-
-const DEPARTMENTS = [
-  { label: 'Bridge', value: 'BRIDGE' },
-  { label: 'Engineering', value: 'ENGINEERING' },
-  { label: 'Exterior', value: 'EXTERIOR' },
-  { label: 'Interior', value: 'INTERIOR' },
-  { label: 'Galley', value: 'GALLEY' },
-];
 
 export const RegisterCrewScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -252,49 +244,20 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
               </View>
 
               <View style={styles.departmentSection}>
-                <Text style={[styles.label, { color: themeColors.textPrimary }]}>Department</Text>
                 <Text style={[styles.departmentHint, { color: themeColors.textSecondary }]}>
                   Select the department you report to. i.e. If you're Deck/Stew, choose
                   Exterior/Interior.
                 </Text>
-                <View style={styles.departmentButtons}>
-                  {DEPARTMENTS.map((dept) => {
-                    const isSelected = formData.departments.includes(dept.value as Department);
-                    const canSelect = isSelected || formData.departments.length < 2;
-                    return (
-                      <Button
-                        key={dept.value}
-                        title={dept.label}
-                        variant={isSelected ? 'primary' : 'outline'}
-                        size="small"
-                        style={styles.departmentButton}
-                        onPress={() => {
-                          if (isSelected) {
-                            setFormData({
-                              ...formData,
-                              departments: formData.departments.filter((d) => d !== dept.value),
-                            });
-                            if (errors.department) setErrors({ ...errors, department: '' });
-                          } else if (canSelect) {
-                            setFormData({
-                              ...formData,
-                              departments: [...formData.departments, dept.value as Department],
-                            });
-                            if (errors.department) setErrors({ ...errors, department: '' });
-                          }
-                        }}
-                      />
-                    );
-                  })}
-                </View>
-                {formData.departments.length > 0 && (
-                  <Text style={[styles.selectedDepts, { color: themeColors.textSecondary }]}>
-                    Selected:{' '}
-                    {formData.departments
-                      .map((d) => DEPARTMENTS.find((x) => x.value === d)?.label ?? d)
-                      .join(', ')}
-                  </Text>
-                )}
+                <DepartmentMultiSelector
+                  value={formData.departments}
+                  onChange={(departments) => {
+                    setFormData((current) => ({ ...current, departments }));
+                    if (errors.department) setErrors({ ...errors, department: '' });
+                  }}
+                  maxSelections={2}
+                  emptyLabel="Select department"
+                  tightTop
+                />
                 {errors.department && <Text style={styles.error}>{errors.department}</Text>}
               </View>
 

@@ -8,7 +8,7 @@ import React, { useCallback, useState } from 'react';
 import { Alert, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner, PageHeader } from '../components';
-import { COLORS, FONTS, SPACING, SIZES } from '../constants/theme';
+import { FONTS, SPACING, SIZES } from '../constants/theme';
 import { CREW_LEAVE_COLORS, CREW_LEAVE_LABELS } from '../constants/crewLeave';
 import { useThemeColors } from '../hooks/useThemeColors';
 import crewLeaveService from '../services/crewLeave';
@@ -163,7 +163,8 @@ export const CrewLeaveScreen = ({ navigation }: any) => {
                 setRefreshing(true);
                 void loadLeave();
               }}
-              tintColor={COLORS.primary}
+              tintColor={themeColors.accent}
+              colors={[themeColors.accent]}
             />
           }
           ListEmptyComponent={

@@ -14,8 +14,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Modal,
-  Pressable,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,7 +21,6 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import shoppingListsService, {
-  ShoppingList,
   ShoppingListItem,
   ShoppingListType,
 } from '../services/shoppingLists';
@@ -33,11 +30,9 @@ import {
   Button,
   LoadingSpinner,
   PageHeader,
-  LabeledDropdown,
+  DepartmentSelector,
   EnterToAddHint,
 } from '../components';
-
-const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
 export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
@@ -54,7 +49,6 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isMaster, setIsMaster] = useState(false);
-  const [departmentDropdownOpen, setDepartmentDropdownOpen] = useState(false);
   const [activeItemIndex, setActiveItemIndex] = useState(0);
 
   const vesselId = user?.vesselId ?? null;
@@ -226,50 +220,10 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
         />
         {!isEdit && !asMasterList && (
           <View style={styles.deptSection}>
-            <LabeledDropdown
-              label="Department"
-              value={department.charAt(0) + department.slice(1).toLowerCase()}
-              open={departmentDropdownOpen}
-              onPress={() => setDepartmentDropdownOpen(!departmentDropdownOpen)}
+            <DepartmentSelector
+              value={department}
+              onChange={(value) => value && setDepartment(value)}
             />
-            {departmentDropdownOpen && (
-              <Modal visible transparent animationType="fade">
-                <Pressable
-                  style={styles.modalBackdrop}
-                  onPress={() => setDepartmentDropdownOpen(false)}
-                >
-                  <View
-                    style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
-                    onStartShouldSetResponder={() => true}
-                  >
-                    {DEPARTMENTS.map((dept) => (
-                      <TouchableOpacity
-                        key={dept}
-                        style={[
-                          styles.modalItem,
-                          { backgroundColor: themeColors.surface },
-                          department === dept && styles.modalItemSelected,
-                        ]}
-                        onPress={() => {
-                          setDepartment(dept);
-                          setDepartmentDropdownOpen(false);
-                        }}
-                      >
-                        <Text
-                          style={[
-                            styles.modalItemText,
-                            { color: themeColors.textPrimary },
-                            department === dept && styles.modalItemTextSelected,
-                          ]}
-                        >
-                          {dept.charAt(0) + dept.slice(1).toLowerCase()}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </Pressable>
-              </Modal>
-            )}
           </View>
         )}
 
@@ -283,7 +237,11 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
                 }}
                 style={[
                   styles.amountInput,
-                  { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+                  {
+                    backgroundColor: themeColors.control,
+                    color: themeColors.textPrimary,
+                    borderColor: themeColors.border,
+                  },
                 ]}
                 value={item.amount ?? ''}
                 onChangeText={(v) => setItemAt(index, 'amount', v)}
@@ -301,7 +259,11 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
                 }}
                 style={[
                   styles.itemInput,
-                  { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+                  {
+                    backgroundColor: themeColors.control,
+                    color: themeColors.textPrimary,
+                    borderColor: themeColors.border,
+                  },
                 ]}
                 value={item.text}
                 onChangeText={(v) => setItemAt(index, 'text', v)}
@@ -320,7 +282,14 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
                 style={styles.removeBtn}
                 disabled={items.length <= 1}
               >
-                <Text style={[styles.removeBtnText, items.length <= 1 && styles.removeBtnDisabled]}>
+                <Text
+                  style={[
+                    styles.removeBtnText,
+                    {
+                      color: items.length <= 1 ? themeColors.textMuted : COLORS.danger,
+                    },
+                  ]}
+                >
                   Remove
                 </Text>
               </TouchableOpacity>
