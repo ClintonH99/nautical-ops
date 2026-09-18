@@ -1,6 +1,6 @@
 /**
- * Pump Out Log Screen
- * List of pump out log entries with Add, Edit, Delete, and selective PDF export.
+ * Discharge Log Screen
+ * List of discharge entries with Add, Edit, Delete, and selective PDF export.
  */
 
 import React, { useState, useCallback } from 'react';
@@ -20,13 +20,21 @@ import { useAuthStore } from '../store';
 import pumpOutLogsService from '../services/pumpOutLogs';
 import vesselService from '../services/vessel';
 import { PumpOutLog, DischargeType } from '../types';
-import { Button, Input, ButtonTagCard, ButtonTagRow, LoadingSpinner, PageHeader, ExportButton, ExportBar } from '../components';
+import {
+  Button,
+  Input,
+  ButtonTagCard,
+  ButtonTagRow,
+  PageHeader,
+  ExportButton,
+  ExportBar,
+} from '../components';
 import { exportPumpOutLogPdf } from '../utils/vesselLogsPdf';
 
 const DISCHARGE_LABELS: Record<DischargeType, string> = {
   DIRECT_DISCHARGE: 'Direct Discharge',
   TREATMENT_PLANT: 'Treatment Plant Discharge',
-  PUMPOUT_SERVICE: 'Pumpout Service',
+  PUMPOUT_SERVICE: 'Pump-out Service',
 };
 
 const DISCHARGE_COLORS: Record<DischargeType, string> = {
@@ -105,7 +113,7 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
   const onEdit = (log: PumpOutLog) => navigation.navigate('AddEditPumpOutLog', { logId: log.id });
 
   const onDelete = (log: PumpOutLog) => {
-    Alert.alert('Delete entry', 'Delete this pump out log entry?', [
+    Alert.alert('Delete entry', 'Delete this discharge log entry?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -148,7 +156,7 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
         <Text style={[styles.message, { color: themeColors.textSecondary }]}>
-          Join a vessel to view pump out logs.
+          Join a vessel to view discharge logs.
         </Text>
       </View>
     );
@@ -157,7 +165,7 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <PageHeader
-        title="Pump Out Log"
+        title="Discharge Log"
         actions={
           <ExportButton
             active={exportMode}
@@ -177,7 +185,7 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
         />
       )}
       <View style={styles.actionBar}>
-        <Button title="Add Log" onPress={onAdd} variant="primary" style={styles.actionBtn} />
+        <Button title="Add Discharge" onPress={onAdd} variant="primary" style={styles.actionBtn} />
       </View>
 
       {logs.length > 0 && !loading && (
@@ -194,7 +202,9 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
           </View>
           {exportMode && (
             <TouchableOpacity onPress={toggleSelectAll} style={styles.selectAllRow}>
-              <Text style={styles.selectAllText}>{allSelected ? 'Deselect All' : 'Select All'}</Text>
+              <Text style={styles.selectAllText}>
+                {allSelected ? 'Deselect All' : 'Select All'}
+              </Text>
             </TouchableOpacity>
           )}
         </>
@@ -222,7 +232,7 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
               </Text>
               <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
                 {logs.length === 0
-                  ? 'Tap "Add Log" to record your first pump out entry.'
+                  ? 'Tap "Add Discharge" to record your first discharge entry.'
                   : 'Try a different search term.'}
               </Text>
             </View>

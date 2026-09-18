@@ -1,10 +1,10 @@
 /**
- * Add / Edit Pump Out Log Screen
- * Fields: Discharge Type (Direct Discharge / Treatment Plant / Pumpout Service),
- *         Pumpout Service Name (if applicable), Location, Amount in Gallons, Date, Time
+ * Add / Edit Discharge Log Screen
+ * Fields: Discharge Type (Direct Discharge / Treatment Plant / Pump-out Service),
+ *         Pump-out Service Name (if applicable), Location, Amount in Gallons, Date, Time
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -40,7 +40,7 @@ function formatTime(d: Date): string {
 const DISCHARGE_OPTIONS: { value: DischargeType; label: string }[] = [
   { value: 'DIRECT_DISCHARGE', label: 'Direct Discharge' },
   { value: 'TREATMENT_PLANT', label: 'Treatment Plant Discharge' },
-  { value: 'PUMPOUT_SERVICE', label: 'Pumpout Service' },
+  { value: 'PUMPOUT_SERVICE', label: 'Pump-out Service' },
 ];
 
 export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
@@ -61,11 +61,12 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [loading, setLoading] = useState(!!logId);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
   const vesselId = user?.vesselId ?? null;
 
   useEffect(() => {
-    navigation.setOptions({ title: isEdit ? 'Edit Pump Out Entry' : 'New Pump Out Entry' });
+    navigation.setOptions({ title: isEdit ? 'Edit Discharge Entry' : 'New Discharge Entry' });
   }, [navigation, isEdit]);
 
   useEffect(() => {
@@ -94,6 +95,7 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
   }, [logId]);
 
   const handleSave = async () => {
+    if (savingRef.current) return;
     if (!vesselId) {
       Alert.alert('Error', 'You must be in a vessel to add log entries.');
       return;
@@ -108,6 +110,7 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
       return;
     }
 
+    savingRef.current = true;
     setSaving(true);
     try {
       if (isEdit) {
@@ -140,6 +143,7 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
     } catch {
       Alert.alert('Error', 'Could not save entry.');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -148,7 +152,7 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
         <Text style={[styles.message, { color: themeColors.textSecondary }]}>
-          Join a vessel to add pump out log entries.
+          Join a vessel to add discharge log entries.
         </Text>
       </View>
     );
@@ -168,7 +172,7 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={0}
     >
-      <PageHeader title="New Pump Out Entry" />
+      <PageHeader title={isEdit ? 'Edit Discharge Entry' : 'New Discharge Entry'} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -209,10 +213,10 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
           </View>
         </View>
 
-        {/* Pumpout Service Name — only shown when Pumpout Service is selected */}
+        {/* Pump-out Service Name — only shown when Pump-out Service is selected */}
         {dischargeType === 'PUMPOUT_SERVICE' && (
           <View style={styles.fieldContainer}>
-            <Text style={[styles.label, { color: themeColors.textPrimary }]}>Pumpout Service</Text>
+            <Text style={[styles.label, { color: themeColors.textPrimary }]}>Pump-out Service</Text>
             <TextInput
               style={[
                 styles.textInput,
@@ -220,7 +224,7 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
               ]}
               value={pumpoutServiceName}
               onChangeText={setPumpoutServiceName}
-              placeholder="Pumpout Truck or Marina Pumpout"
+              placeholder="Pump-out truck or marina pump-out"
               placeholderTextColor={themeColors.textSecondary}
               autoCapitalize="words"
             />

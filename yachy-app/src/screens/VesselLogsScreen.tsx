@@ -2,14 +2,8 @@
  * Vessel Logs Screen
  */
 
-import React, { useLayoutEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { COLORS, FONTS, SPACING, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { PageHeader } from '../components';
@@ -27,29 +21,31 @@ const LOG_CATEGORIES = [
   },
   {
     icon: '🚿',
-    label: 'Pump Out Log',
+    label: 'Discharge Log',
     route: 'PumpOutLog',
   },
 ];
 
-
 const VESSEL_LOGS_INFO = {
-            title: 'Vessel Logs',
-            description: 'Record fuel, waste, and pump-out logs.',
-            features: [
-              'Log fuel bunkering and consumption',
-              'Track general waste disposal',
-              'Record pump-out events',
-              'Maintain compliant vessel records',
-            ],
-          };
+  title: 'Vessel Logs',
+  description: 'Record fuel, waste, and discharge logs.',
+  features: [
+    'Log fuel bunkering and consumption',
+    'Track general waste disposal',
+    'Record discharge events',
+    'Maintain compliant vessel records',
+  ],
+};
 
 export const VesselLogsScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   return (
     <View style={styles.pageWrap}>
       <PageHeader title="Vessel Logs" info={VESSEL_LOGS_INFO} infoScreenKey="vessel_logs" />
-      <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        contentContainerStyle={styles.content}
+      >
         {LOG_CATEGORIES.map((category) => (
           <TouchableOpacity
             key={category.route}
@@ -58,7 +54,9 @@ export const VesselLogsScreen = ({ navigation }: any) => {
             activeOpacity={0.8}
           >
             <Text style={styles.cardIcon}>{category.icon}</Text>
-            <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>{category.label}</Text>
+            <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>
+              {category.label}
+            </Text>
             <Text style={[styles.cardChevron, { color: themeColors.textSecondary }]}>›</Text>
           </TouchableOpacity>
         ))}

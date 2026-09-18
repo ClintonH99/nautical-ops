@@ -2,7 +2,7 @@
  * PDF export utilities for Vessel Logs:
  *   - General Waste Log
  *   - Fuel Log
- *   - Pump Out Log
+ *   - Discharge Log
  */
 
 import * as FileSystem from 'expo-file-system/legacy';
@@ -27,7 +27,7 @@ function dateStr(): string {
 const DISCHARGE_LABELS: Record<DischargeType, string> = {
   DIRECT_DISCHARGE: 'Direct Discharge',
   TREATMENT_PLANT: 'Treatment Plant Discharge',
-  PUMPOUT_SERVICE: 'Pumpout Service',
+  PUMPOUT_SERVICE: 'Pump-out Service',
 };
 
 /** Shared A4 page CSS */
@@ -67,11 +67,10 @@ export async function exportGeneralWasteLogPdf(
   vesselName: string
 ): Promise<void> {
   const rows = logs.length
-    ? logs.map((l) => {
-        const weightDisplay = l.weight != null
-          ? `${l.weight} ${l.weightUnit ?? 'kgs'}`
-          : '—';
-        return `
+    ? logs
+        .map((l) => {
+          const weightDisplay = l.weight != null ? `${l.weight} ${l.weightUnit ?? 'kgs'}` : '—';
+          return `
         <tr>
           <td>${escapeHtml(l.logDate)}</td>
           <td>${escapeHtml(l.logTime)}</td>
@@ -80,7 +79,8 @@ export async function exportGeneralWasteLogPdf(
           <td>${weightDisplay}</td>
           <td>${escapeHtml(l.createdByName) || '—'}</td>
         </tr>`;
-      }).join('')
+        })
+        .join('')
     : `<tr><td colspan="6" class="empty">No entries</td></tr>`;
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
@@ -102,12 +102,11 @@ export async function exportGeneralWasteLogPdf(
 
 // ─── Fuel Log ─────────────────────────────────────────────────────────────────
 
-export async function exportFuelLogPdf(
-  logs: FuelLog[],
-  vesselName: string
-): Promise<void> {
+export async function exportFuelLogPdf(logs: FuelLog[], vesselName: string): Promise<void> {
   const rows = logs.length
-    ? logs.map((l) => `
+    ? logs
+        .map(
+          (l) => `
         <tr>
           <td>${escapeHtml(l.logDate)}</td>
           <td>${escapeHtml(l.logTime)}</td>
@@ -116,12 +115,15 @@ export async function exportFuelLogPdf(
           <td style="text-align:right">$${Number(l.pricePerGallon).toFixed(4)}</td>
           <td style="text-align:right;font-weight:700">$${Number(l.totalPrice).toFixed(2)}</td>
           <td>${escapeHtml(l.createdByName) || '—'}</td>
-        </tr>`).join('')
+        </tr>`
+        )
+        .join('')
     : `<tr><td colspan="7" class="empty">No entries</td></tr>`;
 
   const totalFuel = logs.reduce((s, l) => s + Number(l.amountOfFuel), 0);
   const totalCost = logs.reduce((s, l) => s + Number(l.totalPrice), 0);
-  const totalsRow = logs.length ? `
+  const totalsRow = logs.length
+    ? `
     <tfoot>
       <tr style="background:#f3f4f6;font-weight:700">
         <td colspan="3">Total (${logs.length} entr${logs.length === 1 ? 'y' : 'ies'})</td>
@@ -130,7 +132,8 @@ export async function exportFuelLogPdf(
         <td style="text-align:right">$${totalCost.toFixed(2)}</td>
         <td></td>
       </tr>
-    </tfoot>` : '';
+    </tfoot>`
+    : '';
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
     <style>${baseStyles('#1E3A8A')} tfoot td { padding: 8px 10px; border-top: 2px solid #1E3A8A; }</style>
@@ -151,41 +154,47 @@ export async function exportFuelLogPdf(
   await printAndShare(html, `${safeName}_${dateStr()}_Fuel_Log.pdf`);
 }
 
-// ─── Pump Out Log ─────────────────────────────────────────────────────────────
+// ─── Discharge Log ────────────────────────────────────────────────────────────
 
-export async function exportPumpOutLogPdf(
-  logs: PumpOutLog[],
-  vesselName: string
-): Promise<void> {
+export async function exportPumpOutLogPdf(logs: PumpOutLog[], vesselName: string): Promise<void> {
   const rows = logs.length
-    ? logs.map((l) => `
+    ? logs
+        .map(
+          (l) => `
         <tr>
           <td>${escapeHtml(l.logDate)}</td>
           <td>${escapeHtml(l.logTime)}</td>
           <td>${escapeHtml(DISCHARGE_LABELS[l.dischargeType])}</td>
-          <td>${l.dischargeType === 'PUMPOUT_SERVICE' && l.pumpoutServiceName
-            ? escapeHtml(l.pumpoutServiceName) : '—'}</td>
+          <td>${
+            l.dischargeType === 'PUMPOUT_SERVICE' && l.pumpoutServiceName
+              ? escapeHtml(l.pumpoutServiceName)
+              : '—'
+          }</td>
           <td>${escapeHtml(l.location) || '—'}</td>
           <td style="text-align:right">${escapeHtml(l.amountInGallons)} gal</td>
           <td>${escapeHtml(l.description) || '—'}</td>
           <td>${escapeHtml(l.createdByName) || '—'}</td>
-        </tr>`).join('')
+        </tr>`
+        )
+        .join('')
     : `<tr><td colspan="8" class="empty">No entries</td></tr>`;
 
   const totalGallons = logs.reduce((s, l) => s + Number(l.amountInGallons), 0);
-  const totalsRow = logs.length ? `
+  const totalsRow = logs.length
+    ? `
     <tfoot>
       <tr style="background:#f3f4f6;font-weight:700">
         <td colspan="5">Total (${logs.length} entr${logs.length === 1 ? 'y' : 'ies'})</td>
         <td style="text-align:right">${totalGallons.toFixed(2)} gal</td>
         <td colspan="2"></td>
       </tr>
-    </tfoot>` : '';
+    </tfoot>`
+    : '';
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
     <style>${baseStyles('#1E3A8A')} tfoot td { padding: 8px 10px; border-top: 2px solid #1E3A8A; }</style>
     </head><body>
-    <h1>Pump Out Log</h1>
+    <h1>Discharge Log</h1>
     <p class="subtitle">${escapeHtml(vesselName)} &nbsp;·&nbsp; Generated ${dateStr()}</p>
     <table>
       <thead><tr>
@@ -198,5 +207,5 @@ export async function exportPumpOutLogPdf(
   </body></html>`;
 
   const safeName = vesselName.replace(/[^\w]/g, '_') || 'Vessel';
-  await printAndShare(html, `${safeName}_${dateStr()}_Pump_Out_Log.pdf`);
+  await printAndShare(html, `${safeName}_${dateStr()}_Discharge_Log.pdf`);
 }
