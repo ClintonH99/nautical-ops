@@ -34,30 +34,37 @@ const allDeptsVisible: Record<Department, boolean> = {
   GALLEY: true,
 };
 
-type SearchFilter = 'all' | 'company_name' | 'company_address' | 'known_for' | 'description' | 'contact_name' | 'mobile' | 'email';
+type SearchFilter =
+  | 'all'
+  | 'company_name'
+  | 'company_address'
+  | 'known_for'
+  | 'description'
+  | 'contact_name'
+  | 'mobile'
+  | 'email';
 
 const SEARCH_FILTER_OPTIONS: { value: SearchFilter; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'company_name', label: 'Company Name' },
   { value: 'company_address', label: 'Company Address' },
-  { value: 'known_for', label: 'Know For' },
+  { value: 'known_for', label: 'Known For' },
   { value: 'description', label: 'Description' },
   { value: 'contact_name', label: 'Contact Name' },
   { value: 'mobile', label: 'Mobile Number' },
   { value: 'email', label: 'Email' },
 ];
 
-
 const CONTRACTOR_DATABASE_INFO = {
-            title: 'Contractor Database',
-            description: 'Keep contractor and supplier contacts on file.',
-            features: [
-              'Store contractor contact details',
-              'Reference trusted suppliers quickly',
-              'Keep records for recurring services',
-              'Update entries as contacts change',
-            ],
-          };
+  title: 'Contractor Database',
+  description: 'Keep contractor and supplier contacts on file.',
+  features: [
+    'Store contractor contact details',
+    'Reference trusted suppliers quickly',
+    'Keep records for recurring services',
+    'Update entries as contacts change',
+  ],
+};
 
 export const ContractorDatabaseScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -66,7 +73,8 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [visibleDepartments, setVisibleDepartments] = useState<Record<Department, boolean>>(allDeptsVisible);
+  const [visibleDepartments, setVisibleDepartments] =
+    useState<Record<Department, boolean>>(allDeptsVisible);
   const [departmentDropdownOpen, setDepartmentDropdownOpen] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchFilter, setSearchFilter] = useState<SearchFilter>('all');
@@ -110,12 +118,11 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
   const filteredContractors = contractors
     .filter((c) => visibleDepartments[c.department ?? 'INTERIOR'])
     .filter(matchesKeyword);
-  const departmentDisplayText =
-    DEPARTMENTS.every((d) => visibleDepartments[d])
-      ? 'All departments'
-      : DEPARTMENTS.filter((d) => visibleDepartments[d])
-          .map((d) => d.charAt(0) + d.slice(1).toLowerCase())
-          .join(', ');
+  const departmentDisplayText = DEPARTMENTS.every((d) => visibleDepartments[d])
+    ? 'All departments'
+    : DEPARTMENTS.filter((d) => visibleDepartments[d])
+        .map((d) => d.charAt(0) + d.slice(1).toLowerCase())
+        .join(', ');
 
   const loadContractors = useCallback(async () => {
     if (!vesselId) return;
@@ -131,9 +138,11 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
     }
   }, [vesselId]);
 
-  useFocusEffect(useCallback(() => {
-    loadContractors();
-  }, [loadContractors]));
+  useFocusEffect(
+    useCallback(() => {
+      loadContractors();
+    }, [loadContractors])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -161,14 +170,20 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to use Contractor Database.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to use Contractor Database.
+        </Text>
       </View>
     );
   }
 
   return (
     <View style={styles.pageWrap}>
-      <PageHeader title="Contractor Database" info={CONTRACTOR_DATABASE_INFO} infoScreenKey="contractor_database" />
+      <PageHeader
+        title="Contractor Database"
+        info={CONTRACTOR_DATABASE_INFO}
+        infoScreenKey="contractor_database"
+      />
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={styles.content}
@@ -179,7 +194,9 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
       >
         <View style={styles.searchSection}>
           <View style={styles.searchFilterRow}>
-            <Text style={[styles.searchFilterLabel, { color: themeColors.textPrimary }]}>Search by</Text>
+            <Text style={[styles.searchFilterLabel, { color: themeColors.textPrimary }]}>
+              Search by
+            </Text>
             <TouchableOpacity
               style={[styles.searchFilterDropdown, { backgroundColor: themeColors.surface }]}
               onPress={() => setSearchFilterOpen(!searchFilterOpen)}
@@ -188,27 +205,42 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
               <Text style={[styles.searchFilterText, { color: themeColors.textPrimary }]}>
                 {SEARCH_FILTER_OPTIONS.find((o) => o.value === searchFilter)?.label ?? 'All'}
               </Text>
-              <Text style={[styles.searchFilterChevron, { color: themeColors.textSecondary }]}>{searchFilterOpen ? '▲' : '▼'}</Text>
+              <Text style={[styles.searchFilterChevron, { color: themeColors.textSecondary }]}>
+                {searchFilterOpen ? '▲' : '▼'}
+              </Text>
             </TouchableOpacity>
             {searchFilterOpen && (
               <Modal visible transparent animationType="fade">
-                <Pressable style={styles.modalBackdrop} onPress={() => setSearchFilterOpen(false)}>
-                  <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
-                    <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Search by</Text>
-                    {SEARCH_FILTER_OPTIONS.map((opt) => (
-                      <TouchableOpacity
-                        key={opt.value}
-                        style={[styles.modalItem, searchFilter === opt.value && styles.modalItemSelected]}
-                        onPress={() => {
-                          setSearchFilter(opt.value);
-                          setSearchFilterOpen(false);
-                        }}
-                      >
-                        <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>{opt.label}</Text>
-                      </TouchableOpacity>
-                    ))}
+                <View style={styles.modalBackdrop}>
+                  <Pressable
+                    style={StyleSheet.absoluteFill}
+                    onPress={() => setSearchFilterOpen(false)}
+                  />
+                  <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]}>
+                    <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+                      Search by
+                    </Text>
+                    <ScrollView style={styles.searchFilterList} showsVerticalScrollIndicator>
+                      {SEARCH_FILTER_OPTIONS.map((opt) => (
+                        <TouchableOpacity
+                          key={opt.value}
+                          style={[
+                            styles.modalItem,
+                            searchFilter === opt.value && styles.modalItemSelected,
+                          ]}
+                          onPress={() => {
+                            setSearchFilter(opt.value);
+                            setSearchFilterOpen(false);
+                          }}
+                        >
+                          <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
+                            {opt.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
                   </View>
-                </Pressable>
+                </View>
               </Modal>
             )}
           </View>
@@ -243,22 +275,40 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
             />
             {departmentDropdownOpen && (
               <Modal visible transparent animationType="fade">
-                <Pressable style={styles.modalBackdrop} onPress={() => setDepartmentDropdownOpen(false)}>
-                  <View style={[styles.modalBox, { backgroundColor: themeColors.surface }]} onStartShouldSetResponder={() => true}>
-                    <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Filter by department</Text>
+                <Pressable
+                  style={styles.modalBackdrop}
+                  onPress={() => setDepartmentDropdownOpen(false)}
+                >
+                  <View
+                    style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+                    onStartShouldSetResponder={() => true}
+                  >
+                    <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+                      Filter by department
+                    </Text>
                     <TouchableOpacity
-                      style={[styles.modalItem, DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
+                      style={[
+                        styles.modalItem,
+                        DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected,
+                      ]}
                       onPress={() => {
                         setVisibleDepartments(allDeptsVisible);
                         setDepartmentDropdownOpen(false);
                       }}
                     >
-                      <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>All Departments</Text>
+                      <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
+                        All Departments
+                      </Text>
                     </TouchableOpacity>
                     {DEPARTMENTS.map((dept) => (
                       <TouchableOpacity
                         key={dept}
-                        style={[styles.modalItem, visibleDepartments[dept] && !DEPARTMENTS.every((d) => visibleDepartments[d]) && styles.modalItemSelected]}
+                        style={[
+                          styles.modalItem,
+                          visibleDepartments[dept] &&
+                            !DEPARTMENTS.every((d) => visibleDepartments[d]) &&
+                            styles.modalItemSelected,
+                        ]}
                         onPress={() => {
                           setVisibleDepartments({
                             BRIDGE: dept === 'BRIDGE',
@@ -287,7 +337,9 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
         ) : filteredContractors.length === 0 ? (
           <View style={[styles.emptyState, { backgroundColor: themeColors.surface }]}>
             <Text style={styles.emptyIcon}>👷</Text>
-            <Text style={[styles.emptyTitle, { color: themeColors.textPrimary }]}>No contractors yet</Text>
+            <Text style={[styles.emptyTitle, { color: themeColors.textPrimary }]}>
+              No contractors yet
+            </Text>
             <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
               {contractors.length === 0
                 ? 'Tap "Create Contractor" to add your first contractor.'
@@ -296,9 +348,14 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
           </View>
         ) : (
           filteredContractors.map((contractor) => (
-            <View key={contractor.id} style={[styles.card, { backgroundColor: themeColors.surface }]}>
+            <View
+              key={contractor.id}
+              style={[styles.card, { backgroundColor: themeColors.surface }]}
+            >
               <TouchableOpacity
-                onPress={() => navigation.navigate('AddEditContractor', { contractorId: contractor.id })}
+                onPress={() =>
+                  navigation.navigate('AddEditContractor', { contractorId: contractor.id })
+                }
                 activeOpacity={0.8}
               >
                 <View style={styles.cardTitleBar}>
@@ -310,7 +367,12 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
                   <View
                     style={[
                       styles.deptBadge,
-                      { backgroundColor: getDepartmentColor(contractor.department ?? 'INTERIOR', overrides) },
+                      {
+                        backgroundColor: getDepartmentColor(
+                          contractor.department ?? 'INTERIOR',
+                          overrides
+                        ),
+                      },
                     ]}
                   >
                     <Text style={styles.deptBadgeText}>
@@ -319,36 +381,91 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
                     </Text>
                   </View>
                   <View style={styles.cardActions}>
-                    <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); onDelete(contractor); }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <TouchableOpacity
+                      onPress={(e) => {
+                        e.stopPropagation?.();
+                        onDelete(contractor);
+                      }}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
                       <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => navigation.navigate('AddEditContractor', { contractorId: contractor.id })} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                      <Text style={[styles.editBtn, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}>Edit</Text>
+                    <TouchableOpacity
+                      onPress={() =>
+                        navigation.navigate('AddEditContractor', { contractorId: contractor.id })
+                      }
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text
+                        style={[
+                          styles.editBtn,
+                          { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                        ]}
+                      >
+                        Edit
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </View>
               </TouchableOpacity>
               {contractor.knownFor ? (
                 <View style={styles.cardRow}>
-                  <Text style={[styles.cardLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Know For</Text>
-                  <Text style={[styles.cardValue, { color: themeColors.textPrimary }]}>{contractor.knownFor}</Text>
+                  <Text
+                    style={[
+                      styles.cardLabel,
+                      { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                    ]}
+                  >
+                    Known For
+                  </Text>
+                  <Text style={[styles.cardValue, { color: themeColors.textPrimary }]}>
+                    {contractor.knownFor}
+                  </Text>
                 </View>
               ) : null}
               {contractor.companyAddress ? (
                 <View style={styles.cardRow}>
-                  <Text style={[styles.cardLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Address</Text>
-                  <Text style={[styles.cardValue, { color: themeColors.textPrimary }]}>{contractor.companyAddress}</Text>
+                  <Text
+                    style={[
+                      styles.cardLabel,
+                      { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                    ]}
+                  >
+                    Address
+                  </Text>
+                  <Text style={[styles.cardValue, { color: themeColors.textPrimary }]}>
+                    {contractor.companyAddress}
+                  </Text>
                 </View>
               ) : null}
               {contractor.description ? (
                 <View style={styles.cardRow}>
-                  <Text style={[styles.cardLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Description</Text>
-                  <Text style={[styles.cardValue, { color: themeColors.textPrimary }]} numberOfLines={2}>{contractor.description}</Text>
+                  <Text
+                    style={[
+                      styles.cardLabel,
+                      { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                    ]}
+                  >
+                    Description
+                  </Text>
+                  <Text
+                    style={[styles.cardValue, { color: themeColors.textPrimary }]}
+                    numberOfLines={2}
+                  >
+                    {contractor.description}
+                  </Text>
                 </View>
               ) : null}
               {contractor.contacts.length > 0 && (
                 <View style={styles.cardRow}>
-                  <Text style={[styles.cardLabel, { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary }]}>Contact(s)</Text>
+                  <Text
+                    style={[
+                      styles.cardLabel,
+                      { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                    ]}
+                  >
+                    Contact(s)
+                  </Text>
                   {contractor.contacts.map((c, i) => (
                     <Text key={i} style={[styles.cardValue, { color: themeColors.textPrimary }]}>
                       {[c.name, c.mobile, c.email].filter(Boolean).join(' · ')}
@@ -401,10 +518,21 @@ const styles = StyleSheet.create({
   },
   dropdownText: { fontSize: FONTS.base, fontWeight: '500' },
   dropdownChevron: { fontSize: 10 },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
+  },
   modalBox: { borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, minWidth: 260, maxHeight: 400 },
+  searchFilterList: { maxHeight: 300 },
   modalTitle: { fontSize: FONTS.lg, fontWeight: '600', marginBottom: SPACING.md },
-  modalItem: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg, borderRadius: BORDER_RADIUS.sm },
+  modalItem: {
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: BORDER_RADIUS.sm,
+  },
   modalItemSelected: { backgroundColor: COLORS.gray200 },
   modalItemText: { fontSize: FONTS.base },
   loader: { marginVertical: SPACING.xl },
@@ -446,7 +574,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.white,
   },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACING.sm, marginBottom: SPACING.sm },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: SPACING.sm },
   cardTitleAndDept: { flex: 1, flexDirection: 'column', alignItems: 'flex-start', gap: SPACING.xs },
   cardTitle: { fontSize: FONTS.lg, fontWeight: '600', flex: 1 },
@@ -456,6 +590,12 @@ const styles = StyleSheet.create({
   editBtn: { fontSize: FONTS.sm, fontWeight: '600' },
   deleteBtn: { fontSize: FONTS.sm, color: COLORS.danger, fontWeight: '600' },
   cardRow: { marginBottom: SPACING.sm },
-  cardLabel: { fontSize: FONTS.xs, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
+  cardLabel: {
+    fontSize: FONTS.xs,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
   cardValue: { fontSize: FONTS.base, lineHeight: 20 },
 });

@@ -2,7 +2,7 @@
  * Add / Edit Contractor Screen
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -16,13 +16,19 @@ import {
   Pressable,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import contractorsService, { ContractorContact } from '../services/contractors';
 import { Department } from '../types';
-import { Input, Button, LoadingSpinner, PageHeader, LabeledDropdown } from '../components';
+import {
+  Input,
+  Button,
+  LoadingSpinner,
+  PageHeader,
+  LabeledDropdown,
+  PreviewActionButtons,
+} from '../components';
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
@@ -42,7 +48,9 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
   const [contacts, setContacts] = useState<ContractorContact[]>([{ ...emptyContact }]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [departmentDropdownOpen, setDepartmentDropdownOpen] = useState(false);
+  const activeOperationRef = useRef<'save' | 'delete' | null>(null);
 
   const vesselId = user?.vesselId ?? null;
 
@@ -94,6 +102,7 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
   };
 
   const handleSave = async () => {
+    if (saving || deleting || activeOperationRef.current) return;
     if (!companyName.trim()) {
       Alert.alert('Missing company name', 'Please enter the company name.');
       return;
@@ -106,6 +115,7 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
         email: c.email.trim(),
       }))
       .filter((c) => c.name || c.mobile || c.email);
+    activeOperationRef.current = 'save';
     setSaving(true);
     try {
       if (isEdit) {
@@ -136,23 +146,32 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
       console.error('Save contractor error:', e);
       Alert.alert('Error', 'Could not save contractor.');
     } finally {
+      activeOperationRef.current = null;
       setSaving(false);
     }
   };
 
   const handleDelete = () => {
-    if (!isEdit || !contractorId) return;
+    if (!isEdit || !contractorId || saving || deleting || activeOperationRef.current) return;
     Alert.alert('Delete contractor', `Delete "${companyName.trim()}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
+          // The confirmation can remain open while another action begins.
+          // Claim the operation synchronously so Save and Delete cannot race.
+          if (activeOperationRef.current) return;
+          activeOperationRef.current = 'delete';
+          setDeleting(true);
           try {
             await contractorsService.delete(contractorId);
             navigation.goBack();
           } catch {
             Alert.alert('Error', 'Could not delete contractor.');
+          } finally {
+            activeOperationRef.current = null;
+            setDeleting(false);
           }
         },
       },
@@ -192,6 +211,7 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
         <LabeledDropdown
           label="Department"
           value={department.charAt(0) + department.slice(1).toLowerCase()}
+          open={departmentDropdownOpen}
           onPress={() => setDepartmentDropdownOpen(true)}
         />
         {departmentDropdownOpen && (
@@ -247,7 +267,7 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
           autoCapitalize="words"
         />
         <Input
-          label="Know For"
+          label="Known For"
           value={knownFor}
           onChangeText={setKnownFor}
           placeholder="e.g. plumbing, electrical, refrigeration (keywords for search)"
@@ -319,17 +339,20 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
 
         <View style={styles.actions}>
           <Button
-            title={isEdit ? 'Save changes' : 'Create contractor'}
+            title={isEdit ? 'Save Changes' : 'Create Contractor'}
             onPress={handleSave}
             variant="primary"
             loading={saving}
-            disabled={saving}
+            disabled={saving || deleting}
             fullWidth
           />
           {isEdit && (
-            <TouchableOpacity onPress={handleDelete} style={styles.deleteBtn}>
-              <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-            </TouchableOpacity>
+            <PreviewActionButtons
+              onDelete={handleDelete}
+              deleteLabel="Delete Contractor"
+              deleting={deleting}
+              disabled={saving || deleting}
+            />
           )}
         </View>
       </ScrollView>
@@ -393,6 +416,4 @@ const styles = StyleSheet.create({
   addContactBtn: { paddingVertical: SPACING.sm, marginBottom: SPACING.lg },
   addContactText: { fontSize: FONTS.sm, fontWeight: '600', color: COLORS.primary },
   actions: { marginTop: SPACING.xl },
-  deleteBtn: { marginTop: SPACING.md, alignItems: 'center', paddingVertical: SPACING.sm },
-  deleteBtnText: { fontSize: FONTS.sm, color: COLORS.danger, fontWeight: '600' },
 });
