@@ -25,6 +25,7 @@ import { PageHeader, ExportButton, ExportBar, Checkbox, PreviewActionButtons } f
 import { useAuthStore } from '../store';
 import watchKeepingService, { PublishedWatchTimetable } from '../services/watchKeeping';
 import { formatLocalDateString } from '../utils';
+import { buildWatchSchedulePdfHtml, getWatchScheduleDate } from '../utils/watchSchedulePdf';
 
 export const WatchScheduleScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
@@ -71,25 +72,10 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
     }, [vesselId, loadPublished, route?.params?.timetableId, navigation])
   );
 
-  // Newly generated timetables require a voyage start date. The fallback
-  // keeps older published schedules readable if they predate that field.
-  const scheduleDateStr = (t: { forDate: string | null; createdAt: string }): string =>
-    t.forDate || t.createdAt.slice(0, 10);
-
-  const slotTimeLabel = (slot: PublishedWatchTimetable['slots'][number]): string => {
-    if (!slot.startDate) return `${slot.startTimeStr} – ${slot.endTimeStr}`;
-    const startDate = formatLocalDateString(slot.startDate, { month: 'short', day: 'numeric' });
-    if (slot.endDate && slot.endDate !== slot.startDate) {
-      const endDate = formatLocalDateString(slot.endDate, { month: 'short', day: 'numeric' });
-      return `${startDate} ${slot.startTimeStr} – ${endDate} ${slot.endTimeStr}`;
-    }
-    return `${startDate} · ${slot.startTimeStr} – ${slot.endTimeStr}`;
-  };
-
   const handleDelete = async (timetable: PublishedWatchTimetable) => {
     Alert.alert(
       'Delete Watch Schedule',
-      `Are you sure you want to delete the schedule for ${formatLocalDateString(scheduleDateStr(timetable), { month: 'short', day: 'numeric' })}?`,
+      `Are you sure you want to delete the schedule for ${formatLocalDateString(getWatchScheduleDate(timetable), { month: 'short', day: 'numeric' })}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -130,8 +116,6 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
     selectedIds.has(timetable.id)
   );
 
-  const SLOTS_PER_PAGE = 30;
-
   const exportWatchSchedulesPdf = async (schedules: PublishedWatchTimetable[]) => {
     if (schedules.length === 0) {
       Alert.alert('Nothing selected', 'Tap the watch schedules you want to include, then export.');
@@ -140,83 +124,11 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
 
     setExportingPdf(true);
     try {
-      const slotToRow = (s: PublishedWatchTimetable['slots'][number]) =>
-        `<tr><td>${s.crewPosition || '—'}</td><td>${s.crewName}</td><td>${slotTimeLabel(s)}</td></tr>`;
-
-      const pages = schedules.flatMap((schedule) => {
-        const chunks: PublishedWatchTimetable['slots'][] = [];
-        for (let i = 0; i < schedule.slots.length; i += SLOTS_PER_PAGE) {
-          chunks.push(schedule.slots.slice(i, i + SLOTS_PER_PAGE));
-        }
-        if (chunks.length === 0) chunks.push([]);
-        return chunks.map((slots) => ({ schedule, slots }));
-      });
-
-      const pageBlocks = pages.map(({ schedule, slots }, pageIndex) => {
-        const dateStr = formatLocalDateString(scheduleDateStr(schedule), {
-          weekday: 'long',
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric',
-        });
-        const headerMeta = `
-          <h1>Watch Schedule</h1>
-          <p class="subtitle">${dateStr}</p>
-          <p class="meta"><strong>Schedule:</strong> ${schedule.watchTitle}</p>
-          ${schedule.startLocation ? `<p class="meta"><strong>From:</strong> ${schedule.startLocation}</p>` : ''}
-          ${schedule.destination ? `<p class="meta"><strong>To:</strong> ${schedule.destination}</p>` : ''}
-          <p class="meta"><strong>Start:</strong> ${schedule.startTime}</p>`;
-        const rows = slots.map(slotToRow).join('');
-        const isLast = pageIndex === pages.length - 1;
-        return `
-          <div class="page" ${isLast ? '' : 'style="page-break-after: always;"'}>
-            <div class="content">
-              ${headerMeta}
-              <div class="table-container">
-                <table>
-                  <thead>
-                    <tr>
-                      <th class="col-position">Position</th>
-                      <th class="col-crew">Crew</th>
-                      <th class="col-time">Date and time</th>
-                    </tr>
-                  </thead>
-                  <tbody>${rows}</tbody>
-                </table>
-              </div>
-              ${pages.length > 1 ? `<p class="page-num">Page ${pageIndex + 1} of ${pages.length}</p>` : ''}
-            </div>
-          </div>`;
-      });
-
-      const html = `<!DOCTYPE html>
-        <html>
-        <head><meta charset="utf-8"><title>Watch Schedule</title>
-        <style>
-          @page { size: A4 portrait; margin: 20mm 16mm; }
-          * { box-sizing: border-box; margin: 0; padding: 0; }
-          html, body { font-family: system-ui, sans-serif; font-size: 12px; color: #111; line-height: 1.4; }
-          h1 { font-size: 20px; font-weight: 700; color: #1E3A8A; margin-bottom: 4px; }
-          .subtitle { font-size: 11px; color: #666; margin-bottom: 16px; }
-          .meta { font-size: 11px; color: #555; margin-bottom: 4px; }
-          .table-container { width: 55%; margin-top: 14px; }
-          table { width: 100%; border-collapse: collapse; font-size: 11px; }
-          thead tr { background: #1E3A8A; color: #fff; }
-          th { padding: 8px 10px; text-align: left; font-weight: 600; }
-          td { padding: 7px 10px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
-          tr:nth-child(even) td { background: #f9fafb; }
-          .col-position { width: 25%; }
-          .col-crew { width: 30%; }
-          .col-time { width: 45%; }
-          .page-num { font-size: 11px; color: #999; margin-top: 14px; text-align: right; }
-        </style>
-        </head>
-        <body>${pageBlocks.join('')}</body>
-        </html>`;
+      const html = buildWatchSchedulePdfHtml(schedules);
       const { uri } = await Print.printToFileAsync({ html });
       const filename =
         schedules.length === 1
-          ? `Watch_Schedule_${scheduleDateStr(schedules[0])}.pdf`
+          ? `Watch_Schedule_${getWatchScheduleDate(schedules[0])}.pdf`
           : 'Watch_Schedules.pdf';
       const newUri = `${FileSystem.cacheDirectory}${filename}`;
       await FileSystem.moveAsync({ from: uri, to: newUri });
@@ -287,7 +199,7 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
           />
         ) : publishedTimetables.length === 0 ? (
           <Text style={[styles.empty, { color: themeColors.textSecondary }]}>
-            No Watch Schedules yet. Create a timetable in Create, generate it, then tap Export to
+            No Watch Schedules yet. Create a timetable in Create, generate it, then tap Publish to
             add it here.
           </Text>
         ) : (
@@ -326,7 +238,7 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
                     )}
                   </View>
                   <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>
-                    {formatLocalDateString(scheduleDateStr(t), {
+                    {formatLocalDateString(getWatchScheduleDate(t), {
                       weekday: 'short',
                       month: 'short',
                       day: 'numeric',

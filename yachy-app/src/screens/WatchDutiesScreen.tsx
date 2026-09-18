@@ -5,7 +5,7 @@
  * (built in a later pass).
  */
 
-import React, { useState, useCallback, useLayoutEffect, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -20,7 +20,7 @@ import {
   Modal,
   Pressable,
 } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import userService from '../services/user';
 import { User } from '../types';
@@ -96,8 +96,6 @@ const WATCH_DUTIES_INFO = {
 };
 
 export const WatchDutiesScreen = () => {
-  const navigation = useNavigation<any>();
-
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const canManage = user?.role === 'CAPTAIN_MOV' || user?.role === 'HOD';
@@ -110,7 +108,7 @@ export const WatchDutiesScreen = () => {
   const [assignments, setAssignments] = useState<WatchAssignment[]>([]);
   const [dutyGroups, setDutyGroups] = useState<DutyGroup[]>([]);
   const [selectedDept, setSelectedDept] = useState<Department | 'All'>('All');
-  const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
+  const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(new Set());
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [addGroupModalVisible, setAddGroupModalVisible] = useState(false);
   const [newGroupTitle, setNewGroupTitle] = useState('');
@@ -173,6 +171,15 @@ export const WatchDutiesScreen = () => {
 
   const filteredGroups =
     selectedDept === 'All' ? dutyGroups : dutyGroups.filter((g) => g.department === selectedDept);
+
+  const toggleExpandedGroup = (groupId: string) => {
+    setExpandedGroupIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      return next;
+    });
+  };
 
   const handleToggleItem = async (itemId: string, currentlyChecked: boolean) => {
     if (!user?.id) return;
@@ -570,7 +577,7 @@ export const WatchDutiesScreen = () => {
         </View>
 
         {assignModalVisible && assignDate && (
-          <Modal visible transparent animationType="fade">
+          <Modal visible transparent animationType="fade" onRequestClose={closeAssignModal}>
             <View style={styles.modalBackdrop}>
               <Pressable style={StyleSheet.absoluteFill} onPress={closeAssignModal} />
               <View
@@ -578,16 +585,24 @@ export const WatchDutiesScreen = () => {
                   styles.modalBox,
                   {
                     backgroundColor: themeColors.surface,
-                    maxHeight: activeTimeField ? '85%' : 400,
+                    // Let short forms stay compact, while giving long assignment
+                    // and crew lists room to scroll on smaller phones.
+                    maxHeight: '85%',
                   },
                 ]}
               >
-                <ScrollView showsVerticalScrollIndicator={false} scrollEnabled={!activeTimeField}>
-                  {crewPickerVisible ? (
-                    <>
-                      <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
-                        Select crew
-                      </Text>
+                {crewPickerVisible ? (
+                  <>
+                    <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+                      Select crew
+                    </Text>
+                    <ScrollView
+                      style={styles.crewPickerList}
+                      contentContainerStyle={styles.crewPickerContent}
+                      keyboardShouldPersistTaps="handled"
+                      nestedScrollEnabled
+                      showsVerticalScrollIndicator
+                    >
                       {crewList.map((c) => (
                         <TouchableOpacity
                           key={c.id}
@@ -605,156 +620,155 @@ export const WatchDutiesScreen = () => {
                           </Text>
                         </TouchableOpacity>
                       ))}
-                      <TouchableOpacity
-                        onPress={() => setCrewPickerVisible(false)}
-                        style={[styles.secondaryButton, { marginTop: SPACING.md }]}
-                      >
-                        <Text style={{ color: themeColors.textPrimary }}>Back</Text>
-                      </TouchableOpacity>
-                    </>
-                  ) : (
-                    <>
-                      <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
-                        {new Date(assignDate + 'T00:00:00').toLocaleDateString(undefined, {
-                          weekday: 'long',
-                          day: 'numeric',
-                          month: 'long',
-                        })}
-                      </Text>
+                    </ScrollView>
+                    <TouchableOpacity
+                      onPress={() => setCrewPickerVisible(false)}
+                      style={[styles.secondaryButton, { marginTop: SPACING.md }]}
+                    >
+                      <Text style={{ color: themeColors.textPrimary }}>Back</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <ScrollView
+                    style={styles.assignmentFormScroll}
+                    contentContainerStyle={styles.assignmentFormContent}
+                    keyboardShouldPersistTaps="handled"
+                    nestedScrollEnabled
+                    showsVerticalScrollIndicator
+                  >
+                    <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+                      {new Date(assignDate + 'T00:00:00').toLocaleDateString(undefined, {
+                        weekday: 'long',
+                        day: 'numeric',
+                        month: 'long',
+                      })}
+                    </Text>
 
-                      {assignments.filter((a) => a.date === assignDate).length > 0 && (
-                        <View style={{ marginBottom: SPACING.md }}>
-                          {assignments
-                            .filter((a) => a.date === assignDate)
-                            .map((a) => (
-                              <View
-                                key={a.id}
-                                style={{
-                                  flexDirection: 'row',
-                                  justifyContent: 'space-between',
-                                  alignItems: 'center',
-                                  paddingVertical: 6,
-                                }}
-                              >
-                                <Text
-                                  style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}
-                                >
-                                  {a.userName} {'\u00b7'} {a.startTime}
-                                  {'\u2013'}
-                                  {a.endTime}
-                                </Text>
-                                <TouchableOpacity onPress={() => handleRemoveAssignment(a.id)}>
-                                  <Text style={{ color: '#dc2626', fontSize: FONTS.sm }}>
-                                    Remove
-                                  </Text>
-                                </TouchableOpacity>
-                              </View>
-                            ))}
-                        </View>
-                      )}
+                    {assignments.filter((a) => a.date === assignDate).length > 0 && (
+                      <View style={{ marginBottom: SPACING.md }}>
+                        {assignments
+                          .filter((a) => a.date === assignDate)
+                          .map((a) => (
+                            <View
+                              key={a.id}
+                              style={{
+                                flexDirection: 'row',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                paddingVertical: 6,
+                              }}
+                            >
+                              <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>
+                                {a.userName} {'\u00b7'} {a.startTime}
+                                {'\u2013'}
+                                {a.endTime}
+                              </Text>
+                              <TouchableOpacity onPress={() => handleRemoveAssignment(a.id)}>
+                                <Text style={{ color: '#dc2626', fontSize: FONTS.sm }}>Remove</Text>
+                              </TouchableOpacity>
+                            </View>
+                          ))}
+                      </View>
+                    )}
 
-                      <Text
-                        style={{
-                          color: themeColors.textSecondary,
-                          fontSize: FONTS.sm,
-                          marginBottom: 6,
-                        }}
-                      >
-                        Add crew member
+                    <Text
+                      style={{
+                        color: themeColors.textSecondary,
+                        fontSize: FONTS.sm,
+                        marginBottom: 6,
+                      }}
+                    >
+                      Add crew member
+                    </Text>
+                    <TouchableOpacity
+                      style={[
+                        styles.dropdown,
+                        { backgroundColor: themeColors.background, marginBottom: SPACING.sm },
+                      ]}
+                      onPress={() => setCrewPickerVisible(true)}
+                    >
+                      <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>
+                        {selectedCrewId
+                          ? (crewList.find((c) => c.id === selectedCrewId)?.name ?? 'Select crew')
+                          : 'Select crew'}
                       </Text>
+                    </TouchableOpacity>
+
+                    <View
+                      style={{ flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md }}
+                    >
                       <TouchableOpacity
                         style={[
                           styles.dropdown,
-                          { backgroundColor: themeColors.background, marginBottom: SPACING.sm },
+                          { backgroundColor: themeColors.background, flex: 1 },
                         ]}
-                        onPress={() => setCrewPickerVisible(true)}
+                        onPress={() => setActiveTimeField('start')}
                       >
                         <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>
-                          {selectedCrewId
-                            ? (crewList.find((c) => c.id === selectedCrewId)?.name ?? 'Select crew')
-                            : 'Select crew'}
+                          Start {assignStartTime}
                         </Text>
                       </TouchableOpacity>
-
-                      <View
-                        style={{ flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md }}
+                      <TouchableOpacity
+                        style={[
+                          styles.dropdown,
+                          { backgroundColor: themeColors.background, flex: 1 },
+                        ]}
+                        onPress={() => setActiveTimeField('end')}
                       >
-                        <TouchableOpacity
-                          style={[
-                            styles.dropdown,
-                            { backgroundColor: themeColors.background, flex: 1 },
-                          ]}
-                          onPress={() => setActiveTimeField('start')}
-                        >
-                          <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>
-                            Start {assignStartTime}
-                          </Text>
+                        <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>
+                          End {assignEndTime}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {activeTimeField && (
+                      <DateTimePicker
+                        value={timeStringToDate(
+                          activeTimeField === 'start' ? assignStartTime : assignEndTime
+                        )}
+                        mode="time"
+                        display="spinner"
+                        themeVariant={themeColors.isDark ? 'dark' : 'light'}
+                        onChange={(event, selectedDate) => {
+                          if (selectedDate) {
+                            const timeStr = dateToTimeString(selectedDate);
+                            if (activeTimeField === 'start') setAssignStartTime(timeStr);
+                            else setAssignEndTime(timeStr);
+                          }
+                          if (Platform.OS === 'android') setActiveTimeField(null);
+                        }}
+                      />
+                    )}
+                    {activeTimeField && Platform.OS === 'ios' && (
+                      <TouchableOpacity
+                        onPress={() => setActiveTimeField(null)}
+                        style={[styles.primaryButton, { marginBottom: SPACING.md }]}
+                      >
+                        <Text style={{ color: '#fff', fontWeight: '600' }}>Done</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {!activeTimeField && (
+                      <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
+                        <TouchableOpacity onPress={closeAssignModal} style={styles.secondaryButton}>
+                          <Text style={{ color: themeColors.textPrimary }}>Close</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
+                          onPress={handleAssignCrew}
+                          disabled={savingAssignment || !selectedCrewId}
                           style={[
-                            styles.dropdown,
-                            { backgroundColor: themeColors.background, flex: 1 },
+                            styles.primaryButton,
+                            { opacity: savingAssignment || !selectedCrewId ? 0.6 : 1 },
                           ]}
-                          onPress={() => setActiveTimeField('end')}
                         >
-                          <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>
-                            End {assignEndTime}
+                          <Text style={{ color: '#fff', fontWeight: '600' }}>
+                            {savingAssignment ? 'Assigning...' : 'Assign'}
                           </Text>
                         </TouchableOpacity>
                       </View>
-
-                      {activeTimeField && (
-                        <DateTimePicker
-                          value={timeStringToDate(
-                            activeTimeField === 'start' ? assignStartTime : assignEndTime
-                          )}
-                          mode="time"
-                          display="spinner"
-                          themeVariant={themeColors.isDark ? 'dark' : 'light'}
-                          onChange={(event, selectedDate) => {
-                            if (selectedDate) {
-                              const timeStr = dateToTimeString(selectedDate);
-                              if (activeTimeField === 'start') setAssignStartTime(timeStr);
-                              else setAssignEndTime(timeStr);
-                            }
-                            if (Platform.OS === 'android') setActiveTimeField(null);
-                          }}
-                        />
-                      )}
-                      {activeTimeField && Platform.OS === 'ios' && (
-                        <TouchableOpacity
-                          onPress={() => setActiveTimeField(null)}
-                          style={[styles.primaryButton, { marginBottom: SPACING.md }]}
-                        >
-                          <Text style={{ color: '#fff', fontWeight: '600' }}>Done</Text>
-                        </TouchableOpacity>
-                      )}
-
-                      {!activeTimeField && (
-                        <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
-                          <TouchableOpacity
-                            onPress={closeAssignModal}
-                            style={styles.secondaryButton}
-                          >
-                            <Text style={{ color: themeColors.textPrimary }}>Close</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            onPress={handleAssignCrew}
-                            disabled={savingAssignment || !selectedCrewId}
-                            style={[
-                              styles.primaryButton,
-                              { opacity: savingAssignment || !selectedCrewId ? 0.6 : 1 },
-                            ]}
-                          >
-                            <Text style={{ color: '#fff', fontWeight: '600' }}>
-                              {savingAssignment ? 'Assigning...' : 'Assign'}
-                            </Text>
-                          </TouchableOpacity>
-                        </View>
-                      )}
-                    </>
-                  )}
-                </ScrollView>
+                    )}
+                  </ScrollView>
+                )}
               </View>
             </View>
           </Modal>
@@ -1135,7 +1149,7 @@ export const WatchDutiesScreen = () => {
           >
             <TouchableOpacity
               style={styles.cardHeaderRow}
-              onPress={() => setExpandedGroupId(expandedGroupId === group.id ? null : group.id)}
+              onPress={() => toggleExpandedGroup(group.id)}
               activeOpacity={0.8}
             >
               <View style={{ flex: 1 }}>
@@ -1167,17 +1181,17 @@ export const WatchDutiesScreen = () => {
                     {DEPT_LABEL[group.department]}
                   </Text>
                 </View>
-                {canManage && expandedGroupId === group.id && (
+                {canManage && expandedGroupIds.has(group.id) && (
                   <TouchableOpacity onPress={() => handleDeleteGroup(group.id, group.title)}>
                     <Text style={{ color: '#dc2626', fontSize: FONTS.sm }}>Delete</Text>
                   </TouchableOpacity>
                 )}
                 <Text style={{ color: themeColors.textSecondary, fontSize: 12 }}>
-                  {expandedGroupId === group.id ? '\u25b2' : '\u25bc'}
+                  {expandedGroupIds.has(group.id) ? '\u25b2' : '\u25bc'}
                 </Text>
               </View>
             </TouchableOpacity>
-            {expandedGroupId === group.id && (
+            {expandedGroupIds.has(group.id) && (
               <>
                 {group.items.map((item) => (
                   <View
@@ -1357,8 +1371,10 @@ const styles = StyleSheet.create({
   modalBox: {
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.md,
+    width: '100%',
+    maxWidth: 440,
     minWidth: 260,
-    maxHeight: 400,
+    maxHeight: '85%',
   },
   modalTitle: { fontSize: FONTS.lg, fontWeight: '600', marginBottom: SPACING.md },
   modalItem: {
@@ -1368,6 +1384,15 @@ const styles = StyleSheet.create({
   },
   modalItemSelected: {
     backgroundColor: COLORS.gray200,
+  },
+  crewPickerList: { flexGrow: 0, flexShrink: 1, maxHeight: 360 },
+  crewPickerContent: { flexGrow: 0 },
+  assignmentFormScroll: {
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  assignmentFormContent: {
+    flexGrow: 0,
   },
   groupSheetBackdrop: {
     flex: 1,

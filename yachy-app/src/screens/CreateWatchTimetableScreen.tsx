@@ -3,7 +3,7 @@
  * Form to create, generate, and publish watch keeping timetables (HOD only)
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -124,7 +124,8 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
   }> | null>(null);
   const [timetablePreviewOpen, setTimetablePreviewOpen] = useState(false);
   const [calculatedWatchHours, setCalculatedWatchHours] = useState<number | null>(null);
-  const [exporting, setExporting] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const publishingRef = useRef(false);
   const vesselId = user?.vesselId ?? null;
   const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
 
@@ -317,11 +318,12 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
       endDate: s.endDate,
     }));
 
-  const handleExport = async (slotsOverride?: NonNullable<typeof timetableSlots>) => {
+  const handlePublish = async (slotsOverride?: NonNullable<typeof timetableSlots>) => {
     const slotsToSave = slotsOverride ?? timetableSlots;
-    if (!vesselId || !slotsToSave) return;
+    if (!vesselId || !slotsToSave || publishingRef.current) return;
+    publishingRef.current = true;
     const wasEditing = Boolean(editingTimetableId);
-    setExporting(true);
+    setPublishing(true);
     try {
       const timetableData = {
         vesselId,
@@ -341,7 +343,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
         Alert.alert('Updated', 'Watch Schedule has been updated.');
       } else {
         savedTimetable = await watchKeepingService.publish(timetableData);
-        Alert.alert('Exported', 'Timetable is now in Watch Schedule.');
+        Alert.alert('Published', 'Timetable is now available in Watch Schedule.');
       }
 
       setTimetableSlots(null);
@@ -354,15 +356,16 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
         navigation.replace('WatchSchedule', { timetableId: savedTimetable.id });
       }
     } catch (e) {
-      console.error('Export error:', e);
+      console.error('Publish watch timetable error:', e);
       Alert.alert(
         'Error',
         editingTimetableId
           ? 'Could not update timetable.'
-          : 'Could not export timetable to Watch Schedule.'
+          : 'Could not publish timetable to Watch Schedule.'
       );
     } finally {
-      setExporting(false);
+      publishingRef.current = false;
+      setPublishing(false);
     }
   };
 
@@ -400,7 +403,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
       forDate
     );
 
-    await handleExport(updatedSlots);
+    await handlePublish(updatedSlots);
   };
 
   if (!vesselId) {
@@ -666,18 +669,18 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
           {editingTimetableId ? (
             <View style={styles.editActions}>
               <Button
-                title="Update"
+                title="Save Changes"
                 onPress={handleUpdateDirectly}
                 variant="primary"
-                loading={exporting}
-                disabled={exporting}
+                loading={publishing}
+                disabled={publishing}
                 style={styles.editActionButton}
               />
               <Button
-                title="Close"
+                title="Cancel"
                 onPress={() => navigation.goBack()}
                 variant="outline"
-                disabled={exporting}
+                disabled={publishing}
                 style={styles.editActionButton}
               />
             </View>
@@ -766,34 +769,6 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
                       <Text style={[styles.timetableCrewName, { color: themeColors.textPrimary }]}>
                         {slot.crew.name}
                       </Text>
-                      {slot.crew.contractType === 'temporary' && (
-                        <View
-                          style={{
-                            backgroundColor: '#ea580c',
-                            paddingHorizontal: 5,
-                            paddingVertical: 1,
-                            borderRadius: 4,
-                          }}
-                        >
-                          <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#fff' }}>
-                            TEMP
-                          </Text>
-                        </View>
-                      )}
-                      {slot.crew.contractType === 'rotational' && (
-                        <View
-                          style={{
-                            backgroundColor: '#0d9488',
-                            paddingHorizontal: 5,
-                            paddingVertical: 1,
-                            borderRadius: 4,
-                          }}
-                        >
-                          <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#fff' }}>
-                            Rotation
-                          </Text>
-                        </View>
-                      )}
                     </View>
                     {slot.crew.position ? (
                       <Text
@@ -841,17 +816,17 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
             <View style={styles.timetableActions}>
               <TouchableOpacity
                 style={styles.timetableExportBtn}
-                onPress={() => handleExport()}
-                disabled={exporting}
+                onPress={() => handlePublish()}
+                disabled={publishing}
               >
                 <Text style={styles.timetableExportText}>
-                  {exporting
+                  {publishing
                     ? editingTimetableId
-                      ? 'Updating...'
-                      : 'Exporting...'
+                      ? 'Saving...'
+                      : 'Publishing...'
                     : editingTimetableId
-                      ? 'Update'
-                      : 'Export'}
+                      ? 'Save Changes'
+                      : 'Publish'}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
