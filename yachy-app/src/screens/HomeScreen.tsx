@@ -3,7 +3,7 @@
  * Fresh, minimalist design — image-centric, maritime-focused
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -25,16 +25,17 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import vesselService from '../services/vessel';
 import tripsService from '../services/trips';
 import yardJobsService from '../services/yardJobs';
-import crewLeaveService from '../services/crewLeave';
+import crewLeaveService, { type CrewLeaveCalendarEntry } from '../services/crewLeave';
 import { useVesselTripColors, getTripTypeColorMap } from '../hooks/useVesselTripColors';
 import { DEFAULT_COLORS } from '../services/tripColors';
-import type { Trip, TripType, Department, YardPeriodJob, CrewLeave } from '../types';
+import type { Trip, TripType, Department, YardPeriodJob } from '../types';
 import {
   CREW_LEAVE_COLORS,
   CREW_LEAVE_SHORT_LABELS,
   CREW_LEAVE_TYPES,
 } from '../constants/crewLeave';
 import { parseLocalDate, toYYYYMMDD } from '../utils';
+import { getCrewLeaveMonthRange } from '../utils/crewLeave';
 import { getActiveYardJobs } from '../utils/shipyardRecords';
 
 const { width } = Dimensions.get('window');
@@ -117,14 +118,18 @@ function getMarkedDatesFromYardJobs(
   return marked;
 }
 
-function getMarkedDatesFromCrewLeave(leave: CrewLeave[]): MarkedDates {
+function getMarkedDatesFromCrewLeave(
+  leave: CrewLeaveCalendarEntry[],
+  windowStart: string,
+  windowEnd: string
+): MarkedDates {
   const marked: MarkedDates = {};
   const seen: Record<string, Set<string>> = {};
 
   leave.forEach((entry) => {
     const color = CREW_LEAVE_COLORS[entry.leaveType];
-    const start = parseLocalDate(entry.startDate);
-    const end = parseLocalDate(entry.endDate);
+    const start = parseLocalDate(entry.startDate < windowStart ? windowStart : entry.startDate);
+    const end = parseLocalDate(entry.endDate > windowEnd ? windowEnd : entry.endDate);
     for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
       const key = toYYYYMMDD(date);
       if (!seen[key]) seen[key] = new Set();
@@ -169,7 +174,14 @@ export const HomeScreen = ({ navigation }: any) => {
   const [bannerLoadFailed, setBannerLoadFailed] = useState(false);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [yardJobs, setYardJobs] = useState<YardPeriodJob[]>([]);
-  const [crewLeave, setCrewLeave] = useState<CrewLeave[]>([]);
+  const initialCrewLeaveWindow = getCrewLeaveMonthRange(
+    new Date().getFullYear(),
+    new Date().getMonth() + 1
+  );
+  const [crewLeave, setCrewLeave] = useState<CrewLeaveCalendarEntry[]>([]);
+  const [crewLeaveWindow, setCrewLeaveWindow] = useState(initialCrewLeaveWindow);
+  const crewLeaveWindowRef = useRef(initialCrewLeaveWindow);
+  const crewLeaveRequestIdRef = useRef(0);
   const [tripsLoading, setTripsLoading] = useState(true);
   const [calendarMode, setCalendarMode] = useState<'trips' | 'yardPeriod' | 'crewLeave'>('trips');
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
@@ -190,7 +202,11 @@ export const HomeScreen = ({ navigation }: any) => {
     getActiveYardJobs(yardJobs),
     getDeptColor
   );
-  const markedDatesCrewLeave = getMarkedDatesFromCrewLeave(crewLeave);
+  const markedDatesCrewLeave = getMarkedDatesFromCrewLeave(
+    crewLeave,
+    crewLeaveWindow.startDate,
+    crewLeaveWindow.endDate
+  );
   const markedDates =
     calendarMode === 'trips'
       ? markedDatesTrips
@@ -198,24 +214,43 @@ export const HomeScreen = ({ navigation }: any) => {
         ? markedDatesYardPeriod
         : markedDatesCrewLeave;
 
+  const loadCrewLeaveWindow = useCallback(
+    async (window: { startDate: string; endDate: string }) => {
+      if (!vesselId) return;
+      crewLeaveWindowRef.current = window;
+      setCrewLeaveWindow(window);
+      const requestId = ++crewLeaveRequestIdRef.current;
+      try {
+        const leave = await crewLeaveService.getCalendarInRange(
+          vesselId,
+          window.startDate,
+          window.endDate
+        );
+        if (requestId === crewLeaveRequestIdRef.current) setCrewLeave(leave);
+      } catch (error) {
+        console.error('Load crew leave calendar error:', error);
+      }
+    },
+    [vesselId]
+  );
+
   const loadTrips = useCallback(async () => {
     if (!vesselId) return;
     try {
-      const [data, jobs, leave] = await Promise.all([
+      const [data, jobs] = await Promise.all([
         tripsService.getTripsByVessel(vesselId),
         yardJobsService.getByVessel(vesselId),
-        crewLeaveService.getByVessel(vesselId),
         loadColors(),
+        loadCrewLeaveWindow(crewLeaveWindowRef.current),
       ]);
       setTrips(data);
       setYardJobs(jobs);
-      setCrewLeave(leave);
     } catch (e) {
       console.error('Load trips error:', e);
     } finally {
       setTripsLoading(false);
     }
-  }, [vesselId, loadColors]);
+  }, [vesselId, loadColors, loadCrewLeaveWindow]);
 
   useFocusEffect(
     useCallback(() => {
@@ -457,9 +492,12 @@ export const HomeScreen = ({ navigation }: any) => {
                   ) : (
                     <Calendar
                       key={themeColors.isDark ? 'dark' : 'light'}
-                      current={new Date().toISOString().slice(0, 10)}
+                      current={toYYYYMMDD(new Date())}
                       markedDates={markedDates}
                       markingType="multi-period"
+                      onMonthChange={({ year, month }) => {
+                        void loadCrewLeaveWindow(getCrewLeaveMonthRange(year, month));
+                      }}
                       theme={{
                         backgroundColor: 'transparent',
                         calendarBackground: 'transparent',

@@ -239,15 +239,15 @@ export type CrewLeaveType = 'ANNUAL' | 'SICK' | 'ROTATION' | 'OTHER';
 export interface CrewLeave {
   id: string;
   vesselId: string;
-  crewMemberId: string;
+  crewMemberId: string | null;
   crewMemberName: string;
   crewMemberPosition?: string;
-  crewMemberDepartment?: Department;
+  crewMemberDepartments: Department[];
   leaveType: CrewLeaveType;
   startDate: string;
   endDate: string;
   notes: string;
-  createdBy: string;
+  createdBy: string | null;
   createdAt: string;
   updatedAt: string;
 }

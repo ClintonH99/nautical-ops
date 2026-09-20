@@ -23,12 +23,12 @@ VALUES
   ('61000000-0000-0000-0000-000000000001', 'Leave Test Vessel', 'LEAVETEST001', now() + interval '1 year', FALSE),
   ('61000000-0000-0000-0000-000000000002', 'Other Leave Vessel', 'LEAVETEST002', now() + interval '1 year', FALSE);
 
-INSERT INTO public.users (id, email, name, position, department, vessel_id, role)
+INSERT INTO public.users (id, email, name, position, department, department_2, vessel_id, role)
 VALUES
-  ('62000000-0000-0000-0000-000000000001', 'captain@leave.test', 'Captain', 'Captain', 'BRIDGE', '61000000-0000-0000-0000-000000000001', 'CAPTAIN_MOV'),
-  ('62000000-0000-0000-0000-000000000002', 'hod@leave.test', 'HOD', 'Chief Engineer', 'ENGINEERING', '61000000-0000-0000-0000-000000000001', 'HOD'),
-  ('62000000-0000-0000-0000-000000000003', 'crew@leave.test', 'Crew', 'Deckhand', 'EXTERIOR', '61000000-0000-0000-0000-000000000001', 'CREW'),
-  ('62000000-0000-0000-0000-000000000004', 'other@leave.test', 'Other Crew', 'Stewardess', 'INTERIOR', '61000000-0000-0000-0000-000000000002', 'CREW');
+  ('62000000-0000-0000-0000-000000000001', 'captain@leave.test', 'Captain', 'Captain', 'BRIDGE', NULL, '61000000-0000-0000-0000-000000000001', 'CAPTAIN_MOV'),
+  ('62000000-0000-0000-0000-000000000002', 'hod@leave.test', 'HOD', 'Chief Engineer', 'ENGINEERING', NULL, '61000000-0000-0000-0000-000000000001', 'HOD'),
+  ('62000000-0000-0000-0000-000000000003', 'crew@leave.test', 'Crew', 'Deckhand', 'EXTERIOR', 'GALLEY', '61000000-0000-0000-0000-000000000001', 'CREW'),
+  ('62000000-0000-0000-0000-000000000004', 'other@leave.test', 'Other Crew', 'Stewardess', 'INTERIOR', NULL, '61000000-0000-0000-0000-000000000002', 'CREW');
 
 SET ROLE authenticated;
 
@@ -46,7 +46,48 @@ VALUES (
   '2026-09-21'
 );
 
+-- Apply the history migration after one legacy row exists so its backfill is
+-- exercised as well as the trigger used for future inserts.
+RESET ROLE;
+\ir ../migrations/20260921120000_PRESERVE_AND_FILTER_CREW_LEAVE_HISTORY.sql
+SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', '62000000-0000-0000-0000-000000000001', false);
+
 DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.crew_leave
+    WHERE id = '63000000-0000-0000-0000-000000000001'
+      AND crew_member_name_snapshot = 'Crew'
+      AND crew_member_position_snapshot = 'Deckhand'
+      AND crew_member_departments_snapshot = ARRAY['EXTERIOR', 'GALLEY']::TEXT[]
+  ) THEN
+    RAISE EXCEPTION 'Legacy crew leave was not backfilled with both departments';
+  END IF;
+
+  UPDATE public.crew_leave
+  SET crew_member_name_snapshot = 'Tampered',
+      crew_member_departments_snapshot = ARRAY['BRIDGE']::TEXT[]
+  WHERE id = '63000000-0000-0000-0000-000000000001';
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.crew_leave
+    WHERE id = '63000000-0000-0000-0000-000000000001'
+      AND (
+        crew_member_name_snapshot <> 'Crew'
+        OR crew_member_departments_snapshot <> ARRAY['EXTERIOR', 'GALLEY']::TEXT[]
+      )
+  ) THEN
+    RAISE EXCEPTION 'Historical crew snapshot could be rewritten';
+  END IF;
+END;
+$$;
+
+DO $$
+DECLARE
+  wrong_vessel_blocked BOOLEAN := FALSE;
 BEGIN
   BEGIN
     INSERT INTO public.crew_leave (
@@ -58,9 +99,13 @@ BEGIN
       '2026-09-20',
       '2026-09-21'
     );
-    RAISE EXCEPTION 'Captain assigned leave to a user on another vessel';
-  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  EXCEPTION WHEN OTHERS THEN
+    wrong_vessel_blocked := TRUE;
   END;
+
+  IF NOT wrong_vessel_blocked THEN
+    RAISE EXCEPTION 'Captain assigned leave to a user on another vessel';
+  END IF;
 
   BEGIN
     INSERT INTO public.crew_leave (
@@ -134,5 +179,29 @@ END;
 $$;
 
 RESET ROLE;
+
+-- Removing either referenced profile must preserve the historical record and
+-- its immutable identifying snapshot.
+DELETE FROM public.users
+WHERE id IN (
+  '62000000-0000-0000-0000-000000000001',
+  '62000000-0000-0000-0000-000000000003'
+);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.crew_leave
+    WHERE id = '63000000-0000-0000-0000-000000000001'
+      AND created_by IS NULL
+      AND crew_member_id IS NULL
+      AND crew_member_name_snapshot = 'Crew'
+      AND crew_member_departments_snapshot = ARRAY['EXTERIOR', 'GALLEY']::TEXT[]
+  ) THEN
+    RAISE EXCEPTION 'Crew leave history did not survive profile deletion';
+  END IF;
+END;
+$$;
 
 SELECT 'crew leave tests passed' AS result;

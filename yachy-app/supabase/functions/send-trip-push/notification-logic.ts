@@ -17,7 +17,7 @@ export interface ChecklistNotificationRecord {
 export interface CrewLeaveNotificationRecord {
   id: string;
   vessel_id: string;
-  crew_member_id: string;
+  crew_member_id: string | null;
   leave_type: string;
   start_date: string;
   end_date: string;

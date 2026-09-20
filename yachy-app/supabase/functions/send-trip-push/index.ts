@@ -316,6 +316,12 @@ async function sendCrewLeaveRequest(
     return jsonResponse({ error: 'Unauthorized' }, 401);
   }
 
+  // Historical leave survives account deletion. There is nobody to notify
+  // once the referenced crew profile has been removed.
+  if (!leave.crew_member_id) {
+    return jsonResponse({ sent: 0, accepted: 0, rejected: 0 });
+  }
+
   const recipients = await getUserRecipients(leave.crew_member_id, 'crewLeave');
   const content = buildCrewLeaveNotification(leave as CrewLeaveNotificationRecord, event);
   const messages = envelopes(recipients, content);
