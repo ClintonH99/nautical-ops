@@ -23,6 +23,10 @@ interface LabeledDropdownProps {
   onPress: () => void;
   /** Drop the standard top spacing where the row already sits below a gap. */
   tightTop?: boolean;
+  /** Optional control text colour for domain-specific dropdown standards. */
+  valueColor?: string;
+  /** Optional chevron colour; defaults to valueColor when supplied. */
+  iconColor?: string;
 }
 
 export const LabeledDropdown: React.FC<LabeledDropdownProps> = ({
@@ -31,8 +35,12 @@ export const LabeledDropdown: React.FC<LabeledDropdownProps> = ({
   open = false,
   onPress,
   tightTop = false,
+  valueColor,
+  iconColor,
 }) => {
   const themeColors = useThemeColors();
+  const resolvedValueColor = valueColor ?? themeColors.accent;
+  const resolvedIconColor = iconColor ?? resolvedValueColor;
 
   return (
     <View style={[styles.row, tightTop && styles.rowTight]}>
@@ -51,14 +59,10 @@ export const LabeledDropdown: React.FC<LabeledDropdownProps> = ({
         accessibilityLabel={`${label}: ${value}`}
         accessibilityState={{ expanded: open }}
       >
-        <Text style={[styles.value, { color: themeColors.accent }]} numberOfLines={1}>
+        <Text style={[styles.value, { color: resolvedValueColor }]} numberOfLines={1}>
           {value}
         </Text>
-        <Ionicons
-          name={open ? 'chevron-up' : 'chevron-down'}
-          size={20}
-          color={themeColors.accent}
-        />
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={20} color={resolvedIconColor} />
       </TouchableOpacity>
     </View>
   );
@@ -85,6 +89,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexGrow: 1,
+    flexBasis: 180,
     minHeight: 48,
     paddingVertical: 10,
     paddingHorizontal: SPACING.md,
@@ -92,7 +98,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: SPACING.sm,
     flexShrink: 1,
-    minWidth: 180,
+    minWidth: 0,
   },
   value: {
     fontSize: FONTS.base,

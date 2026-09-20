@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
     gap: SPACING.xs,
   },
-  filterBarContent: { flex: 1 },
+  filterBarContent: { width: '100%', alignSelf: 'stretch' },
   filterLabel: {
     fontSize: FONTS.sm,
     fontWeight: '600',

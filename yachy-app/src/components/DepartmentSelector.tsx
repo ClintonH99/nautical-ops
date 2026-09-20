@@ -13,14 +13,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Department } from '../types';
-import { FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
+import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { DEPARTMENT_OPTIONS, formatDepartmentLabel } from '../utils/departmentSelection';
 import { LabeledDropdown } from './LabeledDropdown';
-
-const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
-
-const departmentLabel = (department: Department) =>
-  department.charAt(0) + department.slice(1).toLowerCase();
 
 interface DepartmentSelectorProps {
   value: Department | null;
@@ -54,8 +50,11 @@ export const DepartmentSelector: React.FC<DepartmentSelectorProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const themeColors = useThemeColors();
-  const options: Array<Department | null> = includeAll ? [null, ...DEPARTMENTS] : DEPARTMENTS;
-  const selectedLabel = value ? departmentLabel(value) : includeAll ? allLabel : emptyLabel;
+  const options: Array<Department | null> = includeAll
+    ? [null, ...DEPARTMENT_OPTIONS]
+    : [...DEPARTMENT_OPTIONS];
+  const selectedLabel = value ? formatDepartmentLabel(value) : includeAll ? allLabel : emptyLabel;
+  const triggerColor = themeColors.isDark ? themeColors.textPrimary : COLORS.primary;
 
   const select = (department: Department | null) => {
     onChange(department);
@@ -79,15 +78,17 @@ export const DepartmentSelector: React.FC<DepartmentSelectorProps> = ({
     >
       {options.map((department) => {
         const isSelected = department === value;
-        const optionLabel = department ? departmentLabel(department) : allLabel;
+        const optionLabel = department ? formatDepartmentLabel(department) : allLabel;
         return (
           <TouchableOpacity
             key={department ?? 'all'}
             style={[
               styles.option,
-              isSelected && {
-                backgroundColor: themeColors.controlSelected,
-              },
+              isSelected && styles.optionSelected,
+              isSelected &&
+                themeColors.isDark && {
+                  borderColor: themeColors.borderStrong,
+                },
             ]}
             onPress={() => select(department)}
             activeOpacity={0.72}
@@ -96,15 +97,13 @@ export const DepartmentSelector: React.FC<DepartmentSelectorProps> = ({
             accessibilityLabel={optionLabel}
           >
             <View style={styles.selectionMark}>
-              {isSelected && (
-                <Ionicons name="checkmark" size={22} color={themeColors.textOnAccent} />
-              )}
+              {isSelected && <Ionicons name="checkmark" size={22} color={COLORS.white} />}
             </View>
             <Text
               style={[
                 styles.optionText,
                 {
-                  color: isSelected ? themeColors.textOnAccent : themeColors.textPrimary,
+                  color: isSelected ? COLORS.white : themeColors.textPrimary,
                 },
                 isSelected && styles.optionTextSelected,
               ]}
@@ -117,6 +116,21 @@ export const DepartmentSelector: React.FC<DepartmentSelectorProps> = ({
     </ScrollView>
   );
 
+  const renderHeader = () => (
+    <View style={[styles.sheetHeader, { borderBottomColor: themeColors.border }]}>
+      <Text style={[styles.sheetTitle, { color: themeColors.textPrimary }]}>Select department</Text>
+      <TouchableOpacity
+        style={styles.closeButton}
+        onPress={() => setOpen(false)}
+        activeOpacity={0.72}
+        accessibilityRole="button"
+        accessibilityLabel="Close department selector"
+      >
+        <Ionicons name="close" size={22} color={themeColors.textPrimary} />
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <LabeledDropdown
@@ -125,6 +139,8 @@ export const DepartmentSelector: React.FC<DepartmentSelectorProps> = ({
         open={open}
         onPress={toggle}
         tightTop={tightTop}
+        valueColor={triggerColor}
+        iconColor={triggerColor}
       />
       {open && presentation === 'inline' && (
         <View
@@ -137,6 +153,7 @@ export const DepartmentSelector: React.FC<DepartmentSelectorProps> = ({
           ]}
           accessibilityRole="menu"
         >
+          {renderHeader()}
           {renderOptions()}
         </View>
       )}
@@ -169,6 +186,7 @@ export const DepartmentSelector: React.FC<DepartmentSelectorProps> = ({
               accessibilityRole="menu"
               accessibilityViewIsModal
             >
+              {renderHeader()}
               {renderOptions()}
             </View>
           </KeyboardAvoidingView>
@@ -209,7 +227,7 @@ const styles = StyleSheet.create({
   },
   inlineSheet: {
     width: '100%',
-    maxHeight: 320,
+    maxHeight: 400,
     marginTop: -SPACING.sm,
     marginBottom: SPACING.md,
     borderWidth: 1,
@@ -219,16 +237,24 @@ const styles = StyleSheet.create({
   optionList: {
     flexGrow: 0,
     flexShrink: 1,
-    maxHeight: 420,
+    maxHeight: 326,
   },
   optionListContent: {
     paddingVertical: SPACING.xs,
   },
   option: {
-    minHeight: 58,
+    minHeight: 52,
+    marginHorizontal: SPACING.xs,
     paddingHorizontal: SPACING.md,
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'transparent',
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  optionSelected: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   selectionMark: {
     width: 30,
@@ -240,5 +266,24 @@ const styles = StyleSheet.create({
   },
   optionTextSelected: {
     fontWeight: '700',
+  },
+  sheetHeader: {
+    minHeight: 56,
+    paddingLeft: SPACING.md,
+    paddingRight: SPACING.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+  },
+  sheetTitle: {
+    fontSize: FONTS.base,
+    fontWeight: '700',
+  },
+  closeButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

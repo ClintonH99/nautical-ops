@@ -38,6 +38,7 @@ import yardJobsService from '../services/yardJobs';
 import { getDepartmentColor, useAuthStore, useDepartmentColorStore } from '../store';
 import type { Department, ShipyardRecordFolder, YardPeriodJob } from '../types';
 import { formatLocalDateString } from '../utils';
+import { DEPARTMENT_OPTIONS as DEPARTMENTS } from '../utils/departmentSelection';
 import { exportYardJobsToPdf } from '../utils/yardJobsPdf';
 import {
   ALL_SHIPYARD_RECORDS,
@@ -47,7 +48,6 @@ import {
   UNFILED_SHIPYARD_RECORDS,
 } from '../utils/shipyardRecords';
 
-const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 type PageView = 'ACTIVE' | 'RECORDS';
 type FolderEditorMode = 'create' | 'rename' | null;
 

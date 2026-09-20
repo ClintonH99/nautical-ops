@@ -20,7 +20,13 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import vesselTasksService from '../services/vesselTasks';
 import { VesselTask, TaskCategory, Department } from '../types';
 import { getTaskUrgencyColor } from '../utils/taskUrgency';
-import { ButtonTagCard, ButtonTagRow, DepartmentSelector, LoadingSpinner, PageHeader } from '../components';
+import {
+  ButtonTagCard,
+  ButtonTagRow,
+  DepartmentSelector,
+  LoadingSpinner,
+  PageHeader,
+} from '../components';
 
 const CATEGORY_LABELS: Record<TaskCategory, string> = {
   DAILY: 'Daily',
@@ -293,7 +299,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
     gap: SPACING.xs,
   },
-  filterBarContent: { flex: 1 },
+  filterBarContent: { width: '100%', alignSelf: 'stretch' },
   filterLabel: {
     fontSize: FONTS.sm,
     fontWeight: '600',

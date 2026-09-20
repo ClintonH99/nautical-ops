@@ -30,8 +30,7 @@ import {
   ExportBar,
   DepartmentMultiSelector,
 } from '../components';
-
-const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
+import { DEPARTMENT_OPTIONS as DEPARTMENTS } from '../utils/departmentSelection';
 
 const INVENTORY_INFO = {
   title: 'Inventory',

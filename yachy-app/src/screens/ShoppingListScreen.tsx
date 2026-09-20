@@ -23,8 +23,7 @@ import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../st
 import shoppingListsService, { ShoppingList, ShoppingListItem } from '../services/shoppingLists';
 import { Department } from '../types';
 import { Button, DepartmentMultiSelector, PageHeader } from '../components';
-
-const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
+import { DEPARTMENT_OPTIONS as DEPARTMENTS } from '../utils/departmentSelection';
 
 const allDeptsVisible: Record<Department, boolean> = {
   BRIDGE: true,
@@ -282,7 +281,10 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
             onChange={(departments) =>
               setVisibleDepartments(
                 DEPARTMENTS.reduce(
-                  (next, department) => ({ ...next, [department]: departments.includes(department) }),
+                  (next, department) => ({
+                    ...next,
+                    [department]: departments.includes(department),
+                  }),
                   {} as Record<Department, boolean>
                 )
               )

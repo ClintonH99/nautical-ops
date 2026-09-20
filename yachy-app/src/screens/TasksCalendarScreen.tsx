@@ -26,10 +26,9 @@ import yardJobsService from '../services/yardJobs';
 import { PieDayComponent } from '../components/PieDayComponent';
 import { VesselTask, YardPeriodJob, Department } from '../types';
 import { getTaskUrgencyColor, getUrgencyLevel, UrgencyLevel } from '../utils/taskUrgency';
-import { LoadingSpinner, PageHeader } from '../components';
+import { DepartmentMultiSelector, LoadingSpinner, PageHeader } from '../components';
 import { parseLocalDate, toYYYYMMDD } from '../utils';
-
-const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
+import { DEPARTMENT_OPTIONS as DEPARTMENTS } from '../utils/departmentSelection';
 
 const URGENCY_OPTIONS: { value: UrgencyLevel | 'ALL'; label: string }[] = [
   { value: 'ALL', label: 'All priorities' },
@@ -120,10 +119,6 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
     INTERIOR: true,
     GALLEY: true,
   });
-
-  const toggleDepartment = (dept: Department) => {
-    setVisibleDepartments((prev) => ({ ...prev, [dept]: !prev[dept] }));
-  };
 
   const loadTasks = useCallback(async () => {
     if (!vesselId) return;
@@ -343,45 +338,20 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
           </Modal>
         )}
 
-        <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
-          Department filters
-        </Text>
-        <Text style={[styles.filterHint, { color: themeColors.textSecondary }]}>
-          Tap to show/hide on calendar
-        </Text>
-        <View style={styles.deptChips}>
-          {DEPARTMENTS.map((dept) => (
-            <TouchableOpacity
-              key={dept}
-              style={[
-                styles.deptChip,
-                {
-                  backgroundColor: themeColors.control,
-                  borderColor: getDeptColor(dept) ?? themeColors.accent,
-                },
-                !visibleDepartments[dept] && styles.deptChipHidden,
-              ]}
-              onPress={() => toggleDepartment(dept)}
-            >
-              <View
-                style={[styles.deptDot, { backgroundColor: getDeptColor(dept) ?? COLORS.primary }]}
-              />
-              <Text
-                style={[
-                  styles.deptChipText,
-                  {
-                    color: visibleDepartments[dept]
-                      ? themeColors.textPrimary
-                      : themeColors.textSecondary,
-                  },
-                  !visibleDepartments[dept] && styles.deptChipTextDim,
-                ]}
-              >
-                {dept.charAt(0) + dept.slice(1).toLowerCase()}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <DepartmentMultiSelector
+          value={DEPARTMENTS.filter((department) => visibleDepartments[department])}
+          onChange={(departments) =>
+            setVisibleDepartments(
+              DEPARTMENTS.reduce(
+                (next, department) => ({ ...next, [department]: departments.includes(department) }),
+                {} as Record<Department, boolean>
+              )
+            )
+          }
+          includeAll
+          minSelections={1}
+          tightTop
+        />
 
         <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
           Yard Period Calendar
@@ -603,11 +573,6 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     marginBottom: SPACING.sm,
   },
-  filterHint: {
-    fontSize: FONTS.xs,
-    color: COLORS.textTertiary,
-    marginBottom: SPACING.sm,
-  },
   dropdown: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -652,37 +617,6 @@ const styles = StyleSheet.create({
   },
   modalItemText: {
     fontSize: FONTS.base,
-  },
-  deptChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
-    marginBottom: SPACING.xl,
-  },
-  deptChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 2,
-  },
-  deptChipHidden: {
-    opacity: 0.5,
-  },
-  deptDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  deptChipText: {
-    fontSize: FONTS.sm,
-    fontWeight: '600',
-  },
-  deptChipTextDim: {
-    color: COLORS.textTertiary,
   },
   calendarCard: {
     borderRadius: BORDER_RADIUS.lg,

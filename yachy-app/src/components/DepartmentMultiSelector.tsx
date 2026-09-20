@@ -13,14 +13,20 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Department } from '../types';
-import { FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
+import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
+import {
+  areAllDepartmentsSelected,
+  canSelectAllDepartments,
+  DEPARTMENT_OPTIONS,
+  formatDepartmentLabel,
+  getDepartmentSelectionLimits,
+  getSelectedDepartments,
+  isIndividualDepartmentSelected,
+  selectDepartmentFromAggregate,
+  toggleDepartmentSelection,
+} from '../utils/departmentSelection';
 import { LabeledDropdown } from './LabeledDropdown';
-
-const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
-
-const departmentLabel = (department: Department) =>
-  department.charAt(0) + department.slice(1).toLowerCase();
 
 interface DepartmentMultiSelectorProps {
   value: Department[];
@@ -32,6 +38,7 @@ interface DepartmentMultiSelectorProps {
   minSelections?: number;
   maxSelections?: number;
   tightTop?: boolean;
+  presentation?: 'modal' | 'inline';
 }
 
 /**
@@ -50,31 +57,36 @@ export const DepartmentMultiSelector: React.FC<DepartmentMultiSelectorProps> = (
   minSelections = 0,
   maxSelections,
   tightTop = false,
+  presentation = 'modal',
 }) => {
   const [open, setOpen] = useState(false);
   const themeColors = useThemeColors();
-  const selected = DEPARTMENTS.filter((department) => value.includes(department));
-  const allSelected = selected.length === DEPARTMENTS.length;
-  const selectedLabel = allSelected
+  const selected = getSelectedDepartments(value);
+  const allSelected = areAllDepartmentsSelected(selected);
+  const showAllOption = includeAll && canSelectAllDepartments(maxSelections);
+  const aggregateSelected = showAllOption && allSelected;
+  const { minimum, maximum } = getDepartmentSelectionLimits(minSelections, maxSelections);
+  const selectedLabel = aggregateSelected
     ? allLabel
     : selected.length
-      ? selected.map(departmentLabel).join(', ')
+      ? selected.map(formatDepartmentLabel).join(', ')
       : emptyLabel;
+  const triggerColor = themeColors.isDark ? themeColors.textPrimary : COLORS.primary;
+  const selectionHint =
+    maxSelections !== undefined
+      ? minimum > 0
+        ? `Select ${minimum} to ${maximum}`
+        : `Select up to ${maximum}`
+      : minimum > 0
+        ? `Select at least ${minimum}`
+        : null;
 
   const toggleDepartment = (department: Department) => {
-    if (allSelected) {
-      onChange([department]);
-      return;
-    }
-
-    if (selected.includes(department)) {
-      if (selected.length <= minSelections) return;
-      onChange(selected.filter((item) => item !== department));
-      return;
-    }
-
-    if (maxSelections && selected.length >= maxSelections) return;
-    onChange([...selected, department]);
+    onChange(
+      aggregateSelected
+        ? selectDepartmentFromAggregate(department, minSelections, maxSelections)
+        : toggleDepartmentSelection(selected, department, minSelections, maxSelections)
+    );
   };
 
   const toggle = () => {
@@ -84,6 +96,135 @@ export const DepartmentMultiSelector: React.FC<DepartmentMultiSelectorProps> = (
     });
   };
 
+  const selectedRowStyle = (isSelected: boolean) => [
+    styles.option,
+    isSelected && styles.optionSelected,
+    isSelected &&
+      themeColors.isDark && {
+        borderColor: themeColors.borderStrong,
+      },
+  ];
+
+  const renderHeader = () => (
+    <View style={[styles.sheetHeader, { borderBottomColor: themeColors.border }]}>
+      <Text style={[styles.sheetTitle, { color: themeColors.textPrimary }]}>
+        Select departments
+      </Text>
+      <TouchableOpacity
+        style={styles.closeButton}
+        onPress={() => setOpen(false)}
+        activeOpacity={0.72}
+        accessibilityRole="button"
+        accessibilityLabel="Close department selector"
+      >
+        <Ionicons name="close" size={22} color={themeColors.textPrimary} />
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderOptions = () => (
+    <ScrollView
+      style={styles.optionList}
+      contentContainerStyle={styles.optionListContent}
+      showsVerticalScrollIndicator
+      nestedScrollEnabled
+      keyboardShouldPersistTaps="handled"
+    >
+      {showAllOption && (
+        <TouchableOpacity
+          style={selectedRowStyle(allSelected)}
+          onPress={() => onChange([...DEPARTMENT_OPTIONS])}
+          activeOpacity={0.72}
+          accessibilityRole="menuitem"
+          accessibilityState={{ selected: allSelected }}
+          accessibilityLabel={allLabel}
+        >
+          <View style={styles.selectionMark}>
+            {allSelected && <Ionicons name="checkmark" size={22} color={COLORS.white} />}
+          </View>
+          <Text
+            style={[
+              styles.optionText,
+              { color: allSelected ? COLORS.white : themeColors.textPrimary },
+              allSelected && styles.optionTextSelected,
+            ]}
+          >
+            {allLabel}
+          </Text>
+        </TouchableOpacity>
+      )}
+      {DEPARTMENT_OPTIONS.map((department) => {
+        // When every department is active, the single "All Departments" row
+        // communicates that state without six competing highlights.
+        const isSelected = isIndividualDepartmentSelected(department, selected, aggregateSelected);
+        const isActuallySelected = selected.includes(department);
+        const isDisabled = isActuallySelected
+          ? selected.length <= minimum
+          : selected.length >= maximum;
+        return (
+          <TouchableOpacity
+            key={department}
+            style={[
+              selectedRowStyle(isSelected),
+              isDisabled && !isActuallySelected && styles.optionDisabled,
+            ]}
+            onPress={() => toggleDepartment(department)}
+            disabled={isDisabled}
+            activeOpacity={0.72}
+            accessibilityRole="menuitem"
+            accessibilityState={{ selected: isSelected, disabled: isDisabled }}
+            accessibilityLabel={formatDepartmentLabel(department)}
+          >
+            <View style={styles.selectionMark}>
+              {isSelected && <Ionicons name="checkmark" size={22} color={COLORS.white} />}
+            </View>
+            <Text
+              style={[
+                styles.optionText,
+                { color: isSelected ? COLORS.white : themeColors.textPrimary },
+                isSelected && styles.optionTextSelected,
+              ]}
+            >
+              {formatDepartmentLabel(department)}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+      {selectionHint && (
+        <Text style={[styles.selectionHint, { color: themeColors.textSecondary }]}>
+          {selectionHint}
+        </Text>
+      )}
+    </ScrollView>
+  );
+
+  const renderSheet = (inline = false) => (
+    <View
+      style={[
+        inline ? styles.inlineSheet : styles.sheet,
+        {
+          backgroundColor: themeColors.surfaceElevated,
+          borderColor: themeColors.border,
+          ...(!inline ? { shadowColor: themeColors.isDark ? '#000000' : '#22324a' } : {}),
+        },
+      ]}
+      accessibilityRole="menu"
+      accessibilityViewIsModal={!inline}
+    >
+      {renderHeader()}
+      {renderOptions()}
+      <TouchableOpacity
+        style={styles.doneButton}
+        onPress={() => setOpen(false)}
+        activeOpacity={0.78}
+        accessibilityRole="button"
+        accessibilityLabel="Done selecting departments"
+      >
+        <Text style={styles.doneText}>Done</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <LabeledDropdown
@@ -92,8 +233,11 @@ export const DepartmentMultiSelector: React.FC<DepartmentMultiSelectorProps> = (
         open={open}
         onPress={toggle}
         tightTop={tightTop}
+        valueColor={triggerColor}
+        iconColor={triggerColor}
       />
-      {open && (
+      {open && presentation === 'inline' && renderSheet(true)}
+      {open && presentation === 'modal' && (
         <Modal
           transparent
           statusBarTranslucent
@@ -110,109 +254,7 @@ export const DepartmentMultiSelector: React.FC<DepartmentMultiSelectorProps> = (
               accessibilityRole="button"
               accessibilityLabel="Close department selector"
             />
-            <View
-              style={[
-                styles.sheet,
-                {
-                  backgroundColor: themeColors.surfaceElevated,
-                  borderColor: themeColors.border,
-                  shadowColor: themeColors.isDark ? '#000000' : '#22324a',
-                },
-              ]}
-              accessibilityRole="menu"
-              accessibilityViewIsModal
-            >
-              <ScrollView
-                style={styles.optionList}
-                contentContainerStyle={styles.optionListContent}
-                showsVerticalScrollIndicator
-                nestedScrollEnabled
-                keyboardShouldPersistTaps="handled"
-              >
-                {includeAll && (
-                  <TouchableOpacity
-                    style={[
-                      styles.option,
-                      allSelected && {
-                        backgroundColor: themeColors.controlSelected,
-                      },
-                    ]}
-                    onPress={() => onChange(DEPARTMENTS)}
-                    activeOpacity={0.72}
-                    accessibilityRole="menuitem"
-                    accessibilityState={{ selected: allSelected }}
-                    accessibilityLabel={allLabel}
-                  >
-                    <View style={styles.selectionMark}>
-                      {allSelected && (
-                        <Ionicons name="checkmark" size={22} color={themeColors.textOnAccent} />
-                      )}
-                    </View>
-                    <Text
-                      style={[
-                        styles.optionText,
-                        {
-                          color: allSelected ? themeColors.textOnAccent : themeColors.textPrimary,
-                        },
-                        allSelected && styles.optionTextSelected,
-                      ]}
-                    >
-                      {allLabel}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                {DEPARTMENTS.map((department) => {
-                  const isSelected = selected.includes(department);
-                  return (
-                    <TouchableOpacity
-                      key={department}
-                      style={[
-                        styles.option,
-                        isSelected && {
-                          backgroundColor: themeColors.controlSelected,
-                        },
-                      ]}
-                      onPress={() => toggleDepartment(department)}
-                      activeOpacity={0.72}
-                      accessibilityRole="menuitem"
-                      accessibilityState={{ selected: isSelected }}
-                      accessibilityLabel={departmentLabel(department)}
-                    >
-                      <View style={styles.selectionMark}>
-                        {isSelected && (
-                          <Ionicons name="checkmark" size={22} color={themeColors.textOnAccent} />
-                        )}
-                      </View>
-                      <Text
-                        style={[
-                          styles.optionText,
-                          {
-                            color: isSelected ? themeColors.textOnAccent : themeColors.textPrimary,
-                          },
-                          isSelected && styles.optionTextSelected,
-                        ]}
-                      >
-                        {departmentLabel(department)}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-                {maxSelections && (
-                  <Text style={[styles.selectionHint, { color: themeColors.textSecondary }]}>
-                    Select up to {maxSelections}
-                  </Text>
-                )}
-              </ScrollView>
-              <TouchableOpacity
-                style={[styles.doneButton, { backgroundColor: themeColors.controlSelected }]}
-                onPress={() => setOpen(false)}
-                activeOpacity={0.78}
-                accessibilityRole="button"
-                accessibilityLabel="Done selecting departments"
-              >
-                <Text style={[styles.doneText, { color: themeColors.textOnAccent }]}>Done</Text>
-              </TouchableOpacity>
-            </View>
+            {renderSheet()}
           </KeyboardAvoidingView>
         </Modal>
       )}
@@ -249,19 +291,39 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...(Platform.OS === 'ios' ? SHADOWS.md : { elevation: 8 }),
   },
+  inlineSheet: {
+    width: '100%',
+    maxHeight: 460,
+    marginTop: -SPACING.sm,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    overflow: 'hidden',
+  },
   optionList: {
     flexGrow: 0,
     flexShrink: 1,
-    maxHeight: 420,
+    maxHeight: 326,
   },
   optionListContent: {
     paddingVertical: SPACING.xs,
   },
   option: {
-    minHeight: 58,
+    minHeight: 52,
+    marginHorizontal: SPACING.xs,
     paddingHorizontal: SPACING.md,
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'transparent',
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  optionSelected: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  optionDisabled: {
+    opacity: 0.48,
   },
   selectionMark: {
     width: 30,
@@ -285,9 +347,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     margin: SPACING.sm,
     borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: COLORS.primary,
   },
   doneText: {
     fontSize: FONTS.base,
     fontWeight: '700',
+    color: COLORS.white,
+  },
+  sheetHeader: {
+    minHeight: 56,
+    paddingLeft: SPACING.md,
+    paddingRight: SPACING.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+  },
+  sheetTitle: {
+    fontSize: FONTS.base,
+    fontWeight: '700',
+  },
+  closeButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
