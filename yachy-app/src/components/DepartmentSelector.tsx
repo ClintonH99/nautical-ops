@@ -30,6 +30,7 @@ interface DepartmentSelectorProps {
   allLabel?: string;
   emptyLabel?: string;
   tightTop?: boolean;
+  presentation?: 'modal' | 'inline';
 }
 
 /**
@@ -37,7 +38,9 @@ interface DepartmentSelectorProps {
  * Department enum; this component only owns the presentation and open state.
  *
  * Options render in a bounded modal rather than an inline absolute menu so a
- * ScrollView, keyboard, or landscape viewport cannot clip them.
+ * ScrollView, keyboard, or landscape viewport cannot clip them. The inline
+ * presentation is reserved for callers already inside a native Modal, because
+ * React Native cannot reliably stack another native Modal on iOS.
  */
 export const DepartmentSelector: React.FC<DepartmentSelectorProps> = ({
   value,
@@ -47,6 +50,7 @@ export const DepartmentSelector: React.FC<DepartmentSelectorProps> = ({
   allLabel = 'All Departments',
   emptyLabel = 'Select department',
   tightTop = false,
+  presentation = 'modal',
 }) => {
   const [open, setOpen] = useState(false);
   const themeColors = useThemeColors();
@@ -65,6 +69,54 @@ export const DepartmentSelector: React.FC<DepartmentSelectorProps> = ({
     });
   };
 
+  const renderOptions = () => (
+    <ScrollView
+      style={styles.optionList}
+      contentContainerStyle={styles.optionListContent}
+      showsVerticalScrollIndicator
+      nestedScrollEnabled
+      keyboardShouldPersistTaps="handled"
+    >
+      {options.map((department) => {
+        const isSelected = department === value;
+        const optionLabel = department ? departmentLabel(department) : allLabel;
+        return (
+          <TouchableOpacity
+            key={department ?? 'all'}
+            style={[
+              styles.option,
+              isSelected && {
+                backgroundColor: themeColors.controlSelected,
+              },
+            ]}
+            onPress={() => select(department)}
+            activeOpacity={0.72}
+            accessibilityRole="menuitem"
+            accessibilityState={{ selected: isSelected }}
+            accessibilityLabel={optionLabel}
+          >
+            <View style={styles.selectionMark}>
+              {isSelected && (
+                <Ionicons name="checkmark" size={22} color={themeColors.textOnAccent} />
+              )}
+            </View>
+            <Text
+              style={[
+                styles.optionText,
+                {
+                  color: isSelected ? themeColors.textOnAccent : themeColors.textPrimary,
+                },
+                isSelected && styles.optionTextSelected,
+              ]}
+            >
+              {optionLabel}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
+  );
+
   return (
     <View style={styles.container}>
       <LabeledDropdown
@@ -74,14 +126,33 @@ export const DepartmentSelector: React.FC<DepartmentSelectorProps> = ({
         onPress={toggle}
         tightTop={tightTop}
       />
-      {open && (
-        <Modal transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+      {open && presentation === 'inline' && (
+        <View
+          style={[
+            styles.inlineSheet,
+            {
+              backgroundColor: themeColors.surfaceElevated,
+              borderColor: themeColors.border,
+            },
+          ]}
+          accessibilityRole="menu"
+        >
+          {renderOptions()}
+        </View>
+      )}
+      {open && presentation === 'modal' && (
+        <Modal
+          transparent
+          statusBarTranslucent
+          animationType="fade"
+          onRequestClose={() => setOpen(false)}
+        >
           <KeyboardAvoidingView
             style={styles.modalRoot}
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           >
             <Pressable
-              style={StyleSheet.absoluteFill}
+              style={styles.backdrop}
               onPress={() => setOpen(false)}
               accessibilityRole="button"
               accessibilityLabel="Close department selector"
@@ -98,50 +169,7 @@ export const DepartmentSelector: React.FC<DepartmentSelectorProps> = ({
               accessibilityRole="menu"
               accessibilityViewIsModal
             >
-              <ScrollView
-                style={styles.optionList}
-                contentContainerStyle={styles.optionListContent}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-              >
-                {options.map((department) => {
-                  const isSelected = department === value;
-                  const optionLabel = department ? departmentLabel(department) : allLabel;
-                  return (
-                    <TouchableOpacity
-                      key={department ?? 'all'}
-                      style={[
-                        styles.option,
-                        isSelected && {
-                          backgroundColor: themeColors.controlSelected,
-                        },
-                      ]}
-                      onPress={() => select(department)}
-                      activeOpacity={0.72}
-                      accessibilityRole="menuitem"
-                      accessibilityState={{ selected: isSelected }}
-                      accessibilityLabel={optionLabel}
-                    >
-                      <View style={styles.selectionMark}>
-                        {isSelected && (
-                          <Ionicons name="checkmark" size={22} color={themeColors.textOnAccent} />
-                        )}
-                      </View>
-                      <Text
-                        style={[
-                          styles.optionText,
-                          {
-                            color: isSelected ? themeColors.textOnAccent : themeColors.textPrimary,
-                          },
-                          isSelected && styles.optionTextSelected,
-                        ]}
-                      >
-                        {optionLabel}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
+              {renderOptions()}
             </View>
           </KeyboardAvoidingView>
         </Modal>
@@ -153,12 +181,21 @@ export const DepartmentSelector: React.FC<DepartmentSelectorProps> = ({
 const styles = StyleSheet.create({
   container: {
     zIndex: 1,
+    width: '100%',
   },
   modalRoot: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.md,
+  },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.46)',
   },
   sheet: {
     width: '100%',
@@ -170,9 +207,19 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...(Platform.OS === 'ios' ? SHADOWS.md : { elevation: 8 }),
   },
+  inlineSheet: {
+    width: '100%',
+    maxHeight: 320,
+    marginTop: -SPACING.sm,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    overflow: 'hidden',
+  },
   optionList: {
     flexGrow: 0,
     flexShrink: 1,
+    maxHeight: 420,
   },
   optionListContent: {
     paddingVertical: SPACING.xs,

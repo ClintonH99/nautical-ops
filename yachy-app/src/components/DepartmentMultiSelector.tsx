@@ -94,13 +94,18 @@ export const DepartmentMultiSelector: React.FC<DepartmentMultiSelectorProps> = (
         tightTop={tightTop}
       />
       {open && (
-        <Modal transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <Modal
+          transparent
+          statusBarTranslucent
+          animationType="fade"
+          onRequestClose={() => setOpen(false)}
+        >
           <KeyboardAvoidingView
             style={styles.modalRoot}
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           >
             <Pressable
-              style={StyleSheet.absoluteFill}
+              style={styles.backdrop}
               onPress={() => setOpen(false)}
               accessibilityRole="button"
               accessibilityLabel="Close department selector"
@@ -120,7 +125,8 @@ export const DepartmentMultiSelector: React.FC<DepartmentMultiSelectorProps> = (
               <ScrollView
                 style={styles.optionList}
                 contentContainerStyle={styles.optionListContent}
-                showsVerticalScrollIndicator={false}
+                showsVerticalScrollIndicator
+                nestedScrollEnabled
                 keyboardShouldPersistTaps="handled"
               >
                 {includeAll && (
@@ -217,12 +223,21 @@ export const DepartmentMultiSelector: React.FC<DepartmentMultiSelectorProps> = (
 const styles = StyleSheet.create({
   container: {
     zIndex: 1,
+    width: '100%',
   },
   modalRoot: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.md,
+  },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.46)',
   },
   sheet: {
     width: '100%',
@@ -237,6 +252,7 @@ const styles = StyleSheet.create({
   optionList: {
     flexGrow: 0,
     flexShrink: 1,
+    maxHeight: 420,
   },
   optionListContent: {
     paddingVertical: SPACING.xs,

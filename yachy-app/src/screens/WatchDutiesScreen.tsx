@@ -1027,6 +1027,7 @@ export const WatchDutiesScreen = () => {
                   <DepartmentSelector
                     value={newGroupDept}
                     onChange={(value) => value && setNewGroupDept(value)}
+                    presentation="inline"
                   />
 
                   <Text

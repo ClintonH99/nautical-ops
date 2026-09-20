@@ -10,7 +10,12 @@ import { InventoryItem } from '../services/inventory';
 const deptLabel = (d: string) => (d ?? '').charAt(0) + (d ?? '').slice(1).toLowerCase();
 
 function sanitizeFilename(s: string): string {
-  return s.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_').trim() || 'Inventory';
+  return (
+    s
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, '_')
+      .trim() || 'Inventory'
+  );
 }
 
 function getInventoryPdfFilename(items: InventoryItem[]): string {
@@ -34,12 +39,13 @@ export function buildInventoryHtml(items: InventoryItem[], title: string = 'Inve
 
   const cards = items.map((item) => {
     const dept = deptLabel(item.department ?? 'INTERIOR');
-    const itemRows = (item.items?.length
-      ? item.items
-          .filter((r) => r.amount?.trim() || r.item?.trim())
-          .map((r) => `<tr><td>${escapeHtml(r.amount)}</td><td>${escapeHtml(r.item)}</td></tr>`)
-          .join('')
-      : '') || '<tr><td colspan="2" style="color:#999;font-style:italic">—</td></tr>';
+    const itemRows =
+      (item.items?.length
+        ? item.items
+            .filter((r) => r.amount?.trim() || r.item?.trim())
+            .map((r) => `<tr><td>${escapeHtml(r.amount)}</td><td>${escapeHtml(r.item)}</td></tr>`)
+            .join('')
+        : '') || '<tr><td colspan="2" style="color:#999;font-style:italic">—</td></tr>';
 
     return `
       <div class="card">
@@ -96,10 +102,12 @@ export function buildInventoryHtml(items: InventoryItem[], title: string = 'Inve
     .card-meta { font-size: 11px; color: #555; margin-bottom: 4px; }
     .card-desc { font-size: 11px; color: #444; margin-bottom: 8px; font-style: italic; }
 
-    .items-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 11px; }
+    .items-table { width: 100%; table-layout: fixed; border-collapse: collapse; margin-top: 8px; font-size: 11px; }
     .items-table thead tr { background: ${accent}; color: #fff; }
     .items-table th { padding: 6px 10px; text-align: left; font-weight: 600; }
     .items-table td { padding: 5px 10px; border-bottom: 1px solid #e5e7eb; }
+    .items-table th:nth-child(1), .items-table td:nth-child(1) { width: 28%; }
+    .items-table th:nth-child(2), .items-table td:nth-child(2) { width: 72%; text-align: center; overflow-wrap: anywhere; }
     .items-table tr:nth-child(even) td { background: #f9fafb; }
   </style>
 </head>
@@ -119,5 +127,9 @@ export async function exportInventoryToPdf(items: InventoryItem[]): Promise<void
   const newUri = `${FileSystem.cacheDirectory}${filename}`;
   await FileSystem.moveAsync({ from: uri, to: newUri });
   const canShare = await Share.isAvailableAsync();
-  if (canShare) await Share.shareAsync(newUri, { mimeType: 'application/pdf', dialogTitle: 'Save Inventory PDF' });
+  if (canShare)
+    await Share.shareAsync(newUri, {
+      mimeType: 'application/pdf',
+      dialogTitle: 'Save Inventory PDF',
+    });
 }

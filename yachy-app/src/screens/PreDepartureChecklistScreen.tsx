@@ -20,7 +20,16 @@ import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../st
 import preDepartureChecklistsService from '../services/preDepartureChecklists';
 import vesselService from '../services/vessel';
 import { PreDepartureChecklist, Department } from '../types';
-import { Button, ButtonTagCard, ButtonTagRow, DepartmentSelector, LoadingSpinner, PageHeader, ExportButton, ExportBar } from '../components';
+import {
+  Button,
+  ButtonTagCard,
+  ButtonTagRow,
+  DepartmentSelector,
+  LoadingSpinner,
+  PageHeader,
+  ExportButton,
+  ExportBar,
+} from '../components';
 import { generatePreDepartureChecklistPdf } from '../utils/preDepartureChecklistPdf';
 
 const CAPTAIN_CHECKLIST_MAX_ITEMS = 15;
@@ -251,7 +260,7 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
             { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
           ]}
         >
-          {(isHOD || isCaptain)
+          {isHOD || isCaptain
             ? 'Add tasks for crew to complete before each departure. Read and do.'
             : 'Tasks to complete before departure. Read and do.'}
         </Text>
@@ -277,19 +286,28 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
         </View>
       )}
       {captainBoard && (
-        <View style={styles.captainBoard}>
-          <TouchableOpacity
-            style={[styles.checkbox, selectedIds.has(captainBoard.id) && styles.checkboxSelected]}
-            onPress={() => toggleSelection(captainBoard.id)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.checkboxIcon}>{selectedIds.has(captainBoard.id) ? '✓' : ''}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.captainBoardContent}
-            onPress={() => onEdit(captainBoard)}
-            activeOpacity={0.9}
-          >
+        <TouchableOpacity
+          style={styles.captainBoard}
+          onPress={() => (exportMode ? toggleSelection(captainBoard.id) : onEdit(captainBoard))}
+          activeOpacity={0.86}
+          accessibilityRole={exportMode ? 'checkbox' : 'button'}
+          accessibilityState={
+            exportMode ? { checked: selectedIds.has(captainBoard.id) } : undefined
+          }
+          accessibilityLabel={
+            exportMode
+              ? `Select ${captainBoard.title} for PDF export`
+              : `Open ${captainBoard.title}`
+          }
+        >
+          {exportMode && (
+            <View
+              style={[styles.checkbox, selectedIds.has(captainBoard.id) && styles.checkboxSelected]}
+            >
+              <Text style={styles.checkboxIcon}>{selectedIds.has(captainBoard.id) ? '✓' : ''}</Text>
+            </View>
+          )}
+          <View style={styles.captainBoardContent}>
             <Text style={styles.captainBoardBadge}>Captain's Checklist</Text>
             <Text style={styles.captainBoardTitle} numberOfLines={1}>
               {captainBoard.title}
@@ -313,8 +331,8 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
                 <Text style={styles.readMore}>Read More...</Text>
               )}
             </View>
-          </TouchableOpacity>
-        </View>
+          </View>
+        </TouchableOpacity>
       )}
       <View style={styles.filterBar}>
         <View style={styles.filterBarContent}>
@@ -338,7 +356,8 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <PageHeader title="Pre-Departure Checklist"
+      <PageHeader
+        title="Pre-Departure Checklist"
         actions={
           <ExportButton
             active={exportMode}

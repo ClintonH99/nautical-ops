@@ -10,11 +10,14 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  Keyboard,
   TouchableOpacity,
   KeyboardAvoidingView,
+  Modal,
   Platform,
+  Pressable,
 } from 'react-native';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
+import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES, SHADOWS } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import vesselTasksService from '../services/vesselTasks';
@@ -278,7 +281,10 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
                 styles.recurringToggle,
                 { backgroundColor: themeColors.control, borderColor: themeColors.border },
               ]}
-              onPress={() => setRecurringExpanded(!recurringExpanded)}
+              onPress={() => {
+                Keyboard.dismiss();
+                setRecurringExpanded(true);
+              }}
             >
               <Text style={[styles.recurringToggleText, { color: themeColors.textPrimary }]}>
                 {recurring ? TASK_RECURRENCE_LABELS[recurring] : 'Choose frequency'}
@@ -287,45 +293,84 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
                 {recurringExpanded ? '▲' : '▼'}
               </Text>
             </TouchableOpacity>
-            {recurringExpanded && (
-              <View
-                style={[
-                  styles.recurringOptions,
-                  { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border },
-                ]}
-              >
-                {recurrenceOptions.map((option, index) => (
-                  <TouchableOpacity
-                    key={option}
-                    style={[
-                      styles.recurringOption,
-                      index < recurrenceOptions.length - 1 && {
-                        borderBottomWidth: 1,
-                        borderBottomColor: themeColors.border,
-                      },
-                      recurring === option && {
-                        backgroundColor: themeColors.controlSelected,
-                      },
-                    ]}
-                    onPress={() => handleRecurrenceChange(option)}
+            <Modal
+              visible={recurringExpanded}
+              transparent
+              statusBarTranslucent
+              animationType="fade"
+              onRequestClose={() => setRecurringExpanded(false)}
+            >
+              <View style={styles.recurringModalRoot}>
+                <Pressable
+                  style={styles.recurringBackdrop}
+                  onPress={() => setRecurringExpanded(false)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close repeat frequency selector"
+                />
+                <View
+                  style={[
+                    styles.recurringOptions,
+                    {
+                      backgroundColor: themeColors.surfaceElevated,
+                      borderColor: themeColors.border,
+                      shadowColor: themeColors.isDark ? COLORS.black : '#22324a',
+                    },
+                  ]}
+                  accessibilityRole="menu"
+                  accessibilityViewIsModal
+                >
+                  <Text style={[styles.recurringModalTitle, { color: themeColors.textPrimary }]}>
+                    Repeat every
+                  </Text>
+                  <ScrollView
+                    style={styles.recurringOptionList}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
                   >
-                    <Text
-                      style={[
-                        styles.recurringOptionText,
-                        {
-                          color:
-                            recurring === option
-                              ? themeColors.textOnAccent
-                              : themeColors.textPrimary,
-                        },
-                      ]}
-                    >
-                      {TASK_RECURRENCE_LABELS[option]}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                    {recurrenceOptions.map((option, index) => (
+                      <TouchableOpacity
+                        key={option}
+                        style={[
+                          styles.recurringOption,
+                          index < recurrenceOptions.length - 1 && {
+                            borderBottomWidth: 1,
+                            borderBottomColor: themeColors.border,
+                          },
+                          recurring === option && {
+                            backgroundColor: themeColors.controlSelected,
+                          },
+                        ]}
+                        onPress={() => handleRecurrenceChange(option)}
+                        activeOpacity={0.72}
+                        accessibilityRole="menuitem"
+                        accessibilityState={{ selected: recurring === option }}
+                      >
+                        <Text
+                          style={[
+                            styles.recurringOptionText,
+                            {
+                              color:
+                                recurring === option
+                                  ? themeColors.textOnAccent
+                                  : themeColors.textPrimary,
+                            },
+                          ]}
+                        >
+                          {TASK_RECURRENCE_LABELS[option]}
+                        </Text>
+                        {recurring === option && (
+                          <Text
+                            style={[styles.recurringCheckmark, { color: themeColors.textOnAccent }]}
+                          >
+                            ✓
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
               </View>
-            )}
+            </Modal>
             {doneByDate && recurring && (
               <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
                 {isEdit ? 'Next' : 'First'} due: {formatLocalDateString(doneByDate)}
@@ -501,16 +546,48 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   recurringOptions: {
+    width: '100%',
+    maxWidth: 460,
+    maxHeight: '80%',
+    alignSelf: 'center',
     backgroundColor: COLORS.white,
     borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.border,
-    marginBottom: SPACING.lg,
     overflow: 'hidden',
+    ...SHADOWS.md,
+  },
+  recurringModalRoot: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: SPACING.md,
+  },
+  recurringBackdrop: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.46)',
+  },
+  recurringModalTitle: {
+    fontSize: FONTS.lg,
+    fontWeight: '700',
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.sm,
+  },
+  recurringOptionList: {
+    flexGrow: 0,
+    flexShrink: 1,
   },
   recurringOption: {
+    minHeight: 58,
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   recurringOptionBorder: {
     borderBottomWidth: 1,
@@ -522,5 +599,9 @@ const styles = StyleSheet.create({
   recurringOptionText: {
     fontSize: FONTS.base,
     color: COLORS.textPrimary,
+  },
+  recurringCheckmark: {
+    fontSize: FONTS.lg,
+    fontWeight: '700',
   },
 });

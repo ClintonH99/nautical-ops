@@ -241,7 +241,6 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
                   placeholder="#"
                   keyboardType="decimal-pad"
                   placeholderTextColor={themeColors.textSecondary}
-                  returnKeyType="next"
                   onFocus={() => setActiveRowIndex(index)}
                 />
                 <TextInput
