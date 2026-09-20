@@ -416,7 +416,7 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                       disabled={isSavingName}
                     />
                     <Button
-                      title={isSavingName ? 'Saving...' : 'Save'}
+                      title={isSavingName ? 'Saving…' : 'Save Changes'}
                       onPress={handleSaveName}
                       variant="primary"
                       fullWidth
@@ -483,7 +483,7 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                       disabled={isSavingImo}
                     />
                     <Button
-                      title={isSavingImo ? 'Saving...' : 'Save'}
+                      title={isSavingImo ? 'Saving…' : 'Save Changes'}
                       onPress={handleSaveImo}
                       variant="primary"
                       fullWidth

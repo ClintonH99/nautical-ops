@@ -11,7 +11,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Button, DateOnlyPicker, Input, LabeledDropdown, LoadingSpinner, PageHeader } from '../components';
+import {
+  Button,
+  DateOnlyPicker,
+  Input,
+  LabeledDropdown,
+  LoadingSpinner,
+  PageHeader,
+} from '../components';
 import { BORDER_RADIUS, COLORS, FONTS, SPACING, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import seaMilesService, { SeaMileEntryFields } from '../services/seaMiles';
@@ -230,7 +237,7 @@ export const AddEditSeaMileScreen = ({ navigation, route }: any) => {
     );
   }
 
-  const title = reviewMode ? 'Edit Sea Miles' : entryId ? 'Edit Sea Miles' : 'Add Sea Miles';
+  const title = entryId || reviewMode ? 'Edit Sea Miles Entry' : 'Create Sea Miles Entry';
 
   return (
     <KeyboardAvoidingView

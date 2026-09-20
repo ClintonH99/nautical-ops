@@ -416,7 +416,12 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
       )}
       <View style={styles.actionsRow}>
         <View style={styles.leftActions}>
-          <Button title="Add Log" onPress={onAdd} variant="primary" style={styles.addButton} />
+          <Button
+            title="Create Maintenance Log"
+            onPress={onAdd}
+            variant="primary"
+            style={styles.addButton}
+          />
           {exportMode && logs.length > 0 && (
             <TouchableOpacity
               onPress={toggleSelectAll}
@@ -509,7 +514,7 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
               No maintenance logs yet
             </Text>
             <Button
-              title="Add first log"
+              title="Create Maintenance Log"
               onPress={onAdd}
               variant="primary"
               style={styles.emptyBtn}

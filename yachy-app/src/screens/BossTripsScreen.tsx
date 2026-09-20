@@ -18,7 +18,15 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import tripsService from '../services/trips';
 import { Trip } from '../types';
-import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner, PageHeader, PillButton, TripLoadErrorBanner } from '../components';
+import {
+  Button,
+  ButtonTagCard,
+  ButtonTagRow,
+  LoadingSpinner,
+  PageHeader,
+  PillButton,
+  TripLoadErrorBanner,
+} from '../components';
 import { formatLocalDateString } from '../utils';
 import { useVesselTripColors } from '../hooks/useVesselTripColors';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -64,7 +72,6 @@ export const BossTripsScreen = ({ navigation }: any) => {
       loadTrips();
     }, [loadTrips])
   );
-
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -129,11 +136,21 @@ export const BossTripsScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <PageHeader title="Boss Trips" actions={canEditTripColors ? <PillButton label="Edit colors" onPress={() => navigation.navigate('TripColorSettings')} /> : undefined} />
+      <PageHeader
+        title="Boss Trips"
+        actions={
+          canEditTripColors ? (
+            <PillButton
+              label="Edit Colors"
+              onPress={() => navigation.navigate('TripColorSettings')}
+            />
+          ) : undefined
+        }
+      />
       {canManageTrips && (
         <View style={styles.addRow}>
           <Button
-            title="Add Boss Trip"
+            title="Create Boss Trip"
             onPress={onAdd}
             variant="primary"
             style={styles.addButton}
@@ -158,7 +175,7 @@ export const BossTripsScreen = ({ navigation }: any) => {
           </Text>
           {canManageTrips && (
             <Button
-              title="Add first trip"
+              title="Create Boss Trip"
               onPress={onAdd}
               variant="primary"
               style={styles.emptyBtn}

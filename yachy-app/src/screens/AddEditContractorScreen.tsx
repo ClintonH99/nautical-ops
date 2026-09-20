@@ -197,7 +197,7 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={0}
     >
-      <PageHeader title={isEdit ? 'Edit Contractor' : 'New Contractor'} />
+      <PageHeader title={isEdit ? 'Edit Contractor' : 'Create Contractor'} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}

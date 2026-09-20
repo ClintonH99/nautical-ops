@@ -735,7 +735,7 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
             ? 'Correct Fuel Receipt'
             : isEdit
               ? 'Edit Legacy Receipt'
-              : 'New Fuel Receipt'
+              : 'Create Fuel Receipt'
         }
       />
       {loading || waitingForCurrentContext ? (

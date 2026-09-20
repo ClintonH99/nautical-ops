@@ -7,7 +7,10 @@ import { supabase } from './supabase';
 
 export interface MusterStationData {
   vesselName: string;
+  /** Legacy primary location retained for older app builds and saved records. */
   musterStation: string;
+  /** All configured muster-station locations. */
+  musterStationLocations?: string[];
   medicalChest: string[];
   grabBag: string[];
   grabBagContents: string;
@@ -29,6 +32,20 @@ export interface MusterStationData {
   }>;
 }
 
+export function getMusterStationLocations(data: Partial<MusterStationData> | null): string[] {
+  const rawLocations = data?.musterStationLocations;
+  const locations = Array.isArray(rawLocations)
+    ? rawLocations
+        .filter((location): location is string => typeof location === 'string')
+        .map((location) => location.trim())
+        .filter(Boolean)
+    : [];
+  if (locations.length > 0) return locations;
+
+  const legacyLocation = typeof data?.musterStation === 'string' ? data.musterStation.trim() : '';
+  return legacyLocation ? [legacyLocation] : [];
+}
+
 export interface MusterStation {
   id: string;
   vesselId: string;
@@ -39,11 +56,17 @@ export interface MusterStation {
 
 class MusterStationsService {
   private mapRow(row: any): MusterStation {
+    const rawData = (row.data || {}) as Partial<MusterStationData>;
+    const musterStationLocations = getMusterStationLocations(rawData);
     return {
       id: row.id,
       vesselId: row.vessel_id,
       title: row.title,
-      data: row.data || {},
+      data: {
+        ...rawData,
+        musterStation: musterStationLocations[0] ?? '',
+        musterStationLocations,
+      } as MusterStationData,
       createdAt: row.created_at,
     };
   }
@@ -70,7 +93,12 @@ class MusterStationsService {
     return this.mapRow(data);
   }
 
-  async create(vesselId: string, title: string, data: MusterStationData, createdBy?: string): Promise<MusterStation> {
+  async create(
+    vesselId: string,
+    title: string,
+    data: MusterStationData,
+    createdBy?: string
+  ): Promise<MusterStation> {
     const { data: row, error } = await supabase
       .from('muster_stations')
       .insert([{ vessel_id: vesselId, title, data, created_by: createdBy || null }])

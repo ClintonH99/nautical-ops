@@ -15,13 +15,18 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import vesselTasksService from '../services/vesselTasks';
 import { VesselTask, TaskCategory, Department } from '../types';
-import { Button, DepartmentSelector, LoadingSpinner, PageHeader } from '../components';
+import {
+  Button,
+  DepartmentSelector,
+  LoadingSpinner,
+  PageHeader,
+  PreviewActionButtons,
+} from '../components';
 
 const CLEANUP_STORAGE_KEY = 'yachy_tasks_last_cleanup_month';
 
@@ -152,12 +157,6 @@ export const CompletedTasksScreen = ({ navigation }: any) => {
         <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
           {item.title}
         </Text>
-        <TouchableOpacity
-          onPress={() => onDelete(item)}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-        </TouchableOpacity>
       </View>
       <View style={styles.cardMeta}>
         <View
@@ -194,6 +193,7 @@ export const CompletedTasksScreen = ({ navigation }: any) => {
           style={styles.unmarkButton}
         />
       ) : null}
+      <PreviewActionButtons onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
     </TouchableOpacity>
   );
 
@@ -389,10 +389,6 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xs,
   },
   cardTitle: { fontSize: FONTS.lg, fontWeight: '600', flex: 1 },
-  deleteBtn: {
-    fontSize: FONTS.sm,
-    color: COLORS.danger,
-  },
   cardMeta: {
     flexDirection: 'row',
     flexWrap: 'wrap',

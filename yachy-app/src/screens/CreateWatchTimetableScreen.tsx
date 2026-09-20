@@ -438,7 +438,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={0}
     >
-      <PageHeader title={editingTimetableId ? 'Edit Watch Schedule' : 'Create'} />
+      <PageHeader title={editingTimetableId ? 'Edit Watch Schedule' : 'Create Watch Schedule'} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -658,7 +658,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
             </View>
           ) : (
             <Button
-              title="Generate Watch Keeping Timetable"
+              title="Continue"
               onPress={handleGenerateTimetable}
               variant="primary"
               loading={generating}
@@ -783,11 +783,11 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
                 <Text style={[styles.timetableExportText, { color: themeColors.textOnAccent }]}>
                   {publishing
                     ? editingTimetableId
-                      ? 'Saving...'
-                      : 'Publishing...'
+                      ? 'Saving…'
+                      : 'Publishing…'
                     : editingTimetableId
                       ? 'Save Changes'
-                      : 'Publish'}
+                      : 'Publish Watch Schedule'}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -796,9 +796,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
                   setTimetablePreviewOpen(false);
                 }}
               >
-                <Text style={[styles.timetableCloseText, { color: themeColors.accent }]}>
-                  Close
-                </Text>
+                <Text style={[styles.timetableCloseText, { color: themeColors.accent }]}>Done</Text>
               </TouchableOpacity>
             </View>
           </View>

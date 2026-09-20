@@ -68,15 +68,17 @@ Logged by / Created by
 
 ## Preview Actions
 
-Every expanded preview with Edit/Delete controls must use the Maintenance Log action-row design at the bottom of the preview:
+Every visible record preview with Edit/Delete controls must use the Maintenance Log action-row design at the bottom of the preview. This applies to both expanded collapsible previews and non-collapsible previews:
 
 - Two equal-width outlined buttons on one row.
 - **Edit**: Ionicons `create-outline`, size 18; navy border/text in day mode and white border/text in dark mode.
 - **Delete**: Ionicons `trash-outline`, size 18; `COLORS.danger` border/text in both themes.
 - Both buttons use `SPACING.sm` vertical padding, `BORDER_RADIUS.md`, and `SPACING.md` between buttons.
-- Do not place Edit/Delete controls in the top-right header of an expanded preview.
+- Do not place Edit/Delete controls in the top-right header of any record preview.
 - Use the shared `PreviewActionButtons` component so preview actions remain consistent.
-- Non-expandable cards that are not preview panels may retain their existing header actions.
+- Hide Edit/Delete controls while checkbox or bulk-selection mode is active; tapping the card must select it instead.
+- Collapsed previews show only the expand indicator. Their action row becomes visible after expansion.
+- Cards used only as navigation or action shortcuts are not record previews and must not pass Edit/Delete handlers to `ButtonTagCard`.
 
 ## Reference Implementation
 

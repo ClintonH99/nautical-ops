@@ -110,7 +110,7 @@ export const AddEditNoteScreen = ({ navigation, route }: any) => {
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <PageHeader title={noteId ? 'Edit Note' : 'New Note'} />
+      <PageHeader title={noteId ? 'Edit Note' : 'Create Note'} />
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={styles.content}

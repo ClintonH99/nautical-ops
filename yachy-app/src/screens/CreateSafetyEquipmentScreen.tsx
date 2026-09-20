@@ -284,7 +284,7 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <PageHeader
-        title="Create Safety Equipment"
+        title={isEdit ? 'Edit Safety Equipment' : 'Create Safety Equipment'}
         actions={<ExportButton active={false} onPress={onExport} />}
       />
       <ScrollView
@@ -317,7 +317,7 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
           ]}
         >
           <Text style={[styles.addSectionLabel, { color: themeColors.textPrimary }]}>
-            Add equipment type
+            Add Equipment Type
           </Text>
           <View style={styles.addSectionRow}>
             <TextInput
@@ -337,7 +337,7 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
               onSubmitEditing={addEquipmentType}
             />
             <Button
-              title="Add"
+              title="Add Equipment Type"
               onPress={addEquipmentType}
               variant="outline"
               style={styles.addBtn}
@@ -439,13 +439,13 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
               </View>
             ))}
             <TouchableOpacity onPress={() => addLoc(key)}>
-              <Text style={[styles.add, { color: themeColors.accent }]}>+ Add location</Text>
+              <Text style={[styles.add, { color: themeColors.accent }]}>+ Add Location</Text>
             </TouchableOpacity>
           </View>
         ))}
         <View style={styles.actions}>
           <Button
-            title={isEdit ? 'Save' : 'Publish'}
+            title={isEdit ? 'Save Changes' : 'Publish Safety Equipment'}
             onPress={onPublish}
             variant="primary"
             fullWidth

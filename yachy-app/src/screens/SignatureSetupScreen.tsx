@@ -135,7 +135,7 @@ export const SignatureSetupScreen = () => {
   if (mode === 'view' && saved) {
     return (
       <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-        <PageHeader title="E-Signature" />
+        <PageHeader title="View E-Signature" />
         <View style={{ padding: SPACING.lg, flex: 1 }}>
           <Text style={[styles.label, { color: themeColors.textSecondary }]}>Your signature</Text>
           <View
@@ -166,7 +166,7 @@ export const SignatureSetupScreen = () => {
             onPress={() => setMode('edit')}
             style={[styles.primaryButton, { marginTop: SPACING.lg }]}
           >
-            <Text style={{ color: '#fff', fontWeight: '600' }}>Edit signature</Text>
+            <Text style={{ color: '#fff', fontWeight: '600' }}>Edit E-Signature</Text>
           </TouchableOpacity>
           <TouchableOpacity
             accessibilityRole="button"
@@ -186,7 +186,7 @@ export const SignatureSetupScreen = () => {
       style={[styles.container, { backgroundColor: themeColors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <PageHeader title="E-Signature" />
+      <PageHeader title={saved ? 'Edit E-Signature' : 'Create E-Signature'} />
       <View style={{ padding: SPACING.lg, flex: 1 }}>
         <View
           style={[
@@ -338,7 +338,7 @@ export const SignatureSetupScreen = () => {
           ]}
         >
           <Text style={{ color: '#fff', fontWeight: '600' }}>
-            {saving ? 'Saving...' : 'Save signature'}
+            {saving ? 'Saving…' : saved ? 'Save Changes' : 'Create E-Signature'}
           </Text>
         </TouchableOpacity>
       </View>

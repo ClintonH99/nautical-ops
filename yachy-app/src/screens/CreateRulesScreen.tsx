@@ -144,7 +144,7 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <PageHeader
-        title="Create Rules"
+        title={isEdit ? 'Edit Rules' : 'Create Rules'}
         actions={<ExportButton active={false} onPress={onExport} />}
       />
       <ScrollView
@@ -212,7 +212,7 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
 
         <View style={styles.actions}>
           <Button
-            title={isEdit ? 'Save' : 'Publish'}
+            title={isEdit ? 'Save Changes' : 'Publish Rules'}
             onPress={onPublish}
             variant="primary"
             fullWidth

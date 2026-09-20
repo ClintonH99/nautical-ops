@@ -164,7 +164,7 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
 
   const handleDelete = () => {
     if (isMaster || !listId) return;
-    Alert.alert('Delete list', `Delete "${title.trim()}"?`, [
+    Alert.alert('Delete Shopping List', `Delete "${title.trim()}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -205,7 +205,7 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={0}
     >
-      <PageHeader title="Shopping List" />
+      <PageHeader title={isEdit ? 'Edit Shopping List' : 'Create Shopping List'} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -300,7 +300,7 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
 
         <View style={styles.actions}>
           <Button
-            title={isEdit ? 'Save changes' : 'Create list'}
+            title={isEdit ? 'Save Changes' : 'Create Shopping List'}
             onPress={handleSave}
             variant="primary"
             loading={saving}

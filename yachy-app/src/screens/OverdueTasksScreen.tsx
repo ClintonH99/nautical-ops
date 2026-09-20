@@ -14,13 +14,17 @@ import {
   Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import vesselTasksService from '../services/vesselTasks';
 import { VesselTask, TaskCategory, Department } from '../types';
-import { DepartmentSelector, LoadingSpinner, PageHeader } from '../components';
+import {
+  DepartmentSelector,
+  LoadingSpinner,
+  PageHeader,
+  PreviewActionButtons,
+} from '../components';
 
 const CATEGORY_LABELS: Record<TaskCategory, string> = {
   DAILY: 'Daily',
@@ -122,12 +126,6 @@ export const OverdueTasksScreen = ({ navigation }: any) => {
         <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
           {item.title}
         </Text>
-        <TouchableOpacity
-          onPress={() => onDelete(item)}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-        </TouchableOpacity>
       </View>
       <View style={styles.cardMeta}>
         <View
@@ -165,6 +163,7 @@ export const OverdueTasksScreen = ({ navigation }: any) => {
           Mark complete
         </Text>
       </TouchableOpacity>
+      <PreviewActionButtons onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
     </TouchableOpacity>
   );
 
@@ -357,10 +356,6 @@ const styles = StyleSheet.create({
     fontSize: FONTS.lg,
     fontWeight: '600',
     flex: 1,
-  },
-  deleteBtn: {
-    fontSize: FONTS.sm,
-    color: COLORS.danger,
   },
   cardMeta: {
     flexDirection: 'row',

@@ -62,7 +62,9 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
   const vesselId = user?.vesselId ?? null;
 
   useEffect(() => {
-    navigation.setOptions({ title: isEdit ? 'Edit Entry' : 'New Waste Log Entry' });
+    navigation.setOptions({
+      title: isEdit ? 'Edit Waste Log Entry' : 'Create Waste Log Entry',
+    });
   }, [navigation, isEdit]);
 
   useEffect(() => {
@@ -170,7 +172,7 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={0}
     >
-      <PageHeader title="New Waste Log Entry" />
+      <PageHeader title={isEdit ? 'Edit Waste Log Entry' : 'Create Waste Log Entry'} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -296,7 +298,7 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
 
         <View style={styles.actions}>
           <Button
-            title={isEdit ? 'Update Entry' : 'Save Entry'}
+            title={isEdit ? 'Save Changes' : 'Create Waste Log Entry'}
             onPress={handleSave}
             variant="primary"
             loading={saving}

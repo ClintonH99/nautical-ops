@@ -2,25 +2,16 @@
  * Rules On-Board Screen
  */
 
-import React, { useState, useCallback, useLayoutEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  Alert,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
+import { FONTS, SPACING, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import rulesService from '../services/rules';
 import {
   Button,
-  Checkbox,
+  ButtonTagCard,
   ExportBar,
   ExportButton,
   LoadingSpinner,
@@ -86,6 +77,7 @@ export const RulesScreen = ({ navigation }: any) => {
   const [exportMode, setExportMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exporting, setExporting] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!vesselId) return;
@@ -218,38 +210,22 @@ export const RulesScreen = ({ navigation }: any) => {
       >
         <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>Published</Text>
         {items.map((item) => (
-          <TouchableOpacity
+          <ButtonTagCard
             key={item.id}
-            style={[styles.card, { backgroundColor: themeColors.surface }]}
-            onPress={() => (exportMode ? toggleSelect(item.id) : onEdit(item))}
-            activeOpacity={isHOD || exportMode ? 0.8 : 1}
-            disabled={!isHOD && !exportMode}
+            headerTitle={item.data?.title || item.title}
+            showCheckbox={exportMode}
+            checked={selectedIds.has(item.id)}
+            onToggleSelect={exportMode ? () => toggleSelect(item.id) : undefined}
+            collapsible={!exportMode}
+            expanded={expandedId === item.id}
+            onToggleExpand={() =>
+              setExpandedId((current) => (current === item.id ? null : item.id))
+            }
+            onEdit={isHOD && !exportMode ? () => onEdit(item) : undefined}
+            onDelete={isHOD && !exportMode ? () => onDelete(item) : undefined}
           >
-            <View style={styles.cardHeader}>
-              {exportMode && (
-                <Checkbox
-                  checked={selectedIds.has(item.id)}
-                  onPress={() => toggleSelect(item.id)}
-                  surface={themeColors.surface}
-                />
-              )}
-              <Text
-                style={[styles.cardTitle, { color: themeColors.textPrimary }]}
-                numberOfLines={1}
-              >
-                {item.data?.title || item.title}
-              </Text>
-              {isHOD && !exportMode && (
-                <TouchableOpacity
-                  onPress={() => onDelete(item)}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-                </TouchableOpacity>
-              )}
-            </View>
             <RulesPreview rules={item.data?.rules ?? []} themeColors={themeColors} />
-          </TouchableOpacity>
+          </ButtonTagCard>
         ))}
         {items.length === 0 && (
           <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
@@ -259,7 +235,7 @@ export const RulesScreen = ({ navigation }: any) => {
         {isHOD && (
           <View style={styles.createSection}>
             <Button
-              title="Create"
+              title="Create Rules"
               onPress={() => navigation.navigate('CreateRules')}
               variant="primary"
               fullWidth
@@ -278,30 +254,8 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
   sectionTitle: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.md },
-  card: {
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: SPACING.sm,
-    marginBottom: SPACING.sm,
-  },
-  cardTitle: { fontSize: FONTS.lg, fontWeight: '600', flex: 1 },
   preview: {
-    marginTop: SPACING.sm,
     marginBottom: SPACING.md,
-    paddingTop: SPACING.sm,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
   },
   previewRow: { fontSize: FONTS.sm, marginBottom: 2 },
   previewMore: { fontSize: FONTS.xs, marginTop: 2 },

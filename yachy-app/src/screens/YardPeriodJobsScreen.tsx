@@ -556,7 +556,7 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
 
       {pageView === 'ACTIVE' ? (
         <Button
-          title="Create"
+          title="Create Job"
           onPress={() => navigation.navigate('AddEditYardJob')}
           fullWidth
           style={styles.primaryAction}
@@ -582,7 +582,7 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
           />
           <View style={styles.folderToolbar}>
             <Button
-              title="+ New Folder"
+              title="Create Folder"
               onPress={openCreateFolder}
               variant="outline"
               style={styles.newFolderButton}
@@ -803,7 +803,7 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
             onStartShouldSetResponder={() => true}
           >
             <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
-              {folderEditorMode === 'create' ? 'New Folder' : 'Rename Folder'}
+              {folderEditorMode === 'create' ? 'Create Folder' : 'Rename Folder'}
             </Text>
             <Input
               label="Folder Name"
@@ -824,7 +824,7 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
                 disabled={folderWorking}
               />
               <Button
-                title="Save"
+                title={folderEditorMode === 'create' ? 'Create Folder' : 'Save Changes'}
                 onPress={() => void saveFolder()}
                 style={styles.modalAction}
                 loading={folderWorking}

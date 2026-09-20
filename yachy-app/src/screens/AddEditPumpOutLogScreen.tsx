@@ -66,7 +66,9 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
   const vesselId = user?.vesselId ?? null;
 
   useEffect(() => {
-    navigation.setOptions({ title: isEdit ? 'Edit Discharge Entry' : 'New Discharge Entry' });
+    navigation.setOptions({
+      title: isEdit ? 'Edit Discharge Entry' : 'Create Discharge Entry',
+    });
   }, [navigation, isEdit]);
 
   useEffect(() => {
@@ -172,7 +174,7 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={0}
     >
-      <PageHeader title={isEdit ? 'Edit Discharge Entry' : 'New Discharge Entry'} />
+      <PageHeader title={isEdit ? 'Edit Discharge Entry' : 'Create Discharge Entry'} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -313,7 +315,7 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
 
         <View style={styles.actions}>
           <Button
-            title={isEdit ? 'Update Entry' : 'Save Entry'}
+            title={isEdit ? 'Save Changes' : 'Create Discharge Entry'}
             onPress={handleSave}
             variant="primary"
             loading={saving}

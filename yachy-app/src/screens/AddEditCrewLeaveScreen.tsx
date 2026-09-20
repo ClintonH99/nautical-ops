@@ -171,7 +171,7 @@ export const AddEditCrewLeaveScreen = ({ navigation, route }: any) => {
   if (!canManage || !vesselId) {
     return (
       <View style={[styles.page, { backgroundColor: themeColors.background }]}>
-        <PageHeader title="Crew Leave" />
+        <PageHeader title={leaveId ? 'Edit Crew Leave' : 'Create Crew Leave'} />
         <View style={styles.center}>
           <Text style={[styles.message, { color: themeColors.textSecondary }]}>
             Only HODs and Captain have access.
@@ -186,7 +186,7 @@ export const AddEditCrewLeaveScreen = ({ navigation, route }: any) => {
       style={[styles.page, { backgroundColor: themeColors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <PageHeader title={leaveId ? 'Edit Crew Leave' : 'Add Crew Leave'} />
+      <PageHeader title={leaveId ? 'Edit Crew Leave' : 'Create Crew Leave'} />
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
@@ -274,7 +274,7 @@ export const AddEditCrewLeaveScreen = ({ navigation, route }: any) => {
           {leaveId ? 'updated' : 'published'}.
         </Text>
         <Button
-          title={leaveId ? 'Update Crew Leave' : 'Publish Crew Leave'}
+          title={leaveId ? 'Save Changes' : 'Publish Crew Leave'}
           onPress={handleSave}
           loading={saving}
           disabled={saving}

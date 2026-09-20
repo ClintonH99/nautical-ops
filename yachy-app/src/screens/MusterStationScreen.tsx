@@ -3,24 +3,21 @@
  * List of published muster stations, Create button, Download PDF per item
  */
 
-import React, { useState, useCallback, useLayoutEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  RefreshControl,
-  Alert,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
+import { FONTS, SPACING, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
-import musterStationsService from '../services/musterStations';
-import { Button, LoadingSpinner, PageHeader, ExportButton, ExportBar, Checkbox } from '../components';
+import musterStationsService, { getMusterStationLocations } from '../services/musterStations';
+import {
+  Button,
+  ButtonTagCard,
+  LoadingSpinner,
+  PageHeader,
+  ExportButton,
+  ExportBar,
+} from '../components';
 import { generateMusterStationListPdf } from '../utils/musterStationPdf';
 import type { MusterStation, MusterStationData } from '../services/musterStations';
 
@@ -32,7 +29,7 @@ function MusterStationPreview({
   themeColors: { textPrimary: string; textSecondary: string };
 }) {
   const d = data || {};
-  const musterLoc = d.musterStation?.trim() || '-';
+  const musterLocations = getMusterStationLocations(d);
   const medical = (d.medicalChest || []).filter(Boolean);
   const grabBag = (d.grabBag || []).filter(Boolean);
   const lifeRings = (d.lifeRings || []).filter(Boolean);
@@ -42,9 +39,11 @@ function MusterStationPreview({
   return (
     <View style={styles.preview}>
       <Text style={[styles.previewLabel, { color: themeColors.textSecondary }]}>
-        Muster Station
+        Muster Station Locations
       </Text>
-      <Text style={[styles.previewValue, { color: themeColors.textPrimary }]}>{musterLoc}</Text>
+      <Text style={[styles.previewValue, { color: themeColors.textPrimary }]}>
+        {musterLocations.join(', ') || '-'}
+      </Text>
       {(medical.length > 0 || grabBag.length > 0 || lifeRings.length > 0) && (
         <View style={styles.previewMetaWrap}>
           {medical.length > 0 && (
@@ -81,17 +80,16 @@ function MusterStationPreview({
   );
 }
 
-
 const MUSTER_STATION_INFO = {
-            title: 'Muster Station & Duties',
-            description: 'Assign crew muster stations and emergency duties.',
-            features: [
-              'Define muster stations for the vessel',
-              'Assign crew roles and duties per station',
-              'Keep emergency responsibilities clear',
-              'Update assignments as crew changes',
-            ],
-          };
+  title: 'Muster Station & Duties',
+  description: 'Assign crew muster stations and emergency duties.',
+  features: [
+    'Define muster stations for the vessel',
+    'Assign crew roles and duties per station',
+    'Keep emergency responsibilities clear',
+    'Update assignments as crew changes',
+  ],
+};
 
 export const MusterStationScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -104,6 +102,7 @@ export const MusterStationScreen = ({ navigation }: any) => {
   const [exportMode, setExportMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exportingList, setExportingList] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!vesselId) return;
@@ -233,37 +232,22 @@ export const MusterStationScreen = ({ navigation }: any) => {
       >
         <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>Published</Text>
         {items.map((item) => (
-          <TouchableOpacity
+          <ButtonTagCard
             key={item.id}
-            style={[styles.card, { backgroundColor: themeColors.surface }]}
-            onPress={() =>
-              exportMode ? toggleSelect(item.id) : isHOD && onEdit(item)
+            headerTitle={item.title}
+            showCheckbox={exportMode}
+            checked={selectedIds.has(item.id)}
+            onToggleSelect={exportMode ? () => toggleSelect(item.id) : undefined}
+            collapsible={!exportMode}
+            expanded={expandedId === item.id}
+            onToggleExpand={() =>
+              setExpandedId((current) => (current === item.id ? null : item.id))
             }
-            activeOpacity={isHOD || exportMode ? 0.8 : 1}
-            disabled={!isHOD && !exportMode}
+            onEdit={isHOD && !exportMode ? () => onEdit(item) : undefined}
+            onDelete={isHOD && !exportMode ? () => onDelete(item) : undefined}
           >
-            <View style={styles.cardHeader}>
-              {exportMode && (
-                <Checkbox
-                  checked={selectedIds.has(item.id)}
-                  onPress={() => toggleSelect(item.id)}
-                  surface={themeColors.surface}
-                />
-              )}
-              <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
-                {item.title}
-              </Text>
-              {isHOD && (
-                <TouchableOpacity
-                  onPress={() => onDelete(item)}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-                </TouchableOpacity>
-              )}
-            </View>
             <MusterStationPreview data={item.data} themeColors={themeColors} />
-          </TouchableOpacity>
+          </ButtonTagCard>
         ))}
         {items.length === 0 && (
           <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
@@ -273,7 +257,7 @@ export const MusterStationScreen = ({ navigation }: any) => {
         {isHOD && (
           <View style={styles.createSection}>
             <Button
-              title="Create"
+              title="Create Muster Station"
               onPress={() => navigation.navigate('CreateMusterStation')}
               variant="primary"
               fullWidth
@@ -293,29 +277,8 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
   sectionTitle: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.md },
-  card: {
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: SPACING.sm,
-  },
-  cardTitle: { fontSize: FONTS.lg, fontWeight: '600', flex: 1 },
   preview: {
-    marginTop: SPACING.sm,
     marginBottom: SPACING.md,
-    paddingTop: SPACING.sm,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
   },
   previewLabel: {
     fontSize: FONTS.xs,

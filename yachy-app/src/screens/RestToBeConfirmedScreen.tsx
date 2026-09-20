@@ -203,7 +203,7 @@ export const RestToBeConfirmedScreen = () => {
   return (
     <View style={[styles.pageWrap, { backgroundColor: themeColors.background }]}>
       <PageHeader
-        title="Rest to be Confirmed"
+        title="Rest to Be Confirmed"
         actions={
           uniqueCrew.length > 0 ? (
             <ExportButton
@@ -318,7 +318,7 @@ export const RestToBeConfirmedScreen = () => {
                 onPress={() => setSelectedMonth(null)}
                 style={{ marginBottom: SPACING.md }}
               >
-                <Text style={{ color: themeColors.accent }}>Back to months</Text>
+                <Text style={{ color: themeColors.accent }}>Back to Months</Text>
               </TouchableOpacity>
             )}
 
@@ -355,14 +355,14 @@ export const RestToBeConfirmedScreen = () => {
                 ]}
               >
                 <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
-                  Select crew to export
+                  Select Crew to Export
                 </Text>
 
                 <TouchableOpacity style={styles.modalItem} onPress={toggleSelectAll}>
                   <Text
                     style={[styles.modalItemText, { color: themeColors.accent, fontWeight: '600' }]}
                   >
-                    {selectedExportIds.size === uniqueCrew.length ? 'Deselect all' : 'Select all'}
+                    {selectedExportIds.size === uniqueCrew.length ? 'Deselect All' : 'Select All'}
                   </Text>
                 </TouchableOpacity>
 
@@ -412,7 +412,7 @@ export const RestToBeConfirmedScreen = () => {
                   disabled={exporting || selectedExportIds.size === 0}
                 >
                   <Text style={styles.reviewButtonText}>
-                    {exporting ? 'Exporting...' : `Export to PDF (${selectedExportIds.size})`}
+                    {exporting ? 'Exporting…' : `Export to PDF (${selectedExportIds.size})`}
                   </Text>
                 </TouchableOpacity>
               </View>

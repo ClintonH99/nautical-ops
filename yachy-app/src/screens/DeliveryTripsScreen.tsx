@@ -18,7 +18,15 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import tripsService from '../services/trips';
 import { Trip } from '../types';
-import { Button, ButtonTagCard, ButtonTagRow, LoadingSpinner, PageHeader, PillButton, TripLoadErrorBanner } from '../components';
+import {
+  Button,
+  ButtonTagCard,
+  ButtonTagRow,
+  LoadingSpinner,
+  PageHeader,
+  PillButton,
+  TripLoadErrorBanner,
+} from '../components';
 import { useVesselTripColors } from '../hooks/useVesselTripColors';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { DEFAULT_COLORS } from '../services/tripColors';
@@ -64,7 +72,6 @@ export const DeliveryTripsScreen = ({ navigation }: any) => {
       loadTrips();
     }, [loadTrips])
   );
-
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -129,10 +136,25 @@ export const DeliveryTripsScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <PageHeader title="Delivery" actions={canEditTripColors ? <PillButton label="Edit colors" onPress={() => navigation.navigate('TripColorSettings')} /> : undefined} />
+      <PageHeader
+        title="Deliveries"
+        actions={
+          canEditTripColors ? (
+            <PillButton
+              label="Edit Colors"
+              onPress={() => navigation.navigate('TripColorSettings')}
+            />
+          ) : undefined
+        }
+      />
       {canManageTrips && (
         <View style={styles.addRow}>
-          <Button title="Add Delivery" onPress={onAdd} variant="primary" style={styles.addButton} />
+          <Button
+            title="Create Delivery"
+            onPress={onAdd}
+            variant="primary"
+            style={styles.addButton}
+          />
         </View>
       )}
       {loadError && (
@@ -152,7 +174,12 @@ export const DeliveryTripsScreen = ({ navigation }: any) => {
             No delivery periods yet
           </Text>
           {canManageTrips && (
-            <Button title="Add first" onPress={onAdd} variant="primary" style={styles.emptyBtn} />
+            <Button
+              title="Create Delivery"
+              onPress={onAdd}
+              variant="primary"
+              style={styles.emptyBtn}
+            />
           )}
         </View>
       ) : trips.length > 0 ? (

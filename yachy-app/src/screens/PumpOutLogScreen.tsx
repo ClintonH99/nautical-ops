@@ -185,7 +185,12 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
         />
       )}
       <View style={styles.actionBar}>
-        <Button title="Add Discharge" onPress={onAdd} variant="primary" style={styles.actionBtn} />
+        <Button
+          title="Create Discharge Entry"
+          onPress={onAdd}
+          variant="primary"
+          style={styles.actionBtn}
+        />
       </View>
 
       {logs.length > 0 && !loading && (
@@ -233,7 +238,7 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
               </Text>
               <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
                 {logs.length === 0
-                  ? 'Tap "Add Discharge" to record your first discharge entry.'
+                  ? 'Tap "Create Discharge Entry" to record your first discharge entry.'
                   : 'Try a different search term.'}
               </Text>
             </View>

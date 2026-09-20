@@ -750,7 +750,7 @@ export const ProfileScreen = ({ navigation }: any) => {
                 disabled={isSaving}
               />
               <Button
-                title={isSaving ? 'Saving...' : 'Save Changes'}
+                title={isSaving ? 'Saving…' : 'Save Changes'}
                 onPress={handleSave}
                 variant="primary"
                 shape="pill"

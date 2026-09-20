@@ -14,14 +14,18 @@ import {
   Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import vesselTasksService from '../services/vesselTasks';
 import { getTaskUrgencyColor } from '../utils/taskUrgency';
 import { VesselTask, TaskCategory, Department } from '../types';
-import { DepartmentSelector, LoadingSpinner, PageHeader } from '../components';
+import {
+  DepartmentSelector,
+  LoadingSpinner,
+  PageHeader,
+  PreviewActionButtons,
+} from '../components';
 
 const UPCOMING_DAYS = 3;
 
@@ -137,12 +141,6 @@ export const UpcomingTasksScreen = ({ navigation }: any) => {
           >
             {item.title}
           </Text>
-          <TouchableOpacity
-            onPress={() => onDelete(item)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-          </TouchableOpacity>
         </View>
         <View style={styles.cardMeta}>
           <View
@@ -202,6 +200,7 @@ export const UpcomingTasksScreen = ({ navigation }: any) => {
             </Text>
           </TouchableOpacity>
         )}
+        <PreviewActionButtons onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
       </TouchableOpacity>
     );
   };
@@ -399,10 +398,6 @@ const styles = StyleSheet.create({
   cardTitleComplete: {
     textDecorationLine: 'line-through',
     color: COLORS.textSecondary,
-  },
-  deleteBtn: {
-    fontSize: FONTS.sm,
-    color: COLORS.danger,
   },
   cardMeta: {
     flexDirection: 'row',

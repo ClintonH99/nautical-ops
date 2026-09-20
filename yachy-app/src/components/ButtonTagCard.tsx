@@ -85,6 +85,9 @@ export function ButtonTagCard({
   const themeColors = useThemeColors();
   // While collapsed, everything below the summary line stays hidden.
   const showDetail = !collapsible || !!expanded;
+  // Bulk-selection mode is intentionally action-free: tapping anywhere on the
+  // card selects it instead of exposing edit/delete controls.
+  const showPreviewActions = showDetail && !showCheckbox && (!!onEdit || !!onDelete);
 
   const handlePress = () => {
     if (showCheckbox && onToggleSelect) {
@@ -141,35 +144,6 @@ export function ButtonTagCard({
               color={themeColors.isDark ? COLORS.white : COLORS.primary}
             />
           )}
-          {!collapsible && !showCheckbox && showDetail && onDelete && (
-            <TouchableOpacity
-              onPress={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-            </TouchableOpacity>
-          )}
-          {!collapsible && !showCheckbox && showDetail && onEdit && (
-            <TouchableOpacity
-              onPress={(e) => {
-                e.stopPropagation();
-                onEdit();
-              }}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Text
-                style={[
-                  styles.editBtn,
-                  { color: themeColors.isDark ? COLORS.white : COLORS.primary },
-                ]}
-              >
-                Edit
-              </Text>
-            </TouchableOpacity>
-          )}
         </View>
       </View>
 
@@ -181,9 +155,7 @@ export function ButtonTagCard({
         <Text style={[styles.cardCreatedBy, { color: themeColors.textSecondary }]}>{footer}</Text>
       )}
 
-      {collapsible && showDetail ? (
-        <PreviewActionButtons onEdit={onEdit} onDelete={onDelete} />
-      ) : null}
+      {showPreviewActions ? <PreviewActionButtons onEdit={onEdit} onDelete={onDelete} /> : null}
     </TouchableOpacity>
   );
 }
@@ -236,7 +208,6 @@ const styles = StyleSheet.create({
   cardMeta: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, flex: 1, minWidth: 0 },
   cardTitle: { fontSize: FONTS.base, fontWeight: '700' },
   cardActions: { flexDirection: 'row', gap: SPACING.md },
-  editBtn: { fontSize: FONTS.sm, fontWeight: '600' },
   cardRow: { marginBottom: SPACING.sm },
   cardLabel: {
     fontSize: FONTS.xs,

@@ -2,7 +2,7 @@
  * Contractor Database Screen
  */
 
-import React, { useState, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -22,7 +22,13 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import contractorsService, { Contractor } from '../services/contractors';
 import { Department } from '../types';
-import { Button, DepartmentMultiSelector, Input, PageHeader } from '../components';
+import {
+  Button,
+  DepartmentMultiSelector,
+  Input,
+  PageHeader,
+  PreviewActionButtons,
+} from '../components';
 import { DEPARTMENT_OPTIONS as DEPARTMENTS } from '../utils/departmentSelection';
 
 const allDeptsVisible: Record<Department, boolean> = {
@@ -77,6 +83,7 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchFilter, setSearchFilter] = useState<SearchFilter>('all');
   const [searchFilterOpen, setSearchFilterOpen] = useState(false);
+  const [expandedContractorId, setExpandedContractorId] = useState<string | null>(null);
 
   const vesselId = user?.vesselId ?? null;
 
@@ -300,7 +307,9 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
             >
               <TouchableOpacity
                 onPress={() =>
-                  navigation.navigate('AddEditContractor', { contractorId: contractor.id })
+                  setExpandedContractorId((current) =>
+                    current === contractor.id ? null : contractor.id
+                  )
                 }
                 activeOpacity={0.8}
               >
@@ -308,6 +317,11 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
                   <Text style={styles.cardTitleBarText} numberOfLines={1}>
                     {contractor.companyName}
                   </Text>
+                  <Ionicons
+                    name={expandedContractorId === contractor.id ? 'chevron-up' : 'chevron-down'}
+                    size={18}
+                    color={COLORS.white}
+                  />
                 </View>
                 <View style={styles.cardHeader}>
                   <View
@@ -326,98 +340,82 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
                         (contractor.department ?? 'INTERIOR').slice(1).toLowerCase()}
                     </Text>
                   </View>
-                  <View style={styles.cardActions}>
-                    <TouchableOpacity
-                      onPress={(e) => {
-                        e.stopPropagation?.();
-                        onDelete(contractor);
-                      }}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() =>
-                        navigation.navigate('AddEditContractor', { contractorId: contractor.id })
-                      }
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Text
-                        style={[
-                          styles.editBtn,
-                          { color: themeColors.isDark ? COLORS.white : COLORS.primary },
-                        ]}
-                      >
-                        Edit
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
                 </View>
               </TouchableOpacity>
-              {contractor.knownFor ? (
-                <View style={styles.cardRow}>
-                  <Text
-                    style={[
-                      styles.cardLabel,
-                      { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                    ]}
-                  >
-                    Known For
-                  </Text>
-                  <Text style={[styles.cardValue, { color: themeColors.textPrimary }]}>
-                    {contractor.knownFor}
-                  </Text>
-                </View>
-              ) : null}
-              {contractor.companyAddress ? (
-                <View style={styles.cardRow}>
-                  <Text
-                    style={[
-                      styles.cardLabel,
-                      { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                    ]}
-                  >
-                    Address
-                  </Text>
-                  <Text style={[styles.cardValue, { color: themeColors.textPrimary }]}>
-                    {contractor.companyAddress}
-                  </Text>
-                </View>
-              ) : null}
-              {contractor.description ? (
-                <View style={styles.cardRow}>
-                  <Text
-                    style={[
-                      styles.cardLabel,
-                      { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                    ]}
-                  >
-                    Description
-                  </Text>
-                  <Text
-                    style={[styles.cardValue, { color: themeColors.textPrimary }]}
-                    numberOfLines={2}
-                  >
-                    {contractor.description}
-                  </Text>
-                </View>
-              ) : null}
-              {contractor.contacts.length > 0 && (
-                <View style={styles.cardRow}>
-                  <Text
-                    style={[
-                      styles.cardLabel,
-                      { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                    ]}
-                  >
-                    Contact(s)
-                  </Text>
-                  {contractor.contacts.map((c, i) => (
-                    <Text key={i} style={[styles.cardValue, { color: themeColors.textPrimary }]}>
-                      {[c.name, c.mobile, c.email].filter(Boolean).join(' · ')}
-                    </Text>
-                  ))}
-                </View>
+              {expandedContractorId === contractor.id && (
+                <>
+                  {contractor.knownFor ? (
+                    <View style={styles.cardRow}>
+                      <Text
+                        style={[
+                          styles.cardLabel,
+                          { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                        ]}
+                      >
+                        Known For
+                      </Text>
+                      <Text style={[styles.cardValue, { color: themeColors.textPrimary }]}>
+                        {contractor.knownFor}
+                      </Text>
+                    </View>
+                  ) : null}
+                  {contractor.companyAddress ? (
+                    <View style={styles.cardRow}>
+                      <Text
+                        style={[
+                          styles.cardLabel,
+                          { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                        ]}
+                      >
+                        Address
+                      </Text>
+                      <Text style={[styles.cardValue, { color: themeColors.textPrimary }]}>
+                        {contractor.companyAddress}
+                      </Text>
+                    </View>
+                  ) : null}
+                  {contractor.description ? (
+                    <View style={styles.cardRow}>
+                      <Text
+                        style={[
+                          styles.cardLabel,
+                          { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                        ]}
+                      >
+                        Description
+                      </Text>
+                      <Text style={[styles.cardValue, { color: themeColors.textPrimary }]}>
+                        {contractor.description}
+                      </Text>
+                    </View>
+                  ) : null}
+                  {contractor.contacts.length > 0 && (
+                    <View style={styles.cardRow}>
+                      <Text
+                        style={[
+                          styles.cardLabel,
+                          { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                        ]}
+                      >
+                        Contact(s)
+                      </Text>
+                      {contractor.contacts.map((c, i) => (
+                        <Text
+                          key={i}
+                          style={[styles.cardValue, { color: themeColors.textPrimary }]}
+                        >
+                          {[c.name, c.mobile, c.email].filter(Boolean).join(' · ')}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
+                  <PreviewActionButtons
+                    onEdit={() =>
+                      navigation.navigate('AddEditContractor', { contractorId: contractor.id })
+                    }
+                    onDelete={() => onDelete(contractor)}
+                  />
+                </>
               )}
             </View>
           ))
@@ -512,13 +510,18 @@ const styles = StyleSheet.create({
     marginTop: -SPACING.lg,
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.lg,
+    flexDirection: 'row',
+    gap: SPACING.sm,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
   },
   cardTitleBarText: {
     fontSize: FONTS.lg,
     fontWeight: '600',
     color: COLORS.white,
+    flex: 1,
+    textAlign: 'center',
+    paddingLeft: 18 + SPACING.sm,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -532,9 +535,6 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: FONTS.lg, fontWeight: '600', flex: 1 },
   deptBadge: { paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: BORDER_RADIUS.sm },
   deptBadgeText: { fontSize: FONTS.xs, fontWeight: '600', color: COLORS.white },
-  cardActions: { flexDirection: 'row', gap: SPACING.md },
-  editBtn: { fontSize: FONTS.sm, fontWeight: '600' },
-  deleteBtn: { fontSize: FONTS.sm, color: COLORS.danger, fontWeight: '600' },
   cardRow: { marginBottom: SPACING.sm },
   cardLabel: {
     fontSize: FONTS.xs,

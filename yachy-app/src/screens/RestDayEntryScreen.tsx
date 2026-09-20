@@ -16,6 +16,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
   TextInput,
   Platform,
 } from 'react-native';
@@ -86,6 +87,8 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   const [pendingTime, setPendingTime] = useState<Date | null>(null);
   const [saving, setSaving] = useState(false);
   const [isManager, setIsManager] = useState(false);
+  const [hasExistingEntry, setHasExistingEntry] = useState(false);
+  const [loadingEntry, setLoadingEntry] = useState(true);
 
   const loadExisting = useCallback(async () => {
     if (!effectiveUserId) return;
@@ -98,6 +101,7 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
     ]);
     setWatchPeriods(linkedWatchPeriods);
     const existing = rows.find((r) => r.date === date);
+    setHasExistingEntry(Boolean(existing));
     if (existing) {
       setRestPeriods(
         existing.rest_periods?.length ? existing.rest_periods : [{ start: '22:00', end: '08:00' }]
@@ -121,9 +125,21 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
 
   useFocusEffect(
     useCallback(() => {
-      loadExisting();
+      setLoadingEntry(true);
+      loadExisting().finally(() => setLoadingEntry(false));
     }, [loadExisting])
   );
+
+  if (loadingEntry) {
+    return (
+      <View style={[styles.pageWrap, { backgroundColor: themeColors.background }]}>
+        <PageHeader title="Rest Entry" />
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color={themeColors.accent} />
+        </View>
+      </View>
+    );
+  }
 
   const isLocked = !isManager && (status === 'pending_confirmation' || status === 'confirmed');
   const compliance = checkCompliance(restPeriods);
@@ -248,7 +264,7 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
         'The saved rest period overlaps an automatically imported Watch Keeping period. Check the times, or save anyway if this accurately records what happened.',
         [
           { text: 'Check Times', style: 'cancel' },
-          { text: 'Save Anyway', onPress: saveOwnEntry },
+          { text: 'Save Draft Anyway', onPress: saveOwnEntry },
         ]
       );
       return;
@@ -328,7 +344,7 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
 
   return (
     <View style={[styles.pageWrap, { backgroundColor: themeColors.background }]}>
-      <PageHeader title="Rest Entry" />
+      <PageHeader title={hasExistingEntry ? 'Edit Rest Entry' : 'Create Rest Entry'} />
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={styles.content}
@@ -550,7 +566,7 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
             disabled={saving}
           >
             <Text style={[styles.saveButtonText, { color: themeColors.textOnAccent }]}>
-              {saving ? 'Confirming...' : 'Confirm'}
+              {saving ? 'Confirming…' : 'Confirm Rest Entry'}
             </Text>
           </TouchableOpacity>
         ) : (
@@ -561,7 +577,7 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
               disabled={saving}
             >
               <Text style={[styles.saveButtonText, { color: themeColors.textOnAccent }]}>
-                {saving ? 'Saving...' : 'Save'}
+                {saving ? 'Saving…' : 'Save Draft'}
               </Text>
             </TouchableOpacity>
           )

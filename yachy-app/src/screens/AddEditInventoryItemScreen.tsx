@@ -177,7 +177,7 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={0}
     >
-      <PageHeader title={isEdit ? 'Edit' : 'Create'} />
+      <PageHeader title={isEdit ? 'Edit Inventory Item' : 'Create Inventory Item'} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -289,7 +289,7 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
 
         <View style={styles.actions}>
           <Button
-            title={isEdit ? 'Save changes' : 'Create'}
+            title={isEdit ? 'Save Changes' : 'Create Inventory Item'}
             onPress={handleSave}
             variant="primary"
             loading={saving}
@@ -298,19 +298,19 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
           />
           {isEdit && (
             <Button
-              title="Remove item"
+              title="Delete Inventory Item"
               onPress={() => {
-                Alert.alert('Remove item', 'Remove this inventory item?', [
+                Alert.alert('Delete Inventory Item', 'Delete this inventory item?', [
                   { text: 'Cancel', style: 'cancel' },
                   {
-                    text: 'Remove',
+                    text: 'Delete',
                     style: 'destructive',
                     onPress: async () => {
                       if (!itemId) return;
                       setSaving(true);
                       try {
                         await inventoryService.delete(itemId);
-                        Alert.alert('Removed', 'Item has been removed.');
+                        Alert.alert('Deleted', 'Inventory item deleted.');
                         navigation.goBack();
                       } catch (e) {
                         console.error('Delete inventory item error:', e);

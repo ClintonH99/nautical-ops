@@ -98,10 +98,10 @@ export const UniformsScreen = ({ navigation }: any) => {
   };
 
   const handleDelete = (u: Uniform) => {
-    Alert.alert('Remove label', `Remove "${u.label}" and all its entries?`, [
+    Alert.alert('Delete Uniform Label', `Delete "${u.label}" and all its entries?`, [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Remove',
+        text: 'Delete',
         style: 'destructive',
         onPress: async () => {
           try {
@@ -109,7 +109,7 @@ export const UniformsScreen = ({ navigation }: any) => {
             setUniforms((prev) => prev.filter((i) => i.id !== u.id));
           } catch (e) {
             console.error('Delete uniform error:', e);
-            Alert.alert('Error', 'Could not remove label.');
+            Alert.alert('Error', 'Could not delete uniform label.');
           }
         },
       },
@@ -193,7 +193,7 @@ export const UniformsScreen = ({ navigation }: any) => {
         </View>
         <View style={styles.createRow}>
           <Button
-            title="Create"
+            title="Create Uniform Label"
             onPress={() => navigation.navigate('AddEditUniform')}
             variant="primary"
             fullWidth
@@ -218,7 +218,7 @@ export const UniformsScreen = ({ navigation }: any) => {
         ) : filteredUniforms.length === 0 ? (
           <Text style={[styles.empty, { color: themeColors.textSecondary }]}>
             {uniforms.length === 0
-              ? 'No uniform labels yet. Tap Create to add one.'
+              ? 'No uniform labels yet. Tap Create Uniform Label to add one.'
               : 'No labels match your search or department filter.'}
           </Text>
         ) : (

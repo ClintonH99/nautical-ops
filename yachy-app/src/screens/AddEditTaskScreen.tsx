@@ -212,7 +212,15 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={0}
     >
-      <PageHeader title="Task" />
+      <PageHeader
+        title={
+          isEdit
+            ? `Edit ${categoryLabel} Task`
+            : showCategoryPicker
+              ? 'Create Task'
+              : `Create ${categoryLabel} Task`
+        }
+      />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -395,7 +403,13 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
         )}
         <View style={styles.actions}>
           <Button
-            title={isEdit ? 'Update task' : 'Create task'}
+            title={
+              isEdit
+                ? 'Save Changes'
+                : showCategoryPicker
+                  ? 'Create Task'
+                  : `Create ${categoryLabel} Task`
+            }
             onPress={handleSave}
             variant="primary"
             loading={saving}

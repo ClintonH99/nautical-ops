@@ -62,7 +62,7 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
   const typeLabel = typeLabels[type] ?? type;
   useEffect(() => {
     navigation.setOptions({
-      title: tripId ? `Edit ${typeLabel}` : `Add ${typeLabel}`,
+      title: tripId ? `Edit ${typeLabel}` : `Create ${typeLabel}`,
     });
   }, [navigation, tripId, typeLabel]);
 
@@ -249,7 +249,7 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={0}
     >
-      <PageHeader title="Trip" />
+      <PageHeader title={isEdit ? `Edit ${typeLabel}` : `Create ${typeLabel}`} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -333,7 +333,7 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
         />
         <View style={styles.actions}>
           <Button
-            title={isEdit ? 'Update trip' : 'Add trip'}
+            title={isEdit ? 'Save Changes' : `Create ${typeLabel}`}
             onPress={handleSave}
             variant="primary"
             loading={saving}

@@ -267,7 +267,12 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
       </View>
       <View style={styles.actionBar}>
         {(isHOD || isCaptain) && (
-          <Button title="Create" onPress={onCreate} variant="primary" fullWidth />
+          <Button
+            title="Create Pre-Departure Checklist"
+            onPress={onCreate}
+            variant="primary"
+            fullWidth
+          />
         )}
       </View>
       {exportMode && filteredChecklists.length > 0 && (
@@ -403,7 +408,7 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
                 {filteredChecklists.length === 0 && checklists.length > 0
                   ? 'Try a different department filter.'
                   : isHOD || isCaptain
-                    ? 'Tap "Create" to add a checklist. Use "All Departments" for the Captain\'s board.'
+                    ? 'Tap Create Pre-Departure Checklist to add one. Use "All Departments" for the Captain\'s board.'
                     : 'No pre-departure tasks have been added yet.'}
               </Text>
             </View>

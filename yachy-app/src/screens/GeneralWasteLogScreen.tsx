@@ -177,7 +177,12 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
         />
       )}
       <View style={styles.actionBar}>
-        <Button title="Add Log" onPress={onAdd} variant="primary" style={styles.actionBtn} />
+        <Button
+          title="Create Waste Log Entry"
+          onPress={onAdd}
+          variant="primary"
+          style={styles.actionBtn}
+        />
       </View>
 
       {logs.length > 0 && !loading && (
@@ -225,7 +230,7 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
               </Text>
               <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
                 {logs.length === 0
-                  ? 'Tap "Add Log" to create your first general waste entry.'
+                  ? 'Tap "Create Waste Log Entry" to create your first general waste entry.'
                   : 'Try a different search term.'}
               </Text>
             </View>

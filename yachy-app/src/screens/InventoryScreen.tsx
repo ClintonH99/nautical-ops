@@ -112,10 +112,10 @@ export const InventoryScreen = ({ navigation }: any) => {
   };
 
   const handleDelete = (item: InventoryItem) => {
-    Alert.alert('Remove item', `Remove "${item.title}" from inventory?`, [
+    Alert.alert('Delete Inventory Item', `Delete "${item.title}" from inventory?`, [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Remove',
+        text: 'Delete',
         style: 'destructive',
         onPress: async () => {
           try {
@@ -123,7 +123,7 @@ export const InventoryScreen = ({ navigation }: any) => {
             setItems((prev) => prev.filter((i) => i.id !== item.id));
           } catch (e) {
             console.error('Delete inventory item error:', e);
-            Alert.alert('Error', 'Could not remove item.');
+            Alert.alert('Error', 'Could not delete inventory item.');
           }
         },
       },
@@ -209,7 +209,7 @@ export const InventoryScreen = ({ navigation }: any) => {
         </View>
         <View style={styles.createRow}>
           <Button
-            title="Create"
+            title="Create Inventory Item"
             onPress={() => navigation.navigate('AddEditInventoryItem')}
             variant="primary"
             fullWidth
@@ -241,7 +241,7 @@ export const InventoryScreen = ({ navigation }: any) => {
         ) : filteredItems.length === 0 ? (
           <Text style={[styles.empty, { color: themeColors.textSecondary }]}>
             {items.length === 0
-              ? 'No inventory items yet. Tap Create to add one.'
+              ? 'No inventory items yet. Tap Create Inventory Item to add one.'
               : 'No items match your search or department filter.'}
           </Text>
         ) : (

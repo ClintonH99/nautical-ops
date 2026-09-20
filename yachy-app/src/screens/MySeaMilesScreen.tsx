@@ -387,7 +387,7 @@ export const MySeaMilesScreen = ({ navigation }: any) => {
         }
       >
         <Button
-          title="+ Add Sea Miles"
+          title="Create Sea Miles Entry"
           onPress={() => navigation.navigate('AddEditSeaMile')}
           fullWidth
           style={styles.addButton}
@@ -413,7 +413,7 @@ export const MySeaMilesScreen = ({ navigation }: any) => {
         />
 
         <Button
-          title="+ New Folder"
+          title="Create Folder"
           onPress={openCreateFolder}
           variant="outline"
           fullWidth
@@ -635,7 +635,7 @@ export const MySeaMilesScreen = ({ navigation }: any) => {
             onStartShouldSetResponder={() => true}
           >
             <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
-              {folderEditorMode === 'create' ? 'New Folder' : 'Rename Folder'}
+              {folderEditorMode === 'create' ? 'Create Folder' : 'Rename Folder'}
             </Text>
             <Input
               label="Folder Name"
@@ -656,7 +656,7 @@ export const MySeaMilesScreen = ({ navigation }: any) => {
                 disabled={folderWorking}
               />
               <Button
-                title="Save"
+                title={folderEditorMode === 'create' ? 'Create Folder' : 'Save Changes'}
                 onPress={() => void saveFolder()}
                 style={styles.modalAction}
                 loading={folderWorking}

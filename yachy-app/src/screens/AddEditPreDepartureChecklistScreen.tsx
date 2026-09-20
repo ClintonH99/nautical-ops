@@ -124,7 +124,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
     navigation.setOptions({
       title: isEdit
         ? isEditable
-          ? 'Edit Checklist'
+          ? 'Edit Pre-Departure Checklist'
           : 'Pre-Departure Checklist'
         : 'Create Pre-Departure Checklist',
     });
@@ -258,7 +258,9 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={0}
     >
-      <PageHeader title="Pre-Departure Checklist" />
+      <PageHeader
+        title={isEdit ? 'Edit Pre-Departure Checklist' : 'Create Pre-Departure Checklist'}
+      />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -463,7 +465,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
         {showEditableFields && (
           <View style={styles.actions}>
             <Button
-              title={isEdit ? 'Save' : 'Create Checklist'}
+              title={isEdit ? 'Save Changes' : 'Publish Pre-Departure Checklist'}
               onPress={handleSave}
               variant="primary"
               loading={saving}

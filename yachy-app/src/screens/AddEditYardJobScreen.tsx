@@ -75,7 +75,7 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
 
   useEffect(() => {
     navigation.setOptions({
-      title: jobId ? 'Edit Job' : 'Create New Job',
+      title: jobId ? 'Edit Job' : 'Create Job',
     });
   }, [navigation, jobId]);
 
@@ -231,7 +231,7 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={0}
     >
-      <PageHeader title="Job" />
+      <PageHeader title={isEdit ? 'Edit Job' : 'Create Job'} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -388,7 +388,7 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
         )}
         <View style={styles.actions}>
           <Button
-            title={isEdit ? 'Update job' : 'Create job'}
+            title={isEdit ? 'Save Changes' : 'Create Job'}
             onPress={handleSave}
             variant="primary"
             loading={saving}

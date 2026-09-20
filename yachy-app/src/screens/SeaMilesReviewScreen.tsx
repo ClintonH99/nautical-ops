@@ -314,7 +314,7 @@ export const SeaMilesReviewScreen = ({ navigation }: any) => {
                   />
                 ) : null}
                 <Button
-                  title="Save"
+                  title="Save Changes"
                   onPress={() => void saveCaptainContact()}
                   style={styles.contactAction}
                   loading={savingContact}

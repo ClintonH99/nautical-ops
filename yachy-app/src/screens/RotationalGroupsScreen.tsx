@@ -79,12 +79,12 @@ export const RotationalGroupsScreen = () => {
 
   const handleAddCrewRotation = (member: User) => {
     Alert.alert(
-      'Add Crew Rotation',
+      'Add Rotational Crew',
       `Mark ${member.name} as rotational crew? They will appear under Ungrouped until assigned to a rotation group.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Add Rotation',
+          text: 'Add Rotational Crew',
           onPress: async () => {
             setAddingRotationId(member.id);
             try {
@@ -161,7 +161,7 @@ export const RotationalGroupsScreen = () => {
       );
       setSelectedIds(new Set());
       await loadData();
-      Alert.alert('Group Created', `"${name}" rotation group has been created.`);
+      Alert.alert('Rotation Group Created', `"${name}" rotation group has been created.`);
     } catch {
       Alert.alert('Error', 'Failed to create rotation group');
     }
@@ -323,7 +323,7 @@ export const RotationalGroupsScreen = () => {
           </Text>
           <Text style={[styles.infoBannerText, { color: themeColors.textSecondary }]}>
             {canEdit
-              ? 'Select ungrouped crew members below then tap "Create Group" to link them. Tap a group name to rename it. Tap a grouped member to remove them.'
+              ? 'Select ungrouped crew members below then tap "Create Rotation Group" to link them. Tap a group name to rename it. Tap a grouped member to remove them.'
               : 'Rotation groups show which crew members share the same role on rotation. Only MOV can edit groups.'}
           </Text>
         </View>
@@ -335,7 +335,7 @@ export const RotationalGroupsScreen = () => {
               onPress={() => setCrewPickerOpen((open) => !open)}
               activeOpacity={0.85}
             >
-              <Text style={styles.addRotationButtonText}>+ Add Crew Rotation</Text>
+              <Text style={styles.addRotationButtonText}>Add Rotational Crew</Text>
             </TouchableOpacity>
 
             {crewPickerOpen && (
@@ -390,7 +390,7 @@ export const RotationalGroupsScreen = () => {
                         </Text>
                       </View>
                       <Text style={[styles.addCrewLabel, { color: themeColors.accent }]}>
-                        {addingRotationId === member.id ? 'Adding…' : 'Add'}
+                        {addingRotationId === member.id ? 'Adding…' : 'Add Rotational Crew'}
                       </Text>
                     </TouchableOpacity>
                   ))
@@ -406,7 +406,7 @@ export const RotationalGroupsScreen = () => {
               No rotational crew on this vessel yet.
             </Text>
             <Text style={[styles.emptySubtext, { color: themeColors.textSecondary }]}>
-              Use “Add Crew Rotation” to assign someone from the vessel.
+              Use “Add Rotational Crew” to assign someone from the vessel.
             </Text>
           </View>
         ) : (
@@ -462,7 +462,7 @@ export const RotationalGroupsScreen = () => {
                 </View>
                 {canEdit && (
                   <Text style={[styles.sectionHint, { color: themeColors.textSecondary }]}>
-                    Tap crew members to select them, then tap "Create Group".
+                    Tap crew members to select them, then tap "Create Rotation Group".
                   </Text>
                 )}
                 <View style={[styles.card, { borderColor: themeColors.border }]}>
@@ -478,7 +478,7 @@ export const RotationalGroupsScreen = () => {
       {canEdit && selectedIds.size >= 2 && (
         <View style={styles.fabContainer}>
           <TouchableOpacity style={styles.fab} onPress={openCreateModal} activeOpacity={0.85}>
-            <Text style={styles.fabText}>Create Group ({selectedIds.size} selected)</Text>
+            <Text style={styles.fabText}>Create Rotation Group ({selectedIds.size} selected)</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -505,7 +505,7 @@ export const RotationalGroupsScreen = () => {
             ]}
           >
             <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
-              {nameModalMode === 'create' ? 'Name this Group' : 'Rename Group'}
+              {nameModalMode === 'create' ? 'Create Rotation Group' : 'Rename Rotation Group'}
             </Text>
             <Text style={[styles.modalSubtitle, { color: themeColors.textSecondary }]}>
               {nameModalMode === 'create'
@@ -554,7 +554,7 @@ export const RotationalGroupsScreen = () => {
                 onPress={handleNameSubmit}
               >
                 <Text style={[styles.modalBtnText, { color: COLORS.white }]}>
-                  {nameModalMode === 'create' ? 'Create' : 'Save'}
+                  {nameModalMode === 'create' ? 'Create Rotation Group' : 'Save Changes'}
                 </Text>
               </TouchableOpacity>
             </View>

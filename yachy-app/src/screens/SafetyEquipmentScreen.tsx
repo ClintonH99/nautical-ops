@@ -256,7 +256,7 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
         {canManage && (
           <View style={styles.createSection}>
             <Button
-              title="Create"
+              title="Create Safety Equipment"
               onPress={() => navigation.navigate('CreateSafetyEquipment')}
               variant="primary"
               fullWidth
@@ -315,7 +315,7 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
         ))}
         {items.length === 0 && (
           <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
-            No published plans yet.{canManage ? ' Tap Create to add one.' : ''}
+            No published plans yet.{canManage ? ' Tap Create Safety Equipment to add one.' : ''}
           </Text>
         )}
         {!canManage && (

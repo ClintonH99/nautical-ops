@@ -134,7 +134,7 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
 
   const handleDelete = () => {
     if (!uniformId) return;
-    Alert.alert('Delete label', `Delete "${label.trim()}" and all its entries?`, [
+    Alert.alert('Delete Uniform Label', `Delete "${label.trim()}" and all its entries?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -174,7 +174,7 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={0}
     >
-      <PageHeader title={isEdit ? 'Edit' : 'Create'} />
+      <PageHeader title={isEdit ? 'Edit Uniform Label' : 'Create Uniform Label'} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -352,12 +352,12 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
         })}
         <TouchableOpacity onPress={addEntry} style={styles.addEntryBtn}>
           <Ionicons name="add" size={16} color={themeColors.accent} />
-          <Text style={[styles.addEntryBtnText, { color: themeColors.accent }]}>Add entry</Text>
+          <Text style={[styles.addEntryBtnText, { color: themeColors.accent }]}>Add Entry</Text>
         </TouchableOpacity>
 
         <View style={styles.actions}>
           <Button
-            title={isEdit ? 'Save changes' : 'Create'}
+            title={isEdit ? 'Save Changes' : 'Create Uniform Label'}
             onPress={handleSave}
             variant="primary"
             loading={saving}

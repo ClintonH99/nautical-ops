@@ -27,7 +27,12 @@ import { User } from '../types';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { DepartmentSelector, PageHeader, EnterToAddHint } from '../components';
+import {
+  DepartmentSelector,
+  PageHeader,
+  EnterToAddHint,
+  PreviewActionButtons,
+} from '../components';
 import {
   getRules,
   saveRules,
@@ -231,7 +236,7 @@ export const WatchDutiesScreen = () => {
   };
 
   const handleRemoveAssignment = (assignmentId: string) => {
-    Alert.alert('Remove assignment', 'Remove this watch assignment?', [
+    Alert.alert('Remove Watch Assignment', 'Remove this watch assignment?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',
@@ -252,12 +257,12 @@ export const WatchDutiesScreen = () => {
     if (!user?.vesselId || !canManage || resettingWeek) return;
 
     Alert.alert(
-      'Reset this week?',
+      'Reset Week Assignments?',
       'This will remove every crew assignment from the displayed week. Duty groups will not be changed.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Reset',
+          text: 'Reset Week',
           style: 'destructive',
           onPress: async () => {
             setResettingWeek(true);
@@ -280,12 +285,12 @@ export const WatchDutiesScreen = () => {
     if (!user?.vesselId || !canManage || resettingDuties) return;
 
     Alert.alert(
-      'Reset duties for all crew?',
+      'Reset Duties for All Crew?',
       'This will untick every duty for every crew member. Duty groups and duty items will not be deleted.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Reset',
+          text: 'Reset Duties',
           style: 'destructive',
           onPress: async () => {
             setResettingDuties(true);
@@ -378,7 +383,7 @@ export const WatchDutiesScreen = () => {
   };
 
   const handleDeleteGroup = (groupId: string, title: string) => {
-    Alert.alert('Delete group', `Delete "${title}" and all its items?`, [
+    Alert.alert('Delete Duty Group', `Delete "${title}" and all its items?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -396,11 +401,12 @@ export const WatchDutiesScreen = () => {
   };
 
   const handleAddItem = async (groupId: string) => {
-    if (!newItemText.trim()) return;
+    const label = newItemText.trim();
+    if (!label) return;
     const group = dutyGroups.find((g) => g.id === groupId);
     const sortOrder = group ? group.items.length : 0;
     try {
-      await addDutyItem(groupId, newItemText.trim(), sortOrder);
+      const itemId = await addDutyItem(groupId, label, sortOrder);
       setDutyGroups((prev) =>
         prev.map((g) =>
           g.id === groupId
@@ -409,8 +415,8 @@ export const WatchDutiesScreen = () => {
                 items: [
                   ...g.items,
                   {
-                    id: `temp-${Date.now()}`,
-                    label: newItemText.trim(),
+                    id: itemId,
+                    label,
                     sortOrder,
                     checked: false,
                   },
@@ -421,14 +427,13 @@ export const WatchDutiesScreen = () => {
       );
       setNewItemText('');
       // Field stays open so several duties can be typed one after another.
-      loadData();
     } catch (e) {
       Alert.alert('Error', 'Failed to add item.');
     }
   };
 
   const handleDeleteItem = (groupId: string, itemId: string) => {
-    Alert.alert('Remove item', 'Remove this duty item?', [
+    Alert.alert('Remove Duty Item', 'Remove this duty item?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',
@@ -503,7 +508,9 @@ export const WatchDutiesScreen = () => {
               accessibilityRole="button"
               accessibilityLabel="Reset all crew assignments for this week"
             >
-              <Text style={styles.resetButtonText}>{resettingWeek ? 'Resetting...' : 'Reset'}</Text>
+              <Text style={styles.resetButtonText}>
+                {resettingWeek ? 'Resetting…' : 'Reset Week'}
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -791,7 +798,7 @@ export const WatchDutiesScreen = () => {
                             { borderColor: themeColors.borderStrong },
                           ]}
                         >
-                          <Text style={{ color: themeColors.textPrimary }}>Close</Text>
+                          <Text style={{ color: themeColors.textPrimary }}>Done</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                           onPress={handleAssignCrew}
@@ -805,7 +812,7 @@ export const WatchDutiesScreen = () => {
                           ]}
                         >
                           <Text style={{ color: '#fff', fontWeight: '600' }}>
-                            {savingAssignment ? 'Assigning...' : 'Assign'}
+                            {savingAssignment ? 'Assigning…' : 'Assign Crew Member'}
                           </Text>
                         </TouchableOpacity>
                       </View>
@@ -833,24 +840,6 @@ export const WatchDutiesScreen = () => {
             >
               Rules
             </Text>
-            {canManage && !editingRules && (
-              <TouchableOpacity
-                onPress={() => {
-                  setRulesDraft(rules);
-                  setEditingRules(true);
-                }}
-              >
-                <Text
-                  style={{
-                    color: themeColors.accent,
-                    fontSize: FONTS.sm,
-                    fontWeight: '600',
-                  }}
-                >
-                  Edit
-                </Text>
-              </TouchableOpacity>
-            )}
           </View>
           {editingRules ? (
             <>
@@ -882,7 +871,7 @@ export const WatchDutiesScreen = () => {
                   style={[styles.primaryButton, { backgroundColor: themeColors.controlSelected }]}
                 >
                   <Text style={{ color: '#fff', fontWeight: '600' }}>
-                    {savingRules ? 'Saving...' : 'Save'}
+                    {savingRules ? 'Saving…' : 'Save Changes'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -916,6 +905,14 @@ export const WatchDutiesScreen = () => {
               No rules set yet.
             </Text>
           )}
+          {canManage && !editingRules ? (
+            <PreviewActionButtons
+              onEdit={() => {
+                setRulesDraft(rules);
+                setEditingRules(true);
+              }}
+            />
+          ) : null}
         </View>
 
         <DepartmentSelector
@@ -939,7 +936,7 @@ export const WatchDutiesScreen = () => {
           {canManage && (
             <TouchableOpacity onPress={openAddGroupModal}>
               <Text style={{ color: themeColors.accent, fontSize: FONTS.sm, fontWeight: '600' }}>
-                + Add group
+                Create Duty Group
               </Text>
             </TouchableOpacity>
           )}
@@ -963,7 +960,7 @@ export const WatchDutiesScreen = () => {
               accessibilityLabel="Reset duties for all crew members"
             >
               <Text style={styles.resetButtonText}>
-                {resettingDuties ? 'Resetting...' : 'Reset'}
+                {resettingDuties ? 'Resetting…' : 'Reset Duties'}
               </Text>
             </TouchableOpacity>
             <Text style={[styles.resetNote, { color: themeColors.textSecondary }]}>
@@ -1093,7 +1090,7 @@ export const WatchDutiesScreen = () => {
                     ]}
                   >
                     <Text style={styles.groupCreateButtonText}>
-                      {savingGroup ? 'Creating...' : 'Create Group'}
+                      {savingGroup ? 'Creating…' : 'Create Duty Group'}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -1163,11 +1160,6 @@ export const WatchDutiesScreen = () => {
                     {DEPT_LABEL[group.department]}
                   </Text>
                 </View>
-                {canManage && expandedGroupIds.has(group.id) && (
-                  <TouchableOpacity onPress={() => handleDeleteGroup(group.id, group.title)}>
-                    <Text style={{ color: '#dc2626', fontSize: FONTS.sm }}>Delete</Text>
-                  </TouchableOpacity>
-                )}
                 <Text style={{ color: themeColors.textSecondary, fontSize: 12 }}>
                   {expandedGroupIds.has(group.id) ? '\u25b2' : '\u25bc'}
                 </Text>
@@ -1257,6 +1249,9 @@ export const WatchDutiesScreen = () => {
                       </Text>
                     </TouchableOpacity>
                   ))}
+                {canManage ? (
+                  <PreviewActionButtons onDelete={() => handleDeleteGroup(group.id, group.title)} />
+                ) : null}
               </>
             )}
           </View>

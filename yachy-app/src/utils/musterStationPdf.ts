@@ -5,7 +5,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import { MusterStationData } from '../services/musterStations';
+import { getMusterStationLocations, type MusterStationData } from '../services/musterStations';
 
 function escapeHtml(s: string): string {
   return String(s ?? '')
@@ -55,8 +55,8 @@ function buildStation(data: MusterStationData, heading?: string): string {
   return (
     '<div class="station">' +
     (heading ? '<h2>' + escapeHtml(heading) + '</h2>' : '') +
-    '<div class="loc"><strong>Muster Station:</strong> ' +
-    escapeHtml(data.musterStation || '-') +
+    '<div class="loc"><strong>Muster Station Locations:</strong> ' +
+    loc(getMusterStationLocations(data)) +
     '</div>' +
     '<div class="loc"><strong>Medical Bags:</strong> ' +
     loc(data.medicalChest || []) +
@@ -92,22 +92,26 @@ async function shareHtmlAsPdf(html: string, filename: string): Promise<void> {
   const newUri = FileSystem.cacheDirectory + filename;
   await FileSystem.moveAsync({ from: uri, to: newUri });
   if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(newUri, { mimeType: 'application/pdf', dialogTitle: 'Save ' + filename });
+    await Sharing.shareAsync(newUri, {
+      mimeType: 'application/pdf',
+      dialogTitle: 'Save ' + filename,
+    });
   }
 }
 
 /** One muster station per document. */
 export async function generateMusterStationPdf(
   data: MusterStationData,
-  filename: string
+  filename: string,
+  title?: string
 ): Promise<void> {
   const html =
     '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' +
     STYLES +
     '</style></head><body>' +
     '<h1>' +
-    escapeHtml(data.vesselName || 'Vessel') +
-    ' Muster Station &amp; Duties</h1>' +
+    escapeHtml(title?.trim() || `${data.vesselName || 'Vessel'} Muster Station & Duties`) +
+    '</h1>' +
     '<p class="subtitle">Generated ' +
     new Date().toISOString().slice(0, 10) +
     '</p>' +

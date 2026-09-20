@@ -124,11 +124,14 @@ export async function addDutyItem(
   groupId: string,
   label: string,
   sortOrder: number
-): Promise<void> {
-  const { error } = await supabase
+): Promise<string> {
+  const { data, error } = await supabase
     .from('watch_duty_items')
-    .insert({ group_id: groupId, label, sort_order: sortOrder });
+    .insert({ group_id: groupId, label, sort_order: sortOrder })
+    .select('id')
+    .single();
   if (error) throw error;
+  return data.id;
 }
 
 export async function deleteDutyItem(itemId: string): Promise<void> {

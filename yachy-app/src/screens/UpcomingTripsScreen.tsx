@@ -124,9 +124,8 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
       checklist,
       trip: trips.find((trip) => trip.id === checklist.tripId),
     }))
-    .filter(
-      (entry): entry is { checklist: PreDepartureChecklist; trip: Trip } =>
-        Boolean(entry.trip && entry.trip.type !== 'YARD_PERIOD' && entry.trip.endDate >= todayStr)
+    .filter((entry): entry is { checklist: PreDepartureChecklist; trip: Trip } =>
+      Boolean(entry.trip && entry.trip.type !== 'YARD_PERIOD' && entry.trip.endDate >= todayStr)
     )
     .sort((a, b) => a.trip.startDate.localeCompare(b.trip.startDate));
 
@@ -163,7 +162,7 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
         title="Upcoming Trips"
         actions={
           <PillButton
-            label="Edit colors"
+            label="Edit Colors"
             onPress={() => navigation.navigate('TripColorSettings')}
           />
         }
@@ -225,14 +224,10 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
                 activeOpacity={0.8}
               >
                 <View style={styles.linkedChecklistContent}>
-                  <Text
-                    style={[styles.linkedChecklistTitle, { color: themeColors.textPrimary }]}
-                  >
+                  <Text style={[styles.linkedChecklistTitle, { color: themeColors.textPrimary }]}>
                     {checklist.title}
                   </Text>
-                  <Text
-                    style={[styles.linkedChecklistTrip, { color: themeColors.textSecondary }]}
-                  >
+                  <Text style={[styles.linkedChecklistTrip, { color: themeColors.textSecondary }]}>
                     {trip.title} · {formatLocalDateString(trip.startDate)} –{' '}
                     {formatLocalDateString(trip.endDate)}
                   </Text>

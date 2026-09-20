@@ -19,7 +19,7 @@ import {
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
-import musterStationsService from '../services/musterStations';
+import musterStationsService, { getMusterStationLocations } from '../services/musterStations';
 import vesselService from '../services/vessel';
 import { Button, LoadingSpinner, PageHeader, ExportButton } from '../components';
 import { generateMusterStationPdf } from '../utils/musterStationPdf';
@@ -76,8 +76,9 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
   const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
   const isEdit = !!musterStationId;
 
+  const [title, setTitle] = useState('');
   const [vesselName, setVesselName] = useState('');
-  const [musterStation, setMusterStation] = useState('');
+  const [musterStationLocations, setMusterStationLocations] = useState<string[]>(['']);
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
 
@@ -92,9 +93,14 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
   useEffect(() => {
     if (!vesselId) return;
     vesselService.getVessel(vesselId).then((vessel) => {
-      if (vessel?.name) setVesselName(vessel.name);
+      if (vessel?.name) {
+        setVesselName(vessel.name);
+        if (!isEdit) {
+          setTitle((current) => current || `${vessel.name} Muster Station and Duties`);
+        }
+      }
     });
-  }, [vesselId]);
+  }, [isEdit, vesselId]);
 
   useEffect(() => {
     if (!musterStationId) {
@@ -106,8 +112,10 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
         const item = await musterStationsService.getById(musterStationId);
         if (item?.data) {
           const d = item.data;
+          setTitle(item.title?.trim() || `${d.vesselName || 'Vessel'} Muster Station and Duties`);
           setVesselName(d.vesselName ?? '');
-          setMusterStation(d.musterStation ?? '');
+          const savedMusterLocations = getMusterStationLocations(d);
+          setMusterStationLocations(savedMusterLocations.length ? savedMusterLocations : ['']);
           setMedicalChest(d.medicalChest?.length ? d.medicalChest : ['']);
           setGrabBag(d.grabBag?.length ? d.grabBag : ['']);
           setGrabBagContents(d.grabBagContents ?? '');
@@ -142,19 +150,55 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
     { ...EMPTY_CREW, roleName: 'Captain' },
   ]);
 
+  const musterStationLocationRefs = useRef<Array<TextInput | null>>([]);
   const medicalChestRefs = useRef<Array<TextInput | null>>([]);
   const grabBagRefs = useRef<Array<TextInput | null>>([]);
   const lifeRingRefs = useRef<Array<TextInput | null>>([]);
+  const pendingLocationFocusRef = useRef<{
+    refs: React.MutableRefObject<Array<TextInput | null>>;
+    index: number;
+  } | null>(null);
   const crewDutyRefs = useRef<Record<string, TextInput | null>>({});
+  const crewFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savingRef = useRef(false);
+
+  useEffect(
+    () => () => {
+      if (crewFocusTimerRef.current) clearTimeout(crewFocusTimerRef.current);
+    },
+    []
+  );
+
+  const shouldAutoFocusLocation = (
+    refs: React.MutableRefObject<Array<TextInput | null>>,
+    index: number
+  ) => {
+    const pending = pendingLocationFocusRef.current;
+    return pending?.refs === refs && pending.index === index;
+  };
+
+  const registerLocationRef = (
+    refs: React.MutableRefObject<Array<TextInput | null>>,
+    index: number,
+    input: TextInput | null
+  ) => {
+    refs.current[index] = input;
+    const pending = pendingLocationFocusRef.current;
+    if (input && pending?.refs === refs && pending.index === index) {
+      pendingLocationFocusRef.current = null;
+      setTimeout(() => {
+        if (refs.current[index] === input) input.focus();
+      }, 50);
+    }
+  };
 
   const addLocation = (
     setter: React.Dispatch<React.SetStateAction<string[]>>,
     refs: React.MutableRefObject<Array<TextInput | null>>,
     newIndex: number
   ) => {
+    pendingLocationFocusRef.current = { refs, index: newIndex };
     setter((previous) => [...previous, '']);
-    requestAnimationFrame(() => refs.current[newIndex]?.focus());
   };
   const removeLocation = (setter: React.Dispatch<React.SetStateAction<string[]>>, i: number) => {
     setter((previous) =>
@@ -187,38 +231,69 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
   const focusNextCrewDuty = (crewIndex: number, field: keyof typeof EMPTY_CREW) => {
     const fieldIndex = CREW_DUTY_FIELDS.indexOf(field);
     const nextField = CREW_DUTY_FIELDS[fieldIndex + 1];
-    if (nextField) crewDutyRefs.current[`${crewIndex}-${nextField}`]?.focus();
+    const nextInputKey = nextField
+      ? `${crewIndex}-${nextField}`
+      : crewMembers[crewIndex + 1]
+        ? `${crewIndex + 1}-roleName`
+        : null;
+    if (crewFocusTimerRef.current) clearTimeout(crewFocusTimerRef.current);
+    if (!nextInputKey) {
+      crewFocusTimerRef.current = setTimeout(() => {
+        Keyboard.dismiss();
+        crewFocusTimerRef.current = null;
+      }, 75);
+      return;
+    }
+    crewFocusTimerRef.current = setTimeout(() => {
+      crewDutyRefs.current[nextInputKey]?.focus();
+      crewFocusTimerRef.current = null;
+    }, 75);
   };
 
-  const buildData = (): MusterStationData => ({
-    vesselName,
-    musterStation,
-    medicalChest: medicalChest.filter(Boolean),
-    grabBag: grabBag.filter(Boolean),
-    grabBagContents,
-    lifeRings: lifeRings.filter(Boolean),
-    emergencySignals,
-    crewMembers: crewMembers.filter((c) => c.roleName.trim()),
-  });
+  const buildData = (): MusterStationData => {
+    const savedMusterLocations = musterStationLocations
+      .map((location) => location.trim())
+      .filter(Boolean);
+
+    return {
+      vesselName,
+      musterStation: savedMusterLocations[0] ?? '',
+      musterStationLocations: savedMusterLocations,
+      medicalChest: medicalChest.filter(Boolean),
+      grabBag: grabBag.filter(Boolean),
+      grabBagContents,
+      lifeRings: lifeRings.filter(Boolean),
+      emergencySignals,
+      crewMembers: crewMembers.filter((c) => c.roleName.trim()),
+    };
+  };
 
   const onExport = async () => {
     const data = buildData();
-    const fn =
-      (vesselName || 'Muster').replace(/[^a-z0-9]/gi, '_') + '_Muster_Station_and_Duties.pdf';
-    await generateMusterStationPdf(data, fn);
+    const exportTitle = title.trim() || `${vesselName || 'Vessel'} Muster Station and Duties`;
+    const fn = exportTitle.replace(/[^a-z0-9]/gi, '_') + '.pdf';
+    await generateMusterStationPdf(data, fn, exportTitle);
   };
 
   const onPublish = async () => {
     if (!vesselId || !isHOD || savingRef.current) return;
+    const publishedTitle = title.trim();
+    if (!publishedTitle) {
+      Alert.alert('Title Required', 'Enter a title for this muster station.');
+      return;
+    }
+    const data = buildData();
+    if (getMusterStationLocations(data).length === 0) {
+      Alert.alert('Location Required', 'Enter at least one muster station location.');
+      return;
+    }
     savingRef.current = true;
     setSaving(true);
-    const data = buildData();
-    const title = `${vesselName || 'Vessel'} Muster Station and Duties`;
     try {
       if (isEdit && musterStationId) {
-        await musterStationsService.update(musterStationId, title, data);
+        await musterStationsService.update(musterStationId, publishedTitle, data);
       } else {
-        await musterStationsService.create(vesselId, title, data, user?.id);
+        await musterStationsService.create(vesselId, publishedTitle, data, user?.id);
       }
       navigation.goBack();
     } catch (e) {
@@ -289,18 +364,59 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
             { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
           ]}
         >
-          Muster station location
+          Title
         </Text>
         <TextInput
           style={[
             styles.input,
             { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
           ]}
-          value={musterStation}
-          onChangeText={setMusterStation}
-          placeholder="e.g. Sundeck"
+          value={title}
+          onChangeText={setTitle}
+          placeholder="e.g. Main Muster Station Plan"
           placeholderTextColor={themeColors.textSecondary}
         />
+        <Text
+          style={[
+            styles.label,
+            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+          ]}
+        >
+          Muster Station Locations
+        </Text>
+        {musterStationLocations.map((location, index) => (
+          <View key={index} style={styles.row}>
+            <TextInput
+              ref={(input) => {
+                registerLocationRef(musterStationLocationRefs, index, input);
+              }}
+              style={[
+                styles.input,
+                styles.flex,
+                { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+              ]}
+              value={location}
+              onChangeText={(value) => setLoc(setMusterStationLocations, index, value)}
+              autoFocus={shouldAutoFocusLocation(musterStationLocationRefs, index)}
+              placeholder="e.g. Sundeck"
+              placeholderTextColor={themeColors.textSecondary}
+            />
+            <TouchableOpacity onPress={() => removeLocation(setMusterStationLocations, index)}>
+              <Text style={styles.remove}>✕</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+        <TouchableOpacity
+          onPress={() =>
+            addLocation(
+              setMusterStationLocations,
+              musterStationLocationRefs,
+              musterStationLocations.length
+            )
+          }
+        >
+          <Text style={styles.add}>+ Add Location</Text>
+        </TouchableOpacity>
         <Text
           style={[
             styles.label,
@@ -313,7 +429,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
           <View key={i} style={styles.row}>
             <TextInput
               ref={(el) => {
-                medicalChestRefs.current[i] = el;
+                registerLocationRef(medicalChestRefs, i, el);
               }}
               style={[
                 styles.input,
@@ -322,6 +438,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
               ]}
               value={loc}
               onChangeText={(v) => setLoc(setMedicalChest, i, v)}
+              autoFocus={shouldAutoFocusLocation(medicalChestRefs, i)}
               placeholder="Location"
               placeholderTextColor={themeColors.textSecondary}
             />
@@ -333,7 +450,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
         <TouchableOpacity
           onPress={() => addLocation(setMedicalChest, medicalChestRefs, medicalChest.length)}
         >
-          <Text style={styles.add}>+ Add location</Text>
+          <Text style={styles.add}>+ Add Location</Text>
         </TouchableOpacity>
 
         <Text
@@ -348,7 +465,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
           <View key={i} style={styles.row}>
             <TextInput
               ref={(el) => {
-                grabBagRefs.current[i] = el;
+                registerLocationRef(grabBagRefs, i, el);
               }}
               style={[
                 styles.input,
@@ -357,6 +474,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
               ]}
               value={loc}
               onChangeText={(v) => setLoc(setGrabBag, i, v)}
+              autoFocus={shouldAutoFocusLocation(grabBagRefs, i)}
               placeholder="Location"
               placeholderTextColor={themeColors.textSecondary}
             />
@@ -366,7 +484,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
           </View>
         ))}
         <TouchableOpacity onPress={() => addLocation(setGrabBag, grabBagRefs, grabBag.length)}>
-          <Text style={styles.add}>+ Add location</Text>
+          <Text style={styles.add}>+ Add Location</Text>
         </TouchableOpacity>
 
         <Text
@@ -402,7 +520,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
           <View key={i} style={styles.row}>
             <TextInput
               ref={(el) => {
-                lifeRingRefs.current[i] = el;
+                registerLocationRef(lifeRingRefs, i, el);
               }}
               style={[
                 styles.input,
@@ -411,6 +529,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
               ]}
               value={loc}
               onChangeText={(v) => setLoc(setLifeRings, i, v)}
+              autoFocus={shouldAutoFocusLocation(lifeRingRefs, i)}
               placeholder="Location"
               placeholderTextColor={themeColors.textSecondary}
             />
@@ -420,7 +539,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
           </View>
         ))}
         <TouchableOpacity onPress={() => addLocation(setLifeRings, lifeRingRefs, lifeRings.length)}>
-          <Text style={styles.add}>+ Add location</Text>
+          <Text style={styles.add}>+ Add Location</Text>
         </TouchableOpacity>
 
         <Text style={[styles.section, { color: themeColors.textPrimary }]}>Emergency signals</Text>
@@ -464,7 +583,10 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
                 placeholder="Role name"
                 placeholderTextColor={themeColors.textSecondary}
                 returnKeyType="next"
-                submitBehavior="submit"
+                submitBehavior="blurAndSubmit"
+                onKeyPress={({ nativeEvent }) => {
+                  if (nativeEvent.key === 'Enter') focusNextCrewDuty(i, 'roleName');
+                }}
                 onSubmitEditing={() => focusNextCrewDuty(i, 'roleName')}
               />
               <TouchableOpacity onPress={() => removeCrew(i)}>
@@ -486,20 +608,23 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
                 onChangeText={(v) => setCrew(i, f, v)}
                 placeholder={CREW_DUTY_LABELS[f]}
                 placeholderTextColor={themeColors.textSecondary}
-                returnKeyType={f === 'medical' ? 'done' : 'next'}
-                submitBehavior={f === 'medical' ? 'blurAndSubmit' : 'submit'}
-                onSubmitEditing={f === 'medical' ? Keyboard.dismiss : () => focusNextCrewDuty(i, f)}
+                returnKeyType={f === 'medical' && i === crewMembers.length - 1 ? 'done' : 'next'}
+                submitBehavior="blurAndSubmit"
+                onKeyPress={({ nativeEvent }) => {
+                  if (nativeEvent.key === 'Enter') focusNextCrewDuty(i, f);
+                }}
+                onSubmitEditing={() => focusNextCrewDuty(i, f)}
               />
             ))}
           </View>
         ))}
         <TouchableOpacity onPress={addCrew}>
-          <Text style={styles.add}>+ Add crew member</Text>
+          <Text style={styles.add}>+ Add Crew Member</Text>
         </TouchableOpacity>
 
         <View style={styles.actions}>
           <Button
-            title={isEdit ? 'Save Changes' : 'Publish'}
+            title={isEdit ? 'Save Changes' : 'Publish Muster Station'}
             onPress={onPublish}
             variant="primary"
             loading={saving}

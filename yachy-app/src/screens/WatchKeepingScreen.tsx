@@ -22,20 +22,19 @@ import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { PageHeader } from '../components';
+import { PageHeader, PreviewActionButtons } from '../components';
 import watchKeepingService, { WatchKeepingRules } from '../services/watchKeeping';
 
-
 const WATCH_KEEPING_INFO = {
-            title: 'Watch Keeping',
-            description: 'Manage watch schedules and timetables.',
-            features: [
-              'Build watch timetables for the crew',
-              'Assign watch periods to crew members',
-              'Keep bridge coverage organized',
-              'Adjust schedules as needed',
-            ],
-          };
+  title: 'Watch Keeping',
+  description: 'Manage watch schedules and timetables.',
+  features: [
+    'Build watch timetables for the crew',
+    'Assign watch periods to crew members',
+    'Keep bridge coverage organized',
+    'Adjust schedules as needed',
+  ],
+};
 
 export const WatchKeepingScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -114,18 +113,6 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
               <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
                 Watch Keeping Rules
               </Text>
-              {isHOD && (
-                <TouchableOpacity onPress={openEditModal} style={styles.editRulesBtn}>
-                  <Text
-                    style={[
-                      styles.editRulesBtnText,
-                      { color: themeColors.isDark ? COLORS.white : COLORS.primary },
-                    ]}
-                  >
-                    Edit
-                  </Text>
-                </TouchableOpacity>
-              )}
             </View>
             {loadingRules ? (
               <ActivityIndicator size="small" color={COLORS.primary} style={styles.rulesLoader} />
@@ -144,6 +131,7 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
                 )}
               </View>
             )}
+            {isHOD && !loadingRules ? <PreviewActionButtons onEdit={openEditModal} /> : null}
           </View>
         </View>
 
@@ -154,7 +142,9 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
         >
           <Text style={styles.cardIcon}>📋</Text>
           <View style={styles.cardLabelWrap}>
-            <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>Watch Schedule</Text>
+            <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>
+              Watch Schedule
+            </Text>
             <Text style={[styles.cardHint, { color: themeColors.textSecondary }]}>
               View published watch timetables
             </Text>
@@ -168,9 +158,11 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
         >
           <Text style={styles.cardIcon}>➕</Text>
           <View style={styles.cardLabelWrap}>
-            <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>Create</Text>
+            <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>
+              Create Watch Schedule
+            </Text>
             <Text style={[styles.cardHint, { color: themeColors.textSecondary }]}>
-              Create and publish a new watch timetable
+              Create and publish a new watch schedule
             </Text>
           </View>
         </TouchableOpacity>
@@ -222,7 +214,7 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
                     onPress={handleSaveRules}
                     disabled={saving}
                   >
-                    <Text style={styles.modalSaveText}>{saving ? 'Saving...' : 'Save'}</Text>
+                    <Text style={styles.modalSaveText}>{saving ? 'Saving…' : 'Save Changes'}</Text>
                   </TouchableOpacity>
                 </View>
               </View>

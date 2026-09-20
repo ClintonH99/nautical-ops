@@ -117,7 +117,7 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
 
   useEffect(() => {
     navigation.setOptions({
-      title: logId ? 'Edit Log' : 'New Maintenance Log',
+      title: logId ? 'Edit Maintenance Log' : 'Create Maintenance Log',
     });
   }, [navigation, logId]);
 
@@ -417,7 +417,7 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={0}
     >
-      <PageHeader title="Log" />
+      <PageHeader title={isEdit ? 'Edit Maintenance Log' : 'Create Maintenance Log'} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -501,7 +501,7 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
                   setCreateNewVisible(true);
                 }}
               >
-                <Text style={styles.createNewBtnText}>Create New</Text>
+                <Text style={styles.createNewBtnText}>Add Equipment</Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
@@ -523,7 +523,7 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
               onStartShouldSetResponder={() => true}
             >
               <Text style={[styles.createNewTitle, { color: themeColors.textPrimary }]}>
-                New Equipment
+                Add Equipment
               </Text>
               <TextInput
                 style={[
@@ -539,7 +539,7 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
               />
               <View style={styles.createNewActions}>
                 <Button
-                  title="Add"
+                  title="Add Equipment"
                   onPress={handleSaveNewEquipment}
                   variant="primary"
                   style={styles.createNewAddBtn}
@@ -641,7 +641,7 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
                   setAddNewLocationVisible(true);
                 }}
               >
-                <Text style={styles.createNewBtnText}>Add New Location</Text>
+                <Text style={styles.createNewBtnText}>Add Location</Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
@@ -663,7 +663,7 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
               onStartShouldSetResponder={() => true}
             >
               <Text style={[styles.createNewTitle, { color: themeColors.textPrimary }]}>
-                New Location
+                Add Location
               </Text>
               <TextInput
                 style={[
@@ -679,7 +679,7 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
               />
               <View style={styles.createNewActions}>
                 <Button
-                  title="Add"
+                  title="Add Location"
                   onPress={handleSaveNewLocation}
                   variant="primary"
                   style={styles.createNewAddBtn}
@@ -833,7 +833,7 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
         />
         <View style={styles.actions}>
           <Button
-            title={isEdit ? 'Update log' : 'Save log'}
+            title={isEdit ? 'Save Changes' : 'Create Maintenance Log'}
             onPress={handleSave}
             variant="primary"
             loading={saving}
