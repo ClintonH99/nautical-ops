@@ -13,10 +13,10 @@ import {
   StatusBar,
   Image,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../components';
-import { FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
+import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 
 const CAPTAIN_BENEFITS = [
@@ -31,7 +31,7 @@ const CREW_BENEFITS = [
 ];
 // React Native resolves bundled bitmap assets through a static require.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const APP_ICON = require('../../assets/icon.png');
+const APP_ICON = require('../../assets/icon-playstore.png');
 const MIN_CONTENT_TOP_PADDING = 52;
 const MIN_BACK_BUTTON_TOP = 48;
 
@@ -64,8 +64,13 @@ export const CreateAccountChoiceScreen = ({ navigation }: any) => {
         </TouchableOpacity>
 
         <View style={styles.brand}>
-          <Image source={APP_ICON} style={styles.appIcon} />
-          <Text style={[styles.appName, { color: themeColors.accent }]}>Nautical Ops</Text>
+          <Image
+            source={APP_ICON}
+            style={styles.appIcon}
+            resizeMode="contain"
+            accessibilityIgnoresInvertColors
+          />
+          <Text style={[styles.appName, { color: themeColors.textPrimary }]}>Nautical Ops</Text>
         </View>
 
         <Text style={[styles.title, { color: themeColors.textPrimary }]}>Welcome aboard</Text>
@@ -86,10 +91,10 @@ export const CreateAccountChoiceScreen = ({ navigation }: any) => {
                 style={[
                   styles.iconBadge,
                   styles.iconBadgeUpdated,
-                  { backgroundColor: themeColors.accentSoft },
+                  { backgroundColor: COLORS.primary },
                 ]}
               >
-                <Ionicons name="boat-outline" size={36} color={themeColors.accent} />
+                <MaterialCommunityIcons name="ship-wheel" size={38} color={COLORS.white} />
               </View>
               <View style={styles.roleText}>
                 <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>
@@ -139,10 +144,10 @@ export const CreateAccountChoiceScreen = ({ navigation }: any) => {
                 style={[
                   styles.iconBadge,
                   styles.iconBadgeUpdated,
-                  { backgroundColor: themeColors.accentSoft },
+                  { backgroundColor: COLORS.primary },
                 ]}
               >
-                <Ionicons name="people-outline" size={36} color={themeColors.accent} />
+                <Ionicons name="people-outline" size={36} color={COLORS.white} />
               </View>
               <View style={styles.roleText}>
                 <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>
@@ -248,19 +253,21 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   brand: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+    gap: SPACING.sm,
     marginTop: SPACING.sm,
     marginBottom: SPACING.lg,
   },
   appIcon: {
-    width: 62,
-    height: 62,
-    borderRadius: BORDER_RADIUS.lg,
-    marginBottom: SPACING.xs,
+    width: 56,
+    height: 56,
+    borderRadius: BORDER_RADIUS.md,
   },
   appName: {
-    fontSize: FONTS.lg,
-    fontWeight: '700',
+    fontSize: FONTS.xl,
+    fontWeight: '800',
   },
   roleHeader: {
     flexDirection: 'row',
