@@ -16,6 +16,7 @@ import {
   Modal,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from 'react-native-calendars';
 import { useFocusEffect } from '@react-navigation/native';
 import { Button } from '../components';
@@ -145,14 +146,26 @@ function getMarkedDatesFromCrewLeave(
 
 const DEPARTMENTS: Department[] = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 
-/** Home categories: Tasks, Shopping, Inventory in a row; Vessel & Crew Safety as log button below */
+type QuickAccessItem = {
+  key: string;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  nav: string;
+};
+
 const HOME_CATEGORIES = [
-  { key: 'tasks', label: 'Tasks', icon: '📝', nav: 'Tasks' as const },
-  { key: 'shipyard', label: 'Shipyard List', icon: '🛠️', nav: 'YardPeriodJobs' as const },
-  { key: 'shopping', label: 'Shopping', icon: '🛒', nav: 'ShoppingListCategory' as const },
-  { key: 'inventory', label: 'Inventory', icon: '📦', nav: 'Inventory' as const },
-  { key: 'notepad', label: 'Notepad', icon: '🗒️', nav: 'Notepad' as const },
-];
+  { key: 'tasks', label: 'Tasks', icon: 'checkbox-outline', nav: 'Tasks' },
+  { key: 'shipyard', label: 'Shipyard List', icon: 'construct-outline', nav: 'YardPeriodJobs' },
+  { key: 'shopping', label: 'Shopping', icon: 'cart-outline', nav: 'ShoppingListCategory' },
+  { key: 'inventory', label: 'Inventory', icon: 'cube-outline', nav: 'Inventory' },
+  { key: 'notepad', label: 'Notepad', icon: 'document-text-outline', nav: 'Notepad' },
+  {
+    key: 'safety',
+    label: 'Vessel & Crew Safety',
+    icon: 'help-buoy-outline',
+    nav: 'VesselCrewSafety',
+  },
+] satisfies QuickAccessItem[];
 
 /** Trips calendar accent – ocean teal */
 const CALENDAR_ACCENT = '#0d9488';
@@ -402,24 +415,14 @@ export const HomeScreen = ({ navigation }: any) => {
                         styles.calendarModeBtn,
                         {
                           borderColor:
-                            calendarMode === 'trips' ? CALENDAR_ACCENT : themeColors.surfaceAlt,
+                            calendarMode === 'trips' ? COLORS.primary : themeColors.surfaceAlt,
                           backgroundColor: themeColors.surface,
                         },
                       ]}
                       onPress={() => setCalendarMode('trips')}
                       activeOpacity={0.8}
                     >
-                      <Text
-                        style={[
-                          styles.calendarModeBtnText,
-                          {
-                            color:
-                              calendarMode === 'trips'
-                                ? CALENDAR_ACCENT
-                                : themeColors.textSecondary,
-                          },
-                        ]}
-                      >
+                      <Text style={[styles.calendarModeBtnText, { color: COLORS.primary }]}>
                         Trips
                       </Text>
                     </TouchableOpacity>
@@ -428,26 +431,14 @@ export const HomeScreen = ({ navigation }: any) => {
                         styles.calendarModeBtn,
                         {
                           borderColor:
-                            calendarMode === 'yardPeriod'
-                              ? CALENDAR_ACCENT
-                              : themeColors.surfaceAlt,
+                            calendarMode === 'yardPeriod' ? COLORS.primary : themeColors.surfaceAlt,
                           backgroundColor: themeColors.surface,
                         },
                       ]}
                       onPress={() => setCalendarMode('yardPeriod')}
                       activeOpacity={0.8}
                     >
-                      <Text
-                        style={[
-                          styles.calendarModeBtnText,
-                          {
-                            color:
-                              calendarMode === 'yardPeriod'
-                                ? CALENDAR_ACCENT
-                                : themeColors.textSecondary,
-                          },
-                        ]}
-                      >
+                      <Text style={[styles.calendarModeBtnText, { color: COLORS.primary }]}>
                         Yard Period
                       </Text>
                     </TouchableOpacity>
@@ -456,31 +447,18 @@ export const HomeScreen = ({ navigation }: any) => {
                         styles.calendarModeBtn,
                         {
                           borderColor:
-                            calendarMode === 'crewLeave' ? CALENDAR_ACCENT : themeColors.surfaceAlt,
+                            calendarMode === 'crewLeave' ? COLORS.primary : themeColors.surfaceAlt,
                           backgroundColor: themeColors.surface,
                         },
                       ]}
                       onPress={() => setCalendarMode('crewLeave')}
                       activeOpacity={0.8}
                     >
-                      <Text
-                        style={[
-                          styles.calendarModeBtnText,
-                          {
-                            color:
-                              calendarMode === 'crewLeave'
-                                ? CALENDAR_ACCENT
-                                : themeColors.textSecondary,
-                          },
-                        ]}
-                      >
+                      <Text style={[styles.calendarModeBtnText, { color: COLORS.primary }]}>
                         Crew Leave
                       </Text>
                     </TouchableOpacity>
                   </View>
-                  <View
-                    style={[styles.tripsCalendarAccent, { backgroundColor: CALENDAR_ACCENT }]}
-                  />
                 </View>
                 <View style={styles.tripsCalendarBody}>
                   {tripsLoading ? (
@@ -583,8 +561,8 @@ export const HomeScreen = ({ navigation }: any) => {
                   style={[
                     styles.seeTripsButton,
                     {
-                      backgroundColor: themeColors.surfaceAlt,
-                      borderTopColor: themeColors.surfaceAlt,
+                      backgroundColor: COLORS.primary,
+                      borderTopColor: COLORS.primary,
                     },
                   ]}
                   onPress={() =>
@@ -598,68 +576,52 @@ export const HomeScreen = ({ navigation }: any) => {
                   }
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.seeTripsButtonText, { color: CALENDAR_ACCENT }]}>
+                  <Text style={[styles.seeTripsButtonText, { color: COLORS.white }]}>
                     {calendarMode === 'trips'
                       ? 'See trips'
                       : calendarMode === 'yardPeriod'
                         ? 'See Shipyard List'
                         : 'See crew leave'}
                   </Text>
-                  <Text style={[styles.seeTripsArrow, { color: CALENDAR_ACCENT }]}>›</Text>
+                  <Text style={[styles.seeTripsArrow, { color: COLORS.white }]}>›</Text>
                 </TouchableOpacity>
               </View>
 
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
+                  <Text style={[styles.sectionTitle, { color: themeColors.accent }]}>
                     Quick Access
                   </Text>
-                  <TouchableOpacity onPress={() => navigation.navigate('Categories')}>
-                    <Text style={[styles.seeAll, { color: themeColors.textSecondary }]}>
-                      See all
-                    </Text>
-                  </TouchableOpacity>
                 </View>
                 <View style={styles.quickAccessStack}>
                   {HOME_CATEGORIES.map((cat) => (
                     <TouchableOpacity
                       key={cat.key}
-                      style={[styles.quickAccessCard, { backgroundColor: themeColors.surface }]}
+                      style={[
+                        styles.quickAccessCard,
+                        {
+                          backgroundColor: themeColors.surface,
+                          borderColor: themeColors.border,
+                        },
+                      ]}
                       onPress={() => navigation.navigate(cat.nav)}
                       activeOpacity={0.8}
                     >
-                      <Text style={styles.quickAccessCardIcon}>{cat.icon}</Text>
+                      <View
+                        style={[
+                          styles.quickAccessCardIcon,
+                          { backgroundColor: themeColors.accentSoft },
+                        ]}
+                      >
+                        <Ionicons name={cat.icon} size={24} color={themeColors.accent} />
+                      </View>
                       <Text
                         style={[styles.quickAccessCardLabel, { color: themeColors.textPrimary }]}
-                        numberOfLines={1}
                       >
                         {cat.label}
                       </Text>
-                      <Text
-                        style={[
-                          styles.quickAccessCardChevron,
-                          { color: themeColors.textSecondary },
-                        ]}
-                      >
-                        ›
-                      </Text>
                     </TouchableOpacity>
                   ))}
-                  <TouchableOpacity
-                    style={[styles.quickAccessCard, { backgroundColor: themeColors.surface }]}
-                    onPress={() => navigation.navigate('VesselCrewSafety')}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.quickAccessCardIcon}>🦺</Text>
-                    <Text style={[styles.quickAccessCardLabel, { color: themeColors.textPrimary }]}>
-                      Vessel & Crew Safety
-                    </Text>
-                    <Text
-                      style={[styles.quickAccessCardChevron, { color: themeColors.textSecondary }]}
-                    >
-                      ›
-                    </Text>
-                  </TouchableOpacity>
                 </View>
               </View>
             </>
@@ -764,12 +726,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.3,
   },
-  tripsCalendarAccent: {
-    width: 40,
-    height: 3,
-    marginTop: 6,
-    borderRadius: 2,
-  },
   tripsCalendarBody: {
     paddingHorizontal: SPACING.sm,
     paddingBottom: SPACING.sm,
@@ -811,6 +767,9 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.lg,
     borderTopWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    marginHorizontal: SPACING.md,
+    marginBottom: SPACING.md,
     gap: SPACING.sm,
   },
   seeTripsButtonText: {
@@ -836,22 +795,27 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  seeAll: { fontSize: FONTS.sm, fontWeight: '600', color: COLORS.primary },
   quickAccessStack: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: SPACING.md,
   },
   quickAccessCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-    minHeight: 48,
-    ...SHADOWS.sm,
+    width: '47.5%',
+    minHeight: 128,
+    justifyContent: 'space-between',
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
   },
-  quickAccessCardIcon: { fontSize: 20, marginRight: SPACING.sm },
-  quickAccessCardLabel: { flex: 1, fontSize: FONTS.base, fontWeight: '600' },
-  quickAccessCardChevron: { fontSize: 16, fontWeight: '300' },
+  quickAccessCardIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickAccessCardLabel: { fontSize: FONTS.base, fontWeight: '700', lineHeight: 21 },
   categoryTile: {
     width: CATEGORY_SIZE,
     height: CATEGORY_SIZE,
