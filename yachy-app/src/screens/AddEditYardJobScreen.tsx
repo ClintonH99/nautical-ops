@@ -14,6 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from 'react-native-calendars';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
@@ -237,155 +238,219 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="always"
       >
-        <DepartmentSelector
-          value={department}
-          onChange={(value) => value && setDepartment(value)}
-        />
-        <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
-          Which department is this job for?
-        </Text>
-        <Input
-          label="Title"
-          value={jobTitle}
-          onChangeText={setJobTitle}
-          placeholder="e.g. Starboard passerelle motor"
-          autoCapitalize="sentences"
-        />
-        <Input
-          label="Defect / damage / improvements needed"
-          value={defectDetails}
-          onChangeText={setDefectDetails}
-          placeholder="What is wrong, or what needs improving?"
-          multiline
-          numberOfLines={3}
-        />
-        <Input
-          label="Job description"
-          value={jobDescription}
-          onChangeText={setJobDescription}
-          placeholder="Details of the work required..."
-          multiline
-          numberOfLines={3}
-        />
-        <Input
-          label="Location of defect / damage"
-          value={defectLocation}
-          onChangeText={setDefectLocation}
-          placeholder="e.g. Starboard side, mid-deck"
-        />
-        <Input
-          label="Equipment or serial number of part (optional)"
-          value={equipmentSerial}
-          onChangeText={setEquipmentSerial}
-          placeholder="e.g. BESENZONI PA284 / SN 44219"
-        />
-        <Text style={[styles.label, { color: themeColors.textPrimary }]}>Urgency / Priority</Text>
-        <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
-          How urgent is this job?
-        </Text>
-        <View style={styles.priorityRow}>
-          {(['GREEN', 'YELLOW', 'RED'] as YardJobPriority[]).map((p) => {
-            const isSelected = priority === p;
-            const chipColor =
-              p === 'GREEN' ? COLORS.success : p === 'YELLOW' ? COLORS.warning : COLORS.danger;
-            return (
-              <TouchableOpacity
-                key={p}
-                style={[
-                  styles.priorityChip,
-                  {
-                    borderColor: chipColor,
-                    borderWidth: isSelected ? 3 : 2,
-                    backgroundColor: isSelected ? chipColor : themeColors.surface,
-                  },
-                ]}
-                onPress={() => setPriority(p)}
-                activeOpacity={0.7}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <View
-                  style={[
-                    styles.priorityDot,
-                    {
-                      backgroundColor:
-                        p === 'GREEN'
-                          ? COLORS.success
-                          : p === 'YELLOW'
-                            ? COLORS.warning
-                            : COLORS.danger,
-                    },
-                  ]}
-                />
-                <Text
-                  style={[
-                    styles.priorityChipText,
-                    { color: isSelected ? COLORS.white : themeColors.textPrimary },
-                    isSelected && { fontWeight: '700' },
-                  ]}
-                >
-                  {p === 'GREEN' ? 'Low' : p === 'YELLOW' ? 'Medium' : 'High'}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-        <Input
-          label="Yard location"
-          value={yardLocation}
-          onChangeText={setYardLocation}
-          placeholder="e.g. Palma Shipyard, Dock 7"
-        />
-        <Input
-          label="Contractor / Company name"
-          value={contractorCompanyName}
-          onChangeText={setContractorCompanyName}
-          placeholder="e.g. Marine Services Ltd"
-        />
-        <Input
-          label="Contact details"
-          value={contactDetails}
-          onChangeText={setContactDetails}
-          placeholder="Phone, email, or other contact info"
-        />
-        <Text style={[styles.label, { color: themeColors.textPrimary }]}>Job dates</Text>
-        <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
-          {!startDate
-            ? 'Tap the first day of this job'
-            : dateSelectionStep === 'end'
-              ? 'Now tap the final day of this job'
-              : `${formatLocalDateString(startDate)} – ${formatLocalDateString(endDate ?? startDate)}`}
-        </Text>
         <View
           style={[
-            styles.calendarWrap,
-            { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border },
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
           ]}
         >
-          <Calendar
-            current={startDate || toYYYYMMDD(new Date())}
-            minDate={isEdit ? undefined : toYYYYMMDD(new Date())}
-            markedDates={markedDates}
-            markingType="period"
-            onDayPress={({ dateString }) => handleDatePress(dateString)}
-            theme={calendarTheme}
-            hideExtraDays
-            hideArrows={false}
+          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Job details</Text>
+          <DepartmentSelector
+            value={department}
+            onChange={(value) => value && setDepartment(value)}
+          />
+          <Input
+            label="Title"
+            value={jobTitle}
+            onChangeText={setJobTitle}
+            placeholder="e.g. Starboard passerelle motor"
+            autoCapitalize="sentences"
+          />
+          <Input
+            label="Defect, damage or improvement"
+            value={defectDetails}
+            onChangeText={setDefectDetails}
+            placeholder="What is wrong, or what needs improving?"
+            multiline
+            numberOfLines={3}
+          />
+          <Input
+            label="Job description"
+            value={jobDescription}
+            onChangeText={setJobDescription}
+            placeholder="Details of the work required..."
+            multiline
+            numberOfLines={3}
+          />
+          <Input
+            label="Location of defect or damage"
+            value={defectLocation}
+            onChangeText={setDefectLocation}
+            placeholder="e.g. Starboard side, mid-deck"
+          />
+          <Input
+            label="Equipment or serial number (optional)"
+            value={equipmentSerial}
+            onChangeText={setEquipmentSerial}
+            placeholder="e.g. BESENZONI PA284 / SN 44219"
           />
         </View>
-        {startDate && (
-          <TouchableOpacity
-            style={styles.clearDate}
-            onPress={() => {
-              setStartDate(null);
-              setEndDate(null);
-              setDateSelectionStep('start');
-            }}
-          >
-            <Text style={[styles.clearDateText, { color: themeColors.textSecondary }]}>
-              Clear dates
+
+        <View
+          style={[
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
+          <View style={styles.sectionHeader}>
+            <Text
+              style={[
+                styles.sectionTitle,
+                styles.sectionTitleInHeader,
+                { color: themeColors.textPrimary },
+              ]}
+            >
+              Priority
             </Text>
-          </TouchableOpacity>
-        )}
+            <Text style={[styles.sectionMeta, { color: themeColors.textSecondary }]}>
+              {priority === 'GREEN'
+                ? 'Low priority'
+                : priority === 'YELLOW'
+                  ? 'Medium priority'
+                  : 'High priority'}
+            </Text>
+          </View>
+          <View style={styles.priorityRow}>
+            {(['GREEN', 'YELLOW', 'RED'] as YardJobPriority[]).map((p) => {
+              const isSelected = priority === p;
+              const chipColor =
+                p === 'GREEN' ? COLORS.success : p === 'YELLOW' ? COLORS.warning : COLORS.danger;
+              return (
+                <TouchableOpacity
+                  key={p}
+                  style={[
+                    styles.priorityChip,
+                    {
+                      borderColor: isSelected ? themeColors.controlSelected : themeColors.border,
+                      backgroundColor: isSelected
+                        ? themeColors.controlSelected
+                        : themeColors.surface,
+                    },
+                  ]}
+                  onPress={() => setPriority(p)}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <View style={[styles.priorityDot, { backgroundColor: chipColor }]} />
+                  <Text
+                    style={[
+                      styles.priorityChipText,
+                      {
+                        color: isSelected ? themeColors.textOnAccent : themeColors.textPrimary,
+                      },
+                    ]}
+                  >
+                    {p === 'GREEN' ? 'Low' : p === 'YELLOW' ? 'Medium' : 'High'}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        <View
+          style={[
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+            Yard and contractor
+          </Text>
+          <Input
+            label="Yard location"
+            value={yardLocation}
+            onChangeText={setYardLocation}
+            placeholder="e.g. Palma Shipyard, Dock 7"
+          />
+          <Input
+            label="Contractor or company name"
+            value={contractorCompanyName}
+            onChangeText={setContractorCompanyName}
+            placeholder="e.g. Marine Services Ltd"
+          />
+          <Input
+            label="Contact details"
+            value={contactDetails}
+            onChangeText={setContactDetails}
+            placeholder="Phone, email, or other contact info"
+          />
+        </View>
+
+        <View
+          style={[
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
+          <View style={styles.sectionHeader}>
+            <Text
+              style={[
+                styles.sectionTitle,
+                styles.sectionTitleInHeader,
+                { color: themeColors.textPrimary },
+              ]}
+            >
+              Job dates
+            </Text>
+            {startDate && (
+              <TouchableOpacity
+                style={styles.clearDate}
+                onPress={() => {
+                  setStartDate(null);
+                  setEndDate(null);
+                  setDateSelectionStep('start');
+                }}
+              >
+                <Text style={[styles.clearDateText, { color: themeColors.accent }]}>Clear</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {(!startDate || dateSelectionStep === 'end') && (
+            <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
+              {!startDate ? 'Tap the first day of this job' : 'Now tap the final day of this job'}
+            </Text>
+          )}
+          {startDate && dateSelectionStep === 'start' && (
+            <View
+              style={[
+                styles.dateSummary,
+                { backgroundColor: themeColors.control, borderColor: themeColors.border },
+              ]}
+            >
+              <View style={styles.dateValue}>
+                <Text style={[styles.dateLabel, { color: themeColors.textSecondary }]}>START</Text>
+                <Text style={[styles.dateText, { color: themeColors.textPrimary }]}>
+                  {formatLocalDateString(startDate)}
+                </Text>
+              </View>
+              <Ionicons name="arrow-forward" size={20} color={themeColors.accent} />
+              <View style={[styles.dateValue, styles.endDateValue]}>
+                <Text style={[styles.dateLabel, { color: themeColors.textSecondary }]}>END</Text>
+                <Text style={[styles.dateText, { color: themeColors.textPrimary }]}>
+                  {formatLocalDateString(endDate ?? startDate)}
+                </Text>
+              </View>
+            </View>
+          )}
+          <View
+            style={[
+              styles.calendarWrap,
+              { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border },
+            ]}
+          >
+            <Calendar
+              current={startDate || toYYYYMMDD(new Date())}
+              minDate={isEdit ? undefined : toYYYYMMDD(new Date())}
+              markedDates={markedDates}
+              markingType="period"
+              onDayPress={({ dateString }) => handleDatePress(dateString)}
+              theme={calendarTheme}
+              hideExtraDays
+              hideArrows={false}
+            />
+          </View>
+        </View>
         <View style={styles.actions}>
           <Button
             title={isEdit ? 'Save Changes' : 'Create Job'}
@@ -418,6 +483,7 @@ const styles = StyleSheet.create({
   content: {
     padding: SPACING.lg,
     paddingBottom: SIZES.bottomScrollPadding,
+    gap: SPACING.md,
   },
   center: {
     flex: 1,
@@ -429,31 +495,71 @@ const styles = StyleSheet.create({
     fontSize: FONTS.base,
     textAlign: 'center',
   },
-  label: {
+  formSection: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.lg,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  sectionTitle: {
+    fontSize: FONTS.lg,
+    fontWeight: '700',
+    marginBottom: SPACING.md,
+  },
+  sectionTitleInHeader: {
+    marginBottom: 0,
+  },
+  sectionMeta: {
+    flexShrink: 1,
     fontSize: FONTS.sm,
-    fontWeight: '600',
-    marginBottom: SPACING.xs,
-    marginTop: SPACING.md,
+    textAlign: 'right',
   },
   hint: {
     fontSize: FONTS.sm,
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.md,
   },
   calendarWrap: {
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.sm,
-    marginBottom: SPACING.sm,
     borderWidth: 1,
   },
   clearDate: {
-    alignSelf: 'flex-start',
     paddingVertical: SPACING.xs,
-    paddingHorizontal: SPACING.sm,
-    marginBottom: SPACING.lg,
+    paddingLeft: SPACING.sm,
   },
   clearDateText: {
     fontSize: FONTS.sm,
-    color: COLORS.danger,
+    fontWeight: '700',
+  },
+  dateSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    marginBottom: SPACING.md,
+    gap: SPACING.sm,
+  },
+  dateValue: {
+    flex: 1,
+  },
+  endDateValue: {
+    alignItems: 'flex-end',
+  },
+  dateLabel: {
+    fontSize: FONTS.xs,
+    fontWeight: '700',
+  },
+  dateText: {
+    fontSize: FONTS.sm,
+    fontWeight: '600',
   },
   actions: {
     marginTop: SPACING.md,
@@ -466,58 +572,9 @@ const styles = StyleSheet.create({
   cancelText: {
     fontSize: FONTS.base,
   },
-  dropdown: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: SPACING.lg,
-  },
-  dropdownText: {
-    fontSize: FONTS.base,
-    fontWeight: '500',
-  },
-  dropdownChevron: {
-    fontSize: 10,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.xl,
-  },
-  modalBox: {
-    borderRadius: BORDER_RADIUS.lg,
-    overflow: 'hidden',
-    width: '100%',
-    maxWidth: 320,
-  },
-  modalItem: {
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  modalItemSelected: {
-    backgroundColor: COLORS.primaryLight + '22',
-  },
-  modalItemText: {
-    fontSize: FONTS.base,
-    fontWeight: '500',
-  },
-  modalItemTextSelected: {
-    color: COLORS.primary,
-    fontWeight: '700',
-  },
   priorityRow: {
     flexDirection: 'row',
-    gap: SPACING.md,
-    marginBottom: SPACING.lg,
+    gap: SPACING.sm,
   },
   priorityChip: {
     flex: 1,
@@ -529,7 +586,7 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.sm,
     borderRadius: BORDER_RADIUS.md,
-    borderWidth: 2,
+    borderWidth: 1,
   },
   priorityDot: {
     width: 10,
@@ -538,6 +595,6 @@ const styles = StyleSheet.create({
   },
   priorityChipText: {
     fontSize: FONTS.sm,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });
