@@ -255,63 +255,74 @@ export const CrewLeaveScreen = ({ navigation }: any) => {
   const pickerOptions = pickerMode === 'status' ? STATUS_OPTIONS : TYPE_OPTIONS;
 
   const filterHeader = (
-    <View
-      style={[
-        styles.filterPanel,
-        { backgroundColor: themeColors.surface, borderColor: themeColors.border },
-      ]}
-    >
-      <View style={styles.filterTitleRow}>
-        <Text style={[styles.filterTitle, { color: themeColors.textPrimary }]}>
-          Filter Crew Leave
-        </Text>
-        <Text
-          style={[styles.resultCount, { color: themeColors.textSecondary }]}
-          accessibilityLiveRegion="polite"
-        >
-          {leave.length}
-          {hasMore ? '+' : ''} {leave.length === 1 ? 'record' : 'records'}
-        </Text>
-      </View>
-      <LabeledDropdown
-        label="Status"
-        value={statusLabel}
-        open={pickerMode === 'status'}
-        onPress={() => setPickerMode('status')}
-        tightTop
-        valueColor={filterTriggerColor}
-        iconColor={filterTriggerColor}
-      />
-      <LabeledDropdown
-        label="Leave Type"
-        value={leaveTypeLabel}
-        open={pickerMode === 'type'}
-        onPress={() => setPickerMode('type')}
-        tightTop
-        valueColor={filterTriggerColor}
-        iconColor={filterTriggerColor}
-      />
-      <DepartmentSelector
-        value={departmentFilter}
-        onChange={setDepartmentFilter}
-        includeAll
-        tightTop
-      />
-      {activeFilterCount > 0 ? (
-        <View style={styles.filterFooter}>
-          <TouchableOpacity
-            onPress={resetFilters}
-            style={styles.resetFiltersButton}
-            accessibilityRole="button"
-            accessibilityLabel="Reset crew leave filters"
-          >
-            <Text style={[styles.resetFiltersText, { color: filterTriggerColor }]}>
-              Reset filters
-            </Text>
-          </TouchableOpacity>
-        </View>
+    <>
+      {canManage ? (
+        <Button
+          title="Create Crew Leave"
+          onPress={() => navigation.navigate('AddEditCrewLeave')}
+          variant="primary"
+          fullWidth
+          style={styles.createButton}
+        />
       ) : null}
-    </View>
+      <View
+        style={[
+          styles.filterPanel,
+          { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+        ]}
+      >
+        <View style={styles.filterTitleRow}>
+          <Text style={[styles.filterTitle, { color: themeColors.textPrimary }]}>
+            Filter Crew Leave
+          </Text>
+          <Text
+            style={[styles.resultCount, { color: themeColors.textSecondary }]}
+            accessibilityLiveRegion="polite"
+          >
+            {leave.length}
+            {hasMore ? '+' : ''} {leave.length === 1 ? 'record' : 'records'}
+          </Text>
+        </View>
+        <LabeledDropdown
+          label="Status"
+          value={statusLabel}
+          open={pickerMode === 'status'}
+          onPress={() => setPickerMode('status')}
+          tightTop
+          valueColor={filterTriggerColor}
+          iconColor={filterTriggerColor}
+        />
+        <LabeledDropdown
+          label="Leave Type"
+          value={leaveTypeLabel}
+          open={pickerMode === 'type'}
+          onPress={() => setPickerMode('type')}
+          tightTop
+          valueColor={filterTriggerColor}
+          iconColor={filterTriggerColor}
+        />
+        <DepartmentSelector
+          value={departmentFilter}
+          onChange={setDepartmentFilter}
+          includeAll
+          tightTop
+        />
+        {activeFilterCount > 0 ? (
+          <View style={styles.filterFooter}>
+            <TouchableOpacity
+              onPress={resetFilters}
+              style={styles.resetFiltersButton}
+              accessibilityRole="button"
+              accessibilityLabel="Reset crew leave filters"
+            >
+              <Text style={[styles.resetFiltersText, { color: filterTriggerColor }]}>
+                Reset filters
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+      </View>
+    </>
   );
 
   const emptyMessage =
@@ -323,21 +334,7 @@ export const CrewLeaveScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.page, { backgroundColor: themeColors.background }]}>
-      <PageHeader
-        title="Crew Leave"
-        info={CREW_LEAVE_INFO}
-        infoScreenKey="crew-leave"
-        actions={
-          canManage ? (
-            <Button
-              title="Create Crew Leave"
-              size="small"
-              shape="pill"
-              onPress={() => navigation.navigate('AddEditCrewLeave')}
-            />
-          ) : undefined
-        }
-      />
+      <PageHeader title="Crew Leave" info={CREW_LEAVE_INFO} infoScreenKey="crew-leave" />
       {loading ? (
         <View style={styles.center}>
           <LoadingSpinner />
@@ -482,6 +479,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.xl },
   message: { fontSize: FONTS.base, textAlign: 'center', lineHeight: 22 },
   emptyMessage: { paddingVertical: SPACING.xl },
+  createButton: { marginBottom: SPACING.lg },
   filterPanel: {
     borderWidth: 1,
     borderRadius: BORDER_RADIUS.lg,
