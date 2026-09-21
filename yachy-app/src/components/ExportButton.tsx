@@ -8,6 +8,7 @@
 
 import React from 'react';
 import { Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { COLORS } from '../constants/theme';
 
@@ -45,8 +46,11 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
       accessibilityRole="button"
       accessibilityLabel={active ? 'Cancel export' : 'Export to PDF'}
     >
+      {!active && !busy ? (
+        <Ionicons name="download-outline" size={15} color={tint} style={styles.icon} />
+      ) : null}
       <Text style={[styles.label, { color: tint }]}>
-        {busy ? 'Exporting…' : active ? 'Cancel' : `⤓  ${label}`}
+        {busy ? 'Exporting…' : active ? 'Cancel' : label}
       </Text>
     </TouchableOpacity>
   );
@@ -65,4 +69,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
   },
+  icon: { marginRight: 7 },
 });

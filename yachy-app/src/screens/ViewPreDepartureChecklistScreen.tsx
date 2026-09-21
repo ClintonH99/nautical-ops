@@ -4,11 +4,10 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import preDepartureChecklistsService from '../services/preDepartureChecklists';
 import { PreDepartureChecklist, Department } from '../types';
 import { LoadingSpinner, PageHeader } from '../components';
@@ -23,9 +22,8 @@ const DEPARTMENT_OPTIONS: { value: Department | null; label: string }[] = [
   { value: 'GALLEY', label: 'Galley' },
 ];
 
-export const ViewPreDepartureChecklistScreen = ({ navigation, route }: any) => {
+export const ViewPreDepartureChecklistScreen = ({ route }: any) => {
   const themeColors = useThemeColors();
-  const overrides = useDepartmentColorStore((s) => s.overrides);
   const checklistId = route?.params?.checklistId as string;
 
   const [checklist, setChecklist] = useState<PreDepartureChecklist | null>(null);
@@ -87,69 +85,83 @@ export const ViewPreDepartureChecklistScreen = ({ navigation, route }: any) => {
 
   return (
     <View style={styles.pageWrap}>
-      <PageHeader title="View Checklist" />
+      <PageHeader title="Pre-Departure Checklist" />
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={styles.content}
       >
-        <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
-          <Text style={[styles.title, { color: themeColors.textPrimary }]}>{checklist.title}</Text>
-          <View style={styles.meta}>
-            <View
-              style={[
-                styles.deptBadge,
-                {
-                  backgroundColor: checklist.department
-                    ? getDepartmentColor(checklist.department, overrides)
-                    : COLORS.gray400,
-                },
-              ]}
-            >
-              <Text style={styles.deptBadgeText}>{deptLabel}</Text>
-            </View>
-            <Text style={[styles.date, { color: themeColors.textSecondary }]}>
-              {formatDate(checklist.createdAt)}
+        <View
+          style={[
+            styles.section,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
+          <Text style={[styles.eyebrow, { color: themeColors.textSecondary }]}>
+            {deptLabel.toUpperCase()}
+          </Text>
+          <Text
+            style={[styles.title, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}
+          >
+            {checklist.title}
+          </Text>
+          <Text style={[styles.date, { color: themeColors.textSecondary }]}>
+            Created {formatDate(checklist.createdAt)}
+          </Text>
+        </View>
+
+        {checklist.linkedTrip && (
+          <View
+            style={[
+              styles.section,
+              { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+            ]}
+          >
+            <Text style={[styles.eyebrow, { color: themeColors.textSecondary }]}>LINKED TRIP</Text>
+            <Text style={[styles.linkedTripTitle, { color: themeColors.textPrimary }]}>
+              {checklist.linkedTrip.title}
+            </Text>
+            <Text style={[styles.linkedTripDates, { color: themeColors.textSecondary }]}>
+              {formatLocalDateString(checklist.linkedTrip.startDate)} –{' '}
+              {formatLocalDateString(checklist.linkedTrip.endDate)}
             </Text>
           </View>
+        )}
 
-          {checklist.linkedTrip && (
-            <View style={[styles.linkedTrip, { borderColor: COLORS.border }]}>
-              <Text style={[styles.linkedTripLabel, { color: themeColors.textSecondary }]}>
-                Linked Trip
-              </Text>
-              <Text style={[styles.linkedTripTitle, { color: themeColors.textPrimary }]}>
-                {checklist.linkedTrip.title}
-              </Text>
-              <Text style={[styles.linkedTripDates, { color: themeColors.textSecondary }]}>
-                {formatLocalDateString(checklist.linkedTrip.startDate)} –{' '}
-                {formatLocalDateString(checklist.linkedTrip.endDate)}
-              </Text>
-            </View>
-          )}
-
-          <View style={styles.itemsSection}>
+        <View
+          style={[
+            styles.section,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
+          <View style={styles.itemsHeader}>
             <Text style={[styles.itemsLabel, { color: themeColors.textPrimary }]}>
               Checklist items
             </Text>
-            {checklist.items.length === 0 ? (
-              <Text style={[styles.emptyItems, { color: themeColors.textSecondary }]}>
-                No items yet
-              </Text>
-            ) : (
-              checklist.items
-                .sort((a, b) => a.sortOrder - b.sortOrder)
-                .map((item, idx) => (
-                  <View key={item.id} style={styles.itemRow}>
-                    <Text style={[styles.itemNum, { color: themeColors.textSecondary }]}>
-                      {idx + 1}.
-                    </Text>
-                    <Text style={[styles.itemLabel, { color: themeColors.textPrimary }]}>
-                      {item.label}
-                    </Text>
-                  </View>
-                ))
-            )}
+            <Text style={[styles.itemCount, { color: themeColors.textSecondary }]}>
+              {checklist.items.length} items
+            </Text>
           </View>
+          {checklist.items.length === 0 ? (
+            <Text style={[styles.emptyItems, { color: themeColors.textSecondary }]}>
+              No items yet
+            </Text>
+          ) : (
+            [...checklist.items]
+              .sort((a, b) => a.sortOrder - b.sortOrder)
+              .map((item, idx) => (
+                <View
+                  key={item.id}
+                  style={[styles.itemRow, { borderBottomColor: themeColors.border }]}
+                >
+                  <Text style={[styles.itemNum, { color: themeColors.textSecondary }]}>
+                    {idx + 1}
+                  </Text>
+                  <Text style={[styles.itemLabel, { color: themeColors.textPrimary }]}>
+                    {item.label}
+                  </Text>
+                </View>
+              ))
+          )}
         </View>
       </ScrollView>
     </View>
@@ -167,59 +179,49 @@ const styles = StyleSheet.create({
   },
   message: { fontSize: FONTS.base, textAlign: 'center' },
   content: { padding: SPACING.lg, paddingBottom: 88 },
-  card: {
+  section: {
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.lg,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 1,
+    marginBottom: SPACING.md,
+  },
+  eyebrow: {
+    fontSize: FONTS.xs,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    marginBottom: 4,
   },
   title: {
     fontSize: FONTS.xl,
     fontWeight: '700',
-    marginBottom: SPACING.sm,
+    marginBottom: 4,
   },
-  meta: {
+  date: { fontSize: FONTS.sm },
+  linkedTripTitle: { fontSize: FONTS.base, fontWeight: '700', marginTop: 2 },
+  linkedTripDates: { fontSize: FONTS.sm, marginTop: 4 },
+  itemsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.md,
-    marginBottom: SPACING.lg,
+    justifyContent: 'space-between',
+    marginBottom: SPACING.sm,
   },
-  deptBadge: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  deptBadgeText: { fontSize: FONTS.xs, fontWeight: '600', color: COLORS.white },
-  date: { fontSize: FONTS.sm },
-  linkedTrip: {
-    borderWidth: 1,
-    borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.md,
-    marginBottom: SPACING.lg,
-  },
-  linkedTripLabel: { fontSize: FONTS.xs, fontWeight: '600', marginBottom: 2 },
-  linkedTripTitle: { fontSize: FONTS.base, fontWeight: '700' },
-  linkedTripDates: { fontSize: FONTS.sm, marginTop: 2 },
-  itemsSection: {},
   itemsLabel: {
-    fontSize: FONTS.sm,
-    fontWeight: '600',
-    marginBottom: SPACING.md,
+    fontSize: FONTS.base,
+    fontWeight: '700',
   },
+  itemCount: { fontSize: FONTS.xs },
   emptyItems: { fontStyle: 'italic', fontSize: FONTS.sm },
   itemRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: SPACING.sm,
+    alignItems: 'center',
+    minHeight: 46,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   itemNum: {
-    fontSize: FONTS.base,
-    fontWeight: '600',
+    fontSize: FONTS.sm,
+    fontWeight: '700',
     marginRight: SPACING.sm,
-    minWidth: 20,
+    minWidth: 22,
   },
   itemLabel: {
     flex: 1,

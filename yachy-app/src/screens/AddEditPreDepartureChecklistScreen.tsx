@@ -17,6 +17,7 @@ import {
   Pressable,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
@@ -266,182 +267,216 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        {showEditableFields ? (
-          <Input
-            label="Title"
-            value={title}
-            onChangeText={setTitle}
-            placeholder="e.g. Deck/Interior Team or Miami to Nassau"
-          />
-        ) : (
-          <>
-            <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: themeColors.textPrimary }]}>Title</Text>
-              <Text style={[styles.readOnlyTitle, { color: themeColors.textPrimary }]}>
-                {title || '—'}
-              </Text>
-            </View>
-            {department != null && (
+        <View
+          style={[
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
+          <Text style={[styles.formSectionTitle, { color: themeColors.textPrimary }]}>
+            Checklist details
+          </Text>
+          {showEditableFields ? (
+            <Input
+              label="Title"
+              value={title}
+              onChangeText={setTitle}
+              placeholder="e.g. Deck/Interior Team or Miami to Nassau"
+            />
+          ) : (
+            <>
               <View style={styles.fieldContainer}>
-                <Text style={[styles.label, { color: themeColors.textPrimary }]}>Department</Text>
+                <Text style={[styles.label, { color: themeColors.textPrimary }]}>Title</Text>
                 <Text style={[styles.readOnlyTitle, { color: themeColors.textPrimary }]}>
-                  {DEPARTMENT_OPTIONS.find((o) => o.value === department)?.label ?? department}
+                  {title || '—'}
                 </Text>
               </View>
-            )}
-          </>
-        )}
+              {department != null && (
+                <View style={styles.fieldContainer}>
+                  <Text style={[styles.label, { color: themeColors.textPrimary }]}>Department</Text>
+                  <Text style={[styles.readOnlyTitle, { color: themeColors.textPrimary }]}>
+                    {DEPARTMENT_OPTIONS.find((o) => o.value === department)?.label ?? department}
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
 
-        {showEditableFields && (
-          <>
-            <View style={styles.fieldContainer}>
-              <DepartmentSelector value={department} onChange={setDepartment} includeAll />
-            </View>
-            <View style={styles.fieldContainer}>
-              <LabeledDropdown
-                label="Linked Trip"
-                value={selectedTrip?.title ?? (tripId ? 'Linked trip' : 'None')}
-                open={tripModalVisible}
-                onPress={() => setTripModalVisible(true)}
-              />
-            </View>
+          {showEditableFields && (
+            <>
+              <View style={styles.fieldContainer}>
+                <DepartmentSelector value={department} onChange={setDepartment} includeAll />
+              </View>
+              <View style={styles.fieldContainer}>
+                <LabeledDropdown
+                  label="Linked Trip"
+                  value={selectedTrip?.title ?? (tripId ? 'Linked trip' : 'None')}
+                  open={tripModalVisible}
+                  onPress={() => setTripModalVisible(true)}
+                />
+              </View>
 
-            {tripModalVisible && (
-              <Modal visible transparent animationType="fade">
-                <Pressable style={styles.modalBackdrop} onPress={() => setTripModalVisible(false)}>
-                  <View
-                    style={[
-                      styles.modalBox,
-                      {
-                        backgroundColor: themeColors.surfaceElevated,
-                        borderColor: themeColors.border,
-                      },
-                    ]}
-                    onStartShouldSetResponder={() => true}
+              {tripModalVisible && (
+                <Modal visible transparent animationType="fade">
+                  <Pressable
+                    style={styles.modalBackdrop}
+                    onPress={() => setTripModalVisible(false)}
                   >
-                    <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
-                      Select linked trip
-                    </Text>
-                    <TouchableOpacity
+                    <View
                       style={[
-                        styles.modalItem,
-                        !tripId && { backgroundColor: themeColors.controlSelected },
+                        styles.modalBox,
+                        {
+                          backgroundColor: themeColors.surfaceElevated,
+                          borderColor: themeColors.border,
+                        },
                       ]}
-                      onPress={() => {
-                        setTripId(null);
-                        setTripModalVisible(false);
-                      }}
+                      onStartShouldSetResponder={() => true}
                     >
-                      <Text
-                        style={[
-                          styles.modalItemText,
-                          {
-                            color: !tripId ? themeColors.textOnAccent : themeColors.textPrimary,
-                          },
-                        ]}
-                      >
-                        No linked trip
+                      <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+                        Select linked trip
                       </Text>
-                      {!tripId && (
-                        <Text style={[styles.selectedMark, { color: themeColors.textOnAccent }]}>
-                          ✓
-                        </Text>
-                      )}
-                    </TouchableOpacity>
-                    <ScrollView style={styles.tripOptions} nestedScrollEnabled>
-                      {trips.map((t) => (
-                        <TouchableOpacity
-                          key={t.id}
+                      <TouchableOpacity
+                        style={[
+                          styles.modalItem,
+                          !tripId && { backgroundColor: themeColors.controlSelected },
+                        ]}
+                        onPress={() => {
+                          setTripId(null);
+                          setTripModalVisible(false);
+                        }}
+                      >
+                        <Text
                           style={[
-                            styles.modalItem,
-                            tripId === t.id && {
-                              backgroundColor: themeColors.controlSelected,
+                            styles.modalItemText,
+                            {
+                              color: !tripId ? themeColors.textOnAccent : themeColors.textPrimary,
                             },
                           ]}
-                          onPress={() => {
-                            setTripId(t.id);
-                            setTripModalVisible(false);
-                          }}
                         >
-                          <View style={styles.modalItemContent}>
-                            <Text
-                              style={[
-                                styles.modalItemText,
-                                {
-                                  color:
-                                    tripId === t.id
-                                      ? themeColors.textOnAccent
-                                      : themeColors.textPrimary,
-                                },
-                              ]}
-                            >
-                              {t.title}
-                            </Text>
-                            <Text
-                              style={[
-                                styles.modalItemSub,
-                                {
-                                  color:
-                                    tripId === t.id
-                                      ? themeColors.textOnAccent
-                                      : themeColors.textSecondary,
-                                },
-                              ]}
-                            >
-                              {formatLocalDateString(t.startDate)} –{' '}
-                              {formatLocalDateString(t.endDate)}
-                            </Text>
-                          </View>
-                          {tripId === t.id && (
-                            <Text
-                              style={[styles.selectedMark, { color: themeColors.textOnAccent }]}
-                            >
-                              ✓
-                            </Text>
-                          )}
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  </View>
-                </Pressable>
-              </Modal>
-            )}
-          </>
-        )}
+                          No linked trip
+                        </Text>
+                        {!tripId && (
+                          <Text style={[styles.selectedMark, { color: themeColors.textOnAccent }]}>
+                            ✓
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                      <ScrollView style={styles.tripOptions} nestedScrollEnabled>
+                        {trips.map((t) => (
+                          <TouchableOpacity
+                            key={t.id}
+                            style={[
+                              styles.modalItem,
+                              tripId === t.id && {
+                                backgroundColor: themeColors.controlSelected,
+                              },
+                            ]}
+                            onPress={() => {
+                              setTripId(t.id);
+                              setTripModalVisible(false);
+                            }}
+                          >
+                            <View style={styles.modalItemContent}>
+                              <Text
+                                style={[
+                                  styles.modalItemText,
+                                  {
+                                    color:
+                                      tripId === t.id
+                                        ? themeColors.textOnAccent
+                                        : themeColors.textPrimary,
+                                  },
+                                ]}
+                              >
+                                {t.title}
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.modalItemSub,
+                                  {
+                                    color:
+                                      tripId === t.id
+                                        ? themeColors.textOnAccent
+                                        : themeColors.textSecondary,
+                                  },
+                                ]}
+                              >
+                                {formatLocalDateString(t.startDate)} –{' '}
+                                {formatLocalDateString(t.endDate)}
+                              </Text>
+                            </View>
+                            {tripId === t.id && (
+                              <Text
+                                style={[styles.selectedMark, { color: themeColors.textOnAccent }]}
+                              >
+                                ✓
+                              </Text>
+                            )}
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  </Pressable>
+                </Modal>
+              )}
+            </>
+          )}
+        </View>
 
-        <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>
-          Checklist items
-        </Text>
-
-        <>
+        <View
+          style={[
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
+          <View style={styles.itemsHeader}>
+            <Text style={[styles.formSectionTitle, { color: themeColors.textPrimary }]}>
+              Checklist items
+            </Text>
+            <Text style={[styles.itemCount, { color: themeColors.textSecondary }]}>
+              {isEdit ? items.length : draftItems.length} items
+            </Text>
+          </View>
           {isEdit
             ? items.map((item, idx) => (
-                <View key={item.id} style={styles.itemRow}>
-                  <Text style={[styles.itemBullet, { color: themeColors.accent }]}>{idx + 1}.</Text>
+                <View
+                  key={item.id}
+                  style={[styles.itemRow, { borderBottomColor: themeColors.border }]}
+                >
+                  <Text style={[styles.itemBullet, { color: themeColors.textSecondary }]}>
+                    {idx + 1}
+                  </Text>
                   <Text style={[styles.itemLabel, { color: themeColors.textPrimary }]}>
                     {item.label}
                   </Text>
                   {isEditable && (
                     <TouchableOpacity
                       onPress={() => removeItem(item)}
+                      accessibilityLabel={`Remove ${item.label}`}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
-                      <Text style={styles.removeBtn}>Remove</Text>
+                      <Ionicons name="close" size={22} color={COLORS.danger} />
                     </TouchableOpacity>
                   )}
                 </View>
               ))
             : draftItems.map((label, idx) => (
-                <View key={`${label}-${idx}`} style={styles.itemRow}>
-                  <Text style={[styles.itemBullet, { color: themeColors.accent }]}>{idx + 1}.</Text>
+                <View
+                  key={`${label}-${idx}`}
+                  style={[styles.itemRow, { borderBottomColor: themeColors.border }]}
+                >
+                  <Text style={[styles.itemBullet, { color: themeColors.textSecondary }]}>
+                    {idx + 1}
+                  </Text>
                   <Text style={[styles.itemLabel, { color: themeColors.textPrimary }]}>
                     {label}
                   </Text>
                   <TouchableOpacity
                     onPress={() => removeDraftItem(idx)}
+                    accessibilityLabel={`Remove ${label}`}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Text style={styles.removeBtn}>Remove</Text>
+                    <Ionicons name="close" size={22} color={COLORS.danger} />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -460,7 +495,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
               <EnterToAddHint />
             </View>
           )}
-        </>
+        </View>
 
         {showEditableFields && (
           <View style={styles.actions}>
@@ -492,6 +527,17 @@ const styles = StyleSheet.create({
   content: { padding: SPACING.lg, paddingBottom: 88 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
+  formSection: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.lg,
+    marginBottom: SPACING.md,
+  },
+  formSectionTitle: {
+    fontSize: FONTS.base,
+    fontWeight: '700',
+    marginBottom: SPACING.md,
+  },
   readOnlyTitle: { fontSize: FONTS.base, fontWeight: '600' },
   fieldContainer: { marginBottom: SPACING.md },
   label: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs },
@@ -524,17 +570,21 @@ const styles = StyleSheet.create({
   modalItemSub: { fontSize: FONTS.xs, marginTop: 2 },
   selectedMark: { color: COLORS.primary, fontSize: FONTS.lg, fontWeight: '700' },
   tripOptions: { maxHeight: 300 },
-  sectionLabel: {
-    fontSize: FONTS.sm,
-    fontWeight: '600',
-    marginTop: SPACING.lg,
-    marginBottom: SPACING.sm,
+  itemsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  itemCount: {
+    fontSize: FONTS.xs,
+    marginBottom: SPACING.md,
   },
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.sm,
+    minHeight: 44,
     gap: SPACING.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   itemBullet: {
     fontSize: FONTS.base,
@@ -542,8 +592,7 @@ const styles = StyleSheet.create({
     minWidth: 24,
   },
   itemLabel: { flex: 1, fontSize: FONTS.base },
-  removeBtn: { fontSize: FONTS.sm, color: COLORS.danger },
-  addSection: { marginTop: SPACING.sm },
+  addSection: { marginTop: SPACING.md },
   addInput: { marginBottom: 0 },
   hint: { fontSize: FONTS.sm, marginTop: SPACING.xs },
   actions: { marginTop: SPACING.xl, gap: SPACING.sm },
