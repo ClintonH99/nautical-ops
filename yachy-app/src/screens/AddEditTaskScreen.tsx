@@ -17,6 +17,7 @@ import {
   Platform,
   Pressable,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES, SHADOWS } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -225,172 +226,195 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
         style={styles.scroll}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <DepartmentSelector
-          value={department}
-          onChange={(value) => value && setDepartment(value)}
-        />
-        <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
-          Tasks are scoped by department. Crew will filter by their department to see only relevant
-          tasks.
+        <Text style={[styles.sectionLabel, { color: themeColors.textSecondary }]}>
+          Task Details
         </Text>
-        {showCategoryPicker && (
-          <>
-            <Text style={[styles.label, { color: themeColors.textPrimary }]}>Task category</Text>
-            <View style={styles.categoryRow}>
-              {(Object.keys(CATEGORY_LABELS) as TaskCategory[]).map((cat) => (
-                <TouchableOpacity
-                  key={cat}
-                  style={[
-                    styles.categoryChip,
-                    {
-                      backgroundColor:
-                        category === cat ? themeColors.controlSelected : themeColors.control,
-                    },
-                  ]}
-                  onPress={() => handleCategoryChange(cat)}
-                >
-                  <Text
+        <View
+          style={[
+            styles.sectionCard,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
+          <DepartmentSelector
+            value={department}
+            onChange={(value) => value && setDepartment(value)}
+            tightTop
+          />
+          {showCategoryPicker && (
+            <>
+              <Text style={[styles.label, { color: themeColors.textPrimary }]}>Task category</Text>
+              <View
+                style={[
+                  styles.categoryRow,
+                  { backgroundColor: themeColors.control, borderColor: themeColors.border },
+                ]}
+              >
+                {(Object.keys(CATEGORY_LABELS) as TaskCategory[]).map((cat, index, values) => (
+                  <TouchableOpacity
+                    key={cat}
                     style={[
-                      styles.categoryChipText,
+                      styles.categoryChip,
+                      index < values.length - 1 && {
+                        borderRightWidth: 1,
+                        borderRightColor: themeColors.border,
+                      },
                       {
-                        color:
-                          category === cat ? themeColors.textOnAccent : themeColors.textPrimary,
+                        backgroundColor: category === cat ? COLORS.primary : themeColors.control,
                       },
                     ]}
+                    onPress={() => handleCategoryChange(cat)}
                   >
-                    {CATEGORY_LABELS[cat]}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </>
-        )}
-        <Input
-          label="Task title"
-          value={title}
-          onChangeText={setTitle}
-          placeholder="e.g. Check engine oil"
-          autoCapitalize="words"
-        />
-        <Input
-          label="Task notes (optional)"
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Additional details..."
-          multiline
-          numberOfLines={3}
-        />
-        {category !== 'DAILY' && (
-          <>
-            <Text style={[styles.label, { color: themeColors.textPrimary }]}>Repeat every</Text>
-            <TouchableOpacity
-              style={[
-                styles.recurringToggle,
-                { backgroundColor: themeColors.control, borderColor: themeColors.border },
-              ]}
-              onPress={() => {
-                Keyboard.dismiss();
-                setRecurringExpanded(true);
-              }}
-            >
-              <Text style={[styles.recurringToggleText, { color: themeColors.textPrimary }]}>
-                {recurring ? TASK_RECURRENCE_LABELS[recurring] : 'Choose frequency'}
+                    <Text
+                      style={[
+                        styles.categoryChipText,
+                        {
+                          color:
+                            category === cat ? themeColors.textOnAccent : themeColors.textPrimary,
+                        },
+                      ]}
+                    >
+                      {CATEGORY_LABELS[cat]}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
+          <Input
+            label="Task title"
+            value={title}
+            onChangeText={setTitle}
+            placeholder="e.g. Check engine oil"
+            autoCapitalize="words"
+          />
+          <Input
+            label="Task notes (optional)"
+            value={notes}
+            onChangeText={setNotes}
+            placeholder="Additional details..."
+            multiline
+            numberOfLines={3}
+            containerStyle={styles.lastField}
+          />
+        </View>
+
+        <Text style={[styles.sectionLabel, { color: themeColors.textSecondary }]}>Schedule</Text>
+        <View
+          style={[
+            styles.sectionCard,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
+          {category !== 'DAILY' && (
+            <>
+              <Text
+                style={[styles.label, styles.scheduleLabel, { color: themeColors.textPrimary }]}
+              >
+                Repeat every
               </Text>
-              <Text style={[styles.recurringChevron, { color: themeColors.textSecondary }]}>
-                {recurringExpanded ? '▲' : '▼'}
-              </Text>
-            </TouchableOpacity>
-            <Modal
-              visible={recurringExpanded}
-              transparent
-              statusBarTranslucent
-              animationType="fade"
-              onRequestClose={() => setRecurringExpanded(false)}
-            >
-              <View style={styles.recurringModalRoot}>
-                <Pressable
-                  style={styles.recurringBackdrop}
-                  onPress={() => setRecurringExpanded(false)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Close repeat frequency selector"
+              <TouchableOpacity
+                style={[
+                  styles.recurringToggle,
+                  { backgroundColor: themeColors.control, borderColor: themeColors.border },
+                ]}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setRecurringExpanded(true);
+                }}
+              >
+                <Text style={[styles.recurringToggleText, { color: themeColors.textPrimary }]}>
+                  {recurring ? TASK_RECURRENCE_LABELS[recurring] : 'Choose frequency'}
+                </Text>
+                <Ionicons
+                  name={recurringExpanded ? 'chevron-up' : 'chevron-down'}
+                  size={20}
+                  color={themeColors.accent}
                 />
-                <View
-                  style={[
-                    styles.recurringOptions,
-                    {
-                      backgroundColor: themeColors.surfaceElevated,
-                      borderColor: themeColors.border,
-                      shadowColor: themeColors.isDark ? COLORS.black : '#22324a',
-                    },
-                  ]}
-                  accessibilityRole="menu"
-                  accessibilityViewIsModal
-                >
-                  <Text style={[styles.recurringModalTitle, { color: themeColors.textPrimary }]}>
-                    Repeat every
-                  </Text>
-                  <ScrollView
-                    style={styles.recurringOptionList}
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
+              </TouchableOpacity>
+              <Modal
+                visible={recurringExpanded}
+                transparent
+                statusBarTranslucent
+                animationType="fade"
+                onRequestClose={() => setRecurringExpanded(false)}
+              >
+                <View style={styles.recurringModalRoot}>
+                  <Pressable
+                    style={styles.recurringBackdrop}
+                    onPress={() => setRecurringExpanded(false)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Close repeat frequency selector"
+                  />
+                  <View
+                    style={[
+                      styles.recurringOptions,
+                      {
+                        backgroundColor: themeColors.surfaceElevated,
+                        borderColor: themeColors.border,
+                        shadowColor: themeColors.isDark ? COLORS.black : '#22324a',
+                      },
+                    ]}
+                    accessibilityRole="menu"
+                    accessibilityViewIsModal
                   >
-                    {recurrenceOptions.map((option, index) => (
-                      <TouchableOpacity
-                        key={option}
-                        style={[
-                          styles.recurringOption,
-                          index < recurrenceOptions.length - 1 && {
-                            borderBottomWidth: 1,
-                            borderBottomColor: themeColors.border,
-                          },
-                          recurring === option && {
-                            backgroundColor: themeColors.controlSelected,
-                          },
-                        ]}
-                        onPress={() => handleRecurrenceChange(option)}
-                        activeOpacity={0.72}
-                        accessibilityRole="menuitem"
-                        accessibilityState={{ selected: recurring === option }}
-                      >
-                        <Text
+                    <Text style={[styles.recurringModalTitle, { color: themeColors.textPrimary }]}>
+                      Repeat every
+                    </Text>
+                    <ScrollView
+                      style={styles.recurringOptionList}
+                      showsVerticalScrollIndicator={false}
+                      keyboardShouldPersistTaps="handled"
+                    >
+                      {recurrenceOptions.map((option, index) => (
+                        <TouchableOpacity
+                          key={option}
                           style={[
-                            styles.recurringOptionText,
-                            {
-                              color:
-                                recurring === option
-                                  ? themeColors.textOnAccent
-                                  : themeColors.textPrimary,
+                            styles.recurringOption,
+                            index < recurrenceOptions.length - 1 && {
+                              borderBottomWidth: 1,
+                              borderBottomColor: themeColors.border,
+                            },
+                            recurring === option && {
+                              backgroundColor: themeColors.controlSelected,
                             },
                           ]}
+                          onPress={() => handleRecurrenceChange(option)}
+                          activeOpacity={0.72}
+                          accessibilityRole="menuitem"
+                          accessibilityState={{ selected: recurring === option }}
                         >
-                          {TASK_RECURRENCE_LABELS[option]}
-                        </Text>
-                        {recurring === option && (
                           <Text
-                            style={[styles.recurringCheckmark, { color: themeColors.textOnAccent }]}
+                            style={[
+                              styles.recurringOptionText,
+                              {
+                                color:
+                                  recurring === option
+                                    ? themeColors.textOnAccent
+                                    : themeColors.textPrimary,
+                              },
+                            ]}
                           >
-                            ✓
+                            {TASK_RECURRENCE_LABELS[option]}
                           </Text>
-                        )}
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
+                          {recurring === option && (
+                            <Ionicons name="checkmark" size={22} color={themeColors.textOnAccent} />
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
                 </View>
-              </View>
-            </Modal>
-            {doneByDate && recurring && (
-              <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
-                {isEdit ? 'Next' : 'First'} due: {formatLocalDateString(doneByDate)}
+              </Modal>
+              <Text style={[styles.scheduleHint, { color: themeColors.textSecondary }]}>
+                {doneByDate && recurring
+                  ? `${isEdit ? 'Next' : 'First'} due: ${formatLocalDateString(doneByDate)}`
+                  : 'First due date will be calculated after selection.'}
               </Text>
-            )}
-          </>
-        )}
-        {category === 'DAILY' && (
-          <>
-            <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
-              Tasks with a deadline change color as time passes (green → yellow → red).
-            </Text>
+            </>
+          )}
+          {category === 'DAILY' && (
             <DateOnlyPicker
               label="Done by date (optional)"
               value={doneByDate}
@@ -399,8 +423,8 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
               title="Select deadline"
               minimumDate={toYYYYMMDD(new Date())}
             />
-          </>
-        )}
+          )}
+        </View>
         <View style={styles.actions}>
           <Button
             title={
@@ -415,6 +439,7 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
             loading={saving}
             disabled={saving}
             fullWidth
+            style={styles.primaryAction}
           />
           <TouchableOpacity
             style={styles.cancelBtn}
@@ -450,19 +475,41 @@ const styles = StyleSheet.create({
     fontSize: FONTS.base,
     textAlign: 'center',
   },
+  sectionLabel: {
+    fontSize: FONTS.sm,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: SPACING.sm,
+  },
+  sectionCard: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.xl,
+  },
   label: {
     fontSize: FONTS.sm,
     fontWeight: '600',
     marginBottom: SPACING.xs,
     marginTop: SPACING.md,
   },
-  hint: {
-    fontSize: FONTS.sm,
-    marginBottom: SPACING.sm,
+  scheduleLabel: {
+    marginTop: 0,
   },
+  scheduleHint: {
+    fontSize: FONTS.sm,
+    lineHeight: 19,
+    marginTop: SPACING.xs,
+  },
+  lastField: { marginBottom: 0 },
   actions: {
-    marginTop: SPACING.md,
+    marginTop: 0,
     gap: SPACING.sm,
+  },
+  primaryAction: {
+    height: 56,
+    borderRadius: BORDER_RADIUS.lg,
   },
   cancelBtn: {
     alignSelf: 'center',
@@ -471,93 +518,35 @@ const styles = StyleSheet.create({
   cancelText: {
     fontSize: FONTS.base,
   },
-  dropdown: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: SPACING.lg,
-  },
-  dropdownText: {
-    fontSize: FONTS.base,
-    fontWeight: '500',
-  },
-  dropdownChevron: {
-    fontSize: 10,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.lg,
-  },
-  modalBox: {
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.md,
-    minWidth: 260,
-    maxHeight: 400,
-  },
-  modalTitle: { fontSize: FONTS.lg, fontWeight: '600', marginBottom: SPACING.md },
-  modalItem: {
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  modalItemSelected: {
-    backgroundColor: COLORS.gray200,
-  },
-  modalItemText: {
-    fontSize: FONTS.base,
-  },
   categoryRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    overflow: 'hidden',
     marginBottom: SPACING.lg,
   },
   categoryChip: {
     flex: 1,
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.sm,
-    backgroundColor: COLORS.gray100,
-    borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
-  },
-  categoryChipSelected: {
-    backgroundColor: COLORS.primary,
   },
   categoryChipText: {
     fontSize: FONTS.sm,
     fontWeight: '600',
-    color: COLORS.textPrimary,
-  },
-  categoryChipTextSelected: {
-    color: COLORS.white,
   },
   recurringToggle: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    backgroundColor: COLORS.white,
+    paddingHorizontal: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
     marginBottom: SPACING.sm,
   },
   recurringToggleText: {
     fontSize: FONTS.base,
-    color: COLORS.textPrimary,
-  },
-  recurringChevron: {
-    fontSize: 10,
-    color: COLORS.textSecondary,
   },
   recurringOptions: {
     width: '100%',
@@ -603,19 +592,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  recurringOptionBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  recurringOptionSelected: {
-    backgroundColor: COLORS.primaryLight,
-  },
   recurringOptionText: {
     fontSize: FONTS.base,
-    color: COLORS.textPrimary,
-  },
-  recurringCheckmark: {
-    fontSize: FONTS.lg,
-    fontWeight: '700',
   },
 });
