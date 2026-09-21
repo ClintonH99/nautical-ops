@@ -6,19 +6,20 @@
 export const COLORS = {
   // Primary colors - Professional nautical blues
   primary: '#1E3A8A', // Deep navy blue
-  primaryLight: '#3B82F6', // Lighter blue
-  primaryDark: '#1E40AF', // Darker navy
-  
+  // Legacy aliases retained for existing screens. Interactive blue is standardised to navy.
+  primaryLight: '#1E3A8A',
+  primaryDark: '#172554',
+
   // Secondary colors
-  secondary: '#0EA5E9', // Ocean blue
-  secondaryLight: '#38BDF8',
-  
+  secondary: '#1E3A8A',
+  secondaryLight: '#1E3A8A',
+
   // Status colors - Task progression
   success: '#10B981', // Green (70-100% time remaining)
   warning: '#F59E0B', // Yellow/Amber (30-70% time remaining)
   danger: '#EF4444', // Red (0-30% time remaining)
   error: '#EF4444', // Error state
-  
+
   // Department colors (Tasks Calendar, Crew Management)
   departmentColors: {
     BRIDGE: '#3B82F6',
@@ -36,7 +37,7 @@ export const COLORS = {
   contractorColor: '#F59E0B', // Yellow
   jobColor: '#EF4444', // Red
   dutyColor: '#8B5CF6', // Purple (multiple trip types on same day)
-  
+
   // Swatches for HOD trip color picker (distinct, accessible)
   tripColorSwatches: [
     '#10B981', // Green
@@ -52,7 +53,7 @@ export const COLORS = {
     '#84CC16', // Lime
     '#06B6D4', // Cyan
   ],
-  
+
   // Neutral colors
   white: '#FFFFFF',
   black: '#000000',
@@ -66,23 +67,23 @@ export const COLORS = {
   gray700: '#374151',
   gray800: '#1F2937',
   gray900: '#111827',
-  
+
   // Background - refined neutrals
   background: '#F8F9FA',
   surface: '#FFFFFF',
   surfaceAlt: '#F1F3F5',
-  
+
   // Text - clear hierarchy
   textPrimary: '#0D0D0D',
   textSecondary: '#64748B',
   textTertiary: '#94A3B8',
   textInverse: '#FFFFFF',
-  
+
   // Border colors
   border: '#E5E7EB',
   borderLight: '#F3F4F6',
   borderDark: '#D1D5DB',
-  
+
   // Overlay
   overlay: 'rgba(0, 0, 0, 0.5)',
   overlayLight: 'rgba(0, 0, 0, 0.3)',

@@ -527,7 +527,7 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
               <TouchableOpacity
                 accessibilityRole="button"
                 accessibilityLabel="Confirm selected time"
-                style={[styles.pickerDoneButton, { backgroundColor: themeColors.accent }]}
+                style={[styles.pickerDoneButton, { backgroundColor: themeColors.controlSelected }]}
                 onPress={confirmPendingTime}
               >
                 <Text style={[styles.pickerDoneButtonText, { color: themeColors.textOnAccent }]}>
@@ -561,7 +561,7 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
 
         {isManager ? (
           <TouchableOpacity
-            style={[styles.saveButton, { backgroundColor: themeColors.accent }]}
+            style={[styles.saveButton, { backgroundColor: themeColors.controlSelected }]}
             onPress={handleConfirm}
             disabled={saving}
           >
@@ -572,7 +572,7 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
         ) : (
           !isLocked && (
             <TouchableOpacity
-              style={[styles.saveButton, { backgroundColor: themeColors.accent }]}
+              style={[styles.saveButton, { backgroundColor: themeColors.controlSelected }]}
               onPress={handleSave}
               disabled={saving}
             >

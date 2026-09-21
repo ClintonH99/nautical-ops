@@ -853,7 +853,7 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
               <View
                 style={[
                   styles.progressFill,
-                  { width: `${totalPercentage}%`, backgroundColor: themeColors.accent },
+                  { width: `${totalPercentage}%`, backgroundColor: themeColors.controlSelected },
                 ]}
               />
             </View>
@@ -897,7 +897,7 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
                     <View
                       style={[
                         styles.progressFill,
-                        { width: `${percentage}%`, backgroundColor: themeColors.accent },
+                        { width: `${percentage}%`, backgroundColor: themeColors.controlSelected },
                       ]}
                     />
                   </View>

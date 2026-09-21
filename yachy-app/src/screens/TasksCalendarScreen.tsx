@@ -471,7 +471,10 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
                       ) : null}
                       {!isComplete && (
                         <TouchableOpacity
-                          style={[styles.completeBtn, { backgroundColor: themeColors.accent }]}
+                          style={[
+                            styles.completeBtn,
+                            { backgroundColor: themeColors.controlSelected },
+                          ]}
                           onPress={() => onMarkComplete(task)}
                         >
                           <Text

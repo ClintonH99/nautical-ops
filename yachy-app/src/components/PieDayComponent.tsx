@@ -5,6 +5,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { COLORS } from '../constants/theme';
 
 const SIZE = 32;
 const RADIUS = 15;
@@ -75,9 +76,12 @@ export const PieDayComponent: React.FC<PieDayProps> = ({
   // Pie chart: multiple segments
   if (segmentColors.length > 1) {
     const sliceAngle = 360 / segmentColors.length;
-    const selectedColor = (theme as Record<string, string>).selectedDayBackgroundColor ?? '#4A90D9';
+    const selectedColor =
+      (theme as Record<string, string>).selectedDayBackgroundColor ?? COLORS.primary;
     const selectedTextColor = (theme as Record<string, string>).selectedDayTextColor ?? '#FFFFFF';
-    const textColor = isSelected ? selectedTextColor : (theme as Record<string, string>).dayTextColor ?? '#333';
+    const textColor = isSelected
+      ? selectedTextColor
+      : ((theme as Record<string, string>).dayTextColor ?? '#333');
 
     return (
       <TouchableOpacity
@@ -125,20 +129,24 @@ export const PieDayComponent: React.FC<PieDayProps> = ({
     segmentColors.length === 1
       ? segmentColors[0]
       : isSelected
-        ? (marking.selectedColor ?? (theme as Record<string, string>).selectedDayBackgroundColor ?? '#4A90D9')
+        ? (marking.selectedColor ??
+          (theme as Record<string, string>).selectedDayBackgroundColor ??
+          COLORS.primary)
         : isToday
           ? (theme as Record<string, string>).todayBackgroundColor
           : undefined;
   const textColor =
     segmentColors.length === 1 || isSelected
-      ? marking.selectedTextColor ?? (theme as Record<string, string>).selectedDayTextColor ?? '#FFFFFF'
+      ? (marking.selectedTextColor ??
+        (theme as Record<string, string>).selectedDayTextColor ??
+        '#FFFFFF')
       : isDisabled
         ? (theme as Record<string, string>).textDisabledColor
         : isInactive
           ? (theme as Record<string, string>).textInactiveColor
           : isToday
             ? (theme as Record<string, string>).todayTextColor
-            : (theme as Record<string, string>).dayTextColor ?? '#333';
+            : ((theme as Record<string, string>).dayTextColor ?? '#333');
 
   return (
     <TouchableOpacity

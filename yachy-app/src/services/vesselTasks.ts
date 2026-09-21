@@ -152,9 +152,10 @@ class VesselTasksService {
     const task = await this.getById(taskId);
     if (!task) throw new Error('Task not found');
 
-    // Recurring: schedule from the completion date, then reset the same row for its next cycle.
+    // Recurring: advance exactly one cycle from the task's current due date and keep it active.
+    // This preserves missed cycles instead of silently skipping them based on today's date.
     if (task.recurring) {
-      const nextDue = calculateRecurringTaskDueDate(task.recurring, new Date());
+      const nextDue = calculateRecurringTaskDueDate(task.recurring, task.doneByDate || new Date());
       await this.update(taskId, {
         status: 'NOT_STARTED',
         doneByDate: nextDue,

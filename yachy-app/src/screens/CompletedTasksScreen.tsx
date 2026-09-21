@@ -17,16 +17,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
+import { useAuthStore } from '../store';
 import vesselTasksService from '../services/vesselTasks';
 import { VesselTask, TaskCategory, Department } from '../types';
-import {
-  Button,
-  DepartmentSelector,
-  LoadingSpinner,
-  PageHeader,
-  PreviewActionButtons,
-} from '../components';
+import { DepartmentSelector, LoadingSpinner, PageHeader, TaskPreviewCard } from '../components';
 
 const CLEANUP_STORAGE_KEY = 'yachy_tasks_last_cleanup_month';
 
@@ -39,7 +33,6 @@ const CATEGORY_LABELS: Record<TaskCategory, string> = {
 export const CompletedTasksScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
-  const overrides = useDepartmentColorStore((s) => s.overrides);
   const [tasks, setTasks] = useState<VesselTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -93,8 +86,6 @@ export const CompletedTasksScreen = ({ navigation }: any) => {
     loadTasks();
   };
 
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   const formatDateTime = (d: string) =>
     new Date(d).toLocaleString(undefined, {
       month: 'short',
@@ -148,53 +139,22 @@ export const CompletedTasksScreen = ({ navigation }: any) => {
   };
 
   const renderItem = ({ item }: { item: VesselTask }) => (
-    <TouchableOpacity
-      style={[styles.card, { backgroundColor: themeColors.surface }]}
+    <TaskPreviewCard
+      title={item.title}
+      department={item.department.charAt(0) + item.department.slice(1).toLowerCase()}
+      category={CATEGORY_LABELS[item.category]}
+      notes={item.notes}
+      completed
+      completedByLine={
+        item.completedByName && item.completedAt
+          ? `Completed by ${item.completedByName} · ${formatDateTime(item.completedAt)}`
+          : undefined
+      }
       onPress={() => onEdit(item)}
-      activeOpacity={0.8}
-    >
-      <View style={styles.cardHeader}>
-        <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
-          {item.title}
-        </Text>
-      </View>
-      <View style={styles.cardMeta}>
-        <View
-          style={[
-            styles.deptBadge,
-            { backgroundColor: getDepartmentColor(item.department, overrides) },
-          ]}
-        >
-          <Text style={styles.deptBadgeText}>
-            {item.department.charAt(0) + item.department.slice(1).toLowerCase()}
-          </Text>
-        </View>
-        <Text style={[styles.categoryBadge, { color: themeColors.textSecondary }]}>
-          {CATEGORY_LABELS[item.category]}
-        </Text>
-      </View>
-      {item.completedByName && item.completedAt && (
-        <Text style={[styles.completedBy, { color: themeColors.textSecondary }]}>
-          Completed by {item.completedByName} on {formatDateTime(item.completedAt)}
-        </Text>
-      )}
-      {item.notes ? (
-        <Text style={styles.cardNotes} numberOfLines={2}>
-          {item.notes}
-        </Text>
-      ) : null}
-      {canUnmarkComplete ? (
-        <Button
-          title="Unmark Complete"
-          variant="outline"
-          size="small"
-          fullWidth
-          onPress={() => onUnmarkComplete(item)}
-          style={styles.unmarkButton}
-        />
-      ) : null}
-      <PreviewActionButtons onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
-    </TouchableOpacity>
+      onEdit={() => onEdit(item)}
+      onDelete={() => onDelete(item)}
+      onUnmarkComplete={canUnmarkComplete ? () => onUnmarkComplete(item) : undefined}
+    />
   );
 
   if (!vesselId) {
@@ -214,7 +174,6 @@ export const CompletedTasksScreen = ({ navigation }: any) => {
         <LoadingSpinner />
       ) : tasks.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>✓</Text>
           <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
             No completed tasks yet
           </Text>
@@ -250,6 +209,11 @@ export const CompletedTasksScreen = ({ navigation }: any) => {
             data={filteredTasks}
             keyExtractor={(t) => t.id}
             renderItem={renderItem}
+            ListHeaderComponent={
+              <Text style={[styles.sectionLabel, { color: themeColors.textSecondary }]}>
+                COMPLETED TASKS
+              </Text>
+            }
             contentContainerStyle={[
               styles.list,
               filteredTasks.length === 0 && tasks.length > 0 && styles.listEmpty,
@@ -414,16 +378,17 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sm,
     color: COLORS.textTertiary,
   },
-  unmarkButton: { marginTop: SPACING.sm },
   empty: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: SPACING.xl,
   },
-  emptyEmoji: {
-    fontSize: 48,
+  emptyText: { fontSize: FONTS.lg },
+  sectionLabel: {
+    fontSize: FONTS.sm,
+    fontWeight: '700',
+    letterSpacing: 1,
     marginBottom: SPACING.md,
   },
-  emptyText: { fontSize: FONTS.lg },
 });

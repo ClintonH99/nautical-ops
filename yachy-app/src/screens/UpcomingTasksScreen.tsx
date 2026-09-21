@@ -15,17 +15,11 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
-import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
+import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import vesselTasksService from '../services/vesselTasks';
-import { getTaskUrgencyColor } from '../utils/taskUrgency';
 import { VesselTask, TaskCategory, Department } from '../types';
-import {
-  DepartmentSelector,
-  LoadingSpinner,
-  PageHeader,
-  PreviewActionButtons,
-} from '../components';
+import { DepartmentSelector, LoadingSpinner, PageHeader, TaskPreviewCard } from '../components';
 
 const UPCOMING_DAYS = 3;
 
@@ -38,7 +32,6 @@ const CATEGORY_LABELS: Record<TaskCategory, string> = {
 export const UpcomingTasksScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
-  const overrides = useDepartmentColorStore((s) => s.overrides);
   const [tasks, setTasks] = useState<VesselTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -113,95 +106,34 @@ export const UpcomingTasksScreen = ({ navigation }: any) => {
   };
 
   const renderItem = ({ item }: { item: VesselTask }) => {
-    const borderColor = getTaskUrgencyColor(item.doneByDate, item.createdAt, item.status);
     const isComplete = item.status === 'COMPLETED';
     const categoryLabel = CATEGORY_LABELS[item.category];
+    const recurringLabel = item.recurring
+      ? item.recurring === '7_DAYS'
+        ? 'Every 7 days'
+        : item.recurring === '14_DAYS'
+          ? 'Every 14 days'
+          : 'Every 30 days'
+      : undefined;
 
     return (
-      <TouchableOpacity
-        style={[
-          styles.card,
-          {
-            backgroundColor: themeColors.surface,
-            borderColor: themeColors.border,
-            borderLeftColor: borderColor,
-          },
-        ]}
+      <TaskPreviewCard
+        title={item.title}
+        department={item.department.charAt(0) + item.department.slice(1).toLowerCase()}
+        category={categoryLabel}
+        dateLabel="Due Date"
+        dateValue={item.doneByDate ? formatDate(item.doneByDate) : undefined}
+        recurring={recurringLabel}
+        notes={item.notes}
+        completedByLine={
+          isComplete && item.completedByName ? `Completed by ${item.completedByName}` : undefined
+        }
+        completed={isComplete}
         onPress={() => onEdit(item)}
-        activeOpacity={0.8}
-      >
-        <View style={styles.cardHeader}>
-          <Text
-            style={[
-              styles.cardTitle,
-              { color: isComplete ? themeColors.textMuted : themeColors.textPrimary },
-              isComplete && styles.cardTitleComplete,
-            ]}
-            numberOfLines={1}
-          >
-            {item.title}
-          </Text>
-        </View>
-        <View style={styles.cardMeta}>
-          <View
-            style={[
-              styles.deptBadge,
-              { backgroundColor: getDepartmentColor(item.department, overrides) },
-            ]}
-          >
-            <Text style={styles.deptBadgeText}>
-              {item.department.charAt(0) + item.department.slice(1).toLowerCase()}
-            </Text>
-          </View>
-          <Text
-            style={[
-              styles.categoryBadge,
-              { color: themeColors.accent, backgroundColor: themeColors.accentSoft },
-            ]}
-          >
-            {categoryLabel}
-          </Text>
-          {item.doneByDate && (
-            <Text style={[styles.cardDate, { color: themeColors.textSecondary }]}>
-              Done by: {formatDate(item.doneByDate)}
-              {isComplete && ' ✓'}
-            </Text>
-          )}
-          {item.recurring && (
-            <Text
-              style={[
-                styles.recurringBadge,
-                { color: themeColors.accent, backgroundColor: themeColors.accentSoft },
-              ]}
-            >
-              {item.recurring === '7_DAYS'
-                ? 'Every 7 days'
-                : item.recurring === '14_DAYS'
-                  ? 'Every 14 days'
-                  : 'Every 30 days'}
-            </Text>
-          )}
-        </View>
-        {isComplete && item.completedByName && (
-          <Text style={styles.completedBy}>Completed by: {item.completedByName}</Text>
-        )}
-        {item.notes ? (
-          <Text style={[styles.cardNotes, { color: themeColors.textMuted }]} numberOfLines={2}>
-            {item.notes}
-          </Text>
-        ) : null}
-        {!isComplete && (
-          <TouchableOpacity
-            style={[styles.completeBtn, { backgroundColor: themeColors.controlSelected }]}
-            onPress={() => onMarkComplete(item)}
-          >
-            <Text style={[styles.completeBtnText, { color: themeColors.textOnAccent }]}>
-              Mark complete
-            </Text>
-          </TouchableOpacity>
-        )}
-        <PreviewActionButtons onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
-      </TouchableOpacity>
+        onEdit={() => onEdit(item)}
+        onDelete={() => onDelete(item)}
+        onMarkComplete={!isComplete ? () => onMarkComplete(item) : undefined}
+      />
     );
   };
 
@@ -222,7 +154,6 @@ export const UpcomingTasksScreen = ({ navigation }: any) => {
         <LoadingSpinner />
       ) : tasks.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>📋</Text>
           <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
             No tasks due in the next {UPCOMING_DAYS} days
           </Text>
@@ -250,6 +181,11 @@ export const UpcomingTasksScreen = ({ navigation }: any) => {
             data={filteredTasks}
             keyExtractor={(t) => t.id}
             renderItem={renderItem}
+            ListHeaderComponent={
+              <Text style={[styles.sectionLabel, { color: themeColors.textSecondary }]}>
+                UPCOMING TASKS
+              </Text>
+            }
             contentContainerStyle={[
               styles.list,
               filteredTasks.length === 0 && tasks.length > 0 && styles.listEmpty,
@@ -460,13 +396,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: SPACING.xl,
   },
-  emptyEmoji: {
-    fontSize: 48,
-    marginBottom: SPACING.md,
-  },
   emptyText: {
     fontSize: FONTS.lg,
     color: COLORS.textSecondary,
     textAlign: 'center',
+  },
+  sectionLabel: {
+    fontSize: FONTS.sm,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: SPACING.md,
   },
 });

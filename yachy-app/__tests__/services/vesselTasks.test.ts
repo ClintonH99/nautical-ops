@@ -13,7 +13,7 @@ const baseTask: VesselTask = {
   department: 'BRIDGE',
   title: 'Vacuum',
   notes: '',
-  doneByDate: '2026-09-05',
+  doneByDate: '2026-09-01',
   status: 'NOT_STARTED',
   recurring: '7_DAYS',
   createdAt: '2026-09-01T12:00:00.000Z',
@@ -32,7 +32,7 @@ describe('vessel task completion', () => {
     jest.useRealTimers();
   });
 
-  it('reschedules a recurring task from its completion date', async () => {
+  it('advances a recurring task one cycle from its existing due date', async () => {
     jest.spyOn(vesselTasksService, 'getById').mockResolvedValue(baseTask);
     const update = jest.spyOn(vesselTasksService, 'update').mockResolvedValue();
 
@@ -40,7 +40,7 @@ describe('vessel task completion', () => {
 
     expect(update).toHaveBeenCalledWith('task-1', {
       status: 'NOT_STARTED',
-      doneByDate: '2026-09-11',
+      doneByDate: '2026-09-08',
       recurring: '7_DAYS',
       completedBy: null,
       completedAt: null,

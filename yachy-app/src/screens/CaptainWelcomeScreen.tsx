@@ -10,7 +10,7 @@ import { Button } from '../components';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 
-const ICON_ACCENT = '#0ea5e9';
+const ICON_ACCENT = COLORS.primary;
 
 export const CaptainWelcomeScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -22,7 +22,7 @@ export const CaptainWelcomeScreen = ({ navigation }: any) => {
           <Text style={styles.icon}>🎉</Text>
           <Text style={[styles.title, { color: themeColors.textPrimary }]}>Account Created!</Text>
           <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-          You're all set as Captain (MOV). Create your vessel to get started and invite your crew.
+            You're all set as Captain (MOV). Create your vessel to get started and invite your crew.
           </Text>
         </View>
 
@@ -40,7 +40,9 @@ export const CaptainWelcomeScreen = ({ navigation }: any) => {
               <Ionicons name="boat-outline" size={28} color={ICON_ACCENT} />
             </View>
             <View style={styles.optionText}>
-              <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>Create a Vessel</Text>
+              <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>
+                Create a Vessel
+              </Text>
               <Text style={[styles.optionDesc, { color: themeColors.textSecondary }]}>
                 Set up your yacht, get an invite code, and start managing operations
               </Text>
@@ -103,7 +105,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: BORDER_RADIUS.md,
-    backgroundColor: 'rgba(14, 165, 233, 0.15)',
+    backgroundColor: 'rgba(30, 58, 138, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: SPACING.md,

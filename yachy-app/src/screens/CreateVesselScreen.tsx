@@ -233,8 +233,8 @@ export const CreateVesselScreen = ({ navigation }: any) => {
               style={[
                 styles.infoBox,
                 {
-                  backgroundColor: 'rgba(14, 165, 233, 0.1)',
-                  borderColor: 'rgba(14, 165, 233, 0.3)',
+                  backgroundColor: 'rgba(30, 58, 138, 0.1)',
+                  borderColor: 'rgba(30, 58, 138, 0.3)',
                 },
               ]}
             >

@@ -15,16 +15,11 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
-import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
+import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import vesselTasksService from '../services/vesselTasks';
 import { VesselTask, TaskCategory, Department } from '../types';
-import {
-  DepartmentSelector,
-  LoadingSpinner,
-  PageHeader,
-  PreviewActionButtons,
-} from '../components';
+import { DepartmentSelector, LoadingSpinner, PageHeader, TaskPreviewCard } from '../components';
 
 const CATEGORY_LABELS: Record<TaskCategory, string> = {
   DAILY: 'Daily',
@@ -35,7 +30,6 @@ const CATEGORY_LABELS: Record<TaskCategory, string> = {
 export const OverdueTasksScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
-  const overrides = useDepartmentColorStore((s) => s.overrides);
   const [tasks, setTasks] = useState<VesselTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -109,63 +103,32 @@ export const OverdueTasksScreen = ({ navigation }: any) => {
       .catch(() => Alert.alert('Error', 'Could not update task'));
   };
 
-  const renderItem = ({ item }: { item: VesselTask }) => (
-    <TouchableOpacity
-      style={[
-        styles.card,
-        {
-          backgroundColor: themeColors.surface,
-          borderColor: themeColors.border,
-          borderLeftColor: COLORS.danger,
-        },
-      ]}
-      onPress={() => onEdit(item)}
-      activeOpacity={0.8}
-    >
-      <View style={styles.cardHeader}>
-        <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
-          {item.title}
-        </Text>
-      </View>
-      <View style={styles.cardMeta}>
-        <View
-          style={[
-            styles.deptBadge,
-            { backgroundColor: getDepartmentColor(item.department, overrides) },
-          ]}
-        >
-          <Text style={styles.deptBadgeText}>
-            {item.department.charAt(0) + item.department.slice(1).toLowerCase()}
-          </Text>
-        </View>
-        <Text style={styles.cardDate}>
-          Was due: {item.doneByDate ? formatDate(item.doneByDate) : ''}
-        </Text>
-        <Text
-          style={[
-            styles.categoryBadge,
-            { color: themeColors.accent, backgroundColor: themeColors.accentSoft },
-          ]}
-        >
-          {CATEGORY_LABELS[item.category]}
-        </Text>
-      </View>
-      {item.notes ? (
-        <Text style={[styles.cardNotes, { color: themeColors.textMuted }]} numberOfLines={2}>
-          {item.notes}
-        </Text>
-      ) : null}
-      <TouchableOpacity
-        style={[styles.completeBtn, { backgroundColor: themeColors.controlSelected }]}
-        onPress={() => onMarkComplete(item)}
-      >
-        <Text style={[styles.completeBtnText, { color: themeColors.textOnAccent }]}>
-          Mark complete
-        </Text>
-      </TouchableOpacity>
-      <PreviewActionButtons onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />
-    </TouchableOpacity>
-  );
+  const renderItem = ({ item }: { item: VesselTask }) => {
+    const recurringLabel = item.recurring
+      ? item.recurring === '7_DAYS'
+        ? 'Every 7 days'
+        : item.recurring === '14_DAYS'
+          ? 'Every 14 days'
+          : 'Every 30 days'
+      : undefined;
+
+    return (
+      <TaskPreviewCard
+        title={item.title}
+        department={item.department.charAt(0) + item.department.slice(1).toLowerCase()}
+        category={CATEGORY_LABELS[item.category]}
+        dateLabel="Was Due"
+        dateValue={item.doneByDate ? formatDate(item.doneByDate) : undefined}
+        dateIsOverdue
+        recurring={recurringLabel}
+        notes={item.notes}
+        onPress={() => onEdit(item)}
+        onEdit={() => onEdit(item)}
+        onDelete={() => onDelete(item)}
+        onMarkComplete={() => onMarkComplete(item)}
+      />
+    );
+  };
 
   if (!vesselId) {
     return (
@@ -184,7 +147,6 @@ export const OverdueTasksScreen = ({ navigation }: any) => {
         <LoadingSpinner />
       ) : tasks.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>✓</Text>
           <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
             No overdue tasks
           </Text>
@@ -212,6 +174,11 @@ export const OverdueTasksScreen = ({ navigation }: any) => {
             data={filteredTasks}
             keyExtractor={(t) => t.id}
             renderItem={renderItem}
+            ListHeaderComponent={
+              <Text style={[styles.sectionLabel, { color: themeColors.textSecondary }]}>
+                OVERDUE TASKS
+              </Text>
+            }
             contentContainerStyle={[
               styles.list,
               filteredTasks.length === 0 && tasks.length > 0 && styles.listEmpty,
@@ -405,11 +372,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: SPACING.xl,
   },
-  emptyEmoji: {
-    fontSize: 48,
-    marginBottom: SPACING.md,
-  },
   emptyText: {
     fontSize: FONTS.lg,
+  },
+  sectionLabel: {
+    fontSize: FONTS.sm,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: SPACING.md,
   },
 });

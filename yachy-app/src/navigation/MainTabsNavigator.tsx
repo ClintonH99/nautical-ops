@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   sidebarItemActive: {
-    backgroundColor: 'rgba(14, 165, 233, 0.12)',
+    backgroundColor: 'rgba(30, 58, 138, 0.12)',
   },
   sidebarLabel: {
     fontSize: 15,

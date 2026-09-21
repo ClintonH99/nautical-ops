@@ -93,7 +93,9 @@ export const ThemeSettingsScreen = () => {
                   ]}
                 >
                   {isSelected && (
-                    <View style={[styles.radioDot, { backgroundColor: themeColors.accent }]} />
+                    <View
+                      style={[styles.radioDot, { backgroundColor: themeColors.controlSelected }]}
+                    />
                   )}
                 </View>
               </TouchableOpacity>

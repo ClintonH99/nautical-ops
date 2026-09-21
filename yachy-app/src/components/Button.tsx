@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
   secondary: {
-    backgroundColor: COLORS.secondary,
+    backgroundColor: COLORS.primary,
   },
   secondaryText: {
     color: COLORS.white,

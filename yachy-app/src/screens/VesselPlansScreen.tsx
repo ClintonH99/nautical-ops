@@ -295,7 +295,7 @@ export const VesselPlansScreen = ({ navigation }: any) => {
           ]}
         >
           {isSelected && (
-            <View style={[styles.radioInner, { backgroundColor: themeColors.accent }]} />
+            <View style={[styles.radioInner, { backgroundColor: themeColors.controlSelected }]} />
           )}
         </View>
       </TouchableOpacity>
@@ -373,7 +373,7 @@ export const VesselPlansScreen = ({ navigation }: any) => {
             ]}
           >
             {isSelected && (
-              <View style={[styles.radioInner, { backgroundColor: themeColors.accent }]} />
+              <View style={[styles.radioInner, { backgroundColor: themeColors.controlSelected }]} />
             )}
           </View>
         </View>

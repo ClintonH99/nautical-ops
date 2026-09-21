@@ -21,6 +21,7 @@ export { DepartmentSelector } from './DepartmentSelector';
 export { DepartmentMultiSelector } from './DepartmentMultiSelector';
 export { EnterToAddHint } from './EnterToAddHint';
 export { PreviewActionButtons } from './PreviewActionButtons';
+export { TaskPreviewCard } from './TaskPreviewCard';
 export { TripLoadErrorBanner } from './TripLoadErrorBanner';
 export { DateOnlyPicker } from './DateOnlyPicker';
 export { FuelVoidReasonModal } from './FuelVoidReasonModal';

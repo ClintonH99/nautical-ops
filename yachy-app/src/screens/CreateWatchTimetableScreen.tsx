@@ -776,7 +776,10 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
               ]}
             >
               <TouchableOpacity
-                style={[styles.timetableExportBtn, { backgroundColor: themeColors.accent }]}
+                style={[
+                  styles.timetableExportBtn,
+                  { backgroundColor: themeColors.controlSelected },
+                ]}
                 onPress={() => handlePublish()}
                 disabled={publishing}
               >

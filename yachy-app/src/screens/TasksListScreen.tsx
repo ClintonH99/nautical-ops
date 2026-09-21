@@ -15,18 +15,12 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
-import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
+import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import vesselTasksService from '../services/vesselTasks';
 import { VesselTask, TaskCategory, Department } from '../types';
-import { getTaskUrgencyColor } from '../utils/taskUrgency';
-import {
-  ButtonTagCard,
-  ButtonTagRow,
-  DepartmentSelector,
-  LoadingSpinner,
-  PageHeader,
-} from '../components';
+import { toYYYYMMDD } from '../utils';
+import { DepartmentSelector, LoadingSpinner, PageHeader, TaskPreviewCard } from '../components';
 
 const CATEGORY_LABELS: Record<TaskCategory, string> = {
   DAILY: 'Daily',
@@ -37,7 +31,6 @@ const CATEGORY_LABELS: Record<TaskCategory, string> = {
 export const TasksListScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
-  const overrides = useDepartmentColorStore((s) => s.overrides);
   const category = (route.params?.category ?? 'DAILY') as TaskCategory;
   const categoryLabel = CATEGORY_LABELS[category];
 
@@ -119,8 +112,8 @@ export const TasksListScreen = ({ navigation, route }: any) => {
   };
 
   const renderItem = ({ item }: { item: VesselTask }) => {
-    const borderColor = getTaskUrgencyColor(item.doneByDate, item.createdAt, item.status);
     const isComplete = item.status === 'COMPLETED';
+    const isOverdue = !isComplete && !!item.doneByDate && item.doneByDate < toYYYYMMDD(new Date());
     const recurringLabel = item.recurring
       ? item.recurring === '7_DAYS'
         ? 'Every 7 days'
@@ -129,40 +122,23 @@ export const TasksListScreen = ({ navigation, route }: any) => {
           : 'Every 30 days'
       : '';
 
-    const dateVal = item.doneByDate
-      ? `${formatDate(item.doneByDate)}${isComplete ? ' ✓' : ''}`
-      : '';
     return (
-      <ButtonTagCard
-        headerTitle={item.title ?? ''}
-        accentColor={borderColor}
+      <TaskPreviewCard
+        title={item.title ?? ''}
+        department={item.department.charAt(0) + item.department.slice(1).toLowerCase()}
+        dateValue={item.doneByDate ? formatDate(item.doneByDate) : undefined}
+        dateIsOverdue={isOverdue}
+        recurring={recurringLabel}
+        notes={item.notes}
+        completedByLine={
+          isComplete && item.completedByName ? `Completed by ${item.completedByName}` : undefined
+        }
+        completed={isComplete}
         onEdit={() => onEdit(item)}
         onDelete={() => onDelete(item)}
         onPress={() => onEdit(item)}
-        footer={
-          isComplete && item.completedByName ? `Completed by ${item.completedByName}` : undefined
-        }
-      >
-        {dateVal ? <ButtonTagRow label="Date" value={dateVal} /> : null}
-        <ButtonTagRow
-          label="Department"
-          value={item.department.charAt(0) + item.department.slice(1).toLowerCase()}
-          badgeColor={getDepartmentColor(item.department, overrides)}
-        />
-        <ButtonTagRow label="Recurring" value={recurringLabel} />
-        <ButtonTagRow label="Notes" value={item.notes ?? ''} />
-        {!isComplete && (
-          <TouchableOpacity
-            style={styles.completeBtn}
-            onPress={(e) => {
-              e?.stopPropagation?.();
-              onMarkComplete(item);
-            }}
-          >
-            <Text style={styles.completeBtnText}>Mark complete</Text>
-          </TouchableOpacity>
-        )}
-      </ButtonTagCard>
+        onMarkComplete={!isComplete ? () => onMarkComplete(item) : undefined}
+      />
     );
   };
 
@@ -178,12 +154,11 @@ export const TasksListScreen = ({ navigation, route }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <PageHeader title="Tasks" />
+      <PageHeader title={`${categoryLabel} Tasks`} />
       {loading ? (
         <LoadingSpinner />
       ) : tasks.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>📋</Text>
           <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
             No {categoryLabel.toLowerCase()} tasks yet
           </Text>
@@ -211,6 +186,11 @@ export const TasksListScreen = ({ navigation, route }: any) => {
             data={filteredTasks}
             keyExtractor={(t) => t.id}
             renderItem={renderItem}
+            ListHeaderComponent={
+              <Text style={[styles.sectionLabel, { color: themeColors.textSecondary }]}>
+                {categoryLabel.toUpperCase()} TASKS
+              </Text>
+            }
             contentContainerStyle={[
               styles.list,
               filteredTasks.length === 0 && tasks.length > 0 && styles.listEmpty,
@@ -263,28 +243,11 @@ const styles = StyleSheet.create({
   listEmpty: {
     flexGrow: 1,
   },
-  completeBtn: {
-    marginTop: SPACING.sm,
-    alignSelf: 'flex-start',
-    paddingVertical: SPACING.xs,
-    paddingHorizontal: SPACING.sm,
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  completeBtnText: {
-    fontSize: FONTS.sm,
-    color: COLORS.white,
-    fontWeight: '600',
-  },
   empty: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: SPACING.xl,
-  },
-  emptyEmoji: {
-    fontSize: 48,
-    marginBottom: SPACING.md,
   },
   emptyText: {
     fontSize: FONTS.lg,
@@ -359,5 +322,11 @@ const styles = StyleSheet.create({
   },
   emptyFilterText: {
     fontSize: FONTS.base,
+  },
+  sectionLabel: {
+    fontSize: FONTS.sm,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: SPACING.md,
   },
 });

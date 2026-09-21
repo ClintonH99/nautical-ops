@@ -22,8 +22,8 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import authService from '../services/auth';
 import { useAuthStore } from '../store';
 
-const INFO_BG = 'rgba(14, 165, 233, 0.12)';
-const INFO_BORDER = 'rgba(14, 165, 233, 0.3)';
+const INFO_BG = 'rgba(30, 58, 138, 0.12)';
+const INFO_BORDER = 'rgba(30, 58, 138, 0.3)';
 
 export const RegisterCaptainScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -134,7 +134,9 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
             <Ionicons name="chevron-back" size={28} color={themeColors.textPrimary} />
           </TouchableOpacity>
 
-          <Text style={[styles.title, { color: themeColors.textPrimary }]}>Create Captain Account</Text>
+          <Text style={[styles.title, { color: themeColors.textPrimary }]}>
+            Create Captain Account
+          </Text>
           <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
             Set up your account and create your vessel
           </Text>
@@ -220,7 +222,9 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
             </View>
 
             <View style={styles.footer}>
-              <Text style={[styles.footerText, { color: themeColors.textSecondary }]}>Already have an account? </Text>
+              <Text style={[styles.footerText, { color: themeColors.textSecondary }]}>
+                Already have an account?{' '}
+              </Text>
               <TouchableOpacity onPress={() => navigation.navigate('Login')}>
                 <Text style={styles.footerLink}>Sign In</Text>
               </TouchableOpacity>

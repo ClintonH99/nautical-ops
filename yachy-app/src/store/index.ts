@@ -167,7 +167,7 @@ export interface BackgroundThemeColors {
   border: string;
   /** Emphasised outline for interactive controls. */
   borderStrong: string;
-  /** Theme-safe interactive accent (never use the dark navy brand colour as night-mode text). */
+  /** Theme-safe interactive accent for text and icons. */
   accent: string;
   accentSoft: string;
   textPrimary: string;
@@ -185,11 +185,11 @@ export const BACKGROUND_THEMES: Record<BackgroundThemeId, BackgroundThemeColors>
     surfaceAlt: '#F1F3F5',
     surfaceElevated: '#FFFFFF',
     control: '#FFFFFF',
-    controlSelected: '#3B82F6',
+    controlSelected: '#1E3A8A',
     border: '#E5E7EB',
     borderStrong: '#94A3B8',
     accent: '#1E3A8A',
-    accentSoft: 'rgba(59,130,246,0.12)',
+    accentSoft: 'rgba(30,58,138,0.12)',
     textPrimary: '#0D0D0D',
     textSecondary: '#64748B',
     textMuted: '#94A3B8',
@@ -203,11 +203,11 @@ export const BACKGROUND_THEMES: Record<BackgroundThemeId, BackgroundThemeColors>
     surfaceAlt: '#334155',
     surfaceElevated: '#223149',
     control: '#162338',
-    controlSelected: '#315D91',
+    controlSelected: '#1E3A8A',
     border: '#415673',
     borderStrong: '#7690B0',
-    accent: '#60A5FA',
-    accentSoft: 'rgba(96,165,250,0.18)',
+    accent: '#FFFFFF',
+    accentSoft: 'rgba(30,58,138,0.5)',
     textPrimary: '#FFFFFF',
     textSecondary: '#C4D0E1',
     textMuted: '#91A4BD',
