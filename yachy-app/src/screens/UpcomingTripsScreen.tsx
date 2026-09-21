@@ -5,6 +5,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from 'react-native-calendars';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
@@ -184,11 +185,16 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
         )}
         <View style={styles.preDepartureRow}>
           <TouchableOpacity
-            style={[styles.preDepartureBtn, { backgroundColor: themeColors.surface }]}
+            style={[
+              styles.preDepartureBtn,
+              { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+            ]}
             onPress={() => navigation.navigate('PreDepartureChecklist')}
             activeOpacity={0.8}
           >
-            <Text style={styles.preDepartureEmoji}>📋</Text>
+            <View style={[styles.preDepartureIcon, { backgroundColor: themeColors.accentSoft }]}>
+              <Ionicons name="clipboard-outline" size={23} color={themeColors.accent} />
+            </View>
             <View style={styles.preDepartureTextWrap}>
               <Text style={[styles.preDepartureLabel, { color: themeColors.textPrimary }]}>
                 Pre-Departure Checklist
@@ -196,9 +202,10 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
               <Text style={[styles.preDepartureHint, { color: themeColors.textSecondary }]}>
                 {tripsStartingTomorrow.length > 0
                   ? `Trip${tripsStartingTomorrow.length > 1 ? 's' : ''} tomorrow: ${tripsStartingTomorrow.map((t) => t.title).join(', ')}`
-                  : 'HODs: Add tasks for crew before departure'}
+                  : 'Add tasks for crew before departure'}
               </Text>
             </View>
+            <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -215,7 +222,10 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
             {linkedUpcomingChecklists.map(({ checklist, trip }) => (
               <TouchableOpacity
                 key={checklist.id}
-                style={[styles.linkedChecklistCard, { backgroundColor: themeColors.surface }]}
+                style={[
+                  styles.linkedChecklistCard,
+                  { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+                ]}
                 onPress={() =>
                   navigation.navigate('ViewPreDepartureChecklist', {
                     checklistId: checklist.id,
@@ -232,9 +242,7 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
                     {formatLocalDateString(trip.endDate)}
                   </Text>
                 </View>
-                <Text style={[styles.linkedChecklistArrow, { color: themeColors.textSecondary }]}>
-                  ›
-                </Text>
+                <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
               </TouchableOpacity>
             ))}
           </View>
@@ -246,16 +254,13 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
             { color: themeColors.isDark ? COLORS.white : COLORS.primary },
           ]}
         >
-          Trip types
-        </Text>
-        <Text style={[styles.filterHint, { color: COLORS.textTertiary }]}>
-          Tap card to open • Tap Show/Hide to filter calendar
+          Trip Types
         </Text>
         <View style={styles.optionsRow}>
           <View
             style={[
               styles.optionCard,
-              { backgroundColor: themeColors.surface, borderLeftColor: c.guest },
+              { backgroundColor: themeColors.surface, borderColor: themeColors.border },
             ]}
           >
             <TouchableOpacity
@@ -263,18 +268,26 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
               onPress={() => navigation.navigate('GuestTrips')}
               activeOpacity={0.8}
             >
-              <Text style={styles.optionEmoji}>👥</Text>
-              <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>
-                Guest Trips
-              </Text>
-              <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>
-                Charter guests
-              </Text>
+              <View style={[styles.tripTypeDot, { backgroundColor: c.guest }]} />
+              <View style={styles.optionTextWrap}>
+                <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>
+                  Guest Trips
+                </Text>
+                <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>
+                  Charter guests
+                </Text>
+              </View>
             </TouchableOpacity>
             <TouchableOpacity style={styles.visibilityBtn} onPress={() => toggleVisible('GUEST')}>
+              <Ionicons
+                name={visibleTypes.GUEST ? 'eye-outline' : 'eye-off-outline'}
+                size={17}
+                color={visibleTypes.GUEST ? themeColors.accent : themeColors.textSecondary}
+              />
               <Text
                 style={[
                   styles.visibilityBtnText,
+                  { color: themeColors.accent },
                   !visibleTypes.GUEST && styles.visibilityBtnTextDim,
                 ]}
               >
@@ -285,7 +298,7 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
           <View
             style={[
               styles.optionCard,
-              { backgroundColor: themeColors.surface, borderLeftColor: c.boss },
+              { backgroundColor: themeColors.surface, borderColor: themeColors.border },
             ]}
           >
             <TouchableOpacity
@@ -293,18 +306,26 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
               onPress={() => navigation.navigate('BossTrips')}
               activeOpacity={0.8}
             >
-              <Text style={styles.optionEmoji}>⚓</Text>
-              <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>
-                Boss Trips
-              </Text>
-              <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>
-                Owner / family
-              </Text>
+              <View style={[styles.tripTypeDot, { backgroundColor: c.boss }]} />
+              <View style={styles.optionTextWrap}>
+                <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>
+                  Boss Trips
+                </Text>
+                <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>
+                  Owner / family
+                </Text>
+              </View>
             </TouchableOpacity>
             <TouchableOpacity style={styles.visibilityBtn} onPress={() => toggleVisible('BOSS')}>
+              <Ionicons
+                name={visibleTypes.BOSS ? 'eye-outline' : 'eye-off-outline'}
+                size={17}
+                color={visibleTypes.BOSS ? themeColors.accent : themeColors.textSecondary}
+              />
               <Text
                 style={[
                   styles.visibilityBtnText,
+                  { color: themeColors.accent },
                   !visibleTypes.BOSS && styles.visibilityBtnTextDim,
                 ]}
               >
@@ -317,7 +338,7 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
           <View
             style={[
               styles.optionCard,
-              { backgroundColor: themeColors.surface, borderLeftColor: c.delivery },
+              { backgroundColor: themeColors.surface, borderColor: themeColors.border },
             ]}
           >
             <TouchableOpacity
@@ -325,19 +346,29 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
               onPress={() => navigation.navigate('DeliveryTrips')}
               activeOpacity={0.8}
             >
-              <Text style={styles.optionEmoji}>🚢</Text>
-              <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>Delivery</Text>
-              <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>
-                Delivery periods
-              </Text>
+              <View style={[styles.tripTypeDot, { backgroundColor: c.delivery }]} />
+              <View style={styles.optionTextWrap}>
+                <Text style={[styles.optionTitle, { color: themeColors.textPrimary }]}>
+                  Delivery
+                </Text>
+                <Text style={[styles.optionSubtitle, { color: themeColors.textSecondary }]}>
+                  Delivery periods
+                </Text>
+              </View>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.visibilityBtn}
               onPress={() => toggleVisible('DELIVERY')}
             >
+              <Ionicons
+                name={visibleTypes.DELIVERY ? 'eye-outline' : 'eye-off-outline'}
+                size={17}
+                color={visibleTypes.DELIVERY ? themeColors.accent : themeColors.textSecondary}
+              />
               <Text
                 style={[
                   styles.visibilityBtnText,
+                  { color: themeColors.accent },
                   !visibleTypes.DELIVERY && styles.visibilityBtnTextDim,
                 ]}
               >
@@ -375,7 +406,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: FONTS.lg,
     fontWeight: '600',
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.md,
   },
   calendarCard: {
     borderRadius: BORDER_RADIUS.lg,
@@ -440,18 +471,18 @@ const styles = StyleSheet.create({
   },
   preDepartureBtn: {
     borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
+    padding: SPACING.md,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    gap: SPACING.md,
+    borderWidth: 1,
   },
-  preDepartureEmoji: {
-    fontSize: 32,
-    marginRight: SPACING.md,
+  preDepartureIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   preDepartureTextWrap: {
     flex: 1,
@@ -465,33 +496,30 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 1,
   },
   linkedChecklistContent: { flex: 1 },
   linkedChecklistTitle: { fontSize: FONTS.base, fontWeight: '700' },
   linkedChecklistTrip: { fontSize: FONTS.sm, marginTop: 2 },
-  linkedChecklistArrow: { fontSize: FONTS['2xl'], marginLeft: SPACING.sm },
   optionCard: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.md,
-    borderLeftWidth: 4,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 1,
   },
   optionCardMain: {
     flex: 1,
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
   },
   visibilityBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     paddingVertical: SPACING.xs,
     paddingHorizontal: SPACING.sm,
     marginLeft: SPACING.xs,
@@ -499,15 +527,12 @@ const styles = StyleSheet.create({
   visibilityBtnText: {
     fontSize: FONTS.xs,
     fontWeight: '600',
-    color: COLORS.primary,
   },
   visibilityBtnTextDim: {
     color: COLORS.textTertiary,
   },
-  optionEmoji: {
-    fontSize: 28,
-    marginBottom: SPACING.xs,
-  },
+  tripTypeDot: { width: 10, height: 10, borderRadius: 5 },
+  optionTextWrap: { flex: 1 },
   optionTitle: { fontSize: FONTS.lg, fontWeight: '600' },
   optionSubtitle: { fontSize: FONTS.sm, marginTop: 2 },
   headerButtonText: { fontSize: FONTS.sm, fontWeight: '600' },

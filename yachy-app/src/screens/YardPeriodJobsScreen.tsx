@@ -440,7 +440,7 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
     return (
       <ButtonTagCard
         headerTitle={item.jobTitle}
-        accentColor={getDepartmentColor(item.department ?? 'INTERIOR', overrides)}
+        minimal
         collapsible={!exportMode}
         expanded={expandedId === item.id}
         onToggleExpand={() => setExpandedId((current) => (current === item.id ? null : item.id))}
@@ -525,7 +525,12 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
 
   const listHeader = (
     <>
-      <View style={[styles.segmentedControl, { backgroundColor: themeColors.surface }]}>
+      <View
+        style={[
+          styles.segmentedControl,
+          { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+        ]}
+      >
         {(
           [
             ['ACTIVE', 'Active Jobs'],
@@ -845,6 +850,7 @@ const styles = StyleSheet.create({
   segmentedControl: {
     flexDirection: 'row',
     padding: 4,
+    borderWidth: 1,
     borderRadius: BORDER_RADIUS.lg,
     marginBottom: SPACING.lg,
   },

@@ -25,6 +25,8 @@ export interface ButtonTagCardProps {
   onToggleSelect?: () => void;
   footer?: string;
   accentColor?: string;
+  /** Flat, border-only presentation for the approved minimal list design. */
+  minimal?: boolean;
   /**
    * Opt in to the collapsed/expanded behaviour: the card shows only its title
    * and `summary` until tapped, then reveals children, edit, delete and footer.
@@ -76,6 +78,7 @@ export function ButtonTagCard({
   onToggleSelect,
   footer,
   accentColor,
+  minimal = false,
   collapsible,
   expanded,
   onToggleExpand,
@@ -104,7 +107,8 @@ export function ButtonTagCard({
       style={[
         styles.card,
         { backgroundColor: themeColors.surface, borderColor: themeColors.border },
-        accentColor && { borderLeftWidth: 4, borderLeftColor: accentColor },
+        minimal && styles.cardMinimal,
+        accentColor && !minimal && { borderLeftWidth: 4, borderLeftColor: accentColor },
         selected && { borderColor: themeColors.accent },
       ]}
       onPress={handlePress}
@@ -197,6 +201,12 @@ const styles = StyleSheet.create({
     elevation: 3,
     borderWidth: 2,
     borderColor: 'transparent',
+  },
+  cardMinimal: {
+    borderWidth: 1,
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
   cardHeader: {
     flexDirection: 'row',

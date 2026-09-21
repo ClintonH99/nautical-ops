@@ -24,7 +24,7 @@ import { TripType, Department } from '../types';
 import { Input, Button, LoadingSpinner, PageHeader, DepartmentSelector } from '../components';
 import { useVesselTripColors } from '../hooks/useVesselTripColors';
 import { DEFAULT_COLORS } from '../services/tripColors';
-import { parseLocalDate, toYYYYMMDD } from '../utils';
+import { formatLocalDateString, parseLocalDate, toYYYYMMDD } from '../utils';
 
 type MarkedDates = {
   [date: string]: { startingDay?: boolean; endingDay?: boolean; color: string; textColor?: string };
@@ -243,6 +243,26 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
     );
   }
 
+  const selectedDateLabel =
+    startDate && endDate
+      ? startDate === endDate
+        ? formatLocalDateString(startDate)
+        : `${formatLocalDateString(startDate)} – ${formatLocalDateString(endDate)}`
+      : 'Select start and end dates';
+
+  const tripCalendar = (
+    <Calendar
+      current={startDate || toYYYYMMDD(new Date())}
+      minDate={toYYYYMMDD(new Date())}
+      markedDates={markedDates}
+      markingType="period"
+      onDayPress={({ dateString }) => onDayPress(dateString)}
+      theme={calendarTheme}
+      hideExtraDays
+      hideArrows={false}
+    />
+  );
+
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: themeColors.background }]}
@@ -255,21 +275,37 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <Input
-          label="Trip title"
-          value={title}
-          onChangeText={setTitle}
-          placeholder={
-            type === 'GUEST'
-              ? 'e.g. Charter week'
-              : type === 'BOSS'
-                ? 'e.g. Owner family trip'
-                : type === 'DELIVERY'
-                  ? 'e.g. Delivery to Palma'
-                  : 'e.g. Annual refit'
-          }
-          autoCapitalize="words"
-        />
+        {type === 'YARD_PERIOD' ? (
+          <Input
+            label="Trip title"
+            value={title}
+            onChangeText={setTitle}
+            placeholder="e.g. Annual refit"
+            autoCapitalize="words"
+          />
+        ) : (
+          <View
+            style={[
+              styles.formSection,
+              { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+            ]}
+          >
+            <Input
+              label="Trip Title"
+              value={title}
+              onChangeText={setTitle}
+              placeholder={
+                type === 'GUEST'
+                  ? 'e.g. Charter week'
+                  : type === 'BOSS'
+                    ? 'e.g. Owner family trip'
+                    : 'e.g. Delivery to Palma'
+              }
+              autoCapitalize="words"
+              containerStyle={styles.sectionInput}
+            />
+          </View>
+        )}
         {type === 'YARD_PERIOD' && (
           <>
             <DepartmentSelector
@@ -298,39 +334,71 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
             />
           </>
         )}
-        <Text style={[styles.label, { color: themeColors.textPrimary }]}>Select dates</Text>
-        <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
-          {!startDate
-            ? 'Tap a start date on the calendar'
-            : !endDate
-              ? 'Tap the end date'
-              : `${startDate} – ${endDate}`}
-        </Text>
-        <View
-          style={[
-            styles.calendarWrap,
-            { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border },
-          ]}
-        >
-          <Calendar
-            current={startDate || toYYYYMMDD(new Date())}
-            minDate={toYYYYMMDD(new Date())}
-            markedDates={markedDates}
-            markingType="period"
-            onDayPress={({ dateString }) => onDayPress(dateString)}
-            theme={calendarTheme}
-            hideExtraDays
-            hideArrows={false}
-          />
-        </View>
-        <Input
-          label="Notes (optional)"
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Special requests, itinerary notes..."
-          multiline
-          numberOfLines={3}
-        />
+        {type === 'YARD_PERIOD' ? (
+          <>
+            <Text style={[styles.label, { color: themeColors.textPrimary }]}>Select dates</Text>
+            <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
+              {!startDate
+                ? 'Tap a start date on the calendar'
+                : !endDate
+                  ? 'Tap the end date'
+                  : `${startDate} – ${endDate}`}
+            </Text>
+            <View
+              style={[
+                styles.calendarWrap,
+                { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border },
+              ]}
+            >
+              {tripCalendar}
+            </View>
+            <Input
+              label="Notes (optional)"
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="Special requests, itinerary notes..."
+              multiline
+              numberOfLines={3}
+            />
+          </>
+        ) : (
+          <>
+            <View
+              style={[
+                styles.formSection,
+                { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+              ]}
+            >
+              <View style={styles.dateSectionHeader}>
+                <Text style={[styles.dateSectionTitle, { color: themeColors.textPrimary }]}>
+                  Trip Dates
+                </Text>
+                <Text style={[styles.dateRange, { color: themeColors.accent }]}>
+                  {selectedDateLabel}
+                </Text>
+              </View>
+              <View style={[styles.calendarInline, { borderTopColor: themeColors.border }]}>
+                {tripCalendar}
+              </View>
+            </View>
+            <View
+              style={[
+                styles.formSection,
+                { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+              ]}
+            >
+              <Input
+                label="Notes (optional)"
+                value={notes}
+                onChangeText={setNotes}
+                placeholder="Special requests or itinerary notes"
+                multiline
+                numberOfLines={3}
+                containerStyle={styles.sectionInput}
+              />
+            </View>
+          </>
+        )}
         <View style={styles.actions}>
           <Button
             title={isEdit ? 'Save Changes' : `Create ${typeLabel}`}
@@ -424,6 +492,26 @@ const styles = StyleSheet.create({
     padding: SPACING.sm,
     marginBottom: SPACING.lg,
     borderWidth: 1,
+  },
+  formSection: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  sectionInput: { marginBottom: 0 },
+  dateSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  dateSectionTitle: { fontSize: FONTS.base, fontWeight: '600' },
+  dateRange: { flex: 1, fontSize: FONTS.xs, fontWeight: '600', textAlign: 'right' },
+  calendarInline: {
+    borderTopWidth: 1,
+    paddingTop: SPACING.sm,
   },
   actions: {
     marginTop: SPACING.md,

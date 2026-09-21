@@ -30,7 +30,7 @@ import {
   PageHeader,
 } from '../components';
 import { BORDER_RADIUS, COLORS, FONTS, SHADOWS, SPACING, SIZES } from '../constants/theme';
-import { CREW_LEAVE_COLORS, CREW_LEAVE_LABELS, CREW_LEAVE_TYPES } from '../constants/crewLeave';
+import { CREW_LEAVE_LABELS, CREW_LEAVE_TYPES } from '../constants/crewLeave';
 import { useThemeColors } from '../hooks/useThemeColors';
 import crewLeaveService from '../services/crewLeave';
 import { getDepartmentColor, useAuthStore, useDepartmentColorStore } from '../store';
@@ -229,7 +229,7 @@ export const CrewLeaveScreen = ({ navigation }: any) => {
   const renderItem = ({ item }: { item: CrewLeave }) => (
     <ButtonTagCard
       headerTitle={item.crewMemberName}
-      accentColor={CREW_LEAVE_COLORS[item.leaveType]}
+      minimal
       collapsible
       expanded={expandedId === item.id}
       onToggleExpand={() => setExpandedId(expandedId === item.id ? null : item.id)}
@@ -261,12 +261,18 @@ export const CrewLeaveScreen = ({ navigation }: any) => {
         { backgroundColor: themeColors.surface, borderColor: themeColors.border },
       ]}
     >
-      <Text style={[styles.filterTitle, { color: themeColors.textPrimary }]}>
-        Filter crew leave
-      </Text>
-      <Text style={[styles.filterHint, { color: themeColors.textSecondary }]}>
-        Current and upcoming leave is shown by default. Completed records remain in History.
-      </Text>
+      <View style={styles.filterTitleRow}>
+        <Text style={[styles.filterTitle, { color: themeColors.textPrimary }]}>
+          Filter Crew Leave
+        </Text>
+        <Text
+          style={[styles.resultCount, { color: themeColors.textSecondary }]}
+          accessibilityLiveRegion="polite"
+        >
+          {leave.length}
+          {hasMore ? '+' : ''} {leave.length === 1 ? 'record' : 'records'}
+        </Text>
+      </View>
       <LabeledDropdown
         label="Status"
         value={statusLabel}
@@ -291,15 +297,8 @@ export const CrewLeaveScreen = ({ navigation }: any) => {
         includeAll
         tightTop
       />
-      <View style={styles.filterFooter}>
-        <Text
-          style={[styles.resultCount, { color: themeColors.textSecondary }]}
-          accessibilityLiveRegion="polite"
-        >
-          Showing {leave.length}
-          {hasMore ? '+' : ''} {leave.length === 1 ? 'record' : 'records'}
-        </Text>
-        {activeFilterCount > 0 ? (
+      {activeFilterCount > 0 ? (
+        <View style={styles.filterFooter}>
           <TouchableOpacity
             onPress={resetFilters}
             style={styles.resetFiltersButton}
@@ -310,8 +309,8 @@ export const CrewLeaveScreen = ({ navigation }: any) => {
               Reset filters
             </Text>
           </TouchableOpacity>
-        ) : null}
-      </View>
+        </View>
+      ) : null}
     </View>
   );
 
@@ -489,14 +488,21 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     marginBottom: SPACING.lg,
   },
-  filterTitle: { fontSize: FONTS.base, fontWeight: '700', marginBottom: SPACING.xs },
-  filterHint: { fontSize: FONTS.xs, lineHeight: 18, marginBottom: SPACING.md },
-  filterFooter: {
+  filterTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  filterTitle: { fontSize: FONTS.lg, fontWeight: '700' },
+  filterFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
     minHeight: 32,
     gap: SPACING.sm,
+    marginTop: SPACING.xs,
   },
   resultCount: { fontSize: FONTS.xs },
   resetFiltersButton: { minHeight: 32, justifyContent: 'center', paddingHorizontal: SPACING.xs },

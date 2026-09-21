@@ -5,6 +5,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
@@ -14,13 +15,13 @@ import { Button, LoadingSpinner, PageHeader } from '../components';
 
 type ColorKey = 'guest' | 'boss' | 'delivery' | 'yardPeriod';
 
-const TRIP_LABELS: { key: ColorKey; label: string; emoji: string }[] = [
-  { key: 'guest', label: 'Guest Trips', emoji: '👥' },
-  { key: 'boss', label: 'Boss Trips', emoji: '⚓' },
-  { key: 'delivery', label: 'Delivery', emoji: '🚢' },
+const TRIP_LABELS: { key: ColorKey; label: string }[] = [
+  { key: 'guest', label: 'Guest Trips' },
+  { key: 'boss', label: 'Boss Trips' },
+  { key: 'delivery', label: 'Delivery' },
 ];
 
-export const TripColorSettingsScreen = ({ navigation }: any) => {
+export const TripColorSettingsScreen = () => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const [colors, setColors] = useState(DEFAULT_COLORS);
@@ -79,7 +80,7 @@ export const TripColorSettingsScreen = ({ navigation }: any) => {
               yardPeriod: DEFAULT_COLORS.yardPeriod,
             });
             setColors(DEFAULT_COLORS);
-          } catch (e) {
+          } catch {
             Alert.alert('Error', 'Could not reset colors');
           } finally {
             setSaving(false);
@@ -119,7 +120,7 @@ export const TripColorSettingsScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.pageWrap}>
-      <PageHeader title="Trip colors" />
+      <PageHeader title="Trip Colors" />
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={styles.content}
@@ -130,14 +131,28 @@ export const TripColorSettingsScreen = ({ navigation }: any) => {
             { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
           ]}
         >
-          Choose a color for each trip type. These colors appear on the Upcoming Trips calendar.
+          Choose the calendar color for each trip type.
         </Text>
 
-        {TRIP_LABELS.map(({ key, label, emoji }) => (
-          <View key={key} style={styles.section}>
-            <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>
-              {emoji} {label}
-            </Text>
+        {TRIP_LABELS.map(({ key, label }) => (
+          <View
+            key={key}
+            style={[
+              styles.section,
+              { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+            ]}
+          >
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <View style={[styles.currentColor, { backgroundColor: colors[key] }]} />
+                <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>
+                  {label}
+                </Text>
+              </View>
+              <Text style={[styles.sectionHint, { color: themeColors.textSecondary }]}>
+                Calendar color
+              </Text>
+            </View>
             <View style={styles.swatchRow}>
               {COLORS.tripColorSwatches.map((hex) => {
                 const isSelected = colors[key] === hex;
@@ -154,7 +169,15 @@ export const TripColorSettingsScreen = ({ navigation }: any) => {
                     ]}
                     onPress={() => handlePick(key, hex)}
                     disabled={saving}
-                  />
+                    activeOpacity={0.75}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Select ${hex} for ${label}`}
+                    accessibilityState={{ selected: isSelected, disabled: saving }}
+                  >
+                    {isSelected ? (
+                      <Ionicons name="checkmark" size={19} color={COLORS.white} />
+                    ) : null}
+                  </TouchableOpacity>
                 );
               })}
             </View>
@@ -196,34 +219,57 @@ const styles = StyleSheet.create({
   },
   intro: {
     fontSize: FONTS.sm,
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.md,
     lineHeight: 22,
   },
   section: {
-    marginBottom: SPACING.xl,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    flex: 1,
+  },
+  currentColor: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
   sectionLabel: {
     fontSize: FONTS.base,
     fontWeight: '600',
-    marginBottom: SPACING.sm,
   },
+  sectionHint: { fontSize: FONTS.xs },
   swatchRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: SPACING.sm,
   },
   swatch: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 2,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 3,
     borderColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   swatchSelected: {
     borderWidth: 3,
   },
   footer: {
-    marginTop: SPACING.lg,
+    marginTop: SPACING.sm,
   },
   resetBtn: {},
 });
