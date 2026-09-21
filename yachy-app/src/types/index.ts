@@ -530,6 +530,12 @@ export interface FuelLog {
   pricePerGallon: number;
   /** Alias for new fuel flows; equal to pricePerGallon for every row. */
   pricePerVolumeUnit: number;
+  /**
+   * Unit used to quote the fuel price. This may differ from `volumeUnit`, which
+   * describes the receipt quantity. Older rows fall back to `volumeUnit` (or
+   * US gallons for pre-foundation records).
+   */
+  priceVolumeUnit: FuelVolumeUnit;
   totalPrice: number;
   /** NULL identifies a pre-migration record; the legacy UI stored US gallons. */
   volumeUnit: FuelVolumeUnit | null;

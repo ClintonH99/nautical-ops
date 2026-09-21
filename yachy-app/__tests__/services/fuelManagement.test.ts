@@ -203,11 +203,12 @@ describe('FuelManagementService', () => {
     });
 
     expect(mockRpc).toHaveBeenCalledWith(
-      'create_fuel_log_with_tank_entries',
+      'create_fuel_receipt_with_tanks',
       expect.objectContaining({
         p_entries: [{ fuel_tank_id: 'tank-1', amount_litres: 2500 }],
         p_log: expect.objectContaining({
           volume_unit: 'LITRES',
+          price_volume_unit: 'LITRES',
           currency_code: 'EUR',
           client_request_id: '11111111-1111-4111-8111-111111111111',
           effective_at: expect.any(String),
@@ -222,6 +223,81 @@ describe('FuelManagementService', () => {
       effectiveAt: '2026-09-18T00:30:00.000Z',
       utcOffsetMinutes: 600,
     });
+  });
+
+  it('creates new tanks and their receipt allocations through the same atomic RPC', async () => {
+    mockRpc.mockResolvedValue({
+      data: {
+        id: 'fuel-log-inline-1',
+        vessel_id: 'vessel-1',
+        location_of_refueling: 'Monaco',
+        log_date: '2026-09-18',
+        log_time: '10:30',
+        amount_of_fuel: '5000',
+        price_per_gallon: '5.15',
+        price_volume_unit: 'US_GALLONS',
+        total_price: '6802.43',
+        volume_unit: 'LITRES',
+        currency_code: 'USD',
+        comment: '',
+        created_at: '2026-09-18T10:30:00Z',
+      },
+      error: null,
+    });
+
+    const created = await fuelManagementService.createFuelLogWithTankEntries({
+      log: {
+        vesselId: 'vessel-1',
+        locationOfRefueling: 'Monaco',
+        logDate: '2026-09-18',
+        logTime: '10:30',
+        amountOfFuel: 5000,
+        pricePerGallon: 5.15,
+        priceVolumeUnit: 'US_GALLONS',
+        totalPrice: 6802.43,
+        createdByName: 'Captain',
+        volumeUnit: 'LITRES',
+        currencyCode: 'USD',
+        comment: '',
+      },
+      entries: [
+        { fuelTankId: 'tank-1', amountLitres: 1000 },
+        { fuelTankId: '22222222-2222-4222-8222-222222222222', amountLitres: 4000 },
+      ],
+      newTanks: [
+        {
+          id: '22222222-2222-4222-8222-222222222222',
+          name: ' Forward Starboard ',
+          location: ' Engine room ',
+          description: ' Main bunker ',
+          capacityLitres: 12000,
+          openingLitres: 250,
+        },
+      ],
+      expectedSetupRevision: 4,
+    });
+
+    expect(mockRpc).toHaveBeenCalledWith(
+      'create_fuel_receipt_with_tanks',
+      expect.objectContaining({
+        p_expected_setup_revision: 4,
+        p_new_tanks: [
+          {
+            id: '22222222-2222-4222-8222-222222222222',
+            name: 'Forward Starboard',
+            location: 'Engine room',
+            description: 'Main bunker',
+            capacity_litres: 12000,
+            opening_litres: 250,
+          },
+        ],
+        p_log: expect.objectContaining({
+          price_volume_unit: 'US_GALLONS',
+          client_request_id: '11111111-1111-4111-8111-111111111111',
+        }),
+      })
+    );
+    expect(created.priceVolumeUnit).toBe('US_GALLONS');
   });
 
   it('normalizes repeating US-gallon conversions to the three-decimal litre ledger scale', async () => {
@@ -269,7 +345,7 @@ describe('FuelManagementService', () => {
 
     expect(mockRpc).toHaveBeenNthCalledWith(
       1,
-      'create_fuel_log_with_tank_entries',
+      'create_fuel_receipt_with_tanks',
       expect.objectContaining({
         p_log: expect.objectContaining({ amount_of_fuel: 1 }),
         p_entries: [{ fuel_tank_id: 'tank-1', amount_litres: 3.785 }],
@@ -281,6 +357,55 @@ describe('FuelManagementService', () => {
       expect.objectContaining({
         p_log_patch: expect.objectContaining({ amount_of_fuel: 1 }),
         p_entries: [{ fuel_tank_id: 'tank-1', amount_litres: 3.785 }],
+      })
+    );
+  });
+
+  it('derives an unlimited multi-tank parent amount from canonical child litres', async () => {
+    mockRpc.mockResolvedValue({
+      data: {
+        id: 'fuel-log-many-tanks',
+        vessel_id: 'vessel-1',
+        location_of_refueling: 'Newport',
+        log_date: '2026-09-18',
+        log_time: '10:30',
+        amount_of_fuel: '29.997',
+        price_per_gallon: '1',
+        price_volume_unit: 'US_GALLONS',
+        total_price: '30',
+        volume_unit: 'US_GALLONS',
+        currency_code: 'USD',
+        comment: '',
+        created_at: '2026-09-18T10:30:00Z',
+      },
+      error: null,
+    });
+    const entries = Array.from({ length: 30 }, (_, index) => ({
+      fuelTankId: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+      amountLitres: 3.785411784,
+    }));
+
+    await fuelManagementService.createFuelLogWithTankEntries({
+      log: {
+        vesselId: 'vessel-1',
+        locationOfRefueling: 'Newport',
+        logDate: '2026-09-18',
+        logTime: '10:30',
+        amountOfFuel: 30,
+        pricePerGallon: 1,
+        totalPrice: 30,
+        createdByName: 'Captain',
+        volumeUnit: 'US_GALLONS',
+        currencyCode: 'USD',
+      },
+      entries,
+    });
+
+    expect(mockRpc).toHaveBeenCalledWith(
+      'create_fuel_receipt_with_tanks',
+      expect.objectContaining({
+        p_log: expect.objectContaining({ amount_of_fuel: 29.997, total_price: 30 }),
+        p_entries: expect.arrayContaining([expect.objectContaining({ amount_litres: 3.785 })]),
       })
     );
   });
@@ -1170,7 +1295,7 @@ describe('FuelManagementService', () => {
     });
   });
 
-  it('rejects partial receipt event context instead of inferring a device timezone', async () => {
+  it('rejects partial receipt event context', async () => {
     await expect(
       fuelManagementService.updateFuelLogWithTankEntries('legacy-log-1', {
         vesselId: 'vessel-1',
@@ -1179,12 +1304,12 @@ describe('FuelManagementService', () => {
         expectedRevision: 0,
         amendmentReason: 'Corrected historical date',
       })
-    ).rejects.toThrow('explicit ship UTC offset');
+    ).rejects.toThrow('valid recorded event time');
 
     expect(mockRpc).not.toHaveBeenCalled();
   });
 
-  it('rejects transfer amendments without explicitly confirmed event context', async () => {
+  it('rejects transfer amendments without complete event context', async () => {
     await expect(
       fuelManagementService.updateTransfer('legacy-transfer-1', {
         vesselId: 'vessel-1',
@@ -1196,7 +1321,7 @@ describe('FuelManagementService', () => {
         expectedRevision: 0,
         amendmentReason: 'Corrected historical transfer',
       })
-    ).rejects.toThrow('explicitly confirmed ship UTC offset');
+    ).rejects.toThrow('valid recorded event time');
 
     expect(mockRpc).not.toHaveBeenCalled();
   });

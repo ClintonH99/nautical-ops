@@ -20,7 +20,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { fuelManagementService } from '../services/fuelManagement';
 import { useAuthStore } from '../store';
 import type { FuelInventoryOperation, FuelTank, FuelVolumeUnit } from '../types';
-import { fuelEventDateTime, fuelEventFields, fuelUtcOffsetOptions } from '../utils/fuelDateTime';
+import { fuelEventDateTime, fuelEventFields } from '../utils/fuelDateTime';
 import { fromLitres, toLitres } from '../utils/fuelUnits';
 
 type EntryKind = 'SOUNDING' | 'CONSUMPTION' | 'ADJUSTMENT';
@@ -366,11 +366,6 @@ export const FuelTankEntryScreen = ({ navigation, route }: any) => {
       })),
     [availableTanks, correctionMode, unit]
   );
-  const utcOffsetOptions = useMemo(
-    () => fuelUtcOffsetOptions(utcOffsetMinutes),
-    [utcOffsetMinutes]
-  );
-
   const parsedAmount = parseDecimal(amount);
   const amountLitres = Number.isFinite(parsedAmount) ? toLitres(parsedAmount, unit) : 0;
   const currentBalance = selectedTank?.balanceLitres ?? 0;
@@ -388,8 +383,8 @@ export const FuelTankEntryScreen = ({ navigation, route }: any) => {
       Alert.alert(
         'Tank availability not verified',
         previewError
-          ? 'The balance at this ship time could not be loaded. Change the date or time, or retry before saving.'
-          : 'Wait for the balance at this ship time to finish loading before saving.'
+          ? 'The balance at the selected date and time could not be loaded. Change the date or time, or retry before saving.'
+          : 'Wait for the balance at the selected date and time to finish loading before saving.'
       );
       return;
     }
@@ -429,7 +424,7 @@ export const FuelTankEntryScreen = ({ navigation, route }: any) => {
 
     const eventAt = fuelEventDateTime(entryDate, entryTime, utcOffsetMinutes);
     if (!Number.isFinite(eventAt.getTime())) {
-      Alert.alert('Check date and time', 'Choose a valid ship date, time and UTC offset.');
+      Alert.alert('Check date and time', 'Choose a valid date and time.');
       return;
     }
     if (eventAt.getTime() > Date.now() + 5 * 60 * 1000) {
@@ -579,8 +574,8 @@ export const FuelTankEntryScreen = ({ navigation, route }: any) => {
               />
               <Text style={[styles.auditText, { color: themeColors.textSecondary }]}>
                 {previewError
-                  ? 'Tank availability and the balance at this ship time could not be verified. Change the date or time, or retry before saving.'
-                  : 'Checking tank availability and the balance at this ship time…'}
+                  ? 'Tank availability and the balance at the selected date and time could not be verified. Change the date or time, or retry before saving.'
+                  : 'Checking tank availability and the balance at the selected date and time…'}
               </Text>
               {previewError ? (
                 <TouchableOpacity
@@ -636,7 +631,7 @@ export const FuelTankEntryScreen = ({ navigation, route }: any) => {
               </Text>
               {previewRefreshing ? (
                 <Text style={[styles.previewHint, { color: themeColors.textSecondary }]}>
-                  Updating the balance at this ship time…
+                  Updating the balance at the selected date and time…
                 </Text>
               ) : null}
               {previewError ? (
@@ -699,16 +694,20 @@ export const FuelTankEntryScreen = ({ navigation, route }: any) => {
           ) : null}
 
           <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
+            <Input
+              label="Location (optional)"
+              value={location}
+              onChangeText={setLocation}
+              placeholder="e.g. Engine room"
+            />
             <DateOnlyPicker
-              label="Effective date"
+              label="Date"
               title={`Select ${kind.toLowerCase()} date`}
               value={entryDate}
               onChange={setEntryDate}
             />
             <View style={styles.field}>
-              <Text style={[styles.label, { color: themeColors.textPrimary }]}>
-                Effective ship time
-              </Text>
+              <Text style={[styles.label, { color: themeColors.textPrimary }]}>Time</Text>
               {Platform.OS === 'ios' ? (
                 <View
                   style={[
@@ -755,19 +754,6 @@ export const FuelTankEntryScreen = ({ navigation, route }: any) => {
                 </>
               )}
             </View>
-            <FuelSelectField
-              label="Ship UTC offset"
-              value={utcOffsetMinutes}
-              options={utcOffsetOptions}
-              onChange={setUtcOffsetMinutes}
-              title="Select ship UTC offset"
-            />
-            <Input
-              label="Location (optional)"
-              value={location}
-              onChangeText={setLocation}
-              placeholder="e.g. Engine room"
-            />
             <Input
               label={kind === 'ADJUSTMENT' ? 'Reason' : 'Note (optional)'}
               value={reason}

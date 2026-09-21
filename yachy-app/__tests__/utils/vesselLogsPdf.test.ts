@@ -44,6 +44,7 @@ describe('fuel log PDF metadata', () => {
         amountOfFuel: 100,
         pricePerGallon: 1.2,
         pricePerVolumeUnit: 1.2,
+        priceVolumeUnit: 'LITRES',
         totalPrice: 120,
         volumeUnit: 'LITRES',
         currencyCode: 'EUR',
@@ -54,6 +55,7 @@ describe('fuel log PDF metadata', () => {
         amountOfFuel: 50,
         pricePerGallon: 4,
         pricePerVolumeUnit: 4,
+        priceVolumeUnit: 'US_GALLONS',
         totalPrice: 200,
         volumeUnit: 'US_GALLONS',
         currencyCode: 'USD',
@@ -73,7 +75,7 @@ describe('fuel log PDF metadata', () => {
     expect(html).toContain('tfoot { display: table-row-group; }');
   });
 
-  it('stacks tank allocations in the vessel display unit and identifies legacy unallocated rows', async () => {
+  it('stacks tank allocations in each receipt unit and identifies legacy unallocated rows', async () => {
     const base = {
       vesselId: 'vessel-1',
       locationOfRefueling: 'Port Hercules',
@@ -90,8 +92,8 @@ describe('fuel log PDF metadata', () => {
       createdAt: '2026-09-18T10:30:00Z',
     };
     const logs: FuelLog[] = [
-      { ...base, id: 'allocated', volumeUnit: 'LITRES' },
-      { ...base, id: 'legacy', volumeUnit: null },
+      { ...base, id: 'allocated', volumeUnit: 'LITRES', priceVolumeUnit: 'LITRES' },
+      { ...base, id: 'legacy', volumeUnit: null, priceVolumeUnit: 'US_GALLONS' },
     ];
     const allocationSnapshot: FuelLogAllocationSnapshot = {
       displayUnit: 'US_GALLONS',
@@ -113,7 +115,7 @@ describe('fuel log PDF metadata', () => {
     expect(html).toContain('class="allocation-row"');
     expect(html).toContain('colspan="8"');
     expect(html).toContain('Port &amp; Day Tank');
-    expect(html).toContain('<span>100 US gal</span>');
+    expect(html).toContain('<span>378.541 L</span>');
     expect(html).toContain('Legacy entry — no tank allocation recorded.');
     expect(html).toContain('page-break-inside: avoid');
   });

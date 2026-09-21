@@ -309,20 +309,14 @@ export const FuelTransfersScreen = ({ navigation }: any) => {
                         }
                       : undefined
                   }
-                  summary={
-                    <ButtonTagRow
-                      label="Date"
-                      value={[transfer.transferDate, transfer.transferTime]
-                        .filter(Boolean)
-                        .join('  ·  ')}
-                    />
-                  }
+                  summary={<ButtonTagRow label="Location" value={transfer.location} />}
                 >
+                  <ButtonTagRow label="Date" value={transfer.transferDate} />
+                  <ButtonTagRow label="Time" value={transfer.transferTime} />
                   <ButtonTagRow
                     label="Amount"
                     value={`${formatVolume(fromLitres(transfer.amountLitres, unit))} ${unitLabel(unit)}`}
                   />
-                  <ButtonTagRow label="Location" value={transfer.location} />
                   <ButtonTagRow label="Comment" value={transfer.notes} />
                 </ButtonTagCard>
               );

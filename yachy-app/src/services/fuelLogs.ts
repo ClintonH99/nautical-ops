@@ -18,6 +18,8 @@ export interface CreateFuelLogData {
   createdByName: string;
   /** Omit only for legacy callers; new fuel flows should always supply a unit. */
   volumeUnit?: FuelVolumeUnit | null;
+  /** Unit used to quote the price; defaults to the receipt volume unit. */
+  priceVolumeUnit?: FuelVolumeUnit | null;
   /** ISO-style currency code. Defaults to USD for backwards compatibility. */
   currencyCode?: string;
   comment?: string;
@@ -31,6 +33,7 @@ export interface UpdateFuelLogData {
   pricePerGallon?: number;
   totalPrice?: number;
   volumeUnit?: FuelVolumeUnit | null;
+  priceVolumeUnit?: FuelVolumeUnit | null;
   currencyCode?: string;
   comment?: string;
 }
@@ -54,6 +57,7 @@ class FuelLogsService {
       amountOfFuel: parseFloat(row.amount_of_fuel) || 0,
       pricePerGallon: parseFloat(row.price_per_gallon) || 0,
       pricePerVolumeUnit: parseFloat(row.price_per_gallon) || 0,
+      priceVolumeUnit: row.price_volume_unit ?? row.volume_unit ?? 'US_GALLONS',
       totalPrice: parseFloat(row.total_price) || 0,
       volumeUnit: row.volume_unit ?? null,
       currencyCode: row.currency_code ?? 'USD',
@@ -114,6 +118,7 @@ class FuelLogsService {
           total_price: input.totalPrice,
           created_by_name: input.createdByName,
           volume_unit: input.volumeUnit ?? null,
+          price_volume_unit: input.priceVolumeUnit ?? input.volumeUnit ?? null,
           currency_code: currencyCode,
           comment: input.comment?.trim() || '',
         },
@@ -140,6 +145,7 @@ class FuelLogsService {
     if (input.pricePerGallon !== undefined) patch.price_per_gallon = input.pricePerGallon;
     if (input.totalPrice !== undefined) patch.total_price = input.totalPrice;
     if (input.volumeUnit !== undefined) patch.volume_unit = input.volumeUnit;
+    if (input.priceVolumeUnit !== undefined) patch.price_volume_unit = input.priceVolumeUnit;
     if (input.currencyCode !== undefined)
       patch.currency_code = normalizeCurrencyCode(input.currencyCode);
     if (input.comment !== undefined) patch.comment = input.comment.trim();

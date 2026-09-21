@@ -14,13 +14,12 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { Button, DateOnlyPicker, Input, LoadingSpinner, PageHeader } from '../components';
-import { FuelSelectField } from '../components/FuelSelectField';
 import { BORDER_RADIUS, COLORS, FONTS, SIZES, SPACING } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { fuelManagementService } from '../services/fuelManagement';
 import { useAuthStore } from '../store';
 import type { FuelInventoryOperation, FuelTank, FuelVolumeUnit } from '../types';
-import { fuelEventDateTime, fuelEventFields, fuelUtcOffsetOptions } from '../utils/fuelDateTime';
+import { fuelEventDateTime, fuelEventFields } from '../utils/fuelDateTime';
 import { fromLitres, toLitres } from '../utils/fuelUnits';
 
 interface OpeningTank {
@@ -197,11 +196,6 @@ export const FuelOpeningBalancesScreen = ({ navigation, route }: any) => {
     () => (correctionMode ? tanks : tanks.filter((item) => !item.initialized)),
     [correctionMode, tanks]
   );
-  const utcOffsetOptions = useMemo(
-    () => fuelUtcOffsetOptions(utcOffsetMinutes),
-    [utcOffsetMinutes]
-  );
-
   const save = async () => {
     if (
       !vesselId ||
@@ -218,7 +212,7 @@ export const FuelOpeningBalancesScreen = ({ navigation, route }: any) => {
     }
     const eventAt = fuelEventDateTime(entryDate, entryTime, utcOffsetMinutes);
     if (!Number.isFinite(eventAt.getTime())) {
-      Alert.alert('Check date and time', 'Choose a valid ship date, time and UTC offset.');
+      Alert.alert('Check date and time', 'Choose a valid date and time.');
       return;
     }
     if (eventAt.getTime() > Date.now() + 5 * 60 * 1000) {
@@ -403,75 +397,70 @@ export const FuelOpeningBalancesScreen = ({ navigation, route }: any) => {
             <Ionicons name="information-circle-outline" size={24} color={themeColors.accent} />
             <Text style={[styles.noticeText, { color: themeColors.textPrimary }]}>
               {correctionMode
-                ? 'Enter the quantities that were actually present at the displayed historical opening date and ship time. Use Sounding—not this correction—to record current physical quantities.'
+                ? 'Enter the quantities that were actually present on the displayed historical opening date. The original time is retained automatically.'
                 : 'Enter the physical quantity currently in every uninitialized tank. Use 0 only when a tank is known to be empty. Historic fuel receipts are not used to guess these values.'}
             </Text>
           </View>
 
           <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
             <DateOnlyPicker
-              label="Effective date"
+              label="Date"
               title="Select opening date"
               value={entryDate}
               onChange={setEntryDate}
             />
-            <View style={styles.field}>
-              <Text style={[styles.label, { color: themeColors.textPrimary }]}>
-                Effective ship time
-              </Text>
-              {Platform.OS === 'ios' ? (
-                <View
-                  style={[
-                    styles.timeField,
-                    { backgroundColor: themeColors.control, borderColor: themeColors.border },
-                  ]}
-                >
-                  <Text style={[styles.timeValue, { color: themeColors.textPrimary }]}>
-                    {formatTime(entryTime)}
-                  </Text>
-                  <DateTimePicker
-                    value={entryTime}
-                    mode="time"
-                    display="compact"
-                    onChange={(_: DateTimePickerEvent, selected?: Date) =>
-                      selected && setEntryTime(selected)
-                    }
-                  />
+            {!correctionMode ? (
+              <>
+                <View style={styles.field}>
+                  <Text style={[styles.label, { color: themeColors.textPrimary }]}>Time</Text>
+                  {Platform.OS === 'ios' ? (
+                    <View
+                      style={[
+                        styles.timeField,
+                        { backgroundColor: themeColors.control, borderColor: themeColors.border },
+                      ]}
+                    >
+                      <Text style={[styles.timeValue, { color: themeColors.textPrimary }]}>
+                        {formatTime(entryTime)}
+                      </Text>
+                      <DateTimePicker
+                        value={entryTime}
+                        mode="time"
+                        display="compact"
+                        onChange={(_: DateTimePickerEvent, selected?: Date) =>
+                          selected && setEntryTime(selected)
+                        }
+                      />
+                    </View>
+                  ) : (
+                    <>
+                      <TouchableOpacity
+                        style={[
+                          styles.timeField,
+                          { backgroundColor: themeColors.control, borderColor: themeColors.border },
+                        ]}
+                        onPress={() => setShowTimePicker(true)}
+                      >
+                        <Text style={[styles.timeValue, { color: themeColors.textPrimary }]}>
+                          {formatTime(entryTime)}
+                        </Text>
+                        <Ionicons name="time-outline" size={22} color={themeColors.textSecondary} />
+                      </TouchableOpacity>
+                      {showTimePicker ? (
+                        <DateTimePicker
+                          value={entryTime}
+                          mode="time"
+                          onChange={(_: DateTimePickerEvent, selected?: Date) => {
+                            setShowTimePicker(false);
+                            if (selected) setEntryTime(selected);
+                          }}
+                        />
+                      ) : null}
+                    </>
+                  )}
                 </View>
-              ) : (
-                <>
-                  <TouchableOpacity
-                    style={[
-                      styles.timeField,
-                      { backgroundColor: themeColors.control, borderColor: themeColors.border },
-                    ]}
-                    onPress={() => setShowTimePicker(true)}
-                  >
-                    <Text style={[styles.timeValue, { color: themeColors.textPrimary }]}>
-                      {formatTime(entryTime)}
-                    </Text>
-                    <Ionicons name="time-outline" size={22} color={themeColors.textSecondary} />
-                  </TouchableOpacity>
-                  {showTimePicker ? (
-                    <DateTimePicker
-                      value={entryTime}
-                      mode="time"
-                      onChange={(_: DateTimePickerEvent, selected?: Date) => {
-                        setShowTimePicker(false);
-                        if (selected) setEntryTime(selected);
-                      }}
-                    />
-                  ) : null}
-                </>
-              )}
-            </View>
-            <FuelSelectField
-              label="Ship UTC offset"
-              value={utcOffsetMinutes}
-              options={utcOffsetOptions}
-              onChange={setUtcOffsetMinutes}
-              title="Select ship UTC offset"
-            />
+              </>
+            ) : null}
           </View>
 
           <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>

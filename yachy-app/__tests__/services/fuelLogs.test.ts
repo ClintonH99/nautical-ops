@@ -39,6 +39,7 @@ describe('FuelLogsService', () => {
       comment: '',
       pricePerGallon: 1.08,
       pricePerVolumeUnit: 1.08,
+      priceVolumeUnit: 'US_GALLONS',
       effectiveAt: null,
       utcOffsetMinutes: null,
     });
@@ -101,12 +102,14 @@ describe('FuelLogsService', () => {
     expect(insert).toHaveBeenCalledWith([
       expect.objectContaining({
         volume_unit: 'LITRES',
+        price_volume_unit: 'LITRES',
         currency_code: 'EUR',
         comment: 'Fuel sample stored',
       }),
     ]);
     expect(created).toMatchObject({
       volumeUnit: 'LITRES',
+      priceVolumeUnit: 'LITRES',
       currencyCode: 'EUR',
       effectiveAt: '2026-09-18T00:30:00.000Z',
       utcOffsetMinutes: 600,

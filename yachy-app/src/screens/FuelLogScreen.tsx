@@ -60,9 +60,7 @@ function volumeLabel(log: FuelLog): string {
 }
 
 function priceLabel(log: FuelLog): string {
-  if (log.volumeUnit === 'LITRES') return 'Per Litre';
-  if (log.volumeUnit === 'US_GALLONS') return 'Per US Gallon';
-  return 'Per Gallon';
+  return log.priceVolumeUnit === 'LITRES' ? 'Per Litre' : 'Per US Gallon';
 }
 
 function displayUnitLabel(unit: FuelVolumeUnit): string {
@@ -432,12 +430,7 @@ export const FuelLogScreen = ({ navigation }: any) => {
                   collapsible={!exportMode}
                   expanded={expandedId === log.id}
                   onToggleExpand={() => setExpandedId(expandedId === log.id ? null : log.id)}
-                  summary={
-                    <ButtonTagRow
-                      label="Date"
-                      value={[log.logDate, log.logTime].filter(Boolean).join('  ·  ')}
-                    />
-                  }
+                  summary={<ButtonTagRow label="Date" value={log.logDate ?? ''} />}
                 >
                   <ButtonTagRow label="Time" value={log.logTime ?? ''} />
                   <View style={[styles.statsRow, { backgroundColor: themeColors.background }]}>

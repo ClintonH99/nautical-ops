@@ -25,13 +25,7 @@ import {
   FuelTransfer,
   FuelVolumeUnit,
 } from '../types';
-import {
-  formatUtcOffset,
-  fuelEventDateTime,
-  fuelEventFields,
-  fuelUtcOffsetOptions,
-} from '../utils/fuelDateTime';
-import { needsHistoricalOffsetConfirmation } from '../utils/fuelHistoricalTime';
+import { fuelEventDateTime, fuelEventFields } from '../utils/fuelDateTime';
 import { getSelectableFuelTransferBalances } from '../utils/fuelTankSelection';
 import { fromLitres, toLitres } from '../utils/fuelUnits';
 
@@ -93,9 +87,6 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
   const [transferDate, setTransferDate] = useState(localDateString());
   const [transferTime, setTransferTime] = useState(new Date());
   const [utcOffsetMinutes, setUtcOffsetMinutes] = useState(-new Date().getTimezoneOffset());
-  const [confirmedHistoricalOffsetContext, setConfirmedHistoricalOffsetContext] = useState<
-    string | null
-  >(null);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [location, setLocation] = useState('');
   const [notes, setNotes] = useState('');
@@ -119,16 +110,6 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
     !correctionMode &&
     !!originalTransfer &&
     !originalTransfer.currentInventoryOperationId;
-  const historicalTimeUnknown =
-    legacyEditMode &&
-    originalTransfer?.effectiveAt == null &&
-    originalTransfer?.utcOffsetMinutes == null;
-  const historicalOffsetConfirmed =
-    !!currentContext && confirmedHistoricalOffsetContext === currentContext;
-  const historicalOffsetConfirmationRequired = needsHistoricalOffsetConfirmation(
-    historicalTimeUnknown,
-    historicalOffsetConfirmed
-  );
   const postedReadOnlyMode =
     !!transferId && !correctionMode && !!originalTransfer?.currentInventoryOperationId;
   const editingExisting = !!transferId && !!originalTransfer;
@@ -152,7 +133,6 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
       setPreviewRefreshing(false);
       setPreviewError(false);
       setVerifiedPreviewContext(null);
-      setConfirmedHistoricalOffsetContext(null);
       setLoading(false);
       return;
     }
@@ -169,7 +149,6 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
       setTransferDate(localDateString(now));
       setTransferTime(now);
       setUtcOffsetMinutes(-now.getTimezoneOffset());
-      setConfirmedHistoricalOffsetContext(null);
       setLocation('');
       setNotes('');
       setAmendmentReason('');
@@ -292,7 +271,6 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
     } catch (error) {
       if (generation !== loadGeneration.current) return;
       console.error('Load fuel transfer form error:', error);
-      setConfirmedHistoricalOffsetContext(null);
       setLoadError(
         error instanceof Error && error.message.includes('no longer available')
           ? error.message
@@ -314,13 +292,6 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
   );
 
   useEffect(() => {
-    if (historicalOffsetConfirmationRequired) {
-      previewGeneration.current += 1;
-      setVerifiedPreviewContext(null);
-      setPreviewRefreshing(false);
-      setPreviewError(false);
-      return;
-    }
     if (
       !vesselId ||
       loading ||
@@ -413,7 +384,6 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
     };
   }, [
     correctionMode,
-    historicalOffsetConfirmationRequired,
     loadError,
     loading,
     inventoryStatus,
@@ -499,26 +469,14 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
       })),
     [balanceBeforeTransfer, editingExisting, reportOnlyMode, selectableBalances, unit]
   );
-  const utcOffsetOptions = useMemo(
-    () => fuelUtcOffsetOptions(utcOffsetMinutes),
-    [utcOffsetMinutes]
-  );
-
   const saveTransfer = async () => {
     if (!vesselId) return;
-    if (historicalOffsetConfirmationRequired) {
-      Alert.alert(
-        'Confirm historical UTC offset',
-        'The original ship UTC offset was not recorded. Choose and confirm the correct historical offset before this transfer can be checked or changed.'
-      );
-      return;
-    }
     if (previewBlocked) {
       Alert.alert(
         'Tank availability not verified',
         previewError
-          ? 'The balances at this ship time could not be loaded. Change the date or time, or retry before saving.'
-          : 'Wait for the balances at this ship time to finish loading before saving.'
+          ? 'The balances at the selected date and time could not be loaded. Change the date or time, or retry before saving.'
+          : 'Wait for the balances at the selected date and time to finish loading before saving.'
       );
       return;
     }
@@ -547,10 +505,8 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
     }
     if (!inventoryReady && !reportOnlyMode && !editingExisting) {
       Alert.alert(
-        'Opening levels required',
-        canManageSetup
-          ? 'Set explicit opening levels for at least two tanks before recording a transfer.'
-          : 'An HOD or Captain MOV must set the required opening tank levels before transfers can be recorded.'
+        'Fuel transfer unavailable',
+        'At least two tanks with current quantities are required to calculate a fuel transfer.'
       );
       return;
     }
@@ -584,7 +540,7 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
 
     const eventAt = fuelEventDateTime(transferDate, transferTime, utcOffsetMinutes);
     if (!Number.isFinite(eventAt.getTime())) {
-      Alert.alert('Check date and time', 'Choose a valid ship date, time and UTC offset.');
+      Alert.alert('Check date and time', 'Choose a valid date and time.');
       return;
     }
     if (eventAt.getTime() > Date.now() + 5 * 60 * 1000) {
@@ -733,26 +689,11 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
         <View style={styles.center}>
           <Ionicons name="alert-circle-outline" size={44} color={COLORS.warning} />
           <Text style={[styles.emptyTitle, { color: themeColors.textPrimary }]}>
-            Opening levels required
+            Fuel transfer unavailable
           </Text>
           <Text style={[styles.message, { color: themeColors.textSecondary }]}>
-            {visibleBalances.filter((item) => item.isInitialized !== true).length}{' '}
-            {visibleBalances.filter((item) => item.isInitialized !== true).length === 1
-              ? 'tank has'
-              : 'tanks have'}{' '}
-            an unknown quantity. No zero balance is assumed.
+            At least two tanks with current quantities are required to calculate a fuel transfer.
           </Text>
-          {canManageSetup ? (
-            <Button
-              title="Set Opening Levels"
-              onPress={() => navigation.navigate('FuelOpeningBalances')}
-              style={styles.emptyAction}
-            />
-          ) : (
-            <Text style={[styles.permissionHint, { color: themeColors.textSecondary }]}>
-              Ask an HOD or Captain MOV to initialize the fuel inventory.
-            </Text>
-          )}
         </View>
       ) : !previewBlocked && selectableBalances.length < 2 ? (
         <View style={styles.center}>
@@ -777,7 +718,7 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {previewBlocked && !historicalOffsetConfirmationRequired ? (
+          {previewBlocked ? (
             <View style={[styles.auditNotice, { borderColor: themeColors.border }]}>
               <Ionicons
                 name={previewError ? 'cloud-offline-outline' : 'time-outline'}
@@ -786,8 +727,8 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
               />
               <Text style={[styles.auditText, { color: themeColors.textSecondary }]}>
                 {previewError
-                  ? 'Tank availability and balances at this ship time could not be verified. Change the date or time, or retry before saving.'
-                  : 'Checking tank availability and balances at this ship time…'}
+                  ? 'Tank availability and balances at the selected date and time could not be verified. Change the date or time, or retry before saving.'
+                  : 'Checking tank availability and balances at the selected date and time…'}
               </Text>
               {previewError ? (
                 <TouchableOpacity
@@ -804,8 +745,8 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
             <View style={[styles.auditNotice, { borderColor: COLORS.warning }]}>
               <Ionicons name="document-text-outline" size={20} color={COLORS.warning} />
               <Text style={[styles.auditText, { color: themeColors.textSecondary }]}>
-                Report-only mode: opening levels have not been set. This records which configured
-                tanks were used, but quantities stay unknown and no calculated balance changes.
+                This transfer is retained as a standalone operational record. Tank quantities stay
+                unknown and no calculated balance changes.
               </Text>
             </View>
           ) : null}
@@ -846,7 +787,7 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
               </Text>
               {previewRefreshing ? (
                 <Text style={[styles.previewHint, { color: themeColors.textSecondary }]}>
-                  Updating the balance at this ship time…
+                  Updating the balance at the selected date and time…
                 </Text>
               ) : null}
               {previewError ? (
@@ -879,6 +820,12 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
           ) : null}
 
           <View style={[styles.card, { backgroundColor: themeColors.surface }]}>
+            <Input
+              label="Location"
+              value={location}
+              onChangeText={setLocation}
+              placeholder="Optional location"
+            />
             <DateOnlyPicker
               label="Date"
               title="Select transfer date"
@@ -886,7 +833,7 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
               onChange={setTransferDate}
             />
             <View style={styles.field}>
-              <Text style={[styles.label, { color: themeColors.textPrimary }]}>Ship time</Text>
+              <Text style={[styles.label, { color: themeColors.textPrimary }]}>Time</Text>
               {Platform.OS === 'ios' ? (
                 <View
                   style={[
@@ -941,59 +888,6 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
                 </>
               )}
             </View>
-            <FuelSelectField
-              label="Ship UTC offset"
-              value={utcOffsetMinutes}
-              options={utcOffsetOptions}
-              onChange={(value) => {
-                setUtcOffsetMinutes(value);
-                if (historicalTimeUnknown) setConfirmedHistoricalOffsetContext(null);
-              }}
-              title="Select ship UTC offset"
-            />
-            {historicalTimeUnknown ? (
-              <View
-                style={[
-                  styles.historicalTimeNotice,
-                  {
-                    backgroundColor: themeColors.surfaceAlt,
-                    borderColor: historicalOffsetConfirmed ? themeColors.accent : COLORS.warning,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name={historicalOffsetConfirmed ? 'checkmark-circle-outline' : 'warning-outline'}
-                  size={20}
-                  color={historicalOffsetConfirmed ? themeColors.accent : COLORS.warning}
-                />
-                <View style={styles.historicalTimeCopy}>
-                  <Text style={[styles.historicalTimeText, { color: themeColors.textPrimary }]}>
-                    {historicalOffsetConfirmed
-                      ? `${formatUtcOffset(utcOffsetMinutes)} is confirmed for this historical transfer.`
-                      : `The original ship UTC offset was not recorded. ${formatUtcOffset(utcOffsetMinutes)} is only a suggestion from this device. Confirm the correct historical offset before checking or changing this transfer.`}
-                  </Text>
-                  {!historicalOffsetConfirmed ? (
-                    <TouchableOpacity
-                      accessibilityRole="button"
-                      onPress={() => {
-                        if (currentContext) setConfirmedHistoricalOffsetContext(currentContext);
-                      }}
-                      style={[styles.confirmOffsetButton, { borderColor: themeColors.accent }]}
-                    >
-                      <Text style={[styles.confirmOffsetText, { color: themeColors.accent }]}>
-                        Confirm {formatUtcOffset(utcOffsetMinutes)}
-                      </Text>
-                    </TouchableOpacity>
-                  ) : null}
-                </View>
-              </View>
-            ) : null}
-            <Input
-              label="Location"
-              value={location}
-              onChangeText={setLocation}
-              placeholder="Optional location"
-            />
             <Input
               label="Comment"
               value={notes}
@@ -1035,7 +929,7 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
             }
             onPress={saveTransfer}
             loading={saving}
-            disabled={saving || (previewBlocked && !historicalOffsetConfirmationRequired)}
+            disabled={saving || previewBlocked}
             fullWidth
           />
           <TouchableOpacity
@@ -1096,26 +990,6 @@ const styles = StyleSheet.create({
   auditText: { flex: 1, fontSize: FONTS.xs, lineHeight: 18 },
   auditRetry: { alignSelf: 'center', paddingHorizontal: SPACING.xs, paddingVertical: SPACING.xs },
   auditRetryText: { fontSize: FONTS.sm, fontWeight: '700' },
-  historicalTimeNotice: {
-    borderWidth: 1,
-    borderRadius: BORDER_RADIUS.md,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: SPACING.sm,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-  },
-  historicalTimeCopy: { flex: 1, gap: SPACING.sm },
-  historicalTimeText: { fontSize: FONTS.xs, lineHeight: 18 },
-  confirmOffsetButton: {
-    alignSelf: 'flex-start',
-    minHeight: 40,
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderRadius: BORDER_RADIUS.md,
-    paddingHorizontal: SPACING.md,
-  },
-  confirmOffsetText: { fontSize: FONTS.sm, fontWeight: '700' },
   setupLink: {
     minHeight: 44,
     alignSelf: 'center',

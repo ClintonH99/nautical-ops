@@ -43,6 +43,7 @@ import type {
   FuelVolumeUnit,
   VesselFuelSettings,
 } from '../types';
+import { fromLitres } from '../utils/fuelUnits';
 
 export interface SaveFuelSetupInput {
   vesselId: string;
@@ -55,6 +56,16 @@ export interface SaveFuelSetupInput {
 export interface CreateFuelLogWithTankEntriesInput {
   log: CreateFuelLogData;
   entries: FuelLogTankEntryInput[];
+  /** New vessel tanks created atomically with this receipt. Manager-only. */
+  newTanks?: Array<
+    FuelTankInput & {
+      id: string;
+      /** Explicit quantity already present before this delivery, in litres. */
+      openingLitres: number;
+    }
+  >;
+  /** Required when `newTanks` is non-empty to reject stale setup editors. */
+  expectedSetupRevision?: number;
   effectiveAt?: string;
   utcOffsetMinutes?: number;
   idempotencyKey?: string;
@@ -141,12 +152,23 @@ function asBoolean(value: unknown): boolean {
  */
 function canonicalLitres(value: number): number {
   if (!Number.isFinite(value)) throw new Error('Fuel quantity must be a valid number.');
-  return Math.round((value + Math.sign(value) * Number.EPSILON) * 1000) / 1000;
+  return roundDecimal(value, 3);
+}
+
+function roundDecimal(value: number, places: number): number {
+  const factor = 10 ** places;
+  const correction = Math.sign(value) * Number.EPSILON * Math.max(1, Math.abs(value));
+  return Math.round((value + correction) * factor) / factor;
 }
 
 function decimal3(value: number, label: string): number {
   if (!Number.isFinite(value)) throw new Error(`${label} must be a valid number.`);
-  return Math.round((value + Math.sign(value) * Number.EPSILON) * 1000) / 1000;
+  return roundDecimal(value, 3);
+}
+
+function decimal4(value: number, label: string): number {
+  if (!Number.isFinite(value)) throw new Error(`${label} must be a valid number.`);
+  return roundDecimal(value, 4);
 }
 
 function asRow(value: unknown): DatabaseRow {
@@ -211,7 +233,7 @@ async function idempotentFuelWrite<T>(
 
 function normalizeUtcOffsetMinutes(value: number): number {
   if (!Number.isInteger(value) || value < -14 * 60 || value > 14 * 60) {
-    throw new Error('UTC offset must be a whole number of minutes between -840 and 840.');
+    throw new Error('The recorded event time is invalid.');
   }
   return value;
 }
@@ -357,6 +379,7 @@ function asString(value: unknown): string {
 
 function mapFuelLog(row: DatabaseRow): FuelLog {
   const pricePerVolumeUnit = asNumber(row.price_per_gallon);
+  const volumeUnit = (row.volume_unit as FuelVolumeUnit | null | undefined) ?? null;
   return {
     id: asString(row.id),
     vesselId: asString(row.vessel_id),
@@ -366,8 +389,10 @@ function mapFuelLog(row: DatabaseRow): FuelLog {
     amountOfFuel: asNumber(row.amount_of_fuel),
     pricePerGallon: pricePerVolumeUnit,
     pricePerVolumeUnit,
+    priceVolumeUnit:
+      (row.price_volume_unit as FuelVolumeUnit | null | undefined) ?? volumeUnit ?? 'US_GALLONS',
     totalPrice: asNumber(row.total_price),
-    volumeUnit: (row.volume_unit as FuelVolumeUnit | null | undefined) ?? null,
+    volumeUnit,
     currencyCode: asString(row.currency_code) || 'USD',
     comment: asString(row.comment),
     createdBy: asString(row.created_by) || null,
@@ -1119,9 +1144,48 @@ class FuelManagementService {
   }
 
   async createFuelLogWithTankEntries(input: CreateFuelLogWithTankEntriesInput): Promise<FuelLog> {
-    assertEntries(input.entries);
     if (!input.log.volumeUnit) {
       throw new Error('Tank-aware fuel logs require a volume unit.');
+    }
+    const priceVolumeUnit = input.log.priceVolumeUnit ?? input.log.volumeUnit;
+    const entries = toLogEntries(input.entries);
+    const deliveredLitres = entries.reduce(
+      (total, entry) => total + Number(entry.amount_litres),
+      0
+    );
+    const receiptAmount = decimal3(
+      fromLitres(deliveredLitres, input.log.volumeUnit),
+      'Fuel receipt amount'
+    );
+    const unitPrice = decimal4(input.log.pricePerGallon, 'Fuel receipt unit price');
+    if (unitPrice <= 0) {
+      throw new Error('Fuel receipt unit price must be greater than zero.');
+    }
+    const totalPrice = roundDecimal(fromLitres(deliveredLitres, priceVolumeUnit) * unitPrice, 2);
+    const newTanks = (input.newTanks ?? []).map((tank) => {
+      if (!tank.id) throw new Error('Each new fuel tank requires an ID.');
+      assertTankInput(tank);
+      const openingLitres = canonicalLitres(tank.openingLitres);
+      if (openingLitres < 0 || openingLitres > tank.capacityLitres) {
+        throw new Error('A new tank opening level must be between zero and its capacity.');
+      }
+      return {
+        id: tank.id,
+        ...toTankRow(tank),
+        opening_litres: openingLitres,
+      };
+    });
+    if (newTanks.length > 0) {
+      if (
+        input.expectedSetupRevision === undefined ||
+        !Number.isInteger(input.expectedSetupRevision) ||
+        input.expectedSetupRevision < 0
+      ) {
+        throw new Error('Adding tanks requires the current fuel setup revision.');
+      }
+      if (new Set(newTanks.map((tank) => tank.id)).size !== newTanks.length) {
+        throw new Error('Each new fuel tank must be unique.');
+      }
     }
     const effective = effectiveContext({
       effectiveAt: input.effectiveAt,
@@ -1135,23 +1199,26 @@ class FuelManagementService {
         location_of_refueling: input.log.locationOfRefueling.trim() || null,
         log_date: input.log.logDate,
         log_time: input.log.logTime,
-        amount_of_fuel: decimal3(input.log.amountOfFuel, 'Fuel receipt amount'),
-        price_per_gallon: input.log.pricePerGallon,
-        total_price: input.log.totalPrice,
+        amount_of_fuel: receiptAmount,
+        price_per_gallon: unitPrice,
+        total_price: totalPrice,
         volume_unit: input.log.volumeUnit,
+        price_volume_unit: priceVolumeUnit,
         currency_code: normalizeCurrencyCode(input.log.currencyCode),
         comment: input.log.comment?.trim() || '',
         effective_at: effective.effectiveAt,
         utc_offset_minutes: effective.utcOffsetMinutes,
       },
-      p_entries: toLogEntries(input.entries),
+      p_entries: entries,
+      p_new_tanks: newTanks,
+      p_expected_setup_revision: newTanks.length > 0 ? input.expectedSetupRevision : null,
     };
     return idempotentFuelWrite(
       `receipt:create:${input.log.vesselId}`,
       payload,
       input.idempotencyKey,
       async (requestId) => {
-        const { data, error } = await supabase.rpc('create_fuel_log_with_tank_entries', {
+        const { data, error } = await supabase.rpc('create_fuel_receipt_with_tanks', {
           ...payload,
           p_log: { ...payload.p_log, client_request_id: requestId },
         });
@@ -1177,9 +1244,7 @@ class FuelManagementService {
       hasAnyEventContext &&
       (!hasUtcOffset || (!hasEffectiveAt && !(hasLocalDate && hasLocalTime)))
     ) {
-      throw new Error(
-        'Fuel receipt amendments must include an explicit ship UTC offset and event time.'
-      );
+      throw new Error('Fuel receipt amendments must include a valid recorded event time.');
     }
     const patch: Record<string, unknown> = {};
     if (input.log.locationOfRefueling !== undefined)
@@ -1192,6 +1257,8 @@ class FuelManagementService {
     if (input.log.pricePerGallon !== undefined) patch.price_per_gallon = input.log.pricePerGallon;
     if (input.log.totalPrice !== undefined) patch.total_price = input.log.totalPrice;
     if (input.log.volumeUnit !== undefined) patch.volume_unit = input.log.volumeUnit;
+    if (input.log.priceVolumeUnit !== undefined)
+      patch.price_volume_unit = input.log.priceVolumeUnit;
     if (input.log.currencyCode !== undefined)
       patch.currency_code = normalizeCurrencyCode(input.log.currencyCode);
     if (input.log.comment !== undefined) patch.comment = input.log.comment.trim();
@@ -1312,9 +1379,7 @@ class FuelManagementService {
       throw new Error('Fuel transfer revision is invalid.');
     }
     if (input.effectiveAt === undefined || input.utcOffsetMinutes === undefined) {
-      throw new Error(
-        'Fuel transfer amendments require an explicitly confirmed ship UTC offset and event time.'
-      );
+      throw new Error('Fuel transfer amendments require a valid recorded event time.');
     }
     const reason = input.amendmentReason?.trim() || '';
     if (!reason) throw new Error('A correction reason is required.');

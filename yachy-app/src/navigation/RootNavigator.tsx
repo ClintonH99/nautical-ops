@@ -83,8 +83,7 @@ import {
   FuelLogScreen,
   AddEditFuelLogScreen,
   FuelInventoryScreen,
-  FuelOpeningBalancesScreen,
-  FuelTankEntryScreen,
+  FuelHistoryScreen,
   FuelSetupScreen,
   FuelTransfersScreen,
   FuelTransferScreen,
@@ -221,8 +220,7 @@ const APP_SCREEN_PATHS = {
   FuelLog: 'logs/fuel',
   AddEditFuelLog: 'logs/fuel/edit',
   FuelInventory: 'logs/fuel/inventory',
-  FuelOpeningBalances: 'logs/fuel/inventory/opening',
-  FuelTankEntry: 'logs/fuel/inventory/entry',
+  FuelHistory: 'logs/fuel/history',
   FuelSetup: 'logs/fuel/setup',
   FuelTransfers: 'logs/fuel/transfers',
   FuelTransfer: 'logs/fuel/transfers/edit',
@@ -1287,15 +1285,8 @@ export const RootNavigator = () => {
                 }}
               />
               <Stack.Screen
-                name="FuelOpeningBalances"
-                component={FuelOpeningBalancesScreen}
-                options={{
-                  headerShown: false,
-                }}
-              />
-              <Stack.Screen
-                name="FuelTankEntry"
-                component={FuelTankEntryScreen}
+                name="FuelHistory"
+                component={FuelHistoryScreen}
                 options={{
                   headerShown: false,
                 }}

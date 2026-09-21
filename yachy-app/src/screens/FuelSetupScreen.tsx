@@ -64,7 +64,7 @@ function messageFromError(error: unknown): string {
   return 'Could not save the vessel fuel setup.';
 }
 
-export const FuelSetupScreen = ({ navigation }: any) => {
+export const FuelSetupScreen = () => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
@@ -288,14 +288,8 @@ export const FuelSetupScreen = ({ navigation }: any) => {
       );
       Alert.alert(
         'Fuel setup saved',
-        'The shared vessel tank setup is up to date. Any new tank needs an explicit opening level before it can be used in inventory activity.',
-        [
-          { text: 'Done', style: 'cancel' },
-          {
-            text: 'Review Opening Levels',
-            onPress: () => navigation.navigate('FuelOpeningBalances'),
-          },
-        ]
+        'The shared vessel tank setup is up to date.',
+        [{ text: 'Done' }]
       );
     } catch (error) {
       if (
@@ -435,15 +429,6 @@ export const FuelSetupScreen = ({ navigation }: any) => {
 
           {canEdit ? (
             <Button title="＋  Add Tank" variant="outline" onPress={openNewTank} fullWidth />
-          ) : null}
-
-          {canEdit ? (
-            <Button
-              title="Review Opening Levels"
-              variant="outline"
-              onPress={() => navigation.navigate('FuelOpeningBalances')}
-              fullWidth
-            />
           ) : null}
 
           <View style={styles.permissionRow}>

@@ -13,12 +13,6 @@ function pad(value: number): string {
   return String(value).padStart(2, '0');
 }
 
-function offsetLabel(offsetMinutes: number): string {
-  const sign = offsetMinutes < 0 ? '-' : '+';
-  const absolute = Math.abs(offsetMinutes);
-  return `UTC${sign}${pad(Math.floor(absolute / 60))}:${pad(absolute % 60)}`;
-}
-
 /** Render an instant in its captured ship-local offset without using device timezone. */
 export function formatFuelEventDateTime(
   value: string | null | undefined,
@@ -32,7 +26,7 @@ export function formatFuelEventDateTime(
   const rendered = `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(
     shifted.getUTCDate()
   )} ${pad(shifted.getUTCHours())}:${pad(shifted.getUTCMinutes())}`;
-  return `${rendered} ${utcOffsetMinutes == null ? 'UTC' : offsetLabel(offset)}`;
+  return rendered;
 }
 
 export function fuelOperationKindLabel(kind: FuelInventoryOperation['kind']): string {
@@ -56,14 +50,10 @@ export function fuelTankVerificationLabel(
     tank.lastVerifiedUtcOffsetMinutes
   );
   if (tank.lastVerificationKind === 'SOUNDING') {
-    return occurredAt
-      ? `Last verified by sounding ${occurredAt}`
-      : 'Latest level is a tank sounding';
+    return occurredAt;
   }
   if (tank.lastVerificationKind === 'OPENING') {
-    return occurredAt
-      ? `Latest absolute level is the opening record from ${occurredAt}`
-      : 'Latest absolute level is the opening record';
+    return occurredAt;
   }
   return 'Latest verification unavailable';
 }

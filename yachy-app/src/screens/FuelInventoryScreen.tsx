@@ -30,7 +30,6 @@ import {
   fuelOperationAuditLabel,
   fuelOperationAmountLitres,
   fuelOperationPostingBreakdown,
-  fuelTankVerificationLabel,
 } from '../utils/fuelInventoryPresentation';
 import { fromLitres } from '../utils/fuelUnits';
 
@@ -44,6 +43,17 @@ function unitLabel(unit: FuelVolumeUnit): string {
 
 function formatVolume(value: number): string {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }).format(value);
+}
+
+const HIDDEN_MANUAL_INVENTORY_KINDS = new Set([
+  'OPENING',
+  'SOUNDING',
+  'CONSUMPTION',
+  'ADJUSTMENT',
+]);
+
+function isHiddenManualInventoryRecord(record: FuelInventoryOperation): boolean {
+  return HIDDEN_MANUAL_INVENTORY_KINDS.has(record.kind);
 }
 
 function historyKind(record: FuelInventoryOperation): string {
@@ -309,8 +319,7 @@ function HistoryCard({
         </View>
         {occurredAt ? (
           <Text style={[styles.historyMeta, { color: themeColors.textSecondary }]}>
-            {record.utcOffsetMinutes == null ? 'Effective time' : 'Ship time'}:{' '}
-            {formatFuelEventDateTime(occurredAt, record.utcOffsetMinutes)}
+            Date and time: {formatFuelEventDateTime(occurredAt, record.utcOffsetMinutes)}
           </Text>
         ) : null}
         {reason ? (
@@ -513,7 +522,10 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
   );
 
   const snapshot = loadedVesselId === vesselId ? storedSnapshot : null;
-  const history = loadedVesselId === vesselId ? storedHistory : [];
+  const history =
+    loadedVesselId === vesselId
+      ? storedHistory.filter((record) => !isHiddenManualInventoryRecord(record))
+      : [];
   const nextBeforeSequence = loadedVesselId === vesselId ? storedNextBeforeSequence : null;
   const legacyAudits = loadedVesselId === vesselId ? storedLegacyAudits : [];
   const legacyCursor = loadedVesselId === vesselId ? storedLegacyCursor : null;
@@ -521,7 +533,6 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
   const waitingForCurrentVessel = loadedVesselId !== vesselId && !currentLoadError;
 
   const unit = snapshot?.displayUnit ?? 'LITRES';
-  const uninitializedCount = snapshot?.uninitializedTankIds.length ?? 0;
   const inventoryReady = !!snapshot?.allTanksInitialized;
   const reportOnlyMode = snapshot?.status === 'NOT_ACTIVATED';
   const totalPercentage = useMemo(() => {
@@ -598,35 +609,13 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
     }
   };
 
-  const requireUsableTanks = (minimum: number, action: () => void) => {
-    if (usableTankCount >= minimum) action();
-    else {
-      Alert.alert(
-        'Opening levels required',
-        canManage
-          ? minimum === 1
-            ? 'Set an explicit opening level for at least one tank before recording this activity.'
-            : 'Set opening levels for at least two tanks before recording a transfer.'
-          : 'An HOD or Captain MOV must set the required opening tank levels first.',
-        canManage
-          ? [
-              { text: 'Cancel', style: 'cancel' },
-              {
-                text: 'Set Opening Levels',
-                onPress: () => navigation.navigate('FuelOpeningBalances'),
-              },
-            ]
-          : [{ text: 'OK' }]
-      );
-    }
-  };
-
   const openFuelReceipt = () => {
-    if (reportOnlyMode && (snapshot?.tanks.length ?? 0) > 0) {
+    const configuredTankCount = snapshot?.tanks.length ?? 0;
+    if (configuredTankCount > 0 || canManage) {
       navigation.navigate('AddEditFuelLog', {});
       return;
     }
-    requireUsableTanks(1, () => navigation.navigate('AddEditFuelLog', {}));
+    Alert.alert('Fuel setup required', 'Ask an HOD or Captain MOV to configure a vessel fuel tank.');
   };
 
   const openFuelTransfer = () => {
@@ -647,13 +636,18 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
       }
       return;
     }
-    requireUsableTanks(2, () => navigation.navigate('FuelTransfer'));
+    if (usableTankCount >= 2) {
+      navigation.navigate('FuelTransfer');
+      return;
+    }
+    Alert.alert(
+      'Fuel transfer unavailable',
+      'At least two tanks with current quantities are required to calculate a fuel transfer.'
+    );
   };
 
   const correctOperation = (record: FuelInventoryOperation) => {
-    if (record.kind === 'OPENING') {
-      navigation.navigate('FuelOpeningBalances', { correctionOperationId: record.id });
-    } else if (record.kind === 'REFUEL' && record.sourceFuelLogId) {
+    if (record.kind === 'REFUEL' && record.sourceFuelLogId) {
       navigation.navigate('AddEditFuelLog', {
         logId: record.sourceFuelLogId,
         correctionOperationId: record.id,
@@ -661,15 +655,6 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
     } else if (record.kind === 'TRANSFER' && record.sourceTransferId) {
       navigation.navigate('FuelTransfer', {
         transferId: record.sourceTransferId,
-        correctionOperationId: record.id,
-      });
-    } else if (
-      record.kind === 'SOUNDING' ||
-      record.kind === 'CONSUMPTION' ||
-      record.kind === 'ADJUSTMENT'
-    ) {
-      navigation.navigate('FuelTankEntry', {
-        kind: record.kind,
         correctionOperationId: record.id,
       });
     } else {
@@ -850,45 +835,6 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
           ) : null}
-          {!inventoryReady ? (
-            <View
-              style={[
-                styles.warningCard,
-                { backgroundColor: themeColors.surface, borderColor: COLORS.warning },
-              ]}
-            >
-              <Ionicons name="alert-circle-outline" size={26} color={COLORS.warning} />
-              <View style={styles.warningCopy}>
-                <Text style={[styles.warningTitle, { color: themeColors.textPrimary }]}>
-                  {reportOnlyMode ? 'Report-only mode' : 'Opening levels required'}
-                </Text>
-                <Text style={[styles.warningText, { color: themeColors.textSecondary }]}>
-                  {reportOnlyMode
-                    ? 'Tank quantities are unknown. Receipts and transfers can still be recorded against configured tanks as report-only evidence, without changing calculated balances.'
-                    : `${uninitializedCount} ${uninitializedCount === 1 ? 'tank has' : 'tanks have'} an unknown quantity. Nautical Ops will not infer zero from old fuel logs.`}
-                </Text>
-                {canManage && !currentLoadError ? (
-                  <TouchableOpacity
-                    accessibilityRole="button"
-                    onPress={() => navigation.navigate('FuelOpeningBalances')}
-                    style={styles.warningAction}
-                  >
-                    <Text style={[styles.warningActionText, { color: themeColors.accent }]}>
-                      Set Opening Levels
-                    </Text>
-                    <Ionicons name="chevron-forward" size={18} color={themeColors.accent} />
-                  </TouchableOpacity>
-                ) : (
-                  <Text style={[styles.managerHint, { color: themeColors.textMuted }]}>
-                    {currentLoadError
-                      ? 'Refresh the inventory before changing opening levels.'
-                      : 'Ask an HOD or Captain MOV to initialize the tanks.'}
-                  </Text>
-                )}
-              </View>
-            </View>
-          ) : null}
-
           <View style={[styles.totalCard, { backgroundColor: themeColors.surface }]}>
             <Text style={[styles.eyebrow, { color: themeColors.textSecondary }]}>
               Calculated fuel on board
@@ -966,26 +912,6 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
                       </Text>
                     ) : null}
                   </View>
-                  <View style={styles.verificationRow}>
-                    <Ionicons
-                      name={
-                        item.lastVerificationKind === 'SOUNDING'
-                          ? 'checkmark-circle-outline'
-                          : item.lastVerificationKind === 'OPENING'
-                            ? 'flag-outline'
-                            : 'help-circle-outline'
-                      }
-                      size={17}
-                      color={
-                        item.lastVerificationKind === 'SOUNDING'
-                          ? COLORS.success
-                          : themeColors.textMuted
-                      }
-                    />
-                    <Text style={[styles.verificationText, { color: themeColors.textSecondary }]}>
-                      {fuelTankVerificationLabel(item)}
-                    </Text>
-                  </View>
                 </View>
               );
             })}
@@ -1006,37 +932,10 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
               disabled={!!currentLoadError}
             />
             <ActionCard
-              icon="analytics-outline"
-              label="Record Sounding"
-              onPress={() =>
-                requireUsableTanks(1, () =>
-                  navigation.navigate('FuelTankEntry', { kind: 'SOUNDING' })
-                )
-              }
-              disabled={!!currentLoadError}
+              icon="time-outline"
+              label="Fueling History"
+              onPress={() => navigation.navigate('FuelHistory')}
             />
-            <ActionCard
-              icon="remove-circle-outline"
-              label="Record Consumption"
-              onPress={() =>
-                requireUsableTanks(1, () =>
-                  navigation.navigate('FuelTankEntry', { kind: 'CONSUMPTION' })
-                )
-              }
-              disabled={!!currentLoadError}
-            />
-            {canManage ? (
-              <ActionCard
-                icon="options-outline"
-                label="Manual Adjustment"
-                onPress={() =>
-                  requireUsableTanks(1, () =>
-                    navigation.navigate('FuelTankEntry', { kind: 'ADJUSTMENT' })
-                  )
-                }
-                disabled={!!currentLoadError}
-              />
-            ) : null}
             <ActionCard
               icon="settings-outline"
               label={canManage ? 'Fuel Setup' : 'View Setup'}
@@ -1048,14 +947,6 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
             <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
               Activity history
             </Text>
-            <View style={styles.historyLinks}>
-              <TouchableOpacity onPress={() => navigation.navigate('FuelLog')}>
-                <Text style={[styles.historyLink, { color: themeColors.accent }]}>Receipts</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => navigation.navigate('FuelTransfers')}>
-                <Text style={[styles.historyLink, { color: themeColors.accent }]}>Transfers</Text>
-              </TouchableOpacity>
-            </View>
           </View>
           {history.length === 0 ? (
             <View style={[styles.emptyActivity, { backgroundColor: themeColors.surface }]}>
@@ -1064,7 +955,7 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
                 No inventory activity yet
               </Text>
               <Text style={[styles.message, { color: themeColors.textSecondary }]}>
-                Opening levels and future tank activity will appear here.
+                Tank transfers will appear here.
               </Text>
             </View>
           ) : (
@@ -1270,8 +1161,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: SPACING.md,
   },
-  historyLinks: { flexDirection: 'row', gap: SPACING.md, paddingTop: 3 },
-  historyLink: { fontSize: FONTS.sm, fontWeight: '700' },
   historyCard: {
     borderWidth: 1,
     borderRadius: BORDER_RADIUS.lg,

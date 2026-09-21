@@ -16,7 +16,7 @@ import {
   PumpOutLog,
   DischargeType,
 } from '../types';
-import { fromLitres } from './fuelUnits';
+import { fromLitres, storedFuelVolumeUnit } from './fuelUnits';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -117,9 +117,7 @@ function fuelVolumeUnitLabel(log: FuelLog): string {
 }
 
 function fuelPriceUnitLabel(log: FuelLog): string {
-  if (log.volumeUnit === 'LITRES') return 'L';
-  if (log.volumeUnit === 'US_GALLONS') return 'US gal';
-  return 'gal';
+  return log.priceVolumeUnit === 'LITRES' ? 'L' : 'US gal';
 }
 
 function pdfMoney(value: number, currencyCode: string): string {
@@ -149,7 +147,9 @@ function fuelAllocationDetailHtml(
   allocationSnapshot: FuelLogAllocationSnapshot
 ): string {
   const allocations = allocationSnapshot.allocationsByLogId[log.id] ?? [];
-  const unit = allocationSnapshot.displayUnit;
+  // A receipt and its allocations must reconcile in the same historical unit,
+  // even if the vessel later changes its preferred display unit.
+  const unit = storedFuelVolumeUnit(log.volumeUnit);
   const detail = allocations.length
     ? allocations
         .map(

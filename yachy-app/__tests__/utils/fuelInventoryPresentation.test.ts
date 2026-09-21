@@ -49,12 +49,12 @@ function operation(
 describe('fuel inventory presentation', () => {
   it('renders captured ship time independently of the device timezone', () => {
     expect(formatFuelEventDateTime('2026-09-18T00:00:00.000Z', 600)).toBe(
-      '2026-09-18 10:00 UTC+10:00'
+      '2026-09-18 10:00'
     );
     expect(formatFuelEventDateTime('2026-09-18T00:00:00.000Z', -210)).toBe(
-      '2026-09-17 20:30 UTC-03:30'
+      '2026-09-17 20:30'
     );
-    expect(formatFuelEventDateTime('2026-09-18T00:00:00.000Z', null)).toBe('2026-09-18 00:00 UTC');
+    expect(formatFuelEventDateTime('2026-09-18T00:00:00.000Z', null)).toBe('2026-09-18 00:00');
   });
 
   it('sums every receipt allocation instead of displaying only the largest tank', () => {
@@ -100,9 +100,7 @@ describe('fuel inventory presentation', () => {
     >;
 
     const label = fuelTankVerificationLabel(verification);
-    expect(label).toBe(
-      'Latest absolute level is the opening record from 2026-09-18 10:00 UTC+10:00'
-    );
+    expect(label).toBe('2026-09-18 10:00');
     expect(label).not.toContain('Not yet verified by sounding');
   });
 
@@ -114,6 +112,6 @@ describe('fuel inventory presentation', () => {
         lastVerificationKind: 'SOUNDING',
         lastVerifiedUtcOffsetMinutes: 600,
       })
-    ).toBe('Last verified by sounding 2026-09-18 10:00 UTC+10:00');
+    ).toBe('2026-09-18 10:00');
   });
 });
