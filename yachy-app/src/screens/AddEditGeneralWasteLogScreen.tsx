@@ -15,7 +15,8 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import generalWasteLogsService from '../services/generalWasteLogs';
@@ -178,123 +179,165 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <DateOnlyPicker
-          label="Date"
-          value={formatDate(date)}
-          onChange={(nextDate) => setDate(parseLocalDate(nextDate))}
-          title="Select waste log date"
-        />
+        <View
+          style={[
+            styles.section,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+            ]}
+          >
+            Entry details
+          </Text>
 
-        {/* Time */}
-        <View style={styles.fieldContainer}>
-          <Text style={[styles.label, { color: themeColors.textPrimary }]}>Time</Text>
-          {Platform.OS === 'ios' ? (
-            <View style={[styles.pickerTrigger, { backgroundColor: themeColors.surface }]}>
-              <Text style={[styles.pickerValue, { color: themeColors.textPrimary }]}>
-                {formatTime(time)}
-              </Text>
-              <DateTimePicker
-                value={time}
-                mode="time"
-                display="compact"
-                onChange={(_: DateTimePickerEvent, selected?: Date) => {
-                  if (selected) setTime(selected);
-                }}
+          <Input
+            label="Position / Location"
+            value={positionLocation}
+            onChangeText={setPositionLocation}
+            placeholder="e.g. 25°N 80°W or Port Miami"
+          />
+
+          <View style={styles.dateTimeRow}>
+            <View style={styles.dateTimeColumn}>
+              <DateOnlyPicker
+                label="Date"
+                value={formatDate(date)}
+                onChange={(nextDate) => setDate(parseLocalDate(nextDate))}
+                title="Select waste log date"
               />
             </View>
-          ) : (
-            <>
-              <TouchableOpacity
-                style={[styles.pickerTrigger, { backgroundColor: themeColors.surface }]}
-                onPress={() => setShowTimePicker(true)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.pickerValue, { color: themeColors.textPrimary }]}>
-                  {formatTime(time)}
-                </Text>
-                <Text style={styles.pickerIcon}>🕐</Text>
-              </TouchableOpacity>
-              {showTimePicker && (
-                <DateTimePicker
-                  value={time}
-                  mode="time"
-                  is24Hour
-                  display="default"
-                  onChange={(_: DateTimePickerEvent, selected?: Date) => {
-                    setShowTimePicker(false);
-                    if (selected) setTime(selected);
-                  }}
-                />
+
+            <View style={[styles.fieldContainer, styles.dateTimeColumn]}>
+              <Text style={[styles.label, { color: themeColors.textPrimary }]}>Time</Text>
+              {Platform.OS === 'ios' ? (
+                <View
+                  style={[
+                    styles.pickerTrigger,
+                    styles.iosPickerTrigger,
+                    { backgroundColor: themeColors.control, borderColor: themeColors.border },
+                  ]}
+                >
+                  <DateTimePicker
+                    value={time}
+                    mode="time"
+                    display="compact"
+                    onChange={(_: DateTimePickerEvent, selected?: Date) => {
+                      if (selected) setTime(selected);
+                    }}
+                  />
+                </View>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={[
+                      styles.pickerTrigger,
+                      { backgroundColor: themeColors.control, borderColor: themeColors.border },
+                    ]}
+                    onPress={() => setShowTimePicker(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.pickerValue, { color: themeColors.textPrimary }]}>
+                      {formatTime(time)}
+                    </Text>
+                    <Ionicons name="time-outline" size={20} color={themeColors.textSecondary} />
+                  </TouchableOpacity>
+                  {showTimePicker && (
+                    <DateTimePicker
+                      value={time}
+                      mode="time"
+                      is24Hour
+                      display="default"
+                      onChange={(_: DateTimePickerEvent, selected?: Date) => {
+                        setShowTimePicker(false);
+                        if (selected) setTime(selected);
+                      }}
+                    />
+                  )}
+                </>
               )}
-            </>
-          )}
-        </View>
-
-        {/* Position / Location */}
-        <Input
-          label="Position / Location"
-          value={positionLocation}
-          onChangeText={setPositionLocation}
-          placeholder="e.g. 25°N 80°W or Port Miami"
-        />
-
-        {/* Weight */}
-        <View style={styles.fieldContainer}>
-          <Text style={[styles.label, { color: themeColors.textPrimary }]}>
-            Weight ({weightUnit === 'kgs' ? 'kg' : 'lbs'})
-          </Text>
-          <View style={styles.weightRow}>
-            <Input
-              value={weight}
-              onChangeText={setWeight}
-              placeholder="e.g. 5.2"
-              keyboardType="decimal-pad"
-              containerStyle={styles.weightInput}
-            />
-            <View style={[styles.unitSelector, { backgroundColor: themeColors.surface }]}>
-              <TouchableOpacity
-                style={[styles.unitBtn, weightUnit === 'kgs' && styles.unitBtnSelected]}
-                onPress={() => setWeightUnit('kgs')}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.unitLabel,
-                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                    weightUnit === 'kgs' && styles.unitLabelSelected,
-                  ]}
-                >
-                  kg
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.unitBtn, weightUnit === 'lbs' && styles.unitBtnSelected]}
-                onPress={() => setWeightUnit('lbs')}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.unitLabel,
-                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                    weightUnit === 'lbs' && styles.unitLabelSelected,
-                  ]}
-                >
-                  lbs
-                </Text>
-              </TouchableOpacity>
             </View>
           </View>
         </View>
 
-        {/* Description of Garbage */}
-        <Input
-          label="Description of Garbage"
-          value={descriptionOfGarbage}
-          onChangeText={setDescriptionOfGarbage}
-          placeholder="Describe the type and amount of garbage..."
-          multiline
-          numberOfLines={4}
-        />
+        <View
+          style={[
+            styles.section,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+            ]}
+          >
+            Waste details
+          </Text>
+
+          <View style={styles.fieldContainer}>
+            <Text style={[styles.label, { color: themeColors.textPrimary }]}>Weight</Text>
+            <View style={styles.weightRow}>
+              <Input
+                value={weight}
+                onChangeText={setWeight}
+                placeholder="e.g. 5.2"
+                keyboardType="decimal-pad"
+                containerStyle={styles.weightInput}
+              />
+              <View
+                style={[
+                  styles.unitSelector,
+                  { backgroundColor: themeColors.control, borderColor: themeColors.border },
+                ]}
+              >
+                <TouchableOpacity
+                  style={[styles.unitBtn, weightUnit === 'kgs' && styles.unitBtnSelected]}
+                  onPress={() => setWeightUnit('kgs')}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.unitLabel,
+                      { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                      weightUnit === 'kgs' && styles.unitLabelSelected,
+                    ]}
+                  >
+                    kg
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.unitBtn, weightUnit === 'lbs' && styles.unitBtnSelected]}
+                  onPress={() => setWeightUnit('lbs')}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.unitLabel,
+                      { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                      weightUnit === 'lbs' && styles.unitLabelSelected,
+                    ]}
+                  >
+                    lbs
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          <Input
+            label="Description of Garbage"
+            value={descriptionOfGarbage}
+            onChangeText={setDescriptionOfGarbage}
+            placeholder="Describe the type and amount of garbage..."
+            multiline
+            numberOfLines={4}
+            containerStyle={styles.lastInput}
+          />
+        </View>
 
         <View style={styles.actions}>
           <Button
@@ -306,14 +349,17 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
             fullWidth
           />
           <TouchableOpacity
-            style={styles.cancelBtn}
+            style={[
+              styles.cancelBtn,
+              { borderColor: themeColors.isDark ? COLORS.white : COLORS.primary },
+            ]}
             onPress={() => navigation.goBack()}
             disabled={saving}
           >
             <Text
               style={[
                 styles.cancelText,
-                { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                { color: themeColors.isDark ? COLORS.white : COLORS.primary },
               ]}
             >
               Cancel
@@ -349,6 +395,18 @@ const styles = StyleSheet.create({
   fieldContainer: {
     marginBottom: SPACING.md,
   },
+  section: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    ...SHADOWS.sm,
+  },
+  sectionTitle: {
+    fontSize: FONTS.lg,
+    fontWeight: '700',
+    marginBottom: SPACING.md,
+  },
   label: {
     fontSize: FONTS.sm,
     fontWeight: '600',
@@ -360,26 +418,37 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     height: SIZES.inputHeight,
     borderWidth: 1,
-    borderColor: COLORS.border,
     borderRadius: BORDER_RADIUS.md,
     paddingHorizontal: SPACING.md,
   },
   pickerValue: {
     fontSize: FONTS.base,
   },
-  pickerIcon: {
-    fontSize: 18,
+  iosPickerTrigger: {
+    justifyContent: 'center',
   },
   actions: {
-    marginTop: SPACING.lg,
+    marginTop: SPACING.sm,
     gap: SPACING.sm,
   },
   cancelBtn: {
-    alignSelf: 'center',
-    padding: SPACING.sm,
+    minHeight: SIZES.buttonHeight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.md,
   },
   cancelText: {
     fontSize: FONTS.base,
+    fontWeight: '600',
+  },
+  dateTimeRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  dateTimeColumn: {
+    flex: 1,
   },
   weightRow: {
     flexDirection: 'row',
@@ -395,7 +464,6 @@ const styles = StyleSheet.create({
     width: 120,
     height: SIZES.inputHeight,
     borderWidth: 1,
-    borderColor: COLORS.border,
     borderRadius: BORDER_RADIUS.md,
     overflow: 'hidden',
   },
@@ -414,5 +482,8 @@ const styles = StyleSheet.create({
   },
   unitLabelSelected: {
     color: COLORS.white,
+  },
+  lastInput: {
+    marginBottom: 0,
   },
 });
