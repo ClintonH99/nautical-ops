@@ -3,7 +3,7 @@
  * Watch Keeping Rules (view / HOD edit), then Watch Schedule and Create buttons
  */
 
-import React, { useState, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import {
   Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -41,6 +42,7 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
   const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
+  const actionColor = themeColors.isDark ? COLORS.white : COLORS.primary;
 
   const [rules, setRules] = useState<WatchKeepingRules | null>(null);
   const [loadingRules, setLoadingRules] = useState(true);
@@ -105,14 +107,17 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
       >
-        {/* Watch Keeping Rules board — matches Muster Station design */}
-        <View style={[styles.rulesBoard, { backgroundColor: themeColors.surface }]}>
+        <View
+          style={[
+            styles.rulesBoard,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
           <View style={styles.rulesBoardInner}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
-                Watch Keeping Rules
-              </Text>
+              <Text style={[styles.sectionTitle, { color: actionColor }]}>Watch Keeping Rules</Text>
             </View>
             {loadingRules ? (
               <ActivityIndicator size="small" color={COLORS.primary} style={styles.rulesLoader} />
@@ -136,35 +141,55 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
         </View>
 
         <TouchableOpacity
-          style={[styles.card, { backgroundColor: themeColors.surface }]}
+          style={[
+            styles.navigationCard,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
           onPress={() => navigation.navigate('WatchSchedule')}
           activeOpacity={0.8}
         >
-          <Text style={styles.cardIcon}>📋</Text>
-          <View style={styles.cardLabelWrap}>
-            <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>
-              Watch Schedule
-            </Text>
-            <Text style={[styles.cardHint, { color: themeColors.textSecondary }]}>
-              View published watch timetables
+          <View
+            style={[
+              styles.navigationIcon,
+              { backgroundColor: themeColors.control, borderColor: themeColors.border },
+            ]}
+          >
+            <Ionicons name="calendar-outline" size={22} color={actionColor} />
+          </View>
+          <View style={styles.navigationCopy}>
+            <Text style={[styles.navigationTitle, { color: actionColor }]}>Watch Schedule</Text>
+            <Text style={[styles.navigationHint, { color: themeColors.textSecondary }]}>
+              View published watch schedules
             </Text>
           </View>
+          <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.card, { backgroundColor: themeColors.surface }]}
+          style={[
+            styles.navigationCard,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
           onPress={() => navigation.navigate('CreateWatchTimetable')}
           activeOpacity={0.8}
         >
-          <Text style={styles.cardIcon}>➕</Text>
-          <View style={styles.cardLabelWrap}>
-            <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>
+          <View
+            style={[
+              styles.navigationIcon,
+              { backgroundColor: themeColors.control, borderColor: themeColors.border },
+            ]}
+          >
+            <Ionicons name="add" size={24} color={actionColor} />
+          </View>
+          <View style={styles.navigationCopy}>
+            <Text style={[styles.navigationTitle, { color: actionColor }]}>
               Create Watch Schedule
             </Text>
-            <Text style={[styles.cardHint, { color: themeColors.textSecondary }]}>
-              Create and publish a new watch schedule
+            <Text style={[styles.navigationHint, { color: themeColors.textSecondary }]}>
+              Create and publish a new schedule
             </Text>
           </View>
+          <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
         </TouchableOpacity>
 
         {/* Edit Rules Modal (HOD only) */}
@@ -177,37 +202,38 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
             >
               <Pressable style={StyleSheet.absoluteFill} onPress={() => setEditModalOpen(false)} />
               <View
-                style={[styles.modalBox, { backgroundColor: themeColors.surface }]}
+                style={[
+                  styles.modalBox,
+                  { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+                ]}
                 onStartShouldSetResponder={() => true}
               >
-                <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+                <Text style={[styles.modalTitle, { color: actionColor }]}>
                   Edit Watch Keeping Rules
                 </Text>
                 <TextInput
                   style={[
                     styles.rulesInput,
                     {
-                      backgroundColor: themeColors.surfaceAlt,
+                      backgroundColor: themeColors.control,
                       color: themeColors.textPrimary,
-                      borderColor: themeColors.isDark ? themeColors.surfaceAlt : COLORS.border,
+                      borderColor: themeColors.borderStrong,
                     },
                   ]}
                   value={editContent}
                   onChangeText={setEditContent}
                   placeholder="Enter rules and guidelines for watch keeping..."
-                  placeholderTextColor={themeColors.textSecondary}
+                  placeholderTextColor={themeColors.textMuted}
                   multiline
                   numberOfLines={8}
                   textAlignVertical="top"
                 />
                 <View style={styles.modalActions}>
                   <TouchableOpacity
-                    style={styles.modalCancelBtn}
+                    style={[styles.modalCancelBtn, { borderColor: actionColor }]}
                     onPress={() => setEditModalOpen(false)}
                   >
-                    <Text style={[styles.modalCancelText, { color: themeColors.textSecondary }]}>
-                      Cancel
-                    </Text>
+                    <Text style={[styles.modalCancelText, { color: actionColor }]}>Cancel</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.modalSaveBtn}
@@ -246,13 +272,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   rulesBoard: {
+    borderWidth: 1,
     borderRadius: BORDER_RADIUS.lg,
     marginBottom: SPACING.lg,
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   rulesBoardInner: {
     padding: SPACING.lg,
@@ -264,7 +291,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   sectionTitle: {
-    fontSize: FONTS.xl,
+    fontSize: FONTS.base,
     fontWeight: 'bold',
   },
   editRulesBtn: {
@@ -290,7 +317,8 @@ const styles = StyleSheet.create({
   rulesLoader: {
     marginVertical: SPACING.md,
   },
-  card: {
+  navigationCard: {
+    borderWidth: 1,
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.lg,
     marginBottom: SPACING.md,
@@ -298,24 +326,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  cardIcon: {
-    fontSize: 36,
-    marginRight: SPACING.lg,
+  navigationIcon: {
+    width: 42,
+    height: 42,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.md,
   },
-  cardLabelWrap: {
+  navigationCopy: {
     flex: 1,
   },
-  cardLabel: {
-    fontSize: FONTS.xl,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
+  navigationTitle: {
+    fontSize: FONTS.base,
+    fontWeight: '700',
   },
-  cardHint: {
+  navigationHint: {
     fontSize: FONTS.sm,
+    marginTop: 2,
   },
   modalBackdrop: {
     flex: 1,
@@ -325,6 +358,7 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
   },
   modalBox: {
+    borderWidth: 1,
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.lg,
     width: '100%',
@@ -332,7 +366,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: FONTS.lg,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: SPACING.md,
   },
   rulesInput: {
@@ -348,21 +382,28 @@ const styles = StyleSheet.create({
   modalActions: {
     flexDirection: 'row',
     gap: SPACING.sm,
-    justifyContent: 'flex-end',
   },
   modalCancelBtn: {
+    flex: 1,
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.lg,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalCancelText: {
     fontSize: FONTS.base,
-    color: COLORS.textSecondary,
+    fontWeight: '600',
   },
   modalSaveBtn: {
+    flex: 1,
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.lg,
     backgroundColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalSaveText: {
     fontSize: FONTS.base,

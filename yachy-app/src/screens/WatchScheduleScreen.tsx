@@ -9,23 +9,34 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
   Alert,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { PageHeader, ExportButton, ExportBar, Checkbox, PreviewActionButtons } from '../components';
+import { PageHeader, ExportButton, ExportBar, ButtonTagCard } from '../components';
 import { useAuthStore } from '../store';
-import watchKeepingService, { PublishedWatchTimetable } from '../services/watchKeeping';
+import watchKeepingService, {
+  PublishedWatchTimetable,
+  TimetableSlot,
+} from '../services/watchKeeping';
 import { formatLocalDateString } from '../utils';
 import { buildWatchSchedulePdfHtml, getWatchScheduleDate } from '../utils/watchSchedulePdf';
+
+function formatSlotDate(slot: TimetableSlot, fallbackDate: string): string {
+  const startDate = slot.startDate || fallbackDate;
+  const startLabel = formatLocalDateString(startDate, { month: 'short', day: 'numeric' });
+  if (slot.endDate && slot.endDate !== startDate) {
+    const endLabel = formatLocalDateString(slot.endDate, { month: 'short', day: 'numeric' });
+    return `${startLabel} – ${endLabel}`;
+  }
+  return startLabel;
+}
 
 export const WatchScheduleScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
@@ -35,7 +46,6 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
   const [exportMode, setExportMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exportingPdf, setExportingPdf] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const vesselId = user?.vesselId ?? null;
@@ -82,7 +92,6 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            setDeleting(true);
             try {
               await watchKeepingService.delete(timetable.id);
               loadPublished();
@@ -90,8 +99,6 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
             } catch (e) {
               console.error('Delete error:', e);
               Alert.alert('Error', 'Could not delete watch schedule.');
-            } finally {
-              setDeleting(false);
             }
           },
         },
@@ -191,6 +198,7 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
             tintColor={themeColors.accent}
           />
         }
+        showsVerticalScrollIndicator={false}
       >
         {loading && publishedTimetables.length === 0 ? (
           <ActivityIndicator
@@ -205,84 +213,135 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
           </Text>
         ) : (
           publishedTimetables.map((t) => {
-            const expanded = isHOD && expandedId === t.id && !exportMode;
+            const expanded = expandedId === t.id && !exportMode;
+            const date = formatLocalDateString(getWatchScheduleDate(t), {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+            });
+            const route = [t.startLocation, t.destination].filter(Boolean).join(' to ');
+            const collapsedDetails = [route, `Start ${t.startTime}`].filter(Boolean).join(' · ');
             return (
-              <View
+              <ButtonTagCard
                 key={t.id}
-                style={[
-                  styles.card,
-                  { backgroundColor: themeColors.surface, borderColor: themeColors.border },
-                ]}
+                headerTitle={t.watchTitle}
+                minimal
+                collapsible
+                expanded={expanded}
+                onToggleExpand={() => setExpandedId(expanded ? null : t.id)}
+                summary={
+                  <View>
+                    <Text style={[styles.recordDate, { color: themeColors.textSecondary }]}>
+                      {date}
+                    </Text>
+                    {collapsedDetails ? (
+                      <Text style={[styles.recordSummary, { color: themeColors.textSecondary }]}>
+                        {collapsedDetails}
+                      </Text>
+                    ) : null}
+                  </View>
+                }
+                showCheckbox={exportMode}
+                checked={selectedIds.has(t.id)}
+                selected={selectedIds.has(t.id)}
+                onToggleSelect={() => toggleSelect(t.id)}
+                onEdit={isHOD ? () => handleEdit(t) : undefined}
+                onDelete={isHOD ? () => handleDelete(t) : undefined}
               >
-                <TouchableOpacity
-                  style={styles.cardSummary}
-                  onPress={() => {
-                    if (exportMode) toggleSelect(t.id);
-                    else if (isHOD) setExpandedId(expanded ? null : t.id);
-                  }}
-                  activeOpacity={exportMode || isHOD ? 0.8 : 1}
+                <View
+                  style={[
+                    styles.routePanel,
+                    {
+                      backgroundColor: themeColors.control,
+                      borderColor: themeColors.border,
+                    },
+                  ]}
                 >
-                  <View style={styles.cardHeader}>
-                    {exportMode && (
-                      <Checkbox
-                        checked={selectedIds.has(t.id)}
-                        onPress={() => toggleSelect(t.id)}
-                        surface={themeColors.surface}
-                      />
-                    )}
-                    <Text
-                      style={[styles.cardTitle, { color: themeColors.textPrimary }]}
-                      numberOfLines={1}
-                    >
-                      {t.watchTitle}
-                    </Text>
-                    {!exportMode && isHOD && (
-                      <Ionicons
-                        name={expanded ? 'chevron-up' : 'chevron-down'}
-                        size={20}
-                        color={themeColors.textSecondary}
-                      />
-                    )}
+                  <View style={styles.routeGrid}>
+                    <View style={styles.routeItem}>
+                      <Text style={[styles.routeLabel, { color: themeColors.textSecondary }]}>
+                        From
+                      </Text>
+                      <Text style={[styles.routeValue, { color: themeColors.textPrimary }]}>
+                        {t.startLocation || '—'}
+                      </Text>
+                    </View>
+                    <View style={styles.routeItem}>
+                      <Text style={[styles.routeLabel, { color: themeColors.textSecondary }]}>
+                        To
+                      </Text>
+                      <Text style={[styles.routeValue, { color: themeColors.textPrimary }]}>
+                        {t.destination || '—'}
+                      </Text>
+                    </View>
+                    <View style={styles.routeItem}>
+                      <Text style={[styles.routeLabel, { color: themeColors.textSecondary }]}>
+                        Start
+                      </Text>
+                      <Text style={[styles.routeValue, { color: themeColors.textPrimary }]}>
+                        {t.startTime}
+                      </Text>
+                    </View>
                   </View>
-                  <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>
-                    {formatLocalDateString(getWatchScheduleDate(t), {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric',
-                    })}
-                  </Text>
-                  {t.startLocation ? (
-                    <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>
-                      From: {t.startLocation}
+                </View>
+                {t.notes ? (
+                  <View style={styles.notesBlock}>
+                    <Text style={[styles.routeLabel, { color: themeColors.textSecondary }]}>
+                      Notes
                     </Text>
-                  ) : null}
-                  {t.destination ? (
-                    <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>
-                      To: {t.destination}
+                    <Text style={[styles.routeValue, { color: themeColors.textPrimary }]}>
+                      {t.notes}
                     </Text>
-                  ) : null}
-                  <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>
-                    Start: {t.startTime}
-                  </Text>
-                </TouchableOpacity>
-
-                {expanded && (
-                  <View
-                    style={[
-                      styles.previewPanel,
-                      {
-                        borderTopColor: themeColors.border,
-                      },
-                    ]}
-                  >
-                    <PreviewActionButtons
-                      onEdit={() => handleEdit(t)}
-                      onDelete={() => handleDelete(t)}
-                      deleting={deleting}
-                    />
                   </View>
-                )}
-              </View>
+                ) : null}
+                <View style={styles.assignmentsSection}>
+                  <Text style={[styles.assignmentsTitle, { color: themeColors.textPrimary }]}>
+                    Watch assignments
+                  </Text>
+                  {t.slots.length === 0 ? (
+                    <Text style={[styles.noAssignments, { color: themeColors.textSecondary }]}>
+                      No watch assignments
+                    </Text>
+                  ) : (
+                    t.slots.map((slot, index) => (
+                      <View
+                        key={`${slot.crewId}-${slot.startDate || ''}-${slot.startTimeStr}-${index}`}
+                        style={[
+                          styles.assignmentRow,
+                          {
+                            borderColor: themeColors.border,
+                            backgroundColor: themeColors.control,
+                          },
+                        ]}
+                      >
+                        <View style={styles.assignmentCrew}>
+                          <Text style={[styles.assignmentName, { color: themeColors.textPrimary }]}>
+                            {slot.crewName}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.assignmentPosition,
+                              { color: themeColors.textSecondary },
+                            ]}
+                          >
+                            {slot.crewPosition || 'Crew'}
+                          </Text>
+                        </View>
+                        <View style={styles.assignmentTimeBlock}>
+                          <Text
+                            style={[styles.assignmentDate, { color: themeColors.textSecondary }]}
+                          >
+                            {formatSlotDate(slot, getWatchScheduleDate(t))}
+                          </Text>
+                          <Text style={[styles.assignmentTime, { color: themeColors.textPrimary }]}>
+                            {slot.startTimeStr} – {slot.endTimeStr}
+                          </Text>
+                        </View>
+                      </View>
+                    ))
+                  )}
+                </View>
+              </ButtonTagCard>
             );
           })
         )}
@@ -298,26 +357,90 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
   empty: { fontSize: FONTS.base, padding: SPACING.xl },
-  card: {
-    borderRadius: BORDER_RADIUS.lg,
-    marginBottom: SPACING.md,
-    overflow: 'hidden',
-    borderWidth: 1,
-  },
-  cardSummary: { padding: SPACING.lg },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  recordDate: {
+    fontSize: FONTS.sm,
     marginBottom: SPACING.xs,
   },
-  cardTitle: { fontSize: FONTS.lg, fontWeight: '600', flex: 1 },
-  cardMeta: { fontSize: FONTS.sm, marginTop: SPACING.xs },
-  previewPanel: {
-    borderTopWidth: 1,
-    paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.lg,
+  recordSummary: {
+    fontSize: FONTS.sm,
+    lineHeight: 20,
+  },
+  routePanel: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    marginTop: SPACING.md,
+  },
+  routeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.md,
+  },
+  routeItem: {
+    minWidth: '44%',
+    flexGrow: 1,
+  },
+  routeLabel: {
+    fontSize: FONTS.xs,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 3,
+  },
+  routeValue: {
+    fontSize: FONTS.base,
+    lineHeight: 20,
+  },
+  notesBlock: {
+    marginTop: SPACING.md,
+  },
+  assignmentsSection: {
+    marginTop: SPACING.lg,
+  },
+  assignmentsTitle: {
+    fontSize: FONTS.base,
+    fontWeight: '700',
+    marginBottom: SPACING.sm,
+  },
+  noAssignments: {
+    fontSize: FONTS.sm,
+    paddingVertical: SPACING.sm,
+  },
+  assignmentRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.sm,
+  },
+  assignmentCrew: {
+    flex: 1,
+  },
+  assignmentName: {
+    fontSize: FONTS.base,
+    fontWeight: '600',
+  },
+  assignmentPosition: {
+    fontSize: FONTS.sm,
+    marginTop: 2,
+  },
+  assignmentTimeBlock: {
+    flexShrink: 0,
+    alignItems: 'flex-end',
+    maxWidth: '52%',
+  },
+  assignmentDate: {
+    fontSize: FONTS.xs,
+    marginBottom: 2,
+    textAlign: 'right',
+  },
+  assignmentTime: {
+    fontSize: FONTS.sm,
+    fontWeight: '600',
+    textAlign: 'right',
   },
   viewModal: { flex: 1 },
   viewModalContent: { paddingBottom: SIZES.bottomScrollPadding },

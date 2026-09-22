@@ -114,6 +114,7 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
 
   const vesselId = user?.vesselId ?? null;
   const isEdit = !!logId;
+  const sectionTitleColor = themeColors.isDark ? COLORS.white : COLORS.primary;
 
   useEffect(() => {
     navigation.setOptions({
@@ -422,415 +423,475 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
         style={styles.scroll}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.fieldContainer}>
-          <Text style={[styles.label, { color: themeColors.textPrimary }]}>Equipment</Text>
-          <TouchableOpacity
-            style={[styles.dropdownTrigger, { backgroundColor: themeColors.surface }]}
-            onPress={() => setEquipmentDropdownVisible(true)}
-          >
-            <Text style={[styles.dropdownText, !equipment && styles.placeholder]}>
-              {equipment || 'Select equipment...'}
-            </Text>
-            <Text style={styles.dropdownChevron}>▼</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Modal
-          visible={equipmentDropdownVisible}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setEquipmentDropdownVisible(false)}
+        <View
+          style={[
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
         >
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPress={() => setEquipmentDropdownVisible(false)}
-          >
-            <View
-              style={[styles.modalContent, { backgroundColor: themeColors.surface }]}
-              onStartShouldSetResponder={() => true}
-            >
-              <ScrollView style={styles.dropdownList} keyboardShouldPersistTaps="handled">
-                {equipmentOptions.map((opt) => (
-                  <View
-                    key={opt}
-                    style={[
-                      styles.dropdownOptionRow,
-                      equipment === opt && styles.dropdownOptionSelected,
-                    ]}
-                  >
-                    <TouchableOpacity
-                      style={styles.dropdownOptionTouch}
-                      onPress={() => {
-                        setEquipment(opt);
-                        setEquipmentDropdownVisible(false);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.dropdownOptionText,
-                          { color: equipment === opt ? undefined : themeColors.textPrimary },
-                          equipment === opt && styles.dropdownOptionTextSelected,
-                        ]}
-                      >
-                        {opt}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.deleteOptionBtn}
-                      onPress={() => removeEquipment(opt)}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Text
-                        style={[
-                          styles.deleteOptionText,
-                          equipment === opt && styles.deleteOptionTextSelected,
-                        ]}
-                      >
-                        ×
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </ScrollView>
-              <TouchableOpacity
-                style={styles.createNewBtn}
-                onPress={() => {
-                  setEquipmentDropdownVisible(false);
-                  setCreateNewVisible(true);
-                }}
-              >
-                <Text style={styles.createNewBtnText}>Add Equipment</Text>
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        </Modal>
-
-        <Modal
-          visible={createNewVisible}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setCreateNewVisible(false)}
-        >
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPress={() => setCreateNewVisible(false)}
-          >
-            <View
-              style={[styles.createNewModal, { backgroundColor: themeColors.surface }]}
-              onStartShouldSetResponder={() => true}
-            >
-              <Text style={[styles.createNewTitle, { color: themeColors.textPrimary }]}>
-                Add Equipment
-              </Text>
-              <TextInput
-                style={[
-                  styles.createNewInput,
-                  { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
-                ]}
-                value={newEquipmentName}
-                onChangeText={setNewEquipmentName}
-                placeholder="Enter equipment name"
-                placeholderTextColor={themeColors.textSecondary}
-                autoCapitalize="words"
-                autoFocus
-              />
-              <View style={styles.createNewActions}>
-                <Button
-                  title="Add Equipment"
-                  onPress={handleSaveNewEquipment}
-                  variant="primary"
-                  style={styles.createNewAddBtn}
-                />
-                <TouchableOpacity
-                  onPress={() => {
-                    setCreateNewVisible(false);
-                    setNewEquipmentName('');
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.cancelText,
-                      { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                    ]}
-                  >
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </TouchableOpacity>
-        </Modal>
-        <View style={styles.fieldContainer}>
-          <Text style={[styles.label, { color: themeColors.textPrimary }]}>Location</Text>
-          <TouchableOpacity
-            style={[styles.dropdownTrigger, { backgroundColor: themeColors.surface }]}
-            onPress={() => setLocationDropdownVisible(true)}
-          >
-            <Text style={[styles.dropdownText, !location && styles.placeholder]}>
-              {location || 'Select location...'}
-            </Text>
-            <Text style={styles.dropdownChevron}>▼</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Modal
-          visible={locationDropdownVisible}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setLocationDropdownVisible(false)}
-        >
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPress={() => setLocationDropdownVisible(false)}
-          >
-            <View
-              style={[styles.modalContent, { backgroundColor: themeColors.surface }]}
-              onStartShouldSetResponder={() => true}
-            >
-              <ScrollView style={styles.dropdownList} keyboardShouldPersistTaps="handled">
-                {locationOptions.map((opt) => (
-                  <View
-                    key={opt}
-                    style={[
-                      styles.dropdownOptionRow,
-                      location === opt && styles.dropdownOptionSelected,
-                    ]}
-                  >
-                    <TouchableOpacity
-                      style={styles.dropdownOptionTouch}
-                      onPress={() => {
-                        setLocation(opt);
-                        setLocationDropdownVisible(false);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.dropdownOptionText,
-                          { color: location === opt ? undefined : themeColors.textPrimary },
-                          location === opt && styles.dropdownOptionTextSelected,
-                        ]}
-                      >
-                        {opt}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.deleteOptionBtn}
-                      onPress={() => removeLocation(opt)}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Text
-                        style={[
-                          styles.deleteOptionText,
-                          location === opt && styles.deleteOptionTextSelected,
-                        ]}
-                      >
-                        ×
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </ScrollView>
-              <TouchableOpacity
-                style={styles.createNewBtn}
-                onPress={() => {
-                  setLocationDropdownVisible(false);
-                  setAddNewLocationVisible(true);
-                }}
-              >
-                <Text style={styles.createNewBtnText}>Add Location</Text>
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        </Modal>
-
-        <Modal
-          visible={addNewLocationVisible}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setAddNewLocationVisible(false)}
-        >
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPress={() => setAddNewLocationVisible(false)}
-          >
-            <View
-              style={[styles.createNewModal, { backgroundColor: themeColors.surface }]}
-              onStartShouldSetResponder={() => true}
-            >
-              <Text style={[styles.createNewTitle, { color: themeColors.textPrimary }]}>
-                Add Location
-              </Text>
-              <TextInput
-                style={[
-                  styles.createNewInput,
-                  { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
-                ]}
-                value={newLocationName}
-                onChangeText={setNewLocationName}
-                placeholder="Enter location name"
-                placeholderTextColor={themeColors.textSecondary}
-                autoCapitalize="words"
-                autoFocus
-              />
-              <View style={styles.createNewActions}>
-                <Button
-                  title="Add Location"
-                  onPress={handleSaveNewLocation}
-                  variant="primary"
-                  style={styles.createNewAddBtn}
-                />
-                <TouchableOpacity
-                  onPress={() => {
-                    setAddNewLocationVisible(false);
-                    setNewLocationName('');
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.cancelText,
-                      { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                    ]}
-                  >
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </TouchableOpacity>
-        </Modal>
-        <View style={styles.fieldContainer}>
-          <Text style={[styles.label, { color: themeColors.textPrimary }]}>Serial number</Text>
-          <View style={styles.serialNumberRow}>
-            <TextInput
-              style={[
-                styles.serialNumberInput,
-                { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
-              ]}
-              value={serialNumber}
-              onChangeText={setSerialNumber}
-              placeholder="Optional - tap Recent for this equipment + location"
-              placeholderTextColor={themeColors.textSecondary}
-            />
+          <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>Equipment details</Text>
+          <View style={styles.fieldContainer}>
+            <Text style={[styles.label, { color: themeColors.textPrimary }]}>Equipment</Text>
             <TouchableOpacity
-              style={styles.recentBtn}
-              onPress={() => setSerialNumberDropdownVisible(true)}
+              style={[
+                styles.dropdownTrigger,
+                { backgroundColor: themeColors.control, borderColor: themeColors.border },
+              ]}
+              onPress={() => setEquipmentDropdownVisible(true)}
             >
-              <Text style={styles.recentBtnText}>Recent</Text>
+              <Text
+                style={[
+                  styles.dropdownText,
+                  { color: equipment ? themeColors.textPrimary : themeColors.textMuted },
+                ]}
+              >
+                {equipment || 'Select equipment'}
+              </Text>
+              <Text style={[styles.dropdownChevron, { color: sectionTitleColor }]}>▼</Text>
             </TouchableOpacity>
           </View>
-        </View>
 
-        <Modal
-          visible={serialNumberDropdownVisible}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setSerialNumberDropdownVisible(false)}
-        >
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPress={() => setSerialNumberDropdownVisible(false)}
+          <Modal
+            visible={equipmentDropdownVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setEquipmentDropdownVisible(false)}
           >
-            <View
-              style={[styles.modalContent, { backgroundColor: themeColors.surface }]}
-              onStartShouldSetResponder={() => true}
+            <TouchableOpacity
+              style={styles.modalOverlay}
+              activeOpacity={1}
+              onPress={() => setEquipmentDropdownVisible(false)}
             >
-              <Text style={[styles.previousTitle, { color: themeColors.textPrimary }]}>
-                {equipment || location
-                  ? `Previous serial numbers${equipment && location ? ` for ${equipment} / ${location}` : ''}`
-                  : 'Select equipment and location first'}
-              </Text>
-              {!equipment && !location ? (
-                <Text
-                  style={[
-                    styles.previousEmpty,
-                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                  ]}
-                >
-                  Choose equipment and location to see serial numbers for that combination.
-                </Text>
-              ) : previousSerialNumbers.length === 0 ? (
-                <Text
-                  style={[
-                    styles.previousEmpty,
-                    { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                  ]}
-                >
-                  Once you have logged a service for a specific equipment at a location, the serial
-                  number will be saved under Recent for future logs.
-                </Text>
-              ) : (
+              <View
+                style={[styles.modalContent, { backgroundColor: themeColors.surface }]}
+                onStartShouldSetResponder={() => true}
+              >
                 <ScrollView style={styles.dropdownList} keyboardShouldPersistTaps="handled">
-                  {previousSerialNumbers.map((sn) => (
-                    <TouchableOpacity
-                      key={sn}
+                  {equipmentOptions.map((opt) => (
+                    <View
+                      key={opt}
                       style={[
-                        styles.dropdownOption,
-                        serialNumber === sn && styles.dropdownOptionSelected,
+                        styles.dropdownOptionRow,
+                        { borderBottomColor: themeColors.border },
+                        equipment === opt && styles.dropdownOptionSelected,
                       ]}
-                      onPress={() => {
-                        setSerialNumber(sn);
-                        setSerialNumberDropdownVisible(false);
-                      }}
                     >
-                      <Text
-                        style={[
-                          styles.dropdownOptionText,
-                          { color: serialNumber === sn ? undefined : themeColors.textPrimary },
-                          serialNumber === sn && styles.dropdownOptionTextSelected,
-                        ]}
-                        numberOfLines={2}
+                      <TouchableOpacity
+                        style={styles.dropdownOptionTouch}
+                        onPress={() => {
+                          setEquipment(opt);
+                          setEquipmentDropdownVisible(false);
+                        }}
                       >
-                        {sn}
-                      </Text>
-                    </TouchableOpacity>
+                        <Text
+                          style={[
+                            styles.dropdownOptionText,
+                            { color: equipment === opt ? undefined : themeColors.textPrimary },
+                            equipment === opt && styles.dropdownOptionTextSelected,
+                          ]}
+                        >
+                          {opt}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.deleteOptionBtn}
+                        onPress={() => removeEquipment(opt)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Text
+                          style={[
+                            styles.deleteOptionText,
+                            equipment === opt && styles.deleteOptionTextSelected,
+                          ]}
+                        >
+                          ×
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   ))}
                 </ScrollView>
-              )}
+                <TouchableOpacity
+                  style={[styles.createNewBtn, { borderTopColor: themeColors.border }]}
+                  onPress={() => {
+                    setEquipmentDropdownVisible(false);
+                    setCreateNewVisible(true);
+                  }}
+                >
+                  <Text style={[styles.createNewBtnText, { color: sectionTitleColor }]}>
+                    Add Equipment
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </Modal>
+
+          <Modal
+            visible={createNewVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setCreateNewVisible(false)}
+          >
+            <TouchableOpacity
+              style={styles.modalOverlay}
+              activeOpacity={1}
+              onPress={() => setCreateNewVisible(false)}
+            >
+              <View
+                style={[styles.createNewModal, { backgroundColor: themeColors.surface }]}
+                onStartShouldSetResponder={() => true}
+              >
+                <Text style={[styles.createNewTitle, { color: themeColors.textPrimary }]}>
+                  Add Equipment
+                </Text>
+                <TextInput
+                  style={[
+                    styles.createNewInput,
+                    {
+                      backgroundColor: themeColors.control,
+                      borderColor: themeColors.border,
+                      color: themeColors.textPrimary,
+                    },
+                  ]}
+                  value={newEquipmentName}
+                  onChangeText={setNewEquipmentName}
+                  placeholder="Enter equipment name"
+                  placeholderTextColor={themeColors.textMuted}
+                  autoCapitalize="words"
+                  autoFocus
+                />
+                <View style={styles.createNewActions}>
+                  <Button
+                    title="Add Equipment"
+                    onPress={handleSaveNewEquipment}
+                    variant="primary"
+                    style={styles.createNewAddBtn}
+                  />
+                  <TouchableOpacity
+                    onPress={() => {
+                      setCreateNewVisible(false);
+                      setNewEquipmentName('');
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.cancelText,
+                        { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                      ]}
+                    >
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </Modal>
+
+          <View style={styles.fieldContainer}>
+            <Text style={[styles.label, { color: themeColors.textPrimary }]}>Location</Text>
+            <TouchableOpacity
+              style={[
+                styles.dropdownTrigger,
+                { backgroundColor: themeColors.control, borderColor: themeColors.border },
+              ]}
+              onPress={() => setLocationDropdownVisible(true)}
+            >
+              <Text
+                style={[
+                  styles.dropdownText,
+                  { color: location ? themeColors.textPrimary : themeColors.textMuted },
+                ]}
+              >
+                {location || 'Select location'}
+              </Text>
+              <Text style={[styles.dropdownChevron, { color: sectionTitleColor }]}>▼</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Modal
+            visible={locationDropdownVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setLocationDropdownVisible(false)}
+          >
+            <TouchableOpacity
+              style={styles.modalOverlay}
+              activeOpacity={1}
+              onPress={() => setLocationDropdownVisible(false)}
+            >
+              <View
+                style={[styles.modalContent, { backgroundColor: themeColors.surface }]}
+                onStartShouldSetResponder={() => true}
+              >
+                <ScrollView style={styles.dropdownList} keyboardShouldPersistTaps="handled">
+                  {locationOptions.map((opt) => (
+                    <View
+                      key={opt}
+                      style={[
+                        styles.dropdownOptionRow,
+                        { borderBottomColor: themeColors.border },
+                        location === opt && styles.dropdownOptionSelected,
+                      ]}
+                    >
+                      <TouchableOpacity
+                        style={styles.dropdownOptionTouch}
+                        onPress={() => {
+                          setLocation(opt);
+                          setLocationDropdownVisible(false);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.dropdownOptionText,
+                            { color: location === opt ? undefined : themeColors.textPrimary },
+                            location === opt && styles.dropdownOptionTextSelected,
+                          ]}
+                        >
+                          {opt}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.deleteOptionBtn}
+                        onPress={() => removeLocation(opt)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Text
+                          style={[
+                            styles.deleteOptionText,
+                            location === opt && styles.deleteOptionTextSelected,
+                          ]}
+                        >
+                          ×
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </ScrollView>
+                <TouchableOpacity
+                  style={[styles.createNewBtn, { borderTopColor: themeColors.border }]}
+                  onPress={() => {
+                    setLocationDropdownVisible(false);
+                    setAddNewLocationVisible(true);
+                  }}
+                >
+                  <Text style={[styles.createNewBtnText, { color: sectionTitleColor }]}>
+                    Add Location
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </Modal>
+
+          <Modal
+            visible={addNewLocationVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setAddNewLocationVisible(false)}
+          >
+            <TouchableOpacity
+              style={styles.modalOverlay}
+              activeOpacity={1}
+              onPress={() => setAddNewLocationVisible(false)}
+            >
+              <View
+                style={[styles.createNewModal, { backgroundColor: themeColors.surface }]}
+                onStartShouldSetResponder={() => true}
+              >
+                <Text style={[styles.createNewTitle, { color: themeColors.textPrimary }]}>
+                  Add Location
+                </Text>
+                <TextInput
+                  style={[
+                    styles.createNewInput,
+                    {
+                      backgroundColor: themeColors.control,
+                      borderColor: themeColors.border,
+                      color: themeColors.textPrimary,
+                    },
+                  ]}
+                  value={newLocationName}
+                  onChangeText={setNewLocationName}
+                  placeholder="Enter location name"
+                  placeholderTextColor={themeColors.textMuted}
+                  autoCapitalize="words"
+                  autoFocus
+                />
+                <View style={styles.createNewActions}>
+                  <Button
+                    title="Add Location"
+                    onPress={handleSaveNewLocation}
+                    variant="primary"
+                    style={styles.createNewAddBtn}
+                  />
+                  <TouchableOpacity
+                    onPress={() => {
+                      setAddNewLocationVisible(false);
+                      setNewLocationName('');
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.cancelText,
+                        { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                      ]}
+                    >
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </Modal>
+          <View style={styles.fieldContainer}>
+            <Text style={[styles.label, { color: themeColors.textPrimary }]}>Serial number</Text>
+            <View style={styles.serialNumberRow}>
+              <TextInput
+                style={[
+                  styles.serialNumberInput,
+                  {
+                    backgroundColor: themeColors.control,
+                    borderColor: themeColors.border,
+                    color: themeColors.textPrimary,
+                  },
+                ]}
+                value={serialNumber}
+                onChangeText={setSerialNumber}
+                placeholder="Optional"
+                placeholderTextColor={themeColors.textMuted}
+              />
+              <TouchableOpacity
+                style={[styles.recentBtn, { borderColor: sectionTitleColor }]}
+                onPress={() => setSerialNumberDropdownVisible(true)}
+              >
+                <Text style={[styles.recentBtnText, { color: sectionTitleColor }]}>Recent</Text>
+              </TouchableOpacity>
             </View>
-          </TouchableOpacity>
-        </Modal>
-        <Input
-          label="Hours of service"
-          value={hoursOfService}
-          onChangeText={setHoursOfService}
-          placeholder="e.g. 1250"
-          keyboardType="numeric"
-        />
-        <Input
-          label="Hours at next service"
-          value={hoursAtNextService}
-          onChangeText={setHoursAtNextService}
-          placeholder="e.g. 1500"
-          keyboardType="numeric"
-        />
-        <Input
-          label="What service done"
-          value={whatServiceDone}
-          onChangeText={setWhatServiceDone}
-          placeholder="Describe the service performed..."
-          multiline
-          numberOfLines={3}
-        />
-        <Input
-          label="Notes"
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Any additional notes i.e found oil leak under generator."
-          multiline
-          numberOfLines={2}
-        />
-        <Input
-          label="Service done by (Crew / Contractor)"
-          value={serviceDoneBy}
-          onChangeText={setServiceDoneBy}
-          placeholder="e.g. John Smith (Crew) or ABC Marine (Contractor)"
-        />
+          </View>
+
+          <Modal
+            visible={serialNumberDropdownVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setSerialNumberDropdownVisible(false)}
+          >
+            <TouchableOpacity
+              style={styles.modalOverlay}
+              activeOpacity={1}
+              onPress={() => setSerialNumberDropdownVisible(false)}
+            >
+              <View
+                style={[styles.modalContent, { backgroundColor: themeColors.surface }]}
+                onStartShouldSetResponder={() => true}
+              >
+                <Text style={[styles.previousTitle, { color: themeColors.textPrimary }]}>
+                  {equipment || location
+                    ? `Previous serial numbers${equipment && location ? ` for ${equipment} / ${location}` : ''}`
+                    : 'Select equipment and location first'}
+                </Text>
+                {!equipment && !location ? (
+                  <Text
+                    style={[
+                      styles.previousEmpty,
+                      { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                    ]}
+                  >
+                    Choose equipment and location to see serial numbers for that combination.
+                  </Text>
+                ) : previousSerialNumbers.length === 0 ? (
+                  <Text
+                    style={[
+                      styles.previousEmpty,
+                      { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                    ]}
+                  >
+                    Once you have logged a service for a specific equipment at a location, the
+                    serial number will be saved under Recent for future logs.
+                  </Text>
+                ) : (
+                  <ScrollView style={styles.dropdownList} keyboardShouldPersistTaps="handled">
+                    {previousSerialNumbers.map((sn) => (
+                      <TouchableOpacity
+                        key={sn}
+                        style={[
+                          styles.dropdownOption,
+                          serialNumber === sn && styles.dropdownOptionSelected,
+                        ]}
+                        onPress={() => {
+                          setSerialNumber(sn);
+                          setSerialNumberDropdownVisible(false);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.dropdownOptionText,
+                            { color: serialNumber === sn ? undefined : themeColors.textPrimary },
+                            serialNumber === sn && styles.dropdownOptionTextSelected,
+                          ]}
+                          numberOfLines={2}
+                        >
+                          {sn}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+              </View>
+            </TouchableOpacity>
+          </Modal>
+        </View>
+
+        <View
+          style={[
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>
+            Service information
+          </Text>
+          <View style={styles.hoursRow}>
+            <Input
+              label="Hours of service"
+              value={hoursOfService}
+              onChangeText={setHoursOfService}
+              placeholder="e.g. 1250"
+              keyboardType="numeric"
+              containerStyle={styles.hoursField}
+            />
+            <Input
+              label="Hours at next service"
+              value={hoursAtNextService}
+              onChangeText={setHoursAtNextService}
+              placeholder="e.g. 1500"
+              keyboardType="numeric"
+              containerStyle={styles.hoursField}
+            />
+          </View>
+          <Input
+            label="Service completed"
+            value={whatServiceDone}
+            onChangeText={setWhatServiceDone}
+            placeholder="Describe the service performed..."
+            multiline
+            numberOfLines={3}
+          />
+          <Input
+            label="Notes"
+            value={notes}
+            onChangeText={setNotes}
+            placeholder="Any additional notes i.e found oil leak under generator."
+            multiline
+            numberOfLines={2}
+          />
+          <Input
+            label="Service done by (Crew / Contractor)"
+            value={serviceDoneBy}
+            onChangeText={setServiceDoneBy}
+            placeholder="e.g. John Smith (Crew) or ABC Marine (Contractor)"
+            containerStyle={styles.lastInput}
+          />
+        </View>
         <View style={styles.actions}>
           <Button
             title={isEdit ? 'Save Changes' : 'Create Maintenance Log'}
@@ -871,6 +932,27 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     paddingBottom: SIZES.bottomScrollPadding,
   },
+  formSection: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.lg,
+    marginBottom: SPACING.md,
+  },
+  sectionTitle: {
+    fontSize: FONTS.base,
+    fontWeight: '700',
+    marginBottom: SPACING.md,
+  },
+  hoursRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  hoursField: {
+    flex: 1,
+  },
+  lastInput: {
+    marginBottom: 0,
+  },
   center: {
     flex: 1,
     justifyContent: 'center',
@@ -882,7 +964,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   actions: {
-    marginTop: SPACING.lg,
+    marginTop: SPACING.xs,
     gap: SPACING.sm,
   },
   cancelBtn: {
@@ -940,13 +1022,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     height: SIZES.inputHeight,
     justifyContent: 'center',
-    backgroundColor: COLORS.primary,
+    borderWidth: 1,
     borderRadius: BORDER_RADIUS.md,
   },
   recentBtnText: {
     fontSize: FONTS.sm,
     fontWeight: '600',
-    color: COLORS.white,
   },
   previousTitle: {
     fontSize: FONTS.sm,
@@ -1018,7 +1099,6 @@ const styles = StyleSheet.create({
   },
   createNewBtnText: {
     fontSize: FONTS.base,
-    color: COLORS.primary,
     fontWeight: '600',
   },
   createNewModal: {

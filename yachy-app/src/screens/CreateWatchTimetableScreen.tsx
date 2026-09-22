@@ -126,6 +126,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
   const publishingRef = useRef(false);
   const vesselId = user?.vesselId ?? null;
   const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
+  const sectionTitleColor = themeColors.isDark ? COLORS.white : COLORS.primary;
 
   const loadCrew = useCallback(async (): Promise<User[]> => {
     if (!vesselId) return [];
@@ -443,200 +444,246 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
         style={styles.scroll}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <Input
-          label="Watch Title"
-          value={watchTitle}
-          onChangeText={setWatchTitle}
-          placeholder="e.g. Morning Watch"
-          autoCapitalize="words"
-        />
-        <DateOnlyPicker
-          label="Voyage Start Date"
-          value={forDate}
-          onChange={setForDate}
-          title="Select voyage start date"
-        />
-        <Text style={[styles.label, { color: themeColors.textPrimary }]}>Start Time</Text>
-        <TouchableOpacity
+        <View
           style={[
-            styles.dropdown,
-            { backgroundColor: themeColors.control, borderColor: themeColors.border },
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
           ]}
-          onPress={() => setStartTimeDropdownOpen(!startTimeDropdownOpen)}
-          activeOpacity={0.7}
         >
-          <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>{startTime}</Text>
-          <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>
-            {startTimeDropdownOpen ? '▲' : '▼'}
+          <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>Schedule details</Text>
+          <Input
+            label="Watch Title"
+            value={watchTitle}
+            onChangeText={setWatchTitle}
+            placeholder="e.g. Morning Watch"
+            autoCapitalize="words"
+          />
+          <DateOnlyPicker
+            label="Voyage Start Date"
+            value={forDate}
+            onChange={setForDate}
+            title="Select voyage start date"
+          />
+          <Text style={[styles.label, styles.firstLabel, { color: themeColors.textPrimary }]}>
+            Start Time
           </Text>
-        </TouchableOpacity>
-        {startTimeDropdownOpen && (
-          <Modal visible transparent animationType="fade">
-            <Pressable style={styles.modalBackdrop} onPress={() => setStartTimeDropdownOpen(false)}>
-              <View
-                style={[
-                  styles.modalBox,
-                  {
-                    backgroundColor: themeColors.surfaceElevated,
-                    borderColor: themeColors.border,
-                  },
-                ]}
-                onStartShouldSetResponder={() => true}
+          <TouchableOpacity
+            style={[
+              styles.dropdown,
+              styles.lastControl,
+              { backgroundColor: themeColors.control, borderColor: themeColors.border },
+            ]}
+            onPress={() => setStartTimeDropdownOpen(!startTimeDropdownOpen)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
+              {startTime}
+            </Text>
+            <Text style={[styles.dropdownChevron, { color: sectionTitleColor }]}>
+              {startTimeDropdownOpen ? '▲' : '▼'}
+            </Text>
+          </TouchableOpacity>
+          {startTimeDropdownOpen && (
+            <Modal visible transparent animationType="fade">
+              <Pressable
+                style={styles.modalBackdrop}
+                onPress={() => setStartTimeDropdownOpen(false)}
               >
-                <ScrollView style={styles.timeList} nestedScrollEnabled>
-                  {TIME_OPTIONS.map((time) => (
-                    <TouchableOpacity
-                      key={time}
-                      style={[
-                        styles.modalItem,
-                        startTime === time && {
-                          backgroundColor: themeColors.controlSelected,
-                        },
-                      ]}
-                      onPress={() => {
-                        setStartTime(time);
-                        setStartTimeDropdownOpen(false);
-                      }}
-                    >
-                      <Text
+                <View
+                  style={[
+                    styles.modalBox,
+                    {
+                      backgroundColor: themeColors.surfaceElevated,
+                      borderColor: themeColors.border,
+                    },
+                  ]}
+                  onStartShouldSetResponder={() => true}
+                >
+                  <ScrollView style={styles.timeList} nestedScrollEnabled>
+                    {TIME_OPTIONS.map((time) => (
+                      <TouchableOpacity
+                        key={time}
                         style={[
-                          styles.modalItemText,
-                          startTime === time && styles.modalItemTextSelected,
-                          {
-                            color:
-                              startTime === time
-                                ? themeColors.textOnAccent
-                                : themeColors.textPrimary,
+                          styles.modalItem,
+                          startTime === time && {
+                            backgroundColor: themeColors.controlSelected,
                           },
                         ]}
+                        onPress={() => {
+                          setStartTime(time);
+                          setStartTimeDropdownOpen(false);
+                        }}
                       >
-                        {time}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            </Pressable>
-          </Modal>
-        )}
-        <Input
-          label="Start Location"
-          value={startLocation}
-          onChangeText={setStartLocation}
-          placeholder="e.g. Marina Bay"
-        />
-        <Input
-          label="Destination"
-          value={destination}
-          onChangeText={setDestination}
-          placeholder="e.g. Port of Palma"
-        />
-        <Input
-          label="Total Running Time"
-          value={totalRunningTime}
-          onChangeText={setTotalRunningTime}
-          placeholder="e.g. 36 (hours)"
-        />
-        <Input
-          label="Notes"
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Additional notes..."
-          multiline
-          numberOfLines={3}
-        />
-        <Input
-          label="Hours of Rest"
-          value={hoursOfRest}
-          onChangeText={setHoursOfRest}
-          placeholder="e.g. 8"
-        />
-        <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
-          Watch time per crew is calculated from crew count, rest hours & total running time.
-        </Text>
-        <Text style={[styles.label, { color: themeColors.textPrimary }]}>Crew</Text>
-        <TouchableOpacity
-          style={[
-            styles.dropdown,
-            { backgroundColor: themeColors.control, borderColor: themeColors.border },
-          ]}
-          onPress={() => setCrewDropdownOpen(!crewDropdownOpen)}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]} numberOfLines={2}>
-            {crewDisplayText}
-          </Text>
-          <Text style={[styles.dropdownChevron, { color: themeColors.textSecondary }]}>
-            {crewDropdownOpen ? '▲' : '▼'}
-          </Text>
-        </TouchableOpacity>
-        {crewDropdownOpen && (
-          <Modal visible transparent animationType="fade">
-            <Pressable style={styles.modalBackdrop} onPress={() => setCrewDropdownOpen(false)}>
-              <View
-                style={[
-                  styles.modalBox,
-                  {
-                    backgroundColor: themeColors.surfaceElevated,
-                    borderColor: themeColors.border,
-                  },
-                ]}
-                onStartShouldSetResponder={() => true}
-              >
-                {crew.length === 0 ? (
-                  <Text style={[styles.emptyCrew, { color: themeColors.textSecondary }]}>
-                    No crew members on vessel
-                  </Text>
-                ) : (
-                  <ScrollView style={styles.crewList} nestedScrollEnabled>
-                    {crew.map((member) => {
-                      const isSelected = selectedCrew.some((c) => c.id === member.id);
-                      return (
-                        <TouchableOpacity
-                          key={member.id}
+                        <Text
                           style={[
-                            styles.modalItem,
-                            isSelected && { backgroundColor: themeColors.controlSelected },
-                          ]}
-                          onPress={() => toggleCrewMember(member)}
-                        >
-                          <Text
-                            style={[
-                              styles.modalItemText,
-                              isSelected && styles.modalItemTextSelected,
-                              {
-                                color: isSelected
+                            styles.modalItemText,
+                            startTime === time && styles.modalItemTextSelected,
+                            {
+                              color:
+                                startTime === time
                                   ? themeColors.textOnAccent
                                   : themeColors.textPrimary,
-                              },
+                            },
+                          ]}
+                        >
+                          {time}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              </Pressable>
+            </Modal>
+          )}
+        </View>
+
+        <View
+          style={[
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>Voyage details</Text>
+          <View style={styles.fieldRow}>
+            <Input
+              label="Start Location"
+              value={startLocation}
+              onChangeText={setStartLocation}
+              placeholder="e.g. Marina Bay"
+              containerStyle={styles.fieldHalf}
+            />
+            <Input
+              label="Destination"
+              value={destination}
+              onChangeText={setDestination}
+              placeholder="e.g. Port of Palma"
+              containerStyle={styles.fieldHalf}
+            />
+          </View>
+          <Input
+            label="Total Running Time"
+            value={totalRunningTime}
+            onChangeText={setTotalRunningTime}
+            placeholder="e.g. 36 (hours)"
+          />
+          <Input
+            label="Notes"
+            value={notes}
+            onChangeText={setNotes}
+            placeholder="Additional notes..."
+            multiline
+            numberOfLines={3}
+            containerStyle={styles.lastInput}
+          />
+        </View>
+
+        <View
+          style={[
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>Crew and rest</Text>
+          <Input
+            label="Hours of Rest"
+            value={hoursOfRest}
+            onChangeText={setHoursOfRest}
+            placeholder="e.g. 8"
+          />
+          <Text style={[styles.hint, { color: themeColors.textSecondary }]}>
+            Watch time per crew is calculated from crew count, rest hours & total running time.
+          </Text>
+          <Text style={[styles.label, styles.firstLabel, { color: themeColors.textPrimary }]}>
+            Crew
+          </Text>
+          <TouchableOpacity
+            style={[
+              styles.dropdown,
+              styles.lastControl,
+              { backgroundColor: themeColors.control, borderColor: themeColors.border },
+            ]}
+            onPress={() => setCrewDropdownOpen(!crewDropdownOpen)}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[styles.dropdownText, { color: themeColors.textPrimary }]}
+              numberOfLines={2}
+            >
+              {crewDisplayText}
+            </Text>
+            <Text style={[styles.dropdownChevron, { color: sectionTitleColor }]}>
+              {crewDropdownOpen ? '▲' : '▼'}
+            </Text>
+          </TouchableOpacity>
+          {crewDropdownOpen && (
+            <Modal visible transparent animationType="fade">
+              <Pressable style={styles.modalBackdrop} onPress={() => setCrewDropdownOpen(false)}>
+                <View
+                  style={[
+                    styles.modalBox,
+                    {
+                      backgroundColor: themeColors.surfaceElevated,
+                      borderColor: themeColors.border,
+                    },
+                  ]}
+                  onStartShouldSetResponder={() => true}
+                >
+                  {crew.length === 0 ? (
+                    <Text style={[styles.emptyCrew, { color: themeColors.textSecondary }]}>
+                      No crew members on vessel
+                    </Text>
+                  ) : (
+                    <ScrollView style={styles.crewList} nestedScrollEnabled>
+                      {crew.map((member) => {
+                        const isSelected = selectedCrew.some((c) => c.id === member.id);
+                        return (
+                          <TouchableOpacity
+                            key={member.id}
+                            style={[
+                              styles.modalItem,
+                              isSelected && { backgroundColor: themeColors.controlSelected },
                             ]}
+                            onPress={() => toggleCrewMember(member)}
                           >
-                            {member.name}
-                          </Text>
-                          {member.position ? (
                             <Text
                               style={[
-                                styles.modalItemSubtext,
+                                styles.modalItemText,
+                                isSelected && styles.modalItemTextSelected,
                                 {
                                   color: isSelected
                                     ? themeColors.textOnAccent
-                                    : themeColors.textSecondary,
+                                    : themeColors.textPrimary,
                                 },
                               ]}
                             >
-                              {member.position}
+                              {member.name}
                             </Text>
-                          ) : null}
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </ScrollView>
-                )}
-              </View>
-            </Pressable>
-          </Modal>
-        )}
+                            {member.position ? (
+                              <Text
+                                style={[
+                                  styles.modalItemSubtext,
+                                  {
+                                    color: isSelected
+                                      ? themeColors.textOnAccent
+                                      : themeColors.textSecondary,
+                                  },
+                                ]}
+                              >
+                                {member.position}
+                              </Text>
+                            ) : null}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                  )}
+                </View>
+              </Pressable>
+            </Modal>
+          )}
+        </View>
         <View style={styles.actions}>
           {editingTimetableId ? (
             <View style={styles.editActions}>
@@ -814,9 +861,31 @@ const styles = StyleSheet.create({
 
   scroll: { flex: 1 },
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
+  formSection: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.lg,
+    marginBottom: SPACING.md,
+  },
+  sectionTitle: {
+    fontSize: FONTS.base,
+    fontWeight: '700',
+    marginBottom: SPACING.md,
+  },
+  fieldRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  fieldHalf: {
+    flex: 1,
+  },
+  lastInput: {
+    marginBottom: 0,
+  },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
   label: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs, marginTop: SPACING.md },
+  firstLabel: { marginTop: 0 },
   hint: { fontSize: FONTS.xs, marginTop: -SPACING.sm, marginBottom: SPACING.lg },
   dropdown: {
     flexDirection: 'row',
@@ -830,6 +899,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     marginBottom: SPACING.lg,
   },
+  lastControl: { marginBottom: 0 },
   dropdownText: { fontSize: FONTS.base, fontWeight: '500', flex: 1 },
   dropdownChevron: { fontSize: 10 },
   modalBackdrop: {
@@ -854,7 +924,7 @@ const styles = StyleSheet.create({
   modalItemTextSelected: { fontWeight: '600' },
   modalItemSubtext: { fontSize: FONTS.sm, marginTop: 2 },
   emptyCrew: { fontSize: FONTS.base, padding: SPACING.lg, textAlign: 'center' },
-  actions: { marginTop: SPACING.xl },
+  actions: { marginTop: SPACING.xs },
   editActions: { flexDirection: 'row', gap: SPACING.sm },
   editActionButton: { flex: 1 },
   timetableModal: {
