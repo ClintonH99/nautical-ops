@@ -75,6 +75,7 @@ function emptyItem(): SafetyItem {
 
 export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
+  const actionColor = themeColors.isDark ? COLORS.white : COLORS.primary;
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
   const isHOD = user?.role === 'HOD';
@@ -291,63 +292,71 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
         style={styles.scroll}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.label, { color: themeColors.textSecondary }]}>Plan title</Text>
-        <TextInput
-          style={[
-            styles.input,
-            {
-              backgroundColor: themeColors.control,
-              color: themeColors.textPrimary,
-              borderColor: themeColors.border,
-            },
-          ]}
-          value={title}
-          onChangeText={setTitle}
-          placeholder="Safety Equipment Locations"
-          placeholderTextColor={themeColors.textSecondary}
-        />
         <View
           style={[
-            styles.addSection,
-            {
-              backgroundColor: themeColors.accentSoft,
-              borderColor: themeColors.borderStrong,
-            },
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
           ]}
         >
-          <Text style={[styles.addSectionLabel, { color: themeColors.textPrimary }]}>
-            Add Equipment Type
-          </Text>
-          <View style={styles.addSectionRow}>
-            <TextInput
-              style={[
-                styles.input,
-                styles.flex,
-                {
-                  backgroundColor: themeColors.control,
-                  color: themeColors.textPrimary,
-                  borderColor: themeColors.border,
-                },
-              ]}
-              value={newCategoryName}
-              onChangeText={setNewCategoryName}
-              placeholder="e.g. Safety harnesses"
-              placeholderTextColor={themeColors.textSecondary}
-              onSubmitEditing={addEquipmentType}
-            />
-            <Button
-              title="Add Equipment Type"
-              onPress={addEquipmentType}
-              variant="outline"
-              style={styles.addBtn}
-            />
-          </View>
+          <Text style={[styles.sectionTitle, { color: actionColor }]}>Plan Details</Text>
+          <Text style={[styles.label, { color: themeColors.textPrimary }]}>Plan Title</Text>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: themeColors.control,
+                color: themeColors.textPrimary,
+                borderColor: themeColors.border,
+              },
+            ]}
+            value={title}
+            onChangeText={setTitle}
+            placeholder="Safety Equipment Locations"
+            placeholderTextColor={themeColors.textMuted}
+          />
+        </View>
+        <View
+          style={[
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: actionColor }]}>Add Equipment Type</Text>
+          <Text style={[styles.label, { color: themeColors.textPrimary }]}>Equipment Type</Text>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: themeColors.control,
+                color: themeColors.textPrimary,
+                borderColor: themeColors.border,
+              },
+            ]}
+            value={newCategoryName}
+            onChangeText={setNewCategoryName}
+            placeholder="e.g. Safety harnesses"
+            placeholderTextColor={themeColors.textMuted}
+            onSubmitEditing={addEquipmentType}
+          />
+          <Button
+            title="Add Equipment Type"
+            onPress={addEquipmentType}
+            variant="outline"
+            fullWidth
+          />
         </View>
         {categoryOrder.map((key) => (
-          <View key={key} style={styles.cat}>
+          <View
+            key={key}
+            style={[
+              styles.formSection,
+              { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+            ]}
+          >
             <View style={styles.catHeader}>
-              <Text style={[styles.catLabel, { color: themeColors.textPrimary }]}>
+              <Text style={[styles.catLabel, { color: actionColor }]}>
                 {getLabel(key, customLabels)}
               </Text>
               <TouchableOpacity
@@ -372,29 +381,37 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
                 ]}
               >
                 <View style={styles.row}>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      styles.flex,
-                      {
-                        backgroundColor: themeColors.control,
-                        color: themeColors.textPrimary,
-                        borderColor: themeColors.border,
-                      },
-                    ]}
-                    value={item.location}
-                    onChangeText={(v) => setLoc(key, i, v)}
-                    placeholder="Location"
-                    placeholderTextColor={themeColors.textSecondary}
-                  />
-                  <TouchableOpacity onPress={() => remLoc(key, i)}>
-                    <Text style={[styles.rm, { color: COLORS.danger }]}>✕</Text>
+                  <View style={styles.locationField}>
+                    <Text style={[styles.label, { color: themeColors.textPrimary }]}>Location</Text>
+                    <TextInput
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: themeColors.control,
+                          color: themeColors.textPrimary,
+                          borderColor: themeColors.border,
+                        },
+                      ]}
+                      value={item.location}
+                      onChangeText={(v) => setLoc(key, i, v)}
+                      placeholder="Location"
+                      placeholderTextColor={themeColors.textMuted}
+                    />
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => remLoc(key, i)}
+                    style={styles.locationDeleteButton}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete ${getLabel(key, customLabels)} location`}
+                  >
+                    <Ionicons name="trash-outline" size={16} color={COLORS.danger} />
+                    <Text style={styles.locationDeleteText}>Delete</Text>
                   </TouchableOpacity>
                 </View>
                 <View style={styles.dateRow}>
                   <View style={styles.dateCol}>
                     <DateOnlyPicker
-                      label="Last checked"
+                      label="Last Checked"
                       value={item.lastChecked}
                       onChange={(value) => setDateField(key, i, 'lastChecked', value)}
                       title="Select last checked date"
@@ -417,7 +434,7 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
                   </View>
                   <View style={styles.dateCol}>
                     <DateOnlyPicker
-                      label="Expiry / replace by"
+                      label="Expiry / Replace By"
                       value={item.expiryDate}
                       onChange={(value) => setDateField(key, i, 'expiryDate', value)}
                       title="Select expiry date"
@@ -441,8 +458,13 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
                 </View>
               </View>
             ))}
-            <TouchableOpacity onPress={() => addLoc(key)}>
-              <Text style={[styles.add, { color: themeColors.accent }]}>+ Add Location</Text>
+            <TouchableOpacity
+              onPress={() => addLoc(key)}
+              style={[styles.addLocationButton, { borderColor: actionColor }]}
+              accessibilityRole="button"
+            >
+              <Ionicons name="add" size={18} color={actionColor} />
+              <Text style={[styles.addLocationText, { color: actionColor }]}>Add Location</Text>
             </TouchableOpacity>
           </View>
         ))}
@@ -465,26 +487,27 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding + 120 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
-  message: { fontSize: FONTS.base },
-  label: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: 4, marginTop: SPACING.md },
-  addSection: {
-    marginTop: SPACING.xl,
-    padding: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
+  message: { fontSize: FONTS.base, textAlign: 'center' },
+  formSection: {
     borderWidth: 1,
-    borderStyle: 'dashed',
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
   },
-  addSectionLabel: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.sm },
-  addSectionRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  addBtn: { minWidth: 70 },
-  cat: { marginTop: SPACING.lg },
+  sectionTitle: { fontSize: FONTS.base, fontWeight: '700', marginBottom: SPACING.md },
+  label: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs },
   catHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: SPACING.sm,
   },
-  catLabel: { fontSize: FONTS.base, fontWeight: '600', flex: 1 },
+  catLabel: {
+    fontSize: FONTS.base,
+    fontWeight: '700',
+    flex: 1,
+    textTransform: 'capitalize',
+  },
   categoryDeleteButton: {
     minHeight: 38,
     flexDirection: 'row',
@@ -502,11 +525,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   input: {
+    minHeight: 48,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
     fontSize: FONTS.base,
     borderWidth: 1,
     borderColor: COLORS.border,
+    marginBottom: SPACING.sm,
   },
   itemCard: {
     borderRadius: BORDER_RADIUS.md,
@@ -514,14 +539,40 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     marginBottom: SPACING.md,
   },
-  row: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.md },
-  flex: { flex: 1 },
-  rm: {},
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  locationField: { flex: 1, minWidth: 0 },
+  locationDeleteButton: {
+    minHeight: 48,
+    paddingHorizontal: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.danger,
+    borderRadius: BORDER_RADIUS.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    marginBottom: SPACING.sm,
+  },
+  locationDeleteText: { color: COLORS.danger, fontSize: FONTS.xs, fontWeight: '700' },
   dateRow: { flexDirection: 'row', gap: SPACING.md },
   dateCol: { flex: 1 },
   naRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   naLabel: { fontSize: FONTS.xs },
-  add: { fontSize: FONTS.base, fontWeight: '600', marginBottom: SPACING.sm },
-  actions: { marginTop: SPACING.xl, gap: SPACING.md },
+  addLocationButton: {
+    minHeight: 46,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+  },
+  addLocationText: { fontSize: FONTS.sm, fontWeight: '700' },
+  actions: { marginTop: SPACING.sm, gap: SPACING.md },
   btn: { marginBottom: SPACING.sm },
 });

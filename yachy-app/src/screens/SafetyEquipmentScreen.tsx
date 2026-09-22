@@ -2,20 +2,10 @@
  * Safety Equipment Screen
  */
 
-import React, { useState, useCallback, useLayoutEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  RefreshControl,
-  Alert,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
+import { COLORS, FONTS, SPACING, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import safetyEquipmentService, {
@@ -27,8 +17,7 @@ import {
   PageHeader,
   ExportButton,
   ExportBar,
-  Checkbox,
-  PreviewActionButtons,
+  ButtonTagCard,
 } from '../components';
 import { generateSafetyEquipmentListPdf } from '../utils/safetyEquipmentPdf';
 import type { SafetyEquipment, SafetyEquipmentData } from '../services/safetyEquipment';
@@ -60,7 +49,7 @@ function SafetyEquipmentPreview({
   themeColors,
 }: {
   data: SafetyEquipmentData;
-  themeColors: { textPrimary: string; textSecondary: string };
+  themeColors: { textPrimary: string; textSecondary: string; border: string };
 }) {
   const items: { key: string; label: string; locations: string }[] = [];
   getSafetyEquipmentCategoryOrder(data, Object.keys(CATEGORY_LABELS)).forEach((key) => {
@@ -79,23 +68,16 @@ function SafetyEquipmentPreview({
         </Text>
       ) : (
         <>
-          {items.slice(0, 5).map(({ key, label, locations }) => (
-            <Text
-              key={key}
-              style={[styles.previewRow, { color: themeColors.textPrimary }]}
-              numberOfLines={1}
-            >
+          {items.map(({ key, label, locations }) => (
+            <View key={key} style={[styles.previewRow, { borderBottomColor: themeColors.border }]}>
               <Text style={[styles.previewLabel, { color: themeColors.textSecondary }]}>
-                {label}:{' '}
+                {label}
               </Text>
-              {locations}
-            </Text>
+              <Text style={[styles.previewValue, { color: themeColors.textPrimary }]}>
+                {locations}
+              </Text>
+            </View>
           ))}
-          {items.length > 5 && (
-            <Text style={[styles.previewMore, { color: themeColors.textSecondary }]}>
-              +{items.length - 5} more
-            </Text>
-          )}
         </>
       )}
     </View>
@@ -242,7 +224,8 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
       )}
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, items.length === 0 && styles.contentEmpty]}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -263,56 +246,63 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
             />
           </View>
         )}
-        <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>Published</Text>
-        {items.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            style={[styles.card, { backgroundColor: themeColors.surface }]}
-            onPress={() =>
-              exportMode
-                ? toggleSelect(item.id)
-                : setExpandedId(expandedId === item.id ? null : item.id)
-            }
-            activeOpacity={0.8}
+        <View style={styles.listHeading}>
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
+            ]}
           >
-            <View style={styles.cardHeader}>
-              {exportMode && (
-                <Checkbox
-                  checked={selectedIds.has(item.id)}
-                  onPress={() => toggleSelect(item.id)}
-                  surface={themeColors.surface}
-                />
-              )}
-              <Text
-                style={[styles.cardTitle, { color: themeColors.textPrimary }]}
-                numberOfLines={1}
-              >
-                {item.title}
-              </Text>
-              {!exportMode && expandedId !== item.id && (
-                <Ionicons name="chevron-down" size={18} color={themeColors.textSecondary} />
-              )}
-              {!exportMode && expandedId === item.id && (
-                <Ionicons
-                  name="chevron-up"
-                  size={18}
-                  color={themeColors.isDark ? COLORS.white : COLORS.primary}
-                />
-              )}
-            </View>
-            {expandedId === item.id && (
-              <>
-                <SafetyEquipmentPreview data={item.data} themeColors={themeColors} />
-                {canManage && !exportMode ? (
-                  <PreviewActionButtons
-                    onEdit={() => onEdit(item)}
-                    onDelete={() => onDelete(item)}
-                  />
-                ) : null}
-              </>
-            )}
-          </TouchableOpacity>
-        ))}
+            Published Equipment Plans
+          </Text>
+          <Text style={[styles.recordCount, { color: themeColors.textSecondary }]}>
+            {items.length} {items.length === 1 ? 'record' : 'records'}
+          </Text>
+        </View>
+        {items.map((item) => {
+          const categoryKeys = getSafetyEquipmentCategoryOrder(
+            item.data,
+            Object.keys(CATEGORY_LABELS)
+          );
+          const populatedCategories = categoryKeys.filter((key) => {
+            const value = item.data[key];
+            return (
+              Array.isArray(value) && value.some((raw) => normalizeSafetyItem(raw as any).location)
+            );
+          });
+          const locationCount = populatedCategories.reduce((total, key) => {
+            const value = item.data[key];
+            if (!Array.isArray(value)) return total;
+            return total + value.filter((raw) => normalizeSafetyItem(raw as any).location).length;
+          }, 0);
+
+          return (
+            <ButtonTagCard
+              key={item.id}
+              headerTitle={item.title}
+              minimal
+              showCheckbox={exportMode}
+              checked={selectedIds.has(item.id)}
+              onToggleSelect={exportMode ? () => toggleSelect(item.id) : undefined}
+              collapsible={!exportMode}
+              expanded={expandedId === item.id}
+              onToggleExpand={() =>
+                setExpandedId((current) => (current === item.id ? null : item.id))
+              }
+              onEdit={canManage && !exportMode ? () => onEdit(item) : undefined}
+              onDelete={canManage && !exportMode ? () => onDelete(item) : undefined}
+              summary={
+                <Text style={[styles.cardSummary, { color: themeColors.textSecondary }]}>
+                  {populatedCategories.length}{' '}
+                  {populatedCategories.length === 1 ? 'equipment type' : 'equipment types'} ·{' '}
+                  {locationCount} {locationCount === 1 ? 'recorded location' : 'recorded locations'}
+                </Text>
+              }
+            >
+              <SafetyEquipmentPreview data={item.data} themeColors={themeColors} />
+            </ButtonTagCard>
+          );
+        })}
         {items.length === 0 && (
           <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
             No published plans yet.{canManage ? ' Tap Create Safety Equipment to add one.' : ''}
@@ -332,43 +322,32 @@ const styles = StyleSheet.create({
   pageWrap: { flex: 1 },
   container: { flex: 1 },
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
+  contentEmpty: { flexGrow: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
-  sectionTitle: {
-    fontSize: FONTS.sm,
-    fontWeight: '600',
-    marginTop: SPACING.xl,
-    marginBottom: SPACING.md,
-  },
-  card: {
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  cardHeader: {
+  listHeading: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: SPACING.sm,
+    paddingHorizontal: 2,
   },
-  cardTitle: { fontSize: FONTS.lg, fontWeight: '600', flex: 1 },
+  sectionTitle: { fontSize: FONTS.base, fontWeight: '700' },
+  recordCount: { fontSize: FONTS.sm },
+  cardSummary: { fontSize: FONTS.sm, lineHeight: 19 },
   preview: {
-    marginTop: SPACING.sm,
-    marginBottom: SPACING.md,
-    paddingTop: SPACING.sm,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    marginBottom: SPACING.sm,
   },
-  previewRow: { fontSize: FONTS.sm, marginBottom: 2 },
-  previewLabel: { fontWeight: '600' },
-  previewMore: { fontSize: FONTS.xs, marginTop: 2 },
+  previewRow: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  previewLabel: { flex: 1, fontSize: FONTS.xs, fontWeight: '700' },
+  previewValue: { flex: 1.2, fontSize: FONTS.sm, lineHeight: 19 },
   previewEmpty: { fontSize: FONTS.sm, fontStyle: 'italic', marginTop: SPACING.sm },
   emptyText: { fontSize: FONTS.base, marginBottom: SPACING.xl, textAlign: 'center' },
-  createSection: { marginTop: SPACING.lg, marginBottom: SPACING.sm },
+  createSection: { marginBottom: SPACING.lg },
   crewNote: { fontSize: FONTS.sm, textAlign: 'center', marginTop: SPACING.md, fontStyle: 'italic' },
 });
