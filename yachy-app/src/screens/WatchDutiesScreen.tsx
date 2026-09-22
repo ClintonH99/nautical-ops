@@ -5,7 +5,7 @@
  * (built in a later pass).
  */
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { Ionicons } from '@expo/vector-icons';
 import userService from '../services/user';
 import { User } from '../types';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
@@ -131,6 +132,11 @@ export const WatchDutiesScreen = () => {
   const [resettingWeek, setResettingWeek] = useState(false);
   const [resettingDuties, setResettingDuties] = useState(false);
   const newGroupItemRefs = useRef<Array<TextInput | null>>([]);
+  const dutyGroupsRef = useRef<DutyGroup[]>([]);
+  const confirmedDutyStatesRef = useRef(new Map<string, boolean>());
+  const pendingDutyStatesRef = useRef(new Map<string, boolean>());
+  const savingDutyItemIdsRef = useRef(new Set<string>());
+  const mountedRef = useRef(true);
 
   const weekStartDate = getMonday(new Date());
   const weekStart = toDateStr(weekStartDate);
@@ -139,6 +145,34 @@ export const WatchDutiesScreen = () => {
     d.setDate(weekStartDate.getDate() + i);
     return d;
   });
+
+  useEffect(() => {
+    dutyGroupsRef.current = dutyGroups;
+  }, [dutyGroups]);
+
+  useEffect(
+    () => () => {
+      mountedRef.current = false;
+    },
+    []
+  );
+
+  const replaceDutyGroups = useCallback((nextGroups: DutyGroup[]) => {
+    dutyGroupsRef.current = nextGroups;
+    setDutyGroups(nextGroups);
+  }, []);
+
+  const updateDutyItemLocally = useCallback(
+    (itemId: string, checked: boolean) => {
+      replaceDutyGroups(
+        dutyGroupsRef.current.map((group) => ({
+          ...group,
+          items: group.items.map((item) => (item.id === itemId ? { ...item, checked } : item)),
+        }))
+      );
+    },
+    [replaceDutyGroups]
+  );
 
   const loadData = useCallback(async () => {
     if (!user?.vesselId) return;
@@ -151,7 +185,10 @@ export const WatchDutiesScreen = () => {
       ]);
       setRules(rulesData);
       setAssignments(assignmentData);
-      setDutyGroups(dutyData);
+      confirmedDutyStatesRef.current = new Map(
+        dutyData.flatMap((group) => group.items.map((item) => [item.id, item.checked] as const))
+      );
+      replaceDutyGroups(dutyData);
 
       if (canManage) {
         const crewData = await userService.getVesselCrew(user.vesselId);
@@ -162,7 +199,7 @@ export const WatchDutiesScreen = () => {
     } finally {
       setLoading(false);
     }
-  }, [canManage, user?.id, user?.vesselId, weekStart]);
+  }, [canManage, replaceDutyGroups, user?.id, user?.vesselId, weekStart]);
 
   useFocusEffect(
     useCallback(() => {
@@ -182,19 +219,51 @@ export const WatchDutiesScreen = () => {
     });
   };
 
-  const handleToggleItem = async (itemId: string, currentlyChecked: boolean) => {
+  const persistPendingDutyState = useCallback(
+    async (itemId: string, userId: string) => {
+      if (savingDutyItemIdsRef.current.has(itemId)) return;
+      savingDutyItemIdsRef.current.add(itemId);
+
+      try {
+        while (pendingDutyStatesRef.current.has(itemId)) {
+          const checked = pendingDutyStatesRef.current.get(itemId);
+          pendingDutyStatesRef.current.delete(itemId);
+          if (checked === undefined) continue;
+
+          try {
+            await setItemChecked(userId, itemId, checked);
+            confirmedDutyStatesRef.current.set(itemId, checked);
+          } catch (error) {
+            console.error('Toggle duty item error:', error);
+            if (!pendingDutyStatesRef.current.has(itemId) && mountedRef.current) {
+              const confirmedChecked = confirmedDutyStatesRef.current.get(itemId) ?? false;
+              updateDutyItemLocally(itemId, confirmedChecked);
+              Alert.alert(
+                'Could not update duty',
+                'Your last change was not saved. Please try again.'
+              );
+            }
+          }
+        }
+      } finally {
+        savingDutyItemIdsRef.current.delete(itemId);
+      }
+    },
+    [updateDutyItemLocally]
+  );
+
+  const handleToggleItem = (itemId: string) => {
     if (!user?.id) return;
-    setDutyGroups((prev) =>
-      prev.map((g) => ({
-        ...g,
-        items: g.items.map((i) => (i.id === itemId ? { ...i, checked: !currentlyChecked } : i)),
-      }))
-    );
-    try {
-      await setItemChecked(user.id, itemId, !currentlyChecked);
-    } catch (e) {
-      console.error('Toggle duty item error:', e);
-    }
+
+    const latestItem = dutyGroupsRef.current
+      .flatMap((group) => group.items)
+      .find((item) => item.id === itemId);
+    if (!latestItem) return;
+
+    const checked = !latestItem.checked;
+    updateDutyItemLocally(itemId, checked);
+    pendingDutyStatesRef.current.set(itemId, checked);
+    void persistPendingDutyState(itemId, user.id);
   };
 
   const openAssignModal = (dateStr: string) => {
@@ -1168,44 +1237,50 @@ export const WatchDutiesScreen = () => {
             {expandedGroupIds.has(group.id) && (
               <>
                 {group.items.map((item) => (
-                  <View
-                    key={item.id}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                    }}
-                  >
+                  <View key={item.id} style={styles.dutyItemRow}>
                     <TouchableOpacity
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 8,
-                        paddingVertical: 6,
-                        flex: 1,
-                      }}
-                      onPress={() => handleToggleItem(item.id, item.checked)}
+                      style={styles.dutyItemToggle}
+                      onPress={() => handleToggleItem(item.id)}
+                      activeOpacity={0.72}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: item.checked }}
+                      accessibilityLabel={`${item.label}, ${item.checked ? 'completed' : 'not completed'}`}
                     >
-                      <Text
-                        style={{
-                          fontSize: 16,
-                          color: item.checked ? '#16a34a' : themeColors.textSecondary,
-                        }}
+                      <View
+                        style={[
+                          styles.dutyCheckbox,
+                          {
+                            backgroundColor: item.checked
+                              ? themeColors.controlSelected
+                              : themeColors.control,
+                            borderColor: item.checked
+                              ? themeColors.controlSelected
+                              : themeColors.borderStrong,
+                          },
+                        ]}
                       >
-                        {item.checked ? '\u2611' : '\u2610'}
-                      </Text>
+                        {item.checked ? (
+                          <Ionicons name="checkmark" size={15} color={themeColors.textOnAccent} />
+                        ) : null}
+                      </View>
                       <Text
                         style={{
                           color: item.checked ? themeColors.textSecondary : themeColors.textPrimary,
                           fontSize: FONTS.sm,
                           textDecorationLine: item.checked ? 'line-through' : 'none',
+                          flex: 1,
                         }}
                       >
                         {item.label}
                       </Text>
                     </TouchableOpacity>
                     {canManage && (
-                      <TouchableOpacity onPress={() => handleDeleteItem(group.id, item.id)}>
+                      <TouchableOpacity
+                        onPress={() => handleDeleteItem(group.id, item.id)}
+                        style={styles.dutyItemRemove}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Remove ${item.label}`}
+                      >
                         <Text style={{ color: '#dc2626', fontSize: FONTS.xs }}>Remove</Text>
                       </TouchableOpacity>
                     )}
@@ -1303,6 +1378,32 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  dutyItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 44,
+  },
+  dutyItemToggle: {
+    flex: 1,
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    paddingVertical: SPACING.xs,
+  },
+  dutyCheckbox: {
+    width: 22,
+    height: 22,
+    borderRadius: BORDER_RADIUS.sm,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dutyItemRemove: {
+    minHeight: 44,
+    paddingLeft: SPACING.md,
+    justifyContent: 'center',
+  },
   weekRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

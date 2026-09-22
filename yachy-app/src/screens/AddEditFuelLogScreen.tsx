@@ -28,12 +28,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import fuelLogsService from '../services/fuelLogs';
 import { fuelManagementService } from '../services/fuelManagement';
 import { useAuthStore } from '../store';
-import {
-  FuelInventoryOperation,
-  FuelLog,
-  FuelTank,
-  FuelVolumeUnit,
-} from '../types';
+import { FuelInventoryOperation, FuelLog, FuelTank, FuelVolumeUnit } from '../types';
 import { fuelEventDateTime, fuelEventFields } from '../utils/fuelDateTime';
 import { canPreserveUnknownReceiptTime } from '../utils/fuelHistoricalTime';
 import { mergeFuelCorrectionTanks } from '../utils/fuelTankSelection';
@@ -164,7 +159,6 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
   const [pricePerUnit, setPricePerUnit] = useState('');
   const [currencyCode, setCurrencyCode] = useState('USD');
   const [comment, setComment] = useState('');
-  const [amendmentReason, setAmendmentReason] = useState('');
   const [legacyAllocationRequired, setLegacyAllocationRequired] = useState(false);
   const [legacyOriginalAmount, setLegacyOriginalAmount] = useState<number | null>(null);
   const [immutablePosted, setImmutablePosted] = useState(false);
@@ -250,7 +244,6 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
       setPricePerUnit('');
       setCurrencyCode('USD');
       setComment('');
-      setAmendmentReason('');
       setLegacyAllocationRequired(false);
       setLegacyOriginalAmount(null);
       setImmutablePosted(false);
@@ -281,7 +274,7 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
           loadedCorrection.status !== 'POSTED' ||
           loadedCorrection.sourceFuelLogId !== logId
         ) {
-          throw new Error('This receipt is no longer available for correction.');
+          throw new Error('This receipt is no longer available for editing.');
         }
         setCorrection(loadedCorrection);
       } else {
@@ -430,9 +423,7 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
           .filter(
             (item) =>
               !item.tank.archivedAt &&
-              (correctionMode
-                ? item.initialized && item.balanceLitres != null
-                : true)
+              (correctionMode ? item.initialized && item.balanceLitres != null : true)
           )
           .map((item) => item.tank);
         const retainedAtEvent = retainedCorrectionTanks.filter((tank) =>
@@ -620,14 +611,11 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
       return;
     }
     if (correctionMode && !correction) {
-      Alert.alert('Correction unavailable', 'Refresh fuel history and try again.');
+      Alert.alert('Edit unavailable', 'Refresh fuel history and try again.');
       return;
     }
     if (immutablePosted) {
-      Alert.alert(
-        'Posted receipt is locked',
-        'Fuel inventory records are append-only. Use the correction workflow from Fuel Inventory instead of silently changing this receipt.'
-      );
+      Alert.alert('Posted receipt is locked', 'Open this receipt from Fuel History to edit it.');
       return;
     }
     if (!location.trim()) {
@@ -684,10 +672,7 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
         return;
       }
       const invalidTank = parsedNewTanks.find(
-        (entry) =>
-          entry.capacity <= 0 ||
-          entry.amount <= 0 ||
-          entry.amount > entry.capacity
+        (entry) => entry.capacity <= 0 || entry.amount <= 0 || entry.amount > entry.capacity
       );
       if (invalidTank) {
         Alert.alert(
@@ -704,13 +689,6 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
       );
       return;
     }
-    if (isEdit && !amendmentReason.trim()) {
-      Alert.alert(
-        'Correction reason required',
-        'Explain why the existing receipt must be changed.'
-      );
-      return;
-    }
     if (
       legacyAllocationRequired &&
       !preserveLegacyWithoutAllocation &&
@@ -720,7 +698,7 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
     ) {
       Alert.alert(
         'Change historical fuel total?',
-        `This legacy entry originally recorded ${legacyOriginalAmount.toLocaleString('en-US', {
+        `This earlier entry originally recorded ${legacyOriginalAmount.toLocaleString('en-US', {
           maximumFractionDigits: 3,
         })} US gal. Your tank allocations total ${receiptAmount.toLocaleString('en-US', {
           maximumFractionDigits: 3,
@@ -797,7 +775,7 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
             },
             entries: [],
             expectedRevision: correction?.revisionNo ?? originalLog?.inventoryRevision ?? 0,
-            amendmentReason: amendmentReason.trim(),
+            amendmentReason: 'Edited by user',
           });
         } else {
           if (!eventAt) throw new Error('Fuel receipt event time is required.');
@@ -808,7 +786,7 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
             effectiveAt: eventAt.toISOString(),
             utcOffsetMinutes,
             expectedRevision: correction?.revisionNo ?? originalLog?.inventoryRevision ?? 0,
-            amendmentReason: amendmentReason.trim(),
+            amendmentReason: 'Edited by user',
           });
         }
       } else {
@@ -832,18 +810,12 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
         });
       }
       Alert.alert(
-        correctionMode
-          ? 'Fuel receipt corrected'
-          : isEdit && !correctionMode
-            ? 'Fuel receipt updated'
-            : 'Fuel receipt saved',
-        correctionMode
-          ? 'A replacement revision was recorded and all affected tank balances were recalculated.'
-          : isEdit && !correctionMode
-            ? preserveUnknownHistoricalTime
-              ? 'The historical receipt was updated without inventing missing timing or tank-allocation data. It does not change calculated fuel inventory.'
-              : 'The standalone receipt and its tank allocations were updated. It does not change calculated fuel inventory.'
-            : 'The receipt and its tank allocations were saved as a standalone refuelling record. Previous receipt quantities were not carried forward.',
+        isEdit ? 'Fuel receipt updated.' : 'Fuel receipt saved',
+        isEdit
+          ? preserveUnknownHistoricalTime
+            ? 'The earlier receipt was updated without adding missing timing or tank-allocation data.'
+            : 'The fuel receipt and its tank allocations were updated.'
+          : 'The receipt and its tank allocations were saved as a standalone refuelling record. Previous receipt quantities were not carried forward.',
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     } catch (error) {
@@ -880,15 +852,7 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
       style={[styles.container, { backgroundColor: themeColors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <PageHeader
-        title={
-          correctionMode
-            ? 'Correct Fuel Receipt'
-            : isEdit
-              ? 'Edit Fuel Receipt'
-              : 'Create Fuel Receipt'
-        }
-      />
+      <PageHeader title={isEdit ? 'Edit Fuel Receipt' : 'Create Fuel Receipt'} />
       {loading || waitingForCurrentContext ? (
         <View style={styles.center}>
           <LoadingSpinner />
@@ -1235,9 +1199,7 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
             ) : null}
             <View style={[styles.totalAmountRow, { borderTopColor: themeColors.border }]}>
               <Text style={[styles.totalAmountLabel, { color: themeColors.textSecondary }]}>
-                {preservingLegacyUnallocatedAmount
-                  ? 'Recorded legacy total'
-                  : 'Total fuel received'}
+                {preservingLegacyUnallocatedAmount ? 'Recorded total' : 'Total fuel received'}
               </Text>
               <Text style={[styles.totalAmountValue, { color: themeColors.textPrimary }]}>
                 {receiptAmount.toLocaleString('en-US', { maximumFractionDigits: 3 })}{' '}
@@ -1287,36 +1249,19 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
               placeholder="Fuel sample, supplier reference or other notes"
               multiline
             />
-            {isEdit ? (
-              <Input
-                label={correctionMode ? 'Reason for correction' : 'Reason for change'}
-                value={amendmentReason}
-                onChangeText={setAmendmentReason}
-                placeholder="Required: explain why the existing receipt is wrong"
-                multiline
-              />
-            ) : null}
           </View>
 
           {isEdit ? (
             <View style={[styles.notice, { backgroundColor: themeColors.surfaceAlt }]}>
               <Ionicons name="shield-checkmark-outline" size={22} color={themeColors.accent} />
               <Text style={[styles.noticeText, { color: themeColors.textPrimary }]}>
-                {correctionMode
-                  ? 'Saving creates a replacement revision. The original receipt, both actors and the correction reason remain in the audit trail.'
-                  : 'Saving updates this standalone receipt and its tank allocations without changing any calculated tank balance.'}
+                Saving updates this fuel receipt and its tank allocations.
               </Text>
             </View>
           ) : null}
 
           <Button
-            title={
-              correctionMode
-                ? 'Save Receipt Correction'
-                : isEdit
-                  ? 'Save Changes'
-                  : 'Create Fuel Receipt'
-            }
+            title={isEdit ? 'Save Changes' : 'Create Fuel Receipt'}
             onPress={save}
             loading={saving}
             disabled={saving || eventTanksBlocked}

@@ -59,6 +59,15 @@ function formatVolume(value: number): string {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value);
 }
 
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    return typeof message === 'string' ? message : '';
+  }
+  return '';
+}
+
 export const FuelTransferScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
@@ -90,7 +99,6 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [location, setLocation] = useState('');
   const [notes, setNotes] = useState('');
-  const [amendmentReason, setAmendmentReason] = useState('');
   const [previewRefreshing, setPreviewRefreshing] = useState(false);
   const [previewError, setPreviewError] = useState(false);
   const [previewRetryNonce, setPreviewRetryNonce] = useState(0);
@@ -151,7 +159,6 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
       setUtcOffsetMinutes(-now.getTimezoneOffset());
       setLocation('');
       setNotes('');
-      setAmendmentReason('');
       setRetainedCorrectionBalances([]);
       setPreviewRefreshing(false);
       setPreviewError(false);
@@ -190,7 +197,7 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
           !existing ||
           existing.currentInventoryOperationId !== loadedCorrection.id
         ) {
-          throw new Error('This transfer is no longer available for correction.');
+          throw new Error('This transfer is no longer available for editing.');
         }
         setCorrection(loadedCorrection);
       } else {
@@ -444,6 +451,10 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
     Number.isFinite(parsedAmount) && parsedAmount > 0 ? toLitres(parsedAmount, unit) : 0;
   const sourceAfter = sourceBalanceLitres - amountLitres;
   const destinationAfter = destinationBalanceLitres + amountLitres;
+  const destinationTankBalance = visibleBalances.find((item) => item.tank.id === destinationTankId);
+  const destinationRemainingCapacityLitres = destinationTankBalance
+    ? Math.max(0, destinationTankBalance.tank.capacityLitres - destinationBalanceLitres)
+    : 0;
   const initializedBalances = visibleBalances.filter((item) => item.isInitialized === true);
   const inventoryReady = initializedBalances.length > 0;
   const reportOnlyMode = !editingExisting && inventoryStatus === 'NOT_ACTIVATED';
@@ -481,10 +492,7 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
       return;
     }
     if (postedReadOnlyMode) {
-      Alert.alert(
-        'Posted transfer is locked',
-        'Fuel inventory records are append-only. Corrections must be recorded separately.'
-      );
+      Alert.alert('Posted transfer is locked', 'Open this transfer from Fuel History to edit it.');
       return;
     }
     if (transferId && !canManageSetup) {
@@ -496,7 +504,7 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
       return;
     }
     if (correctionMode && !correction) {
-      Alert.alert('Correction unavailable', 'Refresh fuel history and try again.');
+      Alert.alert('Edit unavailable', 'Refresh fuel history and try again.');
       return;
     }
     if (!sourceTankId || !destinationTankId) {
@@ -530,14 +538,20 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
       );
       return;
     }
-    if (transferId && !amendmentReason.trim()) {
+    if (
+      !reportOnlyMode &&
+      !legacyEditMode &&
+      destinationTankBalance &&
+      amountLitres > destinationRemainingCapacityLitres + 0.0005
+    ) {
       Alert.alert(
-        'Correction reason required',
-        'Explain why the existing transfer must be changed.'
+        'Not enough tank capacity',
+        `The destination tank can receive ${formatVolume(
+          fromLitres(destinationRemainingCapacityLitres, unit)
+        )} ${unitLabel(unit)}.`
       );
       return;
     }
-
     const eventAt = fuelEventDateTime(transferDate, transferTime, utcOffsetMinutes);
     if (!Number.isFinite(eventAt.getTime())) {
       Alert.alert('Check date and time', 'Choose a valid date and time.');
@@ -565,43 +579,36 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
       expectedRevision: transferId
         ? (correction?.revisionNo ?? originalTransfer?.inventoryRevision ?? 0)
         : undefined,
-      amendmentReason: transferId ? amendmentReason.trim() : undefined,
+      amendmentReason: transferId ? 'Edited by user' : undefined,
     };
 
     setSaving(true);
     try {
-      let createdTransfer: FuelTransfer | null = null;
       if (transferId) {
         await fuelManagementService.updateTransfer(transferId, input);
       } else {
-        createdTransfer = await fuelManagementService.createTransfer(input);
+        await fuelManagementService.createTransfer(input);
       }
-      const createdReportOnly = !!createdTransfer && !createdTransfer.currentInventoryOperationId;
-      Alert.alert(
-        correctionMode
-          ? 'Fuel transfer corrected'
-          : legacyEditMode
-            ? 'Legacy transfer updated'
-            : createdReportOnly
-              ? 'Report-only transfer saved'
-              : 'Transfer saved',
-        correctionMode
-          ? 'A replacement revision was recorded and both tank balances were recalculated.'
-          : legacyEditMode
-            ? 'The report-only transfer was updated. No fuel inventory balance changed because this record predates inventory activation.'
-            : createdReportOnly
-              ? 'The transfer was saved against the configured tanks. Tank quantities remain unknown and no calculated fuel balance changed.'
-              : 'The append-only fuel inventory ledger has been updated.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
+      if (!transferId) {
+        Alert.alert('Successfully created a fuel transfer.', undefined, [
+          { text: 'OK', onPress: () => navigation.goBack() },
+        ]);
+      } else {
+        Alert.alert('Fuel transfer updated.', undefined, [
+          { text: 'OK', onPress: () => navigation.goBack() },
+        ]);
+      }
     } catch (error) {
-      console.error('Save fuel transfer error:', error);
-      const message = error instanceof Error ? error.message : '';
+      const message = errorMessage(error);
+      const capacityError = /exceed tank capacity/i.test(message);
+      if (__DEV__ && !capacityError) console.warn('Save fuel transfer warning:', error);
       Alert.alert(
-        'Could not save transfer',
-        /balance|insufficient|available/i.test(message)
-          ? 'The recorded source balance changed. Refresh and check the amount before trying again.'
-          : 'No changes were saved. Please check the tank details and try again.'
+        capacityError ? 'Not enough tank capacity' : 'Could not save transfer',
+        capacityError
+          ? 'The destination tank does not have enough space for this amount. Reduce the transfer amount and try again.'
+          : /balance|insufficient|available/i.test(message)
+            ? 'The recorded source balance changed. Refresh and check the amount before trying again.'
+            : 'No changes were saved. Please check the tank details and try again.'
       );
     } finally {
       setSaving(false);
@@ -621,7 +628,7 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
   if (transferId && !canManageSetup) {
     return (
       <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-        <PageHeader title={correctionMode ? 'Correct Fuel Transfer' : 'Edit Legacy Transfer'} />
+        <PageHeader title="Edit Fuel Transfer" />
         <View style={styles.center}>
           <Ionicons name="lock-closed-outline" size={44} color={themeColors.textSecondary} />
           <Text style={[styles.emptyTitle, { color: themeColors.textPrimary }]}>
@@ -645,8 +652,7 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
             Posted transfer
           </Text>
           <Text style={[styles.message, { color: themeColors.textSecondary }]}>
-            This transfer is part of the vessel's fuel inventory audit trail and cannot be edited in
-            place.
+            Open this transfer from Fuel History to edit it.
           </Text>
           <Button
             title="Back to Transfers"
@@ -663,15 +669,7 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
       style={[styles.container, { backgroundColor: themeColors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <PageHeader
-        title={
-          correctionMode
-            ? 'Correct Fuel Transfer'
-            : legacyEditMode
-              ? 'Edit Legacy Transfer'
-              : 'Fuel Transfer'
-        }
-      />
+      <PageHeader title={editingExisting ? 'Edit Fuel Transfer' : 'Fuel Transfer'} />
       {loading || waitingForCurrentContext ? (
         <View style={styles.center}>
           <LoadingSpinner />
@@ -895,38 +893,10 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
               placeholder="Reason or operational notes"
               multiline
             />
-            {editingExisting ? (
-              <Input
-                label={legacyEditMode ? 'Reason for change' : 'Reason for correction'}
-                value={amendmentReason}
-                onChangeText={setAmendmentReason}
-                placeholder="Required: explain why the existing transfer is wrong"
-                multiline
-              />
-            ) : null}
           </View>
 
-          {editingExisting ? (
-            <View style={[styles.auditNotice, { borderColor: themeColors.border }]}>
-              <Ionicons name="shield-checkmark-outline" size={20} color={themeColors.accent} />
-              <Text style={[styles.auditText, { color: themeColors.textSecondary }]}>
-                {legacyEditMode
-                  ? 'This transfer predates fuel inventory activation. Saving updates the retained report record without changing any calculated tank balance.'
-                  : 'Saving creates a replacement revision. The original transfer, actors and correction reason remain in the audit trail.'}
-              </Text>
-            </View>
-          ) : null}
-
           <Button
-            title={
-              correctionMode
-                ? 'Save Transfer Correction'
-                : legacyEditMode
-                  ? 'Update Legacy Transfer'
-                  : reportOnlyMode
-                    ? 'Save Report-Only Transfer'
-                    : 'Save Transfer'
-            }
+            title={editingExisting ? 'Save Changes' : 'Save Transfer'}
             onPress={saveTransfer}
             loading={saving}
             disabled={saving || previewBlocked}

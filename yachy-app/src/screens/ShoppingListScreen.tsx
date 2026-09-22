@@ -4,7 +4,7 @@
  * Navigate here from ShoppingListCategoryScreen with listType param
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -23,7 +23,10 @@ import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../st
 import shoppingListsService, { ShoppingList, ShoppingListItem } from '../services/shoppingLists';
 import { Department } from '../types';
 import { Button, DepartmentMultiSelector, PageHeader, PreviewActionButtons } from '../components';
-import { DEPARTMENT_OPTIONS as DEPARTMENTS } from '../utils/departmentSelection';
+import {
+  DEPARTMENT_OPTIONS as DEPARTMENTS,
+  formatDepartmentLabel,
+} from '../utils/departmentSelection';
 
 const allDeptsVisible: Record<Department, boolean> = {
   BRIDGE: true,
@@ -55,6 +58,11 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
   const [visibleDepartments, setVisibleDepartments] =
     useState<Record<Department, boolean>>(allDeptsVisible);
   const [expandedListId, setExpandedListId] = useState<string | null>(null);
+  const listsRef = useRef<ShoppingList[]>([]);
+  const confirmedItemsRef = useRef(new Map<string, ShoppingListItem[]>());
+  const pendingItemsRef = useRef(new Map<string, ShoppingListItem[]>());
+  const savingListIdsRef = useRef(new Set<string>());
+  const mountedRef = useRef(true);
 
   const vesselId = user?.vesselId ?? null;
 
@@ -62,19 +70,42 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
   const listsForType = lists.filter((l) => (l.listType ?? 'general') === listType && !l.isMaster);
   const filteredLists = listsForType.filter((l) => visibleDepartments[l.department ?? 'INTERIOR']);
 
+  useEffect(
+    () => () => {
+      mountedRef.current = false;
+    },
+    []
+  );
+
+  const replaceLists = useCallback((nextLists: ShoppingList[]) => {
+    listsRef.current = nextLists;
+    setLists(nextLists);
+  }, []);
+
+  const updateListItemsLocally = useCallback(
+    (listId: string, items: ShoppingListItem[]) => {
+      const nextLists = listsRef.current.map((list) =>
+        list.id === listId ? { ...list, items } : list
+      );
+      replaceLists(nextLists);
+    },
+    [replaceLists]
+  );
+
   const loadLists = useCallback(async () => {
     if (!vesselId) return;
     setLoading(true);
     try {
       const data = await shoppingListsService.getByVessel(vesselId);
-      setLists(data);
+      data.forEach((list) => confirmedItemsRef.current.set(list.id, list.items));
+      replaceLists(data);
     } catch (e) {
       console.error('Load shopping lists error:', e);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [vesselId]);
+  }, [replaceLists, vesselId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -87,26 +118,65 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
     loadLists();
   };
 
-  const toggleItemChecked = async (list: ShoppingList, itemIndex: number) => {
-    const newItems: ShoppingListItem[] = list.items.map((item, idx) =>
-      idx === itemIndex ? { ...item, checked: !item.checked } : item
+  const persistPendingItems = useCallback(
+    async (listId: string) => {
+      if (savingListIdsRef.current.has(listId)) return;
+      savingListIdsRef.current.add(listId);
+
+      try {
+        while (pendingItemsRef.current.has(listId)) {
+          const itemsToSave = pendingItemsRef.current.get(listId);
+          pendingItemsRef.current.delete(listId);
+          if (!itemsToSave) continue;
+
+          try {
+            const savedList = await shoppingListsService.update(listId, { items: itemsToSave });
+            confirmedItemsRef.current.set(listId, savedList.items);
+          } catch (error) {
+            console.error('Save shopping item state error:', error);
+            if (!pendingItemsRef.current.has(listId) && mountedRef.current) {
+              const confirmedItems = confirmedItemsRef.current.get(listId);
+              if (confirmedItems) updateListItemsLocally(listId, confirmedItems);
+              Alert.alert(
+                'Could not update shopping list',
+                'Your last change was not saved. Please try again.'
+              );
+            }
+          }
+        }
+      } finally {
+        savingListIdsRef.current.delete(listId);
+      }
+    },
+    [updateListItemsLocally]
+  );
+
+  const saveItemsInBackground = useCallback(
+    (listId: string, items: ShoppingListItem[]) => {
+      pendingItemsRef.current.set(listId, items);
+      void persistPendingItems(listId);
+    },
+    [persistPendingItems]
+  );
+
+  const toggleItemChecked = (listId: string, itemIndex: number) => {
+    const latestList = listsRef.current.find((list) => list.id === listId);
+    if (!latestList || !latestList.items[itemIndex]) return;
+
+    const nextItems = latestList.items.map((item, index) =>
+      index === itemIndex ? { ...item, checked: !item.checked } : item
     );
-    try {
-      await shoppingListsService.update(list.id, { items: newItems });
-      setLists((prev) => prev.map((l) => (l.id === list.id ? { ...l, items: newItems } : l)));
-    } catch (e) {
-      console.error('Toggle item error:', e);
-    }
+    updateListItemsLocally(listId, nextItems);
+    saveItemsInBackground(listId, nextItems);
   };
 
-  const resetMasterChecks = async (list: ShoppingList) => {
-    const newItems: ShoppingListItem[] = list.items.map((item) => ({ ...item, checked: false }));
-    try {
-      await shoppingListsService.update(list.id, { items: newItems });
-      setLists((prev) => prev.map((l) => (l.id === list.id ? { ...l, items: newItems } : l)));
-    } catch (e) {
-      console.error('Reset checks error:', e);
-    }
+  const resetMasterChecks = (listId: string) => {
+    const latestList = listsRef.current.find((list) => list.id === listId);
+    if (!latestList) return;
+
+    const nextItems = latestList.items.map((item) => ({ ...item, checked: false }));
+    updateListItemsLocally(listId, nextItems);
+    saveItemsInBackground(listId, nextItems);
   };
 
   const onCreate = () => {
@@ -157,9 +227,35 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
   const renderMasterBoard = () => {
     if (listType !== 'trip') return null;
     return (
-      <View style={styles.masterBoard}>
+      <View style={styles.listGroup}>
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionTitleBlock}>
+            <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+              Personalized lists
+            </Text>
+            <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>
+              Reusable before every trip
+            </Text>
+          </View>
+          <Text style={[styles.sectionCount, { color: themeColors.textSecondary }]}>
+            {masterLists.length} {masterLists.length === 1 ? 'list' : 'lists'}
+          </Text>
+        </View>
+        <Button
+          title="Create Personalized List"
+          onPress={handleAddMasterList}
+          variant={themeColors.isDark ? 'outlineLight' : 'outline'}
+          fullWidth
+          style={styles.secondaryAction}
+        />
         {masterLists.map((masterList) => (
-          <View key={masterList.id} style={[styles.card, { backgroundColor: themeColors.surface }]}>
+          <View
+            key={masterList.id}
+            style={[
+              styles.card,
+              { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+            ]}
+          >
             <TouchableOpacity
               style={styles.masterBoardHeader}
               onPress={() =>
@@ -168,50 +264,74 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
               activeOpacity={0.8}
             >
               <View style={styles.expandableHeaderRow}>
-                <Text style={[styles.masterBoardTitle, { color: themeColors.textPrimary }]}>
-                  {masterList.title}
-                </Text>
+                <View style={styles.cardTitleBlock}>
+                  <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]}>
+                    {masterList.title}
+                  </Text>
+                  <Text style={[styles.cardSubtitle, { color: themeColors.textSecondary }]}>
+                    {masterList.items.length}{' '}
+                    {masterList.items.length === 1 ? 'reusable item' : 'reusable items'}
+                  </Text>
+                </View>
                 <Ionicons
                   name={expandedListId === masterList.id ? 'chevron-up' : 'chevron-down'}
                   size={18}
-                  color={themeColors.isDark ? COLORS.white : COLORS.primary}
+                  color={themeColors.accent}
                 />
               </View>
-              <Text style={[styles.masterBoardSubtitle, { color: themeColors.textSecondary }]}>
-                Items you need before every trip
-              </Text>
             </TouchableOpacity>
             {expandedListId === masterList.id && (
               <>
                 <TouchableOpacity
-                  onPress={() => resetMasterChecks(masterList)}
+                  onPress={() => resetMasterChecks(masterList.id)}
                   style={styles.resetBtn}
                   disabled={!masterList.items.some((i) => i.checked)}
                 >
                   <Text
                     style={[
                       styles.resetBtnText,
+                      { color: themeColors.accent },
                       !masterList.items.some((i) => i.checked) && styles.resetBtnDisabled,
                     ]}
                   >
                     Reset checks for next trip
                   </Text>
                 </TouchableOpacity>
-                <View style={styles.bulletList}>
+                <View style={[styles.bulletList, { borderTopColor: themeColors.border }]}>
                   {masterList.items.length === 0 ? (
                     <Text style={[styles.bulletPlaceholder, { color: COLORS.textTertiary }]}>
                       No items yet. Tap "Edit" below to add items.
                     </Text>
                   ) : (
                     masterList.items.map((item, idx) => (
-                      <View key={idx} style={styles.bulletRow}>
-                        <TouchableOpacity
-                          onPress={() => toggleItemChecked(masterList, idx)}
-                          style={[styles.checkbox, item.checked && styles.checkboxChecked]}
-                          activeOpacity={0.7}
+                      <TouchableOpacity
+                        key={idx}
+                        style={styles.bulletRow}
+                        onPress={() => toggleItemChecked(masterList.id, idx)}
+                        activeOpacity={0.7}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: item.checked }}
+                        accessibilityLabel={
+                          item.amount ? `${item.amount} x ${item.text}` : item.text
+                        }
+                      >
+                        <View
+                          style={[
+                            styles.checkbox,
+                            {
+                              borderColor: item.checked
+                                ? themeColors.controlSelected
+                                : themeColors.borderStrong,
+                              backgroundColor: item.checked
+                                ? themeColors.controlSelected
+                                : themeColors.control,
+                            },
+                          ]}
                         >
-                          {item.checked ? <Text style={styles.checkboxTick}>✓</Text> : null}
-                        </TouchableOpacity>
+                          {item.checked ? (
+                            <Ionicons name="checkmark" size={15} color={themeColors.textOnAccent} />
+                          ) : null}
+                        </View>
                         <Text
                           style={[
                             styles.bulletText,
@@ -222,7 +342,7 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
                         >
                           {item.amount ? `${item.amount} x ${item.text}` : item.text}
                         </Text>
-                      </View>
+                      </TouchableOpacity>
                     ))
                   )}
                 </View>
@@ -236,18 +356,12 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
             )}
           </View>
         ))}
-        <Button
-          title="Create Personalized List"
-          onPress={handleAddMasterList}
-          variant={themeColors.isDark ? 'outlineLight' : 'outline'}
-          fullWidth
-        />
       </View>
     );
   };
 
   return (
-    <View style={styles.pageWrap}>
+    <View style={[styles.pageWrap, { backgroundColor: themeColors.background }]}>
       <PageHeader
         title={listType === 'trip' ? 'Trip Shopping' : 'General Shopping'}
         info={listType === 'trip' ? TRIP_SHOPPING_INFO : undefined}
@@ -257,36 +371,52 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={styles.content}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={themeColors.accent}
+            colors={[themeColors.controlSelected]}
+          />
         }
+        showsVerticalScrollIndicator={false}
       >
-        {renderMasterBoard()}
-        <View style={styles.section}>
-          <Button
-            title={`Create ${sectionTitle} List`}
-            onPress={onCreate}
-            variant="primary"
-            fullWidth
-          />
-          <DepartmentMultiSelector
-            value={DEPARTMENTS.filter((department) => visibleDepartments[department])}
-            onChange={(departments) =>
-              setVisibleDepartments(
-                DEPARTMENTS.reduce(
-                  (next, department) => ({
-                    ...next,
-                    [department]: departments.includes(department),
-                  }),
-                  {} as Record<Department, boolean>
-                )
+        <Button
+          title={`Create ${sectionTitle} List`}
+          onPress={onCreate}
+          variant="primary"
+          fullWidth
+          style={styles.primaryAction}
+        />
+        <DepartmentMultiSelector
+          value={DEPARTMENTS.filter((department) => visibleDepartments[department])}
+          onChange={(departments) =>
+            setVisibleDepartments(
+              DEPARTMENTS.reduce(
+                (next, department) => ({
+                  ...next,
+                  [department]: departments.includes(department),
+                }),
+                {} as Record<Department, boolean>
               )
-            }
-            includeAll
-            minSelections={1}
-          />
+            )
+          }
+          includeAll
+          minSelections={1}
+          tightTop
+        />
+        {renderMasterBoard()}
+        <View style={styles.listGroup}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+              {listType === 'trip' ? 'Trip shopping lists' : 'Shopping lists'}
+            </Text>
+            <Text style={[styles.sectionCount, { color: themeColors.textSecondary }]}>
+              {filteredLists.length} {filteredLists.length === 1 ? 'list' : 'lists'}
+            </Text>
+          </View>
 
           {loading ? (
-            <ActivityIndicator size="small" color={COLORS.primary} style={styles.loader} />
+            <ActivityIndicator size="small" color={themeColors.accent} style={styles.loader} />
           ) : filteredLists.length === 0 ? (
             <Text style={[styles.empty, { color: themeColors.textSecondary }]}>
               {listsForType.length === 0
@@ -297,7 +427,13 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
             filteredLists.map((list) => {
               const dept = list.department ?? 'INTERIOR';
               return (
-                <View key={list.id} style={[styles.card, { backgroundColor: themeColors.surface }]}>
+                <View
+                  key={list.id}
+                  style={[
+                    styles.card,
+                    { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+                  ]}
+                >
                   <TouchableOpacity
                     style={styles.cardHeader}
                     onPress={() =>
@@ -306,46 +442,73 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
                     activeOpacity={0.8}
                   >
                     <View style={styles.cardTitleBlock}>
-                      <Text
-                        style={[styles.cardTitle, { color: themeColors.textPrimary }]}
-                        numberOfLines={1}
-                      >
-                        {list.title}
-                      </Text>
-                      <View
-                        style={[
-                          styles.deptBadge,
-                          { backgroundColor: getDepartmentColor(dept, overrides) },
-                        ]}
-                      >
-                        <Text style={styles.deptBadgeText}>
-                          {dept.charAt(0) + dept.slice(1).toLowerCase()}
+                      <View style={styles.cardTitleRow}>
+                        <Text
+                          style={[styles.cardTitle, { color: themeColors.textPrimary }]}
+                          numberOfLines={1}
+                        >
+                          {list.title}
                         </Text>
+                        <View
+                          style={[
+                            styles.deptBadge,
+                            { backgroundColor: getDepartmentColor(dept, overrides) },
+                          ]}
+                        >
+                          <Text style={styles.deptBadgeText}>{formatDepartmentLabel(dept)}</Text>
+                        </View>
                       </View>
+                      <Text style={[styles.cardSubtitle, { color: themeColors.textSecondary }]}>
+                        {list.items.length} {list.items.length === 1 ? 'item' : 'items'}
+                      </Text>
                     </View>
                     <Ionicons
                       name={expandedListId === list.id ? 'chevron-up' : 'chevron-down'}
                       size={18}
-                      color={themeColors.isDark ? COLORS.white : COLORS.primary}
+                      color={themeColors.accent}
                     />
                   </TouchableOpacity>
                   {expandedListId === list.id && (
                     <>
-                      <View style={styles.bulletList}>
+                      <View style={[styles.bulletList, { borderTopColor: themeColors.border }]}>
                         {list.items.length === 0 ? (
                           <Text style={[styles.bulletPlaceholder, { color: COLORS.textTertiary }]}>
                             No items
                           </Text>
                         ) : (
                           list.items.map((item, idx) => (
-                            <View key={idx} style={styles.bulletRow}>
-                              <TouchableOpacity
-                                onPress={() => toggleItemChecked(list, idx)}
-                                style={[styles.checkbox, item.checked && styles.checkboxChecked]}
-                                activeOpacity={0.7}
+                            <TouchableOpacity
+                              key={idx}
+                              style={styles.bulletRow}
+                              onPress={() => toggleItemChecked(list.id, idx)}
+                              activeOpacity={0.7}
+                              accessibilityRole="checkbox"
+                              accessibilityState={{ checked: item.checked }}
+                              accessibilityLabel={
+                                item.amount ? `${item.amount} x ${item.text}` : item.text
+                              }
+                            >
+                              <View
+                                style={[
+                                  styles.checkbox,
+                                  {
+                                    borderColor: item.checked
+                                      ? themeColors.controlSelected
+                                      : themeColors.borderStrong,
+                                    backgroundColor: item.checked
+                                      ? themeColors.controlSelected
+                                      : themeColors.control,
+                                  },
+                                ]}
                               >
-                                {item.checked ? <Text style={styles.checkboxTick}>✓</Text> : null}
-                              </TouchableOpacity>
+                                {item.checked ? (
+                                  <Ionicons
+                                    name="checkmark"
+                                    size={15}
+                                    color={themeColors.textOnAccent}
+                                  />
+                                ) : null}
+                              </View>
                               <Text
                                 style={[
                                   styles.bulletText,
@@ -356,7 +519,7 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
                               >
                                 {item.amount ? `${item.amount} x ${item.text}` : item.text}
                               </Text>
-                            </View>
+                            </TouchableOpacity>
                           ))
                         )}
                       </View>
@@ -384,50 +547,25 @@ const styles = StyleSheet.create({
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
-  section: { marginBottom: SPACING.lg },
-  filterLabel: {
-    fontSize: FONTS.sm,
-    fontWeight: '600',
-    marginTop: SPACING.lg,
+  primaryAction: { marginBottom: SPACING.md },
+  secondaryAction: { marginBottom: SPACING.md },
+  listGroup: { marginTop: SPACING.md, marginBottom: SPACING.lg },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: SPACING.md,
     marginBottom: SPACING.sm,
   },
-  dropdown: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: SPACING.lg,
-  },
-  dropdownText: { fontSize: FONTS.base, fontWeight: '500' },
-  dropdownChevron: { fontSize: 10 },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.lg,
-  },
-  modalBox: { borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, minWidth: 260, maxHeight: 400 },
-  modalTitle: { fontSize: FONTS.lg, fontWeight: '600', marginBottom: SPACING.md },
-  modalItem: {
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  modalItemSelected: { backgroundColor: COLORS.gray200 },
-  modalItemText: { fontSize: FONTS.base },
+  sectionTitleBlock: { flex: 1 },
+  sectionTitle: { fontSize: FONTS.lg, fontWeight: '700' },
+  sectionSubtitle: { fontSize: FONTS.sm, marginTop: 2 },
+  sectionCount: { fontSize: FONTS.xs, marginTop: 3 },
   loader: { marginVertical: SPACING.xl },
   empty: { fontSize: FONTS.base, paddingVertical: SPACING.xl },
-  masterBoard: { marginBottom: SPACING.xl },
-  masterBoardHeader: { marginBottom: SPACING.sm },
-  masterBoardTitle: { fontSize: FONTS.xl, fontWeight: '700' },
-  masterBoardSubtitle: { fontSize: FONTS.sm, marginTop: 2 },
-  resetBtn: { marginTop: SPACING.sm },
-  resetBtnText: { fontSize: FONTS.sm, fontWeight: '600', color: COLORS.primary },
+  masterBoardHeader: {},
+  resetBtn: { alignSelf: 'flex-start', paddingVertical: SPACING.sm },
+  resetBtnText: { fontSize: FONTS.sm, fontWeight: '600' },
   resetBtnDisabled: { color: COLORS.textTertiary },
   expandableHeaderRow: {
     flexDirection: 'row',
@@ -439,45 +577,49 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.lg,
     marginBottom: SPACING.md,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 1,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: SPACING.sm,
+    gap: SPACING.sm,
   },
-  cardTitleBlock: { flex: 1 },
-  cardTitle: { fontSize: FONTS.lg, fontWeight: '600' },
+  cardTitleBlock: { flex: 1, minWidth: 0 },
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+  },
+  cardTitle: { fontSize: FONTS.lg, fontWeight: '600', flexShrink: 1 },
+  cardSubtitle: { fontSize: FONTS.sm, marginTop: SPACING.xs },
   deptBadge: {
     paddingHorizontal: SPACING.sm,
     paddingVertical: 4,
     borderRadius: BORDER_RADIUS.sm,
-    marginTop: SPACING.xs,
-    alignSelf: 'flex-start',
   },
   deptBadgeText: { fontSize: FONTS.xs, fontWeight: '600', color: COLORS.white },
-  bulletList: { marginTop: SPACING.xs },
-  bulletRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.xs },
+  bulletList: {
+    marginTop: SPACING.sm,
+    paddingTop: SPACING.md,
+    borderTopWidth: 1,
+  },
+  bulletRow: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.xs,
+  },
   checkbox: {
     width: 22,
     height: 22,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.sm,
+    borderWidth: 1,
     marginRight: SPACING.sm,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  checkboxChecked: {
-    backgroundColor: COLORS.success,
-    borderColor: COLORS.success,
-  },
-  checkboxTick: { color: COLORS.white, fontSize: 12, fontWeight: '700' },
   bulletText: { fontSize: FONTS.base, flex: 1 },
   bulletTextChecked: { textDecorationLine: 'line-through', color: COLORS.textTertiary },
   bulletPlaceholder: { fontSize: FONTS.sm, fontStyle: 'italic' },

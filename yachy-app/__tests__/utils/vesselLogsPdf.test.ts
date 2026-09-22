@@ -67,12 +67,17 @@ describe('fuel log PDF metadata', () => {
     const html = mockPrintToFileAsync.mock.calls[0][0].html as string;
     expect(html).toContain('100 L');
     expect(html).toContain('50 US gal');
-    expect(html).toContain('EUR 1.2000 / L');
-    expect(html).toContain('USD 4.0000 / US gal');
-    expect(html).toContain('100.00 L + 50.00 US gal');
+    expect(html).toContain('Price / L');
+    expect(html).toContain('Price / US gal');
+    expect(html).toContain('€1.20');
+    expect(html).toContain('$4.00');
+    expect(html).toContain('100 L + 50 US gal');
     expect(html).toContain('€120.00 + $200.00');
     expect(html).not.toContain('150.00 gal');
-    expect(html).toContain('tfoot { display: table-row-group; }');
+    expect(html).toContain('<h1>Fuel Receipts</h1>');
+    expect(html).toContain('class="summary-grid"');
+    expect(html).not.toContain('Generated');
+    expect(html).not.toContain('<p class="subtitle">Test Vessel');
   });
 
   it('stacks tank allocations in each receipt unit and identifies legacy unallocated rows', async () => {
@@ -112,11 +117,11 @@ describe('fuel log PDF metadata', () => {
     await exportFuelLogPdf(logs, 'Test Vessel', allocationSnapshot);
 
     const html = mockPrintToFileAsync.mock.calls[0][0].html as string;
-    expect(html).toContain('class="allocation-row"');
-    expect(html).toContain('colspan="8"');
+    expect(html).toContain('class="receipt-card"');
+    expect(html).toContain('class="allocation-panel"');
     expect(html).toContain('Port &amp; Day Tank');
-    expect(html).toContain('<span>378.541 L</span>');
-    expect(html).toContain('Legacy entry — no tank allocation recorded.');
+    expect(html).toContain('class="allocation-amount">378.541 L</span>');
+    expect(html).toContain('No tank allocation recorded.');
     expect(html).toContain('page-break-inside: avoid');
   });
 });

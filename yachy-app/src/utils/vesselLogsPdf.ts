@@ -113,7 +113,7 @@ export async function exportGeneralWasteLogPdf(
 function fuelVolumeUnitLabel(log: FuelLog): string {
   if (log.volumeUnit === 'LITRES') return 'L';
   if (log.volumeUnit === 'US_GALLONS') return 'US gal';
-  return 'gal (legacy)';
+  return 'US gal';
 }
 
 function fuelPriceUnitLabel(log: FuelLog): string {
@@ -154,25 +154,21 @@ function fuelAllocationDetailHtml(
     ? allocations
         .map(
           (allocation) => `
-            <div class="allocation-item">
-              <strong>${escapeHtml(allocation.tankName)}</strong>
-              <span>${escapeHtml(pdfVolume(fromLitres(allocation.amountLitres, unit)))} ${escapeHtml(fuelDisplayUnitLabel(unit))}</span>
+            <div class="allocation-row">
+              <span class="allocation-name">${escapeHtml(allocation.tankName)}</span>
+              <span class="allocation-amount">${escapeHtml(pdfVolume(fromLitres(allocation.amountLitres, unit)))} ${escapeHtml(fuelDisplayUnitLabel(unit))}</span>
             </div>`
         )
         .join('')
     : `<div class="unallocated">${
-        log.volumeUnit === null
-          ? 'Legacy entry — no tank allocation recorded.'
-          : 'No tank allocation recorded.'
+        log.volumeUnit === null ? 'No tank allocation recorded.' : 'No tank allocation recorded.'
       }</div>`;
 
   return `
-    <tr class="allocation-row">
-      <td colspan="8">
-        <div class="allocation-title">Tank allocation</div>
-        ${detail}
-      </td>
-    </tr>`;
+    <section class="allocation-panel">
+      <div class="section-label">Tank allocation</div>
+      ${detail}
+    </section>`;
 }
 
 export async function exportFuelLogPdf(
@@ -180,25 +176,43 @@ export async function exportFuelLogPdf(
   vesselName: string,
   allocationSnapshot?: FuelLogAllocationSnapshot
 ): Promise<void> {
-  const rows = logs.length
+  const receiptCards = logs.length
     ? logs
         .map(
-          (l) => `<tbody class="fuel-entry">
-        <tr class="fuel-main-row">
-          <td>${escapeHtml(l.logDate)}</td>
-          <td>${escapeHtml(l.logTime)}</td>
-          <td>${escapeHtml(l.locationOfRefueling) || '—'}</td>
-          <td style="text-align:right">${escapeHtml(l.amountOfFuel)} ${escapeHtml(fuelVolumeUnitLabel(l))}</td>
-          <td style="text-align:right">${escapeHtml(l.currencyCode)} ${Number(l.pricePerVolumeUnit).toFixed(4)} / ${escapeHtml(fuelPriceUnitLabel(l))}</td>
-          <td style="text-align:right;font-weight:700">${escapeHtml(pdfMoney(Number(l.totalPrice), l.currencyCode))}</td>
-          <td>${escapeHtml(l.comment) || '—'}</td>
-          <td>${escapeHtml(l.createdByName) || '—'}</td>
-        </tr>
-        ${allocationSnapshot ? fuelAllocationDetailHtml(l, allocationSnapshot) : ''}
-        </tbody>`
+          (l) => `<article class="receipt-card">
+        <header class="receipt-header">
+          <h2>${escapeHtml(l.locationOfRefueling) || 'Location not recorded'}</h2>
+          <div class="receipt-date">${escapeHtml(l.logDate) || 'Date not recorded'}${l.logTime ? ` <span class="dot">&bull;</span> ${escapeHtml(l.logTime)}` : ''}</div>
+        </header>
+        <section class="receipt-stats">
+          <div class="stat">
+            <div class="stat-label">Fuel received</div>
+            <div class="stat-value">${escapeHtml(pdfVolume(Number(l.amountOfFuel)))} ${escapeHtml(fuelVolumeUnitLabel(l))}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Price / ${escapeHtml(fuelPriceUnitLabel(l))}</div>
+            <div class="stat-value">${escapeHtml(pdfMoney(Number(l.pricePerVolumeUnit), l.currencyCode))}</div>
+          </div>
+          <div class="stat stat-total">
+            <div class="stat-label">Total</div>
+            <div class="stat-value">${escapeHtml(pdfMoney(Number(l.totalPrice), l.currencyCode))}</div>
+          </div>
+        </section>
+        ${
+          allocationSnapshot
+            ? fuelAllocationDetailHtml(l, allocationSnapshot)
+            : `<section class="allocation-panel"><div class="section-label">Tank allocation</div><div class="unallocated">No tank allocation data included.</div></section>`
+        }
+        ${
+          l.comment
+            ? `<section class="comment-panel"><div class="section-label">Comment</div><div>${escapeHtml(l.comment)}</div></section>`
+            : ''
+        }
+        <footer class="receipt-footer">Logged by ${escapeHtml(l.createdByName) || 'Unknown crew member'}</footer>
+      </article>`
         )
         .join('')
-    : `<tbody><tr><td colspan="8" class="empty">No entries</td></tr></tbody>`;
+    : `<div class="empty">No fuel receipts</div>`;
 
   const volumeTotals = new Map<string, number>();
   const costTotals = new Map<string, number>();
@@ -209,62 +223,167 @@ export async function exportFuelLogPdf(
     costTotals.set(currency, (costTotals.get(currency) ?? 0) + Number(log.totalPrice));
   }
   const volumeSummary = [...volumeTotals.entries()]
-    .map(([unit, value]) => `${value.toFixed(2)} ${escapeHtml(unit)}`)
+    .map(([unit, value]) => `${pdfVolume(value)} ${escapeHtml(unit)}`)
     .join(' + ');
   const costSummary = [...costTotals.entries()]
     .map(([currency, value]) => escapeHtml(pdfMoney(value, currency)))
     .join(' + ');
-  const totalsRow = logs.length
-    ? `
-    <tfoot>
-      <tr style="background:#f3f4f6;font-weight:700">
-        <td colspan="3">Total (${logs.length} entr${logs.length === 1 ? 'y' : 'ies'})</td>
-        <td style="text-align:right">${volumeSummary}</td>
-        <td></td>
-        <td style="text-align:right">${costSummary}</td>
-        <td colspan="2"></td>
-      </tr>
-    </tfoot>`
-    : '';
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
-    <style>${baseStyles('#1E3A8A')}
-      tfoot { display: table-row-group; }
-      tfoot td {
-        padding: 8px 10px;
-        border-top: 2px solid #1E3A8A;
-        white-space: nowrap;
+    <style>
+      @page { size: A4 portrait; margin: 14mm 14mm 18mm; }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        color: #0f172a;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 11px;
+        line-height: 1.4;
       }
-      .fuel-entry { break-inside: avoid; page-break-inside: avoid; }
-      .allocation-row td { background: #f8fafc; padding: 7px 10px 9px; }
-      .allocation-title {
+      h1 {
+        color: #1e3a8a;
+        font-size: 28px;
+        line-height: 1.1;
+        margin: 0 0 14px;
+      }
+      .summary-grid {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+      .summary-card {
+        background: #f8fafc;
+        border: 1px solid #dbe4f0;
+        border-radius: 8px;
+        flex: 1;
+        min-width: 0;
+        padding: 11px 12px;
+      }
+      .summary-label,
+      .section-label,
+      .stat-label {
         color: #64748b;
-        font-size: 9px;
+        font-size: 8px;
         font-weight: 700;
-        letter-spacing: .45px;
-        margin-bottom: 3px;
+        letter-spacing: .5px;
         text-transform: uppercase;
       }
-      .allocation-item {
+      .summary-value {
+        color: #0f172a;
+        font-size: 18px;
+        font-weight: 800;
+        line-height: 1.2;
+        margin-top: 4px;
+        overflow-wrap: anywhere;
+      }
+      .receipt-card {
+        border: 1px solid #cbd8e8;
+        border-left: 7px solid #1e3a8a;
+        border-radius: 8px;
+        break-inside: avoid;
+        margin: 0 0 12px;
+        padding: 12px 12px 9px;
+        page-break-inside: avoid;
+      }
+      .receipt-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 9px;
+      }
+      .receipt-header h2 {
+        color: #1e3a8a;
+        flex: 1;
+        font-size: 17px;
+        line-height: 1.2;
+        margin: 0;
+      }
+      .receipt-date {
+        color: #526581;
+        font-size: 10px;
+        padding-top: 2px;
+        text-align: right;
+        white-space: nowrap;
+      }
+      .dot { padding: 0 3px; }
+      .receipt-stats {
+        background: #f8fafc;
+        border-radius: 7px;
+        display: flex;
+        margin-bottom: 8px;
+        padding: 9px 0;
+      }
+      .stat {
+        border-right: 1px solid #d7e0ea;
+        flex: 1;
+        min-width: 0;
+        padding: 0 10px;
+      }
+      .stat:last-child { border-right: 0; }
+      .stat-value {
+        color: #0f172a;
+        font-size: 15px;
+        font-weight: 800;
+        line-height: 1.25;
+        margin-top: 3px;
+        overflow-wrap: anywhere;
+      }
+      .stat-total .stat-value { color: #1e3a8a; }
+      .allocation-panel,
+      .comment-panel {
+        background: #f8fafc;
+        border: 1px solid #edf1f6;
+        border-radius: 7px;
+        margin-bottom: 8px;
+        padding: 8px 10px;
+      }
+      .section-label { margin-bottom: 4px; }
+      .allocation-row {
+        border-bottom: 1px solid #e2e8f0;
         display: flex;
         justify-content: space-between;
-        gap: 16px;
-        padding: 2px 0;
+        gap: 12px;
+        padding: 3px 0;
       }
-      .allocation-item span { white-space: nowrap; }
-      .unallocated { color: #64748b; font-style: italic; }
+      .allocation-row:last-child { border-bottom: 0; }
+      .allocation-name { flex: 1; }
+      .allocation-amount { font-weight: 600; white-space: nowrap; }
+      .unallocated { color: #64748b; font-style: italic; padding: 2px 0; }
+      .comment-panel { color: #334155; }
+      .receipt-footer {
+        border-top: 1px solid #e2e8f0;
+        color: #64748b;
+        font-size: 9px;
+        padding-top: 7px;
+      }
+      .empty {
+        background: #f8fafc;
+        border: 1px solid #dbe4f0;
+        border-radius: 8px;
+        color: #64748b;
+        padding: 28px;
+        text-align: center;
+      }
+      .document-footer {
+        border-top: 1px solid #dbe4f0;
+        color: #64748b;
+        display: flex;
+        font-size: 8px;
+        justify-content: space-between;
+        margin-top: 16px;
+        padding-top: 7px;
+      }
     </style>
     </head><body>
-    <h1>Fuel Log</h1>
-    <p class="subtitle">${escapeHtml(vesselName)} &nbsp;·&nbsp; Generated ${dateStr()}</p>
-    <table>
-      <thead><tr>
-        <th>Date</th><th>Time</th><th>Location</th>
-        <th>Amount</th><th>Price / Unit</th><th>Total</th><th>Comment</th><th>Logged By</th>
-      </tr></thead>
-      ${rows}
-      ${totalsRow}
-    </table>
+    <h1>Fuel Receipts</h1>
+    <section class="summary-grid">
+      <div class="summary-card"><div class="summary-label">Receipts</div><div class="summary-value">${logs.length}</div></div>
+      <div class="summary-card"><div class="summary-label">Total fuel</div><div class="summary-value">${volumeSummary || '0'}</div></div>
+      <div class="summary-card"><div class="summary-label">Total cost</div><div class="summary-value">${costSummary || '-'}</div></div>
+    </section>
+    ${receiptCards}
+    <footer class="document-footer"><span>Nautical Ops &bull; Fuel Receipts</span><span>${escapeHtml(vesselName)} records</span></footer>
   </body></html>`;
 
   const safeName = vesselName.replace(/[^\w]/g, '_') || 'Vessel';

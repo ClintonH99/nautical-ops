@@ -9,7 +9,6 @@ import {
   Input,
   LoadingSpinner,
   PageHeader,
-  FuelVoidReasonModal,
 } from '../components';
 import { BORDER_RADIUS, COLORS, FONTS, SIZES, SPACING } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -40,9 +39,7 @@ export const FuelTransfersScreen = ({ navigation }: any) => {
   const [unit, setUnit] = useState<FuelVolumeUnit>('LITRES');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const [voidTarget, setVoidTarget] = useState<FuelTransfer | null>(null);
-  const [voidReason, setVoidReason] = useState('');
-  const [voiding, setVoiding] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const loadGeneration = useRef(0);
   const requestedVesselId = useRef<string | null>(null);
   const transfers = useMemo(
@@ -64,9 +61,7 @@ export const FuelTransfersScreen = ({ navigation }: any) => {
       setStoredTransfers([]);
       setStoredTanks([]);
       setLoadError(null);
-      setVoidTarget(null);
-      setVoidReason('');
-      setVoiding(false);
+      setDeletingId(null);
       setLoading(false);
       setRefreshing(false);
       return;
@@ -78,9 +73,7 @@ export const FuelTransfersScreen = ({ navigation }: any) => {
       setStoredTanks([]);
       setLoadError(null);
       setExpandedId(null);
-      setVoidTarget(null);
-      setVoidReason('');
-      setVoiding(false);
+      setDeletingId(null);
       setLoading(true);
     }
     try {
@@ -100,7 +93,7 @@ export const FuelTransfersScreen = ({ navigation }: any) => {
       setLoadError({
         vesselId,
         message:
-          'Fuel transfers could not be refreshed. Existing records are retained, but new entries and corrections are paused until refresh succeeds.',
+          'Fuel transfers could not be refreshed. Existing records are retained, but new entries and changes are paused until refresh succeeds.',
       });
     } finally {
       if (generation === loadGeneration.current) {
@@ -139,45 +132,47 @@ export const FuelTransfersScreen = ({ navigation }: any) => {
     });
   }, [query, tankNames, transfers]);
 
-  const confirmLegacyVoid = async () => {
+  const deleteTransfer = async (target: FuelTransfer) => {
     if (
-      !voidTarget ||
       !vesselId ||
-      !voidReason.trim() ||
-      voiding ||
+      deletingId ||
       !canManageSetup ||
       currentLoadError ||
-      voidTarget.vesselId !== vesselId ||
-      voidTarget.currentInventoryOperationId
+      target.vesselId !== vesselId
     ) {
       return;
     }
     const targetVesselId = vesselId;
-    const target = voidTarget;
-    setVoiding(true);
+    setDeletingId(target.id);
     try {
       await fuelManagementService.deleteTransfer(target.id, {
         expectedRevision: target.inventoryRevision ?? 0,
-        reason: voidReason.trim(),
+        reason: 'Deleted by user',
       });
       if (requestedVesselId.current !== targetVesselId) return;
-      setVoidTarget(null);
-      setVoidReason('');
       await load();
-      Alert.alert(
-        'Transfer voided',
-        'The report-only transfer remains in the audit history. Calculated tank balances were not changed.'
-      );
+      Alert.alert('Fuel transfer deleted.');
     } catch (error) {
       if (requestedVesselId.current !== targetVesselId) return;
-      console.error('Void legacy fuel transfer error:', error);
+      if (__DEV__) console.warn('Delete fuel transfer warning:', error);
       Alert.alert(
-        'Could not void transfer',
+        'Could not delete fuel transfer',
         error instanceof Error ? error.message : 'Refresh the transfers and try again.'
       );
     } finally {
-      if (requestedVesselId.current === targetVesselId) setVoiding(false);
+      if (requestedVesselId.current === targetVesselId) setDeletingId(null);
     }
+  };
+
+  const confirmDelete = (target: FuelTransfer) => {
+    Alert.alert('Delete fuel transfer?', 'This will remove the transfer from the vessel records.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => deleteTransfer(target),
+      },
+    ]);
   };
 
   if (!vesselId) {
@@ -207,10 +202,6 @@ export const FuelTransfersScreen = ({ navigation }: any) => {
           style={styles.action}
         />
       </View>
-      <Text style={[styles.auditHint, { color: themeColors.textSecondary }]}>
-        Posted transfers are retained as audit records. Corrections are recorded separately.
-      </Text>
-
       {currentLoadError ? (
         <View
           style={[
@@ -290,53 +281,115 @@ export const FuelTransfersScreen = ({ navigation }: any) => {
               return (
                 <ButtonTagCard
                   key={transfer.id}
-                  headerTitle={`${source} → ${destination}`}
+                  headerLeft={
+                    <View style={styles.transferHeaderCopy}>
+                      <Text
+                        style={[
+                          styles.transferTitle,
+                          { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {source} → {destination}
+                      </Text>
+                      <Text style={[styles.transferDate, { color: themeColors.textSecondary }]}>
+                        {transfer.transferDate || 'Date not recorded'}
+                        {transfer.transferTime ? `  •  ${transfer.transferTime}` : ''}
+                      </Text>
+                    </View>
+                  }
                   collapsible
                   expanded={expandedId === transfer.id}
                   onToggleExpand={() =>
                     setExpandedId((current) => (current === transfer.id ? null : transfer.id))
                   }
                   onEdit={
-                    canManageSetup && !currentLoadError && !transfer.currentInventoryOperationId
-                      ? () => navigation.navigate('FuelTransfer', { transferId: transfer.id })
+                    canManageSetup && !currentLoadError
+                      ? () =>
+                          navigation.navigate('FuelTransfer', {
+                            transferId: transfer.id,
+                            correctionOperationId:
+                              transfer.currentInventoryOperationId ?? undefined,
+                          })
                       : undefined
                   }
                   onDelete={
-                    canManageSetup && !currentLoadError && !transfer.currentInventoryOperationId
-                      ? () => {
-                          setVoidReason('');
-                          setVoidTarget(transfer);
-                        }
+                    canManageSetup && !currentLoadError && deletingId !== transfer.id
+                      ? () => confirmDelete(transfer)
                       : undefined
                   }
-                  summary={<ButtonTagRow label="Location" value={transfer.location} />}
+                  footer={
+                    transfer.createdByName ? `Logged by ${transfer.createdByName}` : undefined
+                  }
+                  summary={
+                    <View style={[styles.statsRow, { backgroundColor: themeColors.background }]}>
+                      <View style={styles.statBox}>
+                        <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
+                          From
+                        </Text>
+                        <Text
+                          style={[styles.statValue, { color: themeColors.textPrimary }]}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.7}
+                        >
+                          {source}
+                        </Text>
+                      </View>
+                      <View style={[styles.statDivider, { backgroundColor: themeColors.border }]} />
+                      <View style={styles.statBox}>
+                        <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
+                          To
+                        </Text>
+                        <Text
+                          style={[styles.statValue, { color: themeColors.textPrimary }]}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.7}
+                        >
+                          {destination}
+                        </Text>
+                      </View>
+                      <View style={[styles.statDivider, { backgroundColor: themeColors.border }]} />
+                      <View style={styles.statBox}>
+                        <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
+                          Amount
+                        </Text>
+                        <Text
+                          style={[styles.statValue, { color: themeColors.accent }]}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.7}
+                        >
+                          {formatVolume(fromLitres(transfer.amountLitres, unit))} {unitLabel(unit)}
+                        </Text>
+                      </View>
+                    </View>
+                  }
                 >
-                  <ButtonTagRow label="Date" value={transfer.transferDate} />
-                  <ButtonTagRow label="Time" value={transfer.transferTime} />
-                  <ButtonTagRow
-                    label="Amount"
-                    value={`${formatVolume(fromLitres(transfer.amountLitres, unit))} ${unitLabel(unit)}`}
-                  />
-                  <ButtonTagRow label="Comment" value={transfer.notes} />
+                  {transfer.location || transfer.notes ? (
+                    <View
+                      style={[
+                        styles.transferDetails,
+                        {
+                          backgroundColor: themeColors.control,
+                          borderColor: themeColors.border,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.detailsTitle, { color: themeColors.textSecondary }]}>
+                        Transfer details
+                      </Text>
+                      <ButtonTagRow label="Location" value={transfer.location} />
+                      <ButtonTagRow label="Comment" value={transfer.notes} />
+                    </View>
+                  ) : null}
                 </ButtonTagCard>
               );
             })
           )}
         </ScrollView>
       )}
-      <FuelVoidReasonModal
-        visible={!!voidTarget && voidTarget.vesselId === vesselId}
-        title="Void this report-only transfer?"
-        description="This does not delete history or change calculated tank balances. Nautical Ops records your name, time and reason in the legacy audit trail."
-        reason={voidReason}
-        onChangeReason={setVoidReason}
-        onCancel={() => {
-          setVoidTarget(null);
-          setVoidReason('');
-        }}
-        onConfirm={confirmLegacyVoid}
-        submitting={voiding}
-      />
     </View>
   );
 };
@@ -353,13 +406,6 @@ const styles = StyleSheet.create({
   },
   action: { flex: 1 },
   searchRow: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.md },
-  auditHint: {
-    paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.sm,
-    fontSize: FONTS.xs,
-    lineHeight: 18,
-    textAlign: 'center',
-  },
   loadError: {
     marginHorizontal: SPACING.lg,
     marginTop: SPACING.sm,
@@ -381,4 +427,39 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   emptyTitle: { fontSize: FONTS.xl, fontWeight: '700', marginTop: SPACING.xs },
+  transferHeaderCopy: { flex: 1, minWidth: 0 },
+  transferTitle: { fontSize: FONTS.lg, fontWeight: '800' },
+  transferDate: { fontSize: FONTS.xs, marginTop: 3 },
+  statsRow: {
+    flexDirection: 'row',
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.sm,
+  },
+  statBox: { flex: 1, minWidth: 0, paddingHorizontal: SPACING.xs },
+  statDivider: { width: 1, marginVertical: 2 },
+  statLabel: {
+    height: 32,
+    fontSize: FONTS.xs,
+    fontWeight: '600',
+    lineHeight: 14,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 2,
+  },
+  statValue: { height: 20, fontSize: FONTS.sm, fontWeight: '700', lineHeight: 18 },
+  transferDetails: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.sm,
+  },
+  detailsTitle: {
+    fontSize: FONTS.xs,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: SPACING.xs,
+  },
 });

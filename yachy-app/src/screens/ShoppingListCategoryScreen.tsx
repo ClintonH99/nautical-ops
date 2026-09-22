@@ -4,27 +4,24 @@
  */
 
 import React from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { PageHeader } from '../components';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
-import { COLORS, FONTS, SPACING, SIZES } from '../constants/theme';
+import { BORDER_RADIUS, FONTS, SPACING, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 
 const CATEGORIES = [
   {
-    icon: '🛒',
+    icon: 'cart-outline' as const,
     label: 'General Shopping',
+    description: 'Everyday vessel supplies',
     listType: 'general' as const,
   },
   {
-    icon: '🛥️',
+    icon: 'boat-outline' as const,
     label: 'Trip Shopping',
+    description: 'Reusable and trip-specific lists',
     listType: 'trip' as const,
   },
 ];
@@ -48,27 +45,41 @@ export const ShoppingListCategoryScreen = ({ navigation }: any) => {
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <Text style={[styles.message, { color: themeColors.textSecondary }]}>Join a vessel to use Shopping List.</Text>
+        <Text style={[styles.message, { color: themeColors.textSecondary }]}>
+          Join a vessel to use Shopping List.
+        </Text>
       </View>
     );
   }
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <PageHeader title="Shopping List" info={SHOPPING_INFO} infoScreenKey="shopping" />
-      <ScrollView contentContainerStyle={styles.content}>
-      {CATEGORIES.map((category) => (
-        <TouchableOpacity
-          key={category.listType}
-          style={[styles.card, { backgroundColor: themeColors.surface }]}
-          onPress={() => navigation.navigate('ShoppingList', { listType: category.listType })}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.cardIcon}>{category.icon}</Text>
-          <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>{category.label}</Text>
-          <Text style={[styles.cardChevron, { color: themeColors.textSecondary }]}>›</Text>
-        </TouchableOpacity>
-      ))}
+      <PageHeader title="Shopping" info={SHOPPING_INFO} infoScreenKey="shopping" />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {CATEGORIES.map((category) => (
+          <TouchableOpacity
+            key={category.listType}
+            style={[
+              styles.card,
+              { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+            ]}
+            onPress={() => navigation.navigate('ShoppingList', { listType: category.listType })}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.cardIcon, { backgroundColor: themeColors.controlSelected }]}>
+              <Ionicons name={category.icon} size={26} color={themeColors.textOnAccent} />
+            </View>
+            <View style={styles.cardCopy}>
+              <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>
+                {category.label}
+              </Text>
+              <Text style={[styles.cardDescription, { color: themeColors.textSecondary }]}>
+                {category.description}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={22} color={themeColors.accent} />
+          </TouchableOpacity>
+        ))}
       </ScrollView>
     </View>
   );
@@ -96,25 +107,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: SPACING.lg,
-    borderRadius: 12,
+    minHeight: 104,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
     marginBottom: SPACING.md,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   cardIcon: {
-    fontSize: FONTS['2xl'],
+    width: 52,
+    height: 52,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: SPACING.lg,
   },
-  cardLabel: {
+  cardCopy: {
     flex: 1,
+  },
+  cardLabel: {
     fontSize: FONTS.lg,
     fontWeight: '600',
   },
-  cardChevron: {
-    fontSize: 24,
-    fontWeight: '300',
+  cardDescription: {
+    fontSize: FONTS.sm,
+    marginTop: SPACING.xs,
   },
 });

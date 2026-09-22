@@ -65,8 +65,8 @@ export function fuelTankVerificationLabel(
 export function fuelOperationAuditLabel(record: FuelInventoryOperation): string {
   const label = fuelOperationKindLabel(record.kind);
   const amended = record.status === 'REPLACED' || record.voidKind?.toUpperCase() === 'AMENDMENT';
-  if (amended) return `Amended ${label.toLowerCase()}`;
-  if (record.status === 'VOIDED' || record.voided) return `Voided ${label.toLowerCase()}`;
+  if (amended) return `Edited ${label.toLowerCase()}`;
+  if (record.status === 'VOIDED' || record.voided) return `Deleted ${label.toLowerCase()}`;
   return label;
 }
 

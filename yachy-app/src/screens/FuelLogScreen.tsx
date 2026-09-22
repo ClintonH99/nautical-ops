@@ -30,10 +30,9 @@ import {
   PageHeader,
   ExportButton,
   ExportBar,
-  FuelVoidReasonModal,
 } from '../components';
 import { exportFuelLogPdf } from '../utils/vesselLogsPdf';
-import { fromLitres } from '../utils/fuelUnits';
+import { fromLitres, storedFuelVolumeUnit, toLitres } from '../utils/fuelUnits';
 
 const EMPTY_ALLOCATION_SNAPSHOT: FuelLogAllocationSnapshot = {
   displayUnit: 'LITRES',
@@ -55,12 +54,7 @@ function formatCurrency(value: number, currencyCode: string): string {
 
 function volumeLabel(log: FuelLog): string {
   if (log.volumeUnit === 'LITRES') return 'L';
-  if (log.volumeUnit === 'US_GALLONS') return 'US gal';
-  return 'gal (legacy)';
-}
-
-function priceLabel(log: FuelLog): string {
-  return log.priceVolumeUnit === 'LITRES' ? 'Per Litre' : 'Per US Gallon';
+  return 'US gal';
 }
 
 function displayUnitLabel(unit: FuelVolumeUnit): string {
@@ -86,9 +80,7 @@ export const FuelLogScreen = ({ navigation }: any) => {
   const [loadError, setLoadError] = useState<{ vesselId: string; message: string } | null>(null);
   const [storedAllocationSnapshot, setStoredAllocationSnapshot] =
     useState<FuelLogAllocationSnapshot>(EMPTY_ALLOCATION_SNAPSHOT);
-  const [voidTarget, setVoidTarget] = useState<FuelLog | null>(null);
-  const [voidReason, setVoidReason] = useState('');
-  const [voiding, setVoiding] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const loadGeneration = useRef(0);
   const requestedVesselId = useRef<string | null>(null);
 
@@ -99,6 +91,23 @@ export const FuelLogScreen = ({ navigation }: any) => {
     loadedVesselId === vesselId ? storedAllocationSnapshot : EMPTY_ALLOCATION_SNAPSHOT;
   const currentLoadError = loadError?.vesselId === vesselId ? loadError.message : null;
   const waitingForCurrentVessel = loadedVesselId !== vesselId && !currentLoadError;
+
+  const receiptSummary = (() => {
+    const costs = new Map<string, number>();
+    let totalLitres = 0;
+    logs.forEach((log) => {
+      const currency = log.currencyCode || 'USD';
+      totalLitres += toLitres(Number(log.amountOfFuel), storedFuelVolumeUnit(log.volumeUnit));
+      costs.set(currency, (costs.get(currency) ?? 0) + Number(log.totalPrice));
+    });
+    const displayUnit = allocationSnapshot.displayUnit;
+    return {
+      volume: `${formatVolume(fromLitres(totalLitres, displayUnit))} ${displayUnitLabel(displayUnit)}`,
+      cost: [...costs.entries()]
+        .map(([currency, value]) => formatCurrency(value, currency))
+        .join(' + '),
+    };
+  })();
 
   const filteredLogs = searchQuery.trim()
     ? logs.filter((log) => {
@@ -122,9 +131,7 @@ export const FuelLogScreen = ({ navigation }: any) => {
       setStoredAllocationSnapshot(EMPTY_ALLOCATION_SNAPSHOT);
       setLoadedVesselId(null);
       setLoadError(null);
-      setVoidTarget(null);
-      setVoidReason('');
-      setVoiding(false);
+      setDeletingId(null);
       setLoading(false);
       setRefreshing(false);
       return;
@@ -137,9 +144,7 @@ export const FuelLogScreen = ({ navigation }: any) => {
       setLoadError(null);
       setSelectedIds(new Set());
       setExpandedId(null);
-      setVoidTarget(null);
-      setVoidReason('');
-      setVoiding(false);
+      setDeletingId(null);
       setLoading(true);
     }
     try {
@@ -160,7 +165,7 @@ export const FuelLogScreen = ({ navigation }: any) => {
       setLoadError({
         vesselId,
         message:
-          'Fuel receipts could not be refreshed. Existing data is retained, but new entries and corrections are paused until refresh succeeds.',
+          'Fuel receipts could not be refreshed. Existing data is retained, but new entries and changes are paused until refresh succeeds.',
       });
     } finally {
       if (generation === loadGeneration.current) {
@@ -198,47 +203,48 @@ export const FuelLogScreen = ({ navigation }: any) => {
     loadLogs();
   };
   const onAdd = () => navigation.navigate('AddEditFuelLog', {});
-  const onEdit = (log: FuelLog) => navigation.navigate('AddEditFuelLog', { logId: log.id });
+  const onEdit = (log: FuelLog) =>
+    navigation.navigate('AddEditFuelLog', {
+      logId: log.id,
+      correctionOperationId: log.currentInventoryOperationId ?? undefined,
+    });
 
-  const confirmLegacyVoid = async () => {
+  const deleteReceipt = async (target: FuelLog) => {
     if (
-      !voidTarget ||
       !vesselId ||
-      !voidReason.trim() ||
-      voiding ||
+      deletingId ||
       !canManageSetup ||
       currentLoadError ||
-      voidTarget.vesselId !== vesselId ||
-      voidTarget.currentInventoryOperationId
-    ) {
+      target.vesselId !== vesselId
+    )
       return;
-    }
     const targetVesselId = vesselId;
-    const target = voidTarget;
-    setVoiding(true);
+    setDeletingId(target.id);
     try {
       await fuelManagementService.voidFuelLog(target.id, {
         expectedRevision: target.inventoryRevision ?? 0,
-        reason: voidReason.trim(),
+        reason: 'Deleted by user',
       });
       if (requestedVesselId.current !== targetVesselId) return;
-      setVoidTarget(null);
-      setVoidReason('');
       await loadLogs();
-      Alert.alert(
-        'Receipt voided',
-        'The report-only receipt remains in the audit history. Calculated tank balances were not changed.'
-      );
+      Alert.alert('Fuel receipt deleted.');
     } catch (error) {
       if (requestedVesselId.current !== targetVesselId) return;
-      console.error('Void legacy fuel receipt error:', error);
+      if (__DEV__) console.warn('Delete fuel receipt warning:', error);
       Alert.alert(
-        'Could not void receipt',
+        'Could not delete fuel receipt',
         error instanceof Error ? error.message : 'Refresh the receipts and try again.'
       );
     } finally {
-      if (requestedVesselId.current === targetVesselId) setVoiding(false);
+      if (requestedVesselId.current === targetVesselId) setDeletingId(null);
     }
+  };
+
+  const confirmDelete = (target: FuelLog) => {
+    Alert.alert('Delete this fuel receipt?', 'This will remove the receipt from the app.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteReceipt(target) },
+    ]);
   };
 
   const onExportPdf = async () => {
@@ -287,248 +293,344 @@ export const FuelLogScreen = ({ navigation }: any) => {
           />
         }
       />
-      {exportMode && (
-        <ExportBar
-          count={selectedIds.size}
-          onConfirm={onExportPdf}
-          exporting={exportingPdf}
-          hint="Tap logs to select"
-        />
-      )}
-      <View style={styles.actionBar}>
-        <Button
-          title="Add Receipt"
-          onPress={onAdd}
-          variant="primary"
-          style={styles.actionBtn}
-          disabled={!!currentLoadError}
-        />
-        <Button
-          title="Tank Inventory"
-          onPress={() => navigation.navigate('FuelInventory')}
-          variant="outline"
-          style={styles.actionBtn}
-        />
-      </View>
-      <Text style={[styles.auditHint, { color: themeColors.textSecondary }]}>
-        Posted receipts remain in the audit history. Corrections are recorded separately.
-      </Text>
-      <TouchableOpacity
-        style={styles.setupLink}
-        onPress={() => navigation.navigate('FuelSetup')}
-        accessibilityRole="button"
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
+        }
       >
-        <Text style={[styles.setupLinkText, { color: themeColors.accent }]}>
-          {canManageSetup ? 'Edit Vessel Fuel Setup' : 'View Vessel Fuel Setup'}
-        </Text>
-        <Text style={[styles.setupLinkChevron, { color: themeColors.accent }]}>›</Text>
-      </TouchableOpacity>
-
-      {currentLoadError ? (
-        <View
-          style={[
-            styles.loadError,
-            { backgroundColor: themeColors.surface, borderColor: COLORS.warning },
-          ]}
-        >
-          <Text style={[styles.loadErrorText, { color: themeColors.textPrimary }]}>
-            {currentLoadError}
-          </Text>
-          <TouchableOpacity accessibilityRole="button" onPress={loadLogs}>
-            <Text style={[styles.loadErrorAction, { color: themeColors.accent }]}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
-
-      {logs.length > 0 && !loading && (
-        <>
-          <View style={styles.searchRow}>
-            <Input
-              variant="search"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Search by date, time, location…"
-              style={styles.searchInput}
-              returnKeyType="search"
-            />
-          </View>
-          {exportMode && (
-            <TouchableOpacity onPress={toggleSelectAll} style={styles.selectAllRow}>
-              <Text style={[styles.selectAllText, { color: themeColors.accent }]}>
-                {allSelected ? 'Deselect All' : 'Select All'}
+        {exportMode && (
+          <ExportBar
+            count={selectedIds.size}
+            onConfirm={onExportPdf}
+            exporting={exportingPdf}
+            hint="Tap logs to select"
+          />
+        )}
+        {logs.length > 0 && !loading && !waitingForCurrentVessel ? (
+          <View
+            style={[
+              styles.summaryPanel,
+              { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+            ]}
+          >
+            <View style={styles.summaryHeader}>
+              <Text style={[styles.summaryTitle, { color: themeColors.textPrimary }]}>
+                Receipt summary
               </Text>
-            </TouchableOpacity>
-          )}
-        </>
-      )}
-
-      {loading || waitingForCurrentVessel ? (
-        <View style={styles.loader}>
-          <LoadingSpinner />
-        </View>
-      ) : (
-        <ScrollView
-          contentContainerStyle={[
-            styles.listContent,
-            filteredLogs.length === 0 && styles.emptyContent,
-          ]}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={[COLORS.primary]}
-            />
-          }
-        >
-          {filteredLogs.length === 0 ? (
-            <View style={[styles.emptyState, { backgroundColor: themeColors.surface }]}>
-              <Text style={styles.emptyIcon}>⛽</Text>
-              <Text style={[styles.emptyTitle, { color: themeColors.textPrimary }]}>
-                {currentLoadError && logs.length === 0
-                  ? 'Could not load receipts'
-                  : logs.length === 0
-                    ? 'No entries yet'
-                    : 'No matching entries'}
-              </Text>
-              <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
-                {currentLoadError && logs.length === 0
-                  ? 'Retry when your connection is available. Nautical Ops will not treat a load failure as an empty audit log.'
-                  : logs.length === 0
-                    ? 'Tap "Add Receipt" to record your first bunkering entry.'
-                    : 'Try a different search term.'}
-              </Text>
+              <View style={[styles.receiptCount, { backgroundColor: themeColors.controlSelected }]}>
+                <Text style={styles.receiptCountText}>
+                  {logs.length} {logs.length === 1 ? 'receipt' : 'receipts'}
+                </Text>
+              </View>
             </View>
-          ) : (
-            filteredLogs.map((log) => {
-              const selected = selectedIds.has(log.id);
-              const tankAllocations = allocationSnapshot.allocationsByLogId[log.id] ?? [];
-              return (
-                <ButtonTagCard
-                  key={log.id}
-                  headerTitle={log.locationOfRefueling ?? ''}
-                  showCheckbox={exportMode}
-                  checked={selected}
-                  onToggleSelect={() => toggleSelect(log.id)}
-                  selected={exportMode && selected}
-                  onEdit={
-                    canManageSetup && !currentLoadError && !log.currentInventoryOperationId
-                      ? () => onEdit(log)
-                      : undefined
-                  }
-                  onDelete={
-                    canManageSetup &&
-                    !exportMode &&
-                    !currentLoadError &&
-                    !log.currentInventoryOperationId
-                      ? () => {
-                          setVoidReason('');
-                          setVoidTarget(log);
-                        }
-                      : undefined
-                  }
-                  footer={log.createdByName ? `Logged by ${log.createdByName}` : undefined}
-                  collapsible={!exportMode}
-                  expanded={expandedId === log.id}
-                  onToggleExpand={() => setExpandedId(expandedId === log.id ? null : log.id)}
-                  summary={<ButtonTagRow label="Date" value={log.logDate ?? ''} />}
-                >
-                  <ButtonTagRow label="Time" value={log.logTime ?? ''} />
-                  <View style={[styles.statsRow, { backgroundColor: themeColors.background }]}>
-                    <View style={styles.statBox}>
-                      <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
-                        Amount
-                      </Text>
-                      <Text style={[styles.statValue, { color: themeColors.textPrimary }]}>
-                        {log.amountOfFuel} {volumeLabel(log)}
-                      </Text>
-                    </View>
-                    <View style={[styles.statDivider, { backgroundColor: themeColors.border }]} />
-                    <View style={styles.statBox}>
-                      <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
-                        {priceLabel(log)}
-                      </Text>
-                      <Text style={[styles.statValue, { color: themeColors.textPrimary }]}>
-                        {formatCurrency(log.pricePerVolumeUnit, log.currencyCode)}
-                      </Text>
-                    </View>
-                    <View style={[styles.statDivider, { backgroundColor: themeColors.border }]} />
-                    <View style={styles.statBox}>
-                      <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
-                        Total
-                      </Text>
-                      <Text
-                        style={[styles.statValue, styles.totalValue, { color: themeColors.accent }]}
-                      >
-                        {formatCurrency(log.totalPrice, log.currencyCode)}
-                      </Text>
-                    </View>
-                  </View>
-                  <View
-                    style={[
-                      styles.allocations,
-                      {
-                        backgroundColor: themeColors.control,
-                        borderColor: themeColors.border,
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.allocationsTitle, { color: themeColors.textSecondary }]}>
-                      Tank allocation
-                    </Text>
-                    {tankAllocations.length > 0 ? (
-                      tankAllocations.map((allocation) => (
-                        <View key={allocation.fuelTankId} style={styles.allocationRow}>
-                          <Text
-                            style={[styles.allocationTankName, { color: themeColors.textPrimary }]}
-                          >
-                            {allocation.tankName}
+            <View style={styles.summaryMetrics}>
+              <View
+                style={[
+                  styles.summaryMetric,
+                  { backgroundColor: themeColors.background, borderColor: themeColors.border },
+                ]}
+              >
+                <Text style={[styles.summaryLabel, { color: themeColors.textSecondary }]}>
+                  Total fuel
+                </Text>
+                <Text style={[styles.summaryValue, { color: themeColors.textPrimary }]}>
+                  {receiptSummary.volume || '—'}
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.summaryMetric,
+                  { backgroundColor: themeColors.background, borderColor: themeColors.border },
+                ]}
+              >
+                <Text style={[styles.summaryLabel, { color: themeColors.textSecondary }]}>
+                  Total cost
+                </Text>
+                <Text style={[styles.summaryValue, { color: themeColors.accent }]}>
+                  {receiptSummary.cost || '—'}
+                </Text>
+              </View>
+            </View>
+          </View>
+        ) : null}
+        <View style={styles.actionBar}>
+          <Button
+            title="Add Receipt"
+            onPress={onAdd}
+            variant="primary"
+            style={styles.actionBtn}
+            disabled={!!currentLoadError}
+          />
+        </View>
+
+        {currentLoadError ? (
+          <View
+            style={[
+              styles.loadError,
+              { backgroundColor: themeColors.surface, borderColor: COLORS.warning },
+            ]}
+          >
+            <Text style={[styles.loadErrorText, { color: themeColors.textPrimary }]}>
+              {currentLoadError}
+            </Text>
+            <TouchableOpacity accessibilityRole="button" onPress={loadLogs}>
+              <Text style={[styles.loadErrorAction, { color: themeColors.accent }]}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
+        {logs.length > 0 && !loading && (
+          <>
+            <View style={styles.searchRow}>
+              <Input
+                variant="search"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Search by date, time, location…"
+                style={styles.searchInput}
+                returnKeyType="search"
+              />
+            </View>
+            {exportMode && (
+              <TouchableOpacity onPress={toggleSelectAll} style={styles.selectAllRow}>
+                <Text style={[styles.selectAllText, { color: themeColors.accent }]}>
+                  {allSelected ? 'Deselect All' : 'Select All'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </>
+        )}
+
+        {loading || waitingForCurrentVessel ? (
+          <View style={styles.loader}>
+            <LoadingSpinner />
+          </View>
+        ) : (
+          <View style={[styles.listContent, filteredLogs.length === 0 && styles.emptyContent]}>
+            {filteredLogs.length === 0 ? (
+              <View style={[styles.emptyState, { backgroundColor: themeColors.surface }]}>
+                <Text style={styles.emptyIcon}>⛽</Text>
+                <Text style={[styles.emptyTitle, { color: themeColors.textPrimary }]}>
+                  {currentLoadError && logs.length === 0
+                    ? 'Could not load receipts'
+                    : logs.length === 0
+                      ? 'No entries yet'
+                      : 'No matching entries'}
+                </Text>
+                <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
+                  {currentLoadError && logs.length === 0
+                    ? 'Retry when your connection is available. Nautical Ops will not treat a load failure as an empty audit log.'
+                    : logs.length === 0
+                      ? 'Tap "Add Receipt" to record your first bunkering entry.'
+                      : 'Try a different search term.'}
+                </Text>
+              </View>
+            ) : (
+              filteredLogs.map((log) => {
+                const selected = selectedIds.has(log.id);
+                const tankAllocations = allocationSnapshot.allocationsByLogId[log.id] ?? [];
+                return (
+                  <ButtonTagCard
+                    key={log.id}
+                    headerLeft={
+                      <View style={styles.receiptHeaderCopy}>
+                        <Text
+                          style={[
+                            styles.receiptLocation,
+                            { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {log.locationOfRefueling || 'Location not recorded'}
+                        </Text>
+                        <Text style={[styles.receiptDate, { color: themeColors.textSecondary }]}>
+                          {log.logDate || 'Date not recorded'}
+                          {log.logTime ? `  •  ${log.logTime}` : ''}
+                        </Text>
+                      </View>
+                    }
+                    showCheckbox={exportMode}
+                    checked={selected}
+                    onToggleSelect={() => toggleSelect(log.id)}
+                    selected={exportMode && selected}
+                    onEdit={canManageSetup && !currentLoadError ? () => onEdit(log) : undefined}
+                    onDelete={
+                      canManageSetup && !exportMode && !currentLoadError
+                        ? () => confirmDelete(log)
+                        : undefined
+                    }
+                    footer={log.createdByName ? `Logged by ${log.createdByName}` : undefined}
+                    collapsible={!exportMode}
+                    expanded={expandedId === log.id}
+                    onToggleExpand={() => setExpandedId(expandedId === log.id ? null : log.id)}
+                    summary={
+                      <View style={[styles.statsRow, { backgroundColor: themeColors.background }]}>
+                        <View style={styles.statBox}>
+                          <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
+                            Fuel received
                           </Text>
                           <Text
-                            style={[styles.allocationAmount, { color: themeColors.textPrimary }]}
+                            style={[styles.statValue, { color: themeColors.textPrimary }]}
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                            minimumFontScale={0.8}
                           >
-                            {formatVolume(
-                              fromLitres(allocation.amountLitres, allocationSnapshot.displayUnit)
-                            )}{' '}
-                            {displayUnitLabel(allocationSnapshot.displayUnit)}
+                            {formatVolume(log.amountOfFuel)} {volumeLabel(log)}
                           </Text>
                         </View>
-                      ))
-                    ) : (
-                      <Text style={[styles.unallocatedText, { color: themeColors.textSecondary }]}>
-                        {log.volumeUnit === null
-                          ? 'Legacy entry — no tank allocation recorded.'
-                          : 'No tank allocation recorded.'}
+                        <View
+                          style={[styles.statDivider, { backgroundColor: themeColors.border }]}
+                        />
+                        <View style={styles.statBox}>
+                          <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
+                            Price
+                          </Text>
+                          <Text
+                            style={[styles.statValue, { color: themeColors.textPrimary }]}
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                            minimumFontScale={0.8}
+                          >
+                            {formatCurrency(log.pricePerVolumeUnit, log.currencyCode)}
+                          </Text>
+                        </View>
+                        <View
+                          style={[styles.statDivider, { backgroundColor: themeColors.border }]}
+                        />
+                        <View style={styles.statBox}>
+                          <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>
+                            Total
+                          </Text>
+                          <Text
+                            style={[
+                              styles.statValue,
+                              styles.totalValue,
+                              { color: themeColors.accent },
+                            ]}
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                            minimumFontScale={0.8}
+                          >
+                            {formatCurrency(log.totalPrice, log.currencyCode)}
+                          </Text>
+                        </View>
+                      </View>
+                    }
+                  >
+                    <View
+                      style={[
+                        styles.allocations,
+                        {
+                          backgroundColor: themeColors.control,
+                          borderColor: themeColors.border,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.allocationsTitle, { color: themeColors.textSecondary }]}>
+                        Tank allocation
                       </Text>
-                    )}
-                  </View>
-                  <ButtonTagRow label="Comment" value={log.comment ?? ''} />
-                </ButtonTagCard>
-              );
-            })
-          )}
-        </ScrollView>
-      )}
-      <FuelVoidReasonModal
-        visible={!!voidTarget && voidTarget.vesselId === vesselId}
-        title="Void this report-only receipt?"
-        description="This does not delete history or change calculated tank balances. Nautical Ops records your name, time and reason in the legacy audit trail."
-        reason={voidReason}
-        onChangeReason={setVoidReason}
-        onCancel={() => {
-          setVoidTarget(null);
-          setVoidReason('');
-        }}
-        onConfirm={confirmLegacyVoid}
-        submitting={voiding}
-      />
+                      {tankAllocations.length > 0 ? (
+                        tankAllocations.map((allocation) => (
+                          <View key={allocation.fuelTankId} style={styles.allocationRow}>
+                            <Text
+                              style={[
+                                styles.allocationTankName,
+                                { color: themeColors.textPrimary },
+                              ]}
+                            >
+                              {allocation.tankName}
+                            </Text>
+                            <Text
+                              style={[styles.allocationAmount, { color: themeColors.textPrimary }]}
+                            >
+                              {formatVolume(
+                                fromLitres(allocation.amountLitres, allocationSnapshot.displayUnit)
+                              )}{' '}
+                              {displayUnitLabel(allocationSnapshot.displayUnit)}
+                            </Text>
+                          </View>
+                        ))
+                      ) : (
+                        <Text
+                          style={[styles.unallocatedText, { color: themeColors.textSecondary }]}
+                        >
+                          {log.volumeUnit === null
+                            ? 'No tank allocation was recorded for this earlier receipt.'
+                            : 'No tank allocation recorded.'}
+                        </Text>
+                      )}
+                    </View>
+                    <ButtonTagRow label="Comment" value={log.comment ?? ''} />
+                  </ButtonTagCard>
+                );
+              })
+            )}
+          </View>
+        )}
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: SIZES.bottomScrollPadding },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
+  summaryPanel: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.lg,
+    marginHorizontal: SPACING.lg,
+    marginTop: SPACING.lg,
+    padding: SPACING.md,
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  summaryTitle: { fontSize: FONTS.lg, fontWeight: '800' },
+  receiptCount: {
+    borderRadius: 999,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 5,
+  },
+  receiptCountText: { color: COLORS.white, fontSize: FONTS.xs, fontWeight: '800' },
+  summaryMetrics: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  summaryMetric: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 82,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  summaryLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    textAlign: 'center',
+  },
+  summaryValue: {
+    fontSize: FONTS.base,
+    fontWeight: '800',
+    lineHeight: 21,
+    textAlign: 'center',
+  },
   actionBar: {
     flexDirection: 'row',
     gap: SPACING.sm,
@@ -537,23 +639,6 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.sm,
   },
   actionBtn: { flex: 1 },
-  setupLink: {
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 40,
-    paddingHorizontal: SPACING.md,
-    marginBottom: SPACING.sm,
-  },
-  setupLinkText: { fontSize: FONTS.sm, fontWeight: '600' },
-  setupLinkChevron: { fontSize: 20, marginLeft: 2 },
-  auditHint: {
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.sm,
-    fontSize: FONTS.xs,
-    lineHeight: 18,
-    textAlign: 'center',
-  },
   loadError: {
     marginHorizontal: SPACING.lg,
     marginBottom: SPACING.sm,
@@ -570,9 +655,9 @@ const styles = StyleSheet.create({
   searchInput: {},
   selectAllRow: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.sm },
   selectAllText: { fontSize: FONTS.sm, fontWeight: '600' },
-  loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  listContent: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
-  emptyContent: { flexGrow: 1, justifyContent: 'center' },
+  loader: { minHeight: 280, alignItems: 'center', justifyContent: 'center' },
+  listContent: { padding: SPACING.lg },
+  emptyContent: { minHeight: 320, justifyContent: 'center' },
   emptyState: {
     borderRadius: 12,
     padding: SPACING.xl,
@@ -586,6 +671,9 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 48, marginBottom: SPACING.md },
   emptyTitle: { fontSize: FONTS.xl, fontWeight: '700', marginBottom: SPACING.sm },
   emptyText: { fontSize: FONTS.base, textAlign: 'center', lineHeight: 22 },
+  receiptHeaderCopy: { flex: 1, minWidth: 0 },
+  receiptLocation: { fontSize: FONTS.lg, fontWeight: '800' },
+  receiptDate: { fontSize: FONTS.xs, marginTop: 3 },
   statsRow: {
     flexDirection: 'row',
     borderRadius: BORDER_RADIUS.md,
@@ -593,16 +681,18 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
     marginBottom: SPACING.sm,
   },
-  statBox: { flex: 1, alignItems: 'center' },
+  statBox: { flex: 1, minWidth: 0, paddingHorizontal: SPACING.xs },
   statDivider: { width: 1, marginVertical: 2 },
   statLabel: {
     fontSize: FONTS.xs,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.4,
+    height: 32,
+    lineHeight: 14,
     marginBottom: 2,
   },
-  statValue: { fontSize: FONTS.base, fontWeight: '600' },
+  statValue: { fontSize: FONTS.sm, fontWeight: '700', lineHeight: 18, height: 20 },
   totalValue: { fontWeight: '700' },
   allocations: {
     borderWidth: 1,

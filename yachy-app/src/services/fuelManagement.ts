@@ -913,7 +913,7 @@ class FuelManagementService {
     if (!Number.isInteger(input.expectedRevision) || input.expectedRevision < 1) {
       throw new Error('Fuel opening revision must be a positive integer.');
     }
-    if (!input.amendmentReason.trim()) throw new Error('A correction reason is required.');
+    if (!input.amendmentReason.trim()) throw new Error('The edit request is invalid.');
     const effective = effectiveContext({
       effectiveAt: input.occurredAt,
       utcOffsetMinutes: input.utcOffsetMinutes,
@@ -982,7 +982,7 @@ class FuelManagementService {
     if (!Number.isInteger(input.expectedRevision) || input.expectedRevision < 1) {
       throw new Error('Fuel inventory revision must be a positive integer.');
     }
-    if (!input.amendmentReason.trim()) throw new Error('A correction reason is required.');
+    if (!input.amendmentReason.trim()) throw new Error('The edit request is invalid.');
     const effective = effectiveContext({
       effectiveAt: input.occurredAt,
       utcOffsetMinutes: input.utcOffsetMinutes,
@@ -1017,7 +1017,7 @@ class FuelManagementService {
     if (!Number.isInteger(input.expectedRevision) || input.expectedRevision < 1) {
       throw new Error('Fuel inventory revision must be a positive integer.');
     }
-    if (!input.reason.trim()) throw new Error('A void reason is required.');
+    if (!input.reason.trim()) throw new Error('The delete request is invalid.');
     const payload = {
       p_operation_id: input.operationId,
       p_expected_revision: input.expectedRevision,
@@ -1310,7 +1310,7 @@ class FuelManagementService {
       throw new Error('Fuel log revision is invalid.');
     }
     const reason = options.reason.trim();
-    if (!reason) throw new Error('A void reason is required.');
+    if (!reason) throw new Error('The delete request is invalid.');
     const payload = {
       p_fuel_log_id: id,
       p_expected_revision: expectedRevision,
@@ -1382,7 +1382,7 @@ class FuelManagementService {
       throw new Error('Fuel transfer amendments require a valid recorded event time.');
     }
     const reason = input.amendmentReason?.trim() || '';
-    if (!reason) throw new Error('A correction reason is required.');
+    if (!reason) throw new Error('The edit request is invalid.');
     const payload = {
       p_fuel_transfer_id: id,
       p_expected_revision: expectedRevision,
@@ -1409,7 +1409,7 @@ class FuelManagementService {
       throw new Error('Fuel transfer revision is invalid.');
     }
     const reason = options.reason.trim();
-    if (!reason) throw new Error('A void reason is required.');
+    if (!reason) throw new Error('The delete request is invalid.');
     const payload = {
       p_fuel_transfer_id: id,
       p_expected_revision: expectedRevision,

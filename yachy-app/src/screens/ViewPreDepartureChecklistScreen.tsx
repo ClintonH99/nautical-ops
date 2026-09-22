@@ -1,13 +1,15 @@
 /**
  * View Pre-Departure Checklist Screen
- * Read-only view for users to view published checklists
+ * Published checklist view with manager-controlled item completion.
  */
 
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { useAuthStore } from '../store';
 import preDepartureChecklistsService from '../services/preDepartureChecklists';
 import { PreDepartureChecklist, Department } from '../types';
 import { LoadingSpinner, PageHeader } from '../components';
@@ -24,28 +26,105 @@ const DEPARTMENT_OPTIONS: { value: Department | null; label: string }[] = [
 
 export const ViewPreDepartureChecklistScreen = ({ route }: any) => {
   const themeColors = useThemeColors();
+  const { user } = useAuthStore();
   const checklistId = route?.params?.checklistId as string;
+  const canCheckItems = user?.role === 'CAPTAIN_MOV' || user?.role === 'HOD';
 
   const [checklist, setChecklist] = useState<PreDepartureChecklist | null>(null);
   const [loading, setLoading] = useState(true);
+  const checklistRef = useRef<PreDepartureChecklist | null>(null);
+  const confirmedStatesRef = useRef(new Map<string, boolean>());
+  const pendingStatesRef = useRef(new Map<string, boolean>());
+  const savingItemIdsRef = useRef(new Set<string>());
+  const mountedRef = useRef(true);
+
+  useEffect(
+    () => () => {
+      mountedRef.current = false;
+    },
+    []
+  );
+
+  const replaceChecklist = useCallback((nextChecklist: PreDepartureChecklist | null) => {
+    checklistRef.current = nextChecklist;
+    setChecklist(nextChecklist);
+  }, []);
+
+  const updateItemLocally = useCallback(
+    (itemId: string, checked: boolean) => {
+      const currentChecklist = checklistRef.current;
+      if (!currentChecklist) return;
+      replaceChecklist({
+        ...currentChecklist,
+        items: currentChecklist.items.map((item) =>
+          item.id === itemId ? { ...item, checked } : item
+        ),
+      });
+    },
+    [replaceChecklist]
+  );
 
   const loadChecklist = useCallback(async () => {
     if (!checklistId) return;
     try {
       const c = await preDepartureChecklistsService.getById(checklistId);
-      setChecklist(c);
+      confirmedStatesRef.current = new Map(c?.items.map((item) => [item.id, item.checked]) ?? []);
+      replaceChecklist(c);
     } catch (e) {
       console.error('Load checklist error:', e);
     } finally {
       setLoading(false);
     }
-  }, [checklistId]);
+  }, [checklistId, replaceChecklist]);
 
   useFocusEffect(
     useCallback(() => {
       loadChecklist();
     }, [loadChecklist])
   );
+
+  const persistPendingState = useCallback(
+    async (itemId: string) => {
+      if (savingItemIdsRef.current.has(itemId)) return;
+      savingItemIdsRef.current.add(itemId);
+
+      try {
+        while (pendingStatesRef.current.has(itemId)) {
+          const checked = pendingStatesRef.current.get(itemId);
+          pendingStatesRef.current.delete(itemId);
+          if (checked === undefined) continue;
+
+          try {
+            await preDepartureChecklistsService.updateItemChecked(itemId, checked);
+            confirmedStatesRef.current.set(itemId, checked);
+          } catch (error) {
+            console.error('Update checklist item error:', error);
+            if (!pendingStatesRef.current.has(itemId) && mountedRef.current) {
+              updateItemLocally(itemId, confirmedStatesRef.current.get(itemId) ?? false);
+              Alert.alert(
+                'Could not update checklist',
+                'Your last change was not saved. Please try again.'
+              );
+            }
+          }
+        }
+      } finally {
+        savingItemIdsRef.current.delete(itemId);
+      }
+    },
+    [updateItemLocally]
+  );
+
+  const handleToggleItem = (itemId: string) => {
+    if (!canCheckItems) return;
+    const latestItem = checklistRef.current?.items.find((item) => item.id === itemId);
+    if (!latestItem) return;
+
+    const checked = !latestItem.checked;
+    updateItemLocally(itemId, checked);
+    pendingStatesRef.current.set(itemId, checked);
+    void persistPendingState(itemId);
+  };
 
   const deptLabel = checklist?.department
     ? (DEPARTMENT_OPTIONS.find((o) => o.value === checklist.department)?.label ??
@@ -148,18 +227,46 @@ export const ViewPreDepartureChecklistScreen = ({ route }: any) => {
           ) : (
             [...checklist.items]
               .sort((a, b) => a.sortOrder - b.sortOrder)
-              .map((item, idx) => (
-                <View
+              .map((item) => (
+                <TouchableOpacity
                   key={item.id}
                   style={[styles.itemRow, { borderBottomColor: themeColors.border }]}
+                  onPress={() => handleToggleItem(item.id)}
+                  activeOpacity={canCheckItems ? 0.72 : 1}
+                  disabled={!canCheckItems}
+                  accessibilityRole={canCheckItems ? 'checkbox' : undefined}
+                  accessibilityState={canCheckItems ? { checked: item.checked } : undefined}
+                  accessibilityLabel={`${item.label}, ${item.checked ? 'completed' : 'not completed'}`}
                 >
-                  <Text style={[styles.itemNum, { color: themeColors.textSecondary }]}>
-                    {idx + 1}
-                  </Text>
-                  <Text style={[styles.itemLabel, { color: themeColors.textPrimary }]}>
+                  <View
+                    style={[
+                      styles.checkbox,
+                      {
+                        backgroundColor: item.checked
+                          ? themeColors.controlSelected
+                          : themeColors.control,
+                        borderColor: item.checked
+                          ? themeColors.controlSelected
+                          : themeColors.borderStrong,
+                      },
+                    ]}
+                  >
+                    {item.checked ? (
+                      <Ionicons name="checkmark" size={15} color={themeColors.textOnAccent} />
+                    ) : null}
+                  </View>
+                  <Text
+                    style={[
+                      styles.itemLabel,
+                      {
+                        color: item.checked ? themeColors.textSecondary : themeColors.textPrimary,
+                        textDecorationLine: item.checked ? 'line-through' : 'none',
+                      },
+                    ]}
+                  >
                     {item.label}
                   </Text>
-                </View>
+                </TouchableOpacity>
               ))
           )}
         </View>
@@ -217,11 +324,14 @@ const styles = StyleSheet.create({
     minHeight: 46,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  itemNum: {
-    fontSize: FONTS.sm,
-    fontWeight: '700',
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: BORDER_RADIUS.sm,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: SPACING.sm,
-    minWidth: 22,
   },
   itemLabel: {
     flex: 1,

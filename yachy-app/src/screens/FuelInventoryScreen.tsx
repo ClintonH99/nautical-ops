@@ -12,15 +12,13 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { Button, Input, LoadingSpinner, PageHeader } from '../components';
+import { Button, LoadingSpinner, PageHeader } from '../components';
 import { BORDER_RADIUS, COLORS, FONTS, SIZES, SPACING } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { fuelManagementService } from '../services/fuelManagement';
 import { useAuthStore } from '../store';
 import type {
   FuelInventoryLedgerPosting,
-  FuelInventoryLegacyAudit,
-  FuelInventoryLegacyAuditCursor,
   FuelInventoryOperation,
   FuelInventorySnapshot,
   FuelVolumeUnit,
@@ -45,12 +43,7 @@ function formatVolume(value: number): string {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }).format(value);
 }
 
-const HIDDEN_MANUAL_INVENTORY_KINDS = new Set([
-  'OPENING',
-  'SOUNDING',
-  'CONSUMPTION',
-  'ADJUSTMENT',
-]);
+const HIDDEN_MANUAL_INVENTORY_KINDS = new Set(['OPENING', 'SOUNDING', 'CONSUMPTION', 'ADJUSTMENT']);
 
 function isHiddenManualInventoryRecord(record: FuelInventoryOperation): boolean {
   return HIDDEN_MANUAL_INVENTORY_KINDS.has(record.kind);
@@ -68,7 +61,7 @@ function historyLabel(kind: string): string {
     SOUNDING: 'Tank sounding',
     CONSUMPTION: 'Fuel consumed',
     ADJUSTMENT: 'Manual adjustment',
-    REVERSAL: 'Correction / reversal',
+    REVERSAL: 'Record change',
   };
   return labels[kind] ?? 'Fuel activity';
 }
@@ -88,153 +81,6 @@ function historyIcon(kind: string): keyof typeof Ionicons.glyphMap {
 
 function postingTankName(posting: FuelInventoryLedgerPosting | undefined): string {
   return posting?.tankName ?? '';
-}
-
-function legacySnapshotSummary(
-  record: FuelInventoryLegacyAudit,
-  snapshot: Record<string, unknown>
-): string {
-  const date = asString(snapshot.log_date || snapshot.transfer_date);
-  const time = asString(snapshot.log_time || snapshot.transfer_time);
-  const location = asString(snapshot.location_of_refueling || snapshot.location);
-  const amountValue = Number(
-    record.sourceType === 'FUEL_LOG' ? snapshot.amount_of_fuel : snapshot.amount_litres
-  );
-  const receiptUnit =
-    snapshot.volume_unit === 'LITRES'
-      ? 'L'
-      : snapshot.volume_unit === 'US_GALLONS'
-        ? 'US gal'
-        : 'US gal (legacy)';
-  const amount = Number.isFinite(amountValue)
-    ? `${formatVolume(amountValue)} ${record.sourceType === 'FUEL_LOG' ? receiptUnit : 'L'}`
-    : '';
-  const route =
-    record.sourceType === 'FUEL_TRANSFER'
-      ? [
-          asString(snapshot.source_tank_name) || 'Previous source tank',
-          asString(snapshot.destination_tank_name) || 'Previous destination tank',
-        ].join(' → ')
-      : '';
-  return [route, [date, time].filter(Boolean).join(' '), amount, location]
-    .filter(Boolean)
-    .join(' · ');
-}
-
-function LegacyAuditCard({ record }: { record: FuelInventoryLegacyAudit }) {
-  const themeColors = useThemeColors();
-  const sourceLabel = record.sourceType === 'FUEL_LOG' ? 'Receipt' : 'Transfer';
-  const actionLabel = record.action === 'VOID' ? 'Voided' : 'Corrected';
-  const before = legacySnapshotSummary(record, record.beforeSnapshot);
-  const after = legacySnapshotSummary(record, record.afterSnapshot);
-  const revisions =
-    record.revisionBefore == null || record.revisionAfter == null
-      ? ''
-      : `Revision ${record.revisionBefore} → ${record.revisionAfter}`;
-
-  return (
-    <View
-      style={[
-        styles.historyCard,
-        { backgroundColor: themeColors.surface, borderColor: themeColors.border },
-      ]}
-    >
-      <View style={[styles.historyIcon, { backgroundColor: themeColors.accentSoft }]}>
-        <Ionicons
-          name={record.action === 'VOID' ? 'close-circle-outline' : 'create-outline'}
-          size={20}
-          color={record.action === 'VOID' ? COLORS.danger : themeColors.accent}
-        />
-      </View>
-      <View style={styles.historyCopy}>
-        <Text
-          style={[
-            styles.historyKind,
-            { color: record.action === 'VOID' ? COLORS.danger : themeColors.accent },
-          ]}
-        >
-          Report-only {sourceLabel}
-        </Text>
-        <Text style={[styles.historyTitle, { color: themeColors.textPrimary }]}>{actionLabel}</Text>
-        {record.action === 'AMENDMENT' && before ? (
-          <Text style={[styles.historyMeta, { color: themeColors.textSecondary }]}>
-            Before: {before}
-          </Text>
-        ) : null}
-        {after ? (
-          <Text style={[styles.historyMeta, { color: themeColors.textSecondary }]}>
-            {record.action === 'AMENDMENT' ? 'After' : 'Record'}: {after}
-          </Text>
-        ) : null}
-        <Text style={[styles.historyReason, { color: themeColors.textPrimary }]}>
-          Reason: {record.reason}
-        </Text>
-        <Text style={[styles.historyAudit, { color: themeColors.textMuted }]}>
-          {[
-            revisions,
-            record.createdByName ? `By ${record.createdByName}` : '',
-            record.recordedAt ? formatFuelEventDateTime(record.recordedAt, null) : '',
-          ]
-            .filter(Boolean)
-            .join(' · ')}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
-function LegacyAuditSection({
-  records,
-  nextCursor,
-  loadError,
-  loadingOlder,
-  disabled,
-  onLoadOlder,
-}: {
-  records: FuelInventoryLegacyAudit[];
-  nextCursor: FuelInventoryLegacyAuditCursor | null;
-  loadError: string | null;
-  loadingOlder: boolean;
-  disabled: boolean;
-  onLoadOlder: () => void;
-}) {
-  const themeColors = useThemeColors();
-  return (
-    <View style={styles.legacyAuditBlock}>
-      <View style={styles.legacySection}>
-        <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
-          Report-only record changes
-        </Text>
-        <Text style={[styles.legacyHint, { color: themeColors.textSecondary }]}>
-          Corrections and voids to receipts or transfers created before inventory activation. These
-          records are retained for audit and do not change calculated tank balances.
-        </Text>
-      </View>
-      {records.length === 0 ? (
-        <View style={[styles.emptyActivity, { backgroundColor: themeColors.surface }]}>
-          <Ionicons name="shield-checkmark-outline" size={30} color={themeColors.textSecondary} />
-          <Text style={[styles.emptyActivityTitle, { color: themeColors.textPrimary }]}>
-            No report-only changes
-          </Text>
-        </View>
-      ) : (
-        records.map((record) => <LegacyAuditCard key={record.id} record={record} />)
-      )}
-      {loadError ? (
-        <Text style={[styles.historyLoadError, { color: COLORS.danger }]}>{loadError}</Text>
-      ) : null}
-      {nextCursor ? (
-        <Button
-          title="Load Older Record Changes"
-          variant="outline"
-          onPress={onLoadOlder}
-          loading={loadingOlder}
-          disabled={loadingOlder || disabled}
-          style={styles.loadOlderButton}
-        />
-      ) : null}
-    </View>
-  );
 }
 
 function historyTitle(record: FuelInventoryOperation): string {
@@ -272,14 +118,14 @@ function HistoryCard({
   record,
   unit,
   canManage,
-  onCorrect,
-  onVoid,
+  onEdit,
+  onDelete,
 }: {
   record: FuelInventoryOperation;
   unit: FuelVolumeUnit;
   canManage: boolean;
-  onCorrect: () => void;
-  onVoid: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
 }) {
   const themeColors = useThemeColors();
   const kind = historyKind(record);
@@ -339,15 +185,14 @@ function HistoryCard({
             ))}
           </View>
         ) : null}
-        {amendmentReason ? (
+        {amendmentReason && amendmentReason !== 'Edited by user' ? (
           <Text style={[styles.historyReason, { color: themeColors.textPrimary }]}>
-            Correction reason: {amendmentReason}
+            Edit reason: {amendmentReason}
           </Text>
         ) : null}
-        {record.voided && record.voidReason ? (
+        {record.voided && record.voidReason && record.voidReason !== 'Deleted by user' ? (
           <Text style={[styles.historyReason, { color: COLORS.danger }]}>
-            {record.status === 'REPLACED' ? 'Replacement reason' : 'Void reason'}:{' '}
-            {record.voidReason}
+            {record.status === 'REPLACED' ? 'Edit reason' : 'Deletion reason'}: {record.voidReason}
           </Text>
         ) : null}
         {recordedAt || actor ? (
@@ -364,7 +209,7 @@ function HistoryCard({
           <Text style={[styles.historyAudit, { color: themeColors.textMuted }]}>
             {[
               record.voidedByName
-                ? `${record.status === 'REPLACED' ? 'Replaced' : 'Voided'} by ${record.voidedByName}`
+                ? `${record.status === 'REPLACED' ? 'Edited' : 'Deleted'} by ${record.voidedByName}`
                 : '',
               record.voidedAt ? formatFuelEventDateTime(record.voidedAt, null) : '',
             ]
@@ -376,20 +221,20 @@ function HistoryCard({
           <View style={styles.historyActions}>
             <TouchableOpacity
               accessibilityRole="button"
-              onPress={onCorrect}
+              onPress={onEdit}
               style={[styles.historyAction, { borderColor: themeColors.border }]}
             >
               <Ionicons name="create-outline" size={16} color={themeColors.accent} />
-              <Text style={[styles.historyActionText, { color: themeColors.accent }]}>Correct</Text>
+              <Text style={[styles.historyActionText, { color: themeColors.accent }]}>Edit</Text>
             </TouchableOpacity>
             {record.kind !== 'OPENING' ? (
               <TouchableOpacity
                 accessibilityRole="button"
-                onPress={onVoid}
+                onPress={onDelete}
                 style={[styles.historyAction, { borderColor: COLORS.danger }]}
               >
-                <Ionicons name="close-circle-outline" size={16} color={COLORS.danger} />
-                <Text style={[styles.historyActionText, { color: COLORS.danger }]}>Void</Text>
+                <Ionicons name="trash-outline" size={16} color={COLORS.danger} />
+                <Text style={[styles.historyActionText, { color: COLORS.danger }]}>Delete</Text>
               </TouchableOpacity>
             ) : null}
           </View>
@@ -443,57 +288,43 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
   const [storedSnapshot, setStoredSnapshot] = useState<FuelInventorySnapshot | null>(null);
   const [storedHistory, setStoredHistory] = useState<FuelInventoryOperation[]>([]);
   const [storedNextBeforeSequence, setStoredNextBeforeSequence] = useState<number | null>(null);
-  const [storedLegacyAudits, setStoredLegacyAudits] = useState<FuelInventoryLegacyAudit[]>([]);
-  const [storedLegacyCursor, setStoredLegacyCursor] =
-    useState<FuelInventoryLegacyAuditCursor | null>(null);
   const [loadError, setLoadError] = useState<{ vesselId: string; message: string } | null>(null);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [historyLoadError, setHistoryLoadError] = useState<string | null>(null);
-  const [loadingOlderLegacy, setLoadingOlderLegacy] = useState(false);
-  const [legacyLoadError, setLegacyLoadError] = useState<string | null>(null);
-  const [voidTarget, setVoidTarget] = useState<FuelInventoryOperation | null>(null);
-  const [voidReason, setVoidReason] = useState('');
-  const [voiding, setVoiding] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<FuelInventoryOperation | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const loadGeneration = useRef(0);
   const currentVesselId = useRef(vesselId);
   currentVesselId.current = vesselId;
 
   useEffect(() => {
-    setVoidTarget(null);
-    setVoidReason('');
-    setVoiding(false);
+    setDeleteTarget(null);
+    setDeleting(false);
   }, [vesselId]);
 
   const load = useCallback(async () => {
     const generation = ++loadGeneration.current;
     setLoadingOlder(false);
-    setLoadingOlderLegacy(false);
     setHistoryLoadError(null);
-    setLegacyLoadError(null);
     if (!vesselId) {
       setLoadedVesselId(null);
       setStoredSnapshot(null);
       setStoredHistory([]);
       setStoredNextBeforeSequence(null);
-      setStoredLegacyAudits([]);
-      setStoredLegacyCursor(null);
       setLoadError(null);
       setLoading(false);
       setRefreshing(false);
       return;
     }
     try {
-      const [nextSnapshot, nextHistory, nextLegacyHistory] = await Promise.all([
+      const [nextSnapshot, nextHistory] = await Promise.all([
         fuelManagementService.getInventorySnapshot(vesselId),
         fuelManagementService.getInventoryHistory(vesselId),
-        fuelManagementService.getLegacyInventoryAudits(vesselId),
       ]);
       if (generation !== loadGeneration.current) return;
       setStoredSnapshot(nextSnapshot);
       setStoredHistory(nextHistory.operations);
       setStoredNextBeforeSequence(nextHistory.nextBeforeSequence);
-      setStoredLegacyAudits(nextLegacyHistory.audits);
-      setStoredLegacyCursor(nextLegacyHistory.nextCursor);
       setLoadedVesselId(vesselId);
       setLoadError(null);
     } catch (error) {
@@ -502,7 +333,7 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
       setLoadError({
         vesselId,
         message:
-          'Fuel inventory could not be refreshed. Existing figures are retained, but recording and corrections are paused until the data refreshes.',
+          'Fuel inventory could not be refreshed. Existing figures are retained, but recording and changes are paused until the data refreshes.',
       });
     } finally {
       if (generation === loadGeneration.current) {
@@ -527,8 +358,6 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
       ? storedHistory.filter((record) => !isHiddenManualInventoryRecord(record))
       : [];
   const nextBeforeSequence = loadedVesselId === vesselId ? storedNextBeforeSequence : null;
-  const legacyAudits = loadedVesselId === vesselId ? storedLegacyAudits : [];
-  const legacyCursor = loadedVesselId === vesselId ? storedLegacyCursor : null;
   const currentLoadError = loadError?.vesselId === vesselId ? loadError.message : null;
   const waitingForCurrentVessel = loadedVesselId !== vesselId && !currentLoadError;
 
@@ -577,45 +406,16 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
     }
   };
 
-  const loadOlderLegacyAudits = async () => {
-    if (
-      !vesselId ||
-      !legacyCursor ||
-      loadingOlderLegacy ||
-      currentLoadError ||
-      loadedVesselId !== vesselId
-    ) {
-      return;
-    }
-    const generation = loadGeneration.current;
-    setLoadingOlderLegacy(true);
-    setLegacyLoadError(null);
-    try {
-      const nextPage = await fuelManagementService.getLegacyInventoryAudits(vesselId, {
-        before: legacyCursor,
-      });
-      if (generation !== loadGeneration.current) return;
-      setStoredLegacyAudits((current) => {
-        const existingIds = new Set(current.map((record) => record.id));
-        return [...current, ...nextPage.audits.filter((record) => !existingIds.has(record.id))];
-      });
-      setStoredLegacyCursor(nextPage.nextCursor);
-    } catch (error) {
-      if (generation !== loadGeneration.current) return;
-      console.error('Load older legacy fuel audits error:', error);
-      setLegacyLoadError('Older report-only record changes could not be loaded. Please try again.');
-    } finally {
-      if (generation === loadGeneration.current) setLoadingOlderLegacy(false);
-    }
-  };
-
   const openFuelReceipt = () => {
     const configuredTankCount = snapshot?.tanks.length ?? 0;
     if (configuredTankCount > 0 || canManage) {
       navigation.navigate('AddEditFuelLog', {});
       return;
     }
-    Alert.alert('Fuel setup required', 'Ask an HOD or Captain MOV to configure a vessel fuel tank.');
+    Alert.alert(
+      'Fuel setup required',
+      'Ask an HOD or Captain MOV to configure a vessel fuel tank.'
+    );
   };
 
   const openFuelTransfer = () => {
@@ -646,7 +446,7 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
     );
   };
 
-  const correctOperation = (record: FuelInventoryOperation) => {
+  const editOperation = (record: FuelInventoryOperation) => {
     if (record.kind === 'REFUEL' && record.sourceFuelLogId) {
       navigation.navigate('AddEditFuelLog', {
         logId: record.sourceFuelLogId,
@@ -658,35 +458,35 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
         correctionOperationId: record.id,
       });
     } else {
-      Alert.alert('Correction unavailable', 'Refresh the fuel history and try again.');
+      Alert.alert('Edit unavailable', 'Refresh the fuel history and try again.');
     }
   };
 
-  const confirmVoid = async () => {
+  const confirmDelete = async () => {
     if (
-      !voidTarget ||
+      !deleteTarget ||
       !vesselId ||
-      voidTarget.vesselId !== vesselId ||
-      !voidReason.trim() ||
-      voiding ||
+      deleteTarget.vesselId !== vesselId ||
+      deleting ||
       !canManage ||
       currentLoadError
     ) {
       return;
     }
-    const target = voidTarget;
+    const target = deleteTarget;
     const targetVesselId = vesselId;
-    setVoiding(true);
+    const actionReason = 'Deleted by user';
+    setDeleting(true);
     try {
       if (target.kind === 'REFUEL' && target.sourceFuelLogId) {
         await fuelManagementService.voidFuelLog(target.sourceFuelLogId, {
           expectedRevision: target.revisionNo,
-          reason: voidReason.trim(),
+          reason: actionReason,
         });
       } else if (target.kind === 'TRANSFER' && target.sourceTransferId) {
         await fuelManagementService.deleteTransfer(target.sourceTransferId, {
           expectedRevision: target.revisionNo,
-          reason: voidReason.trim(),
+          reason: actionReason,
         });
       } else if (
         target.kind === 'SOUNDING' ||
@@ -696,25 +496,26 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
         await fuelManagementService.voidInventoryEntry({
           operationId: target.id,
           expectedRevision: target.revisionNo,
-          reason: voidReason.trim(),
+          reason: actionReason,
         });
       } else {
-        throw new Error('This fuel record cannot be voided here.');
+        throw new Error('This fuel record cannot be deleted here.');
       }
       if (currentVesselId.current !== targetVesselId) return;
-      setVoidTarget(null);
-      setVoidReason('');
+      setDeleteTarget(null);
       await load();
-      Alert.alert('Fuel record voided', 'The reversal and its reason are now in the audit trail.');
+      Alert.alert(target.kind === 'TRANSFER' ? 'Fuel transfer deleted.' : 'Fuel record deleted.');
     } catch (error) {
       if (currentVesselId.current !== targetVesselId) return;
-      console.error('Void fuel inventory operation error:', error);
+      if (__DEV__) console.warn('Update fuel inventory operation warning:', error);
       Alert.alert(
-        'Could not void fuel record',
+        target.kind === 'TRANSFER'
+          ? 'Could not delete fuel transfer'
+          : 'Could not delete fuel record',
         error instanceof Error ? error.message : 'Refresh the fuel history and try again.'
       );
     } finally {
-      if (currentVesselId.current === targetVesselId) setVoiding(false);
+      if (currentVesselId.current === targetVesselId) setDeleting(false);
     }
   };
 
@@ -794,14 +595,6 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
               style={styles.centerAction}
             />
           </View>
-          <LegacyAuditSection
-            records={legacyAudits}
-            nextCursor={legacyCursor}
-            loadError={legacyLoadError}
-            loadingOlder={loadingOlderLegacy}
-            disabled={!!currentLoadError}
-            onLoadOlder={loadOlderLegacyAudits}
-          />
         </ScrollView>
       ) : (
         <ScrollView
@@ -965,11 +758,8 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
                 record={record}
                 unit={unit}
                 canManage={canManage && !currentLoadError}
-                onCorrect={() => correctOperation(record)}
-                onVoid={() => {
-                  setVoidReason('');
-                  setVoidTarget(record);
-                }}
+                onEdit={() => editOperation(record)}
+                onDelete={() => setDeleteTarget(record)}
               />
             ))
           )}
@@ -988,60 +778,47 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
               style={styles.loadOlderButton}
             />
           ) : null}
-
-          <LegacyAuditSection
-            records={legacyAudits}
-            nextCursor={legacyCursor}
-            loadError={legacyLoadError}
-            loadingOlder={loadingOlderLegacy}
-            disabled={!!currentLoadError}
-            onLoadOlder={loadOlderLegacyAudits}
-          />
         </ScrollView>
       )}
       <Modal
-        visible={!!voidTarget && voidTarget.vesselId === vesselId}
+        visible={!!deleteTarget && deleteTarget.vesselId === vesselId}
         transparent
         animationType="fade"
-        onRequestClose={() => !voiding && setVoidTarget(null)}
+        onRequestClose={() => !deleting && setDeleteTarget(null)}
       >
         <View style={styles.modalBackdrop}>
           <Pressable
             style={StyleSheet.absoluteFill}
-            onPress={() => !voiding && setVoidTarget(null)}
+            onPress={() => !deleting && setDeleteTarget(null)}
           />
           <View style={[styles.modalCard, { backgroundColor: themeColors.surface }]}>
             <View style={styles.modalIcon}>
               <Ionicons name="warning-outline" size={26} color={COLORS.danger} />
             </View>
             <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
-              Void this fuel record?
+              {deleteTarget?.kind === 'TRANSFER'
+                ? 'Delete this fuel transfer?'
+                : 'Delete this fuel record?'}
             </Text>
             <Text style={[styles.modalText, { color: themeColors.textSecondary }]}>
-              This does not erase history. Nautical Ops records a reversal with your name, time and
-              reason, then recalculates every affected tank.
+              {deleteTarget?.kind === 'TRANSFER'
+                ? 'This will remove the transfer and recalculate both affected tank balances.'
+                : 'This will remove the record from the app and recalculate any affected tank balances.'}
             </Text>
-            <Input
-              label="Reason for voiding"
-              value={voidReason}
-              onChangeText={setVoidReason}
-              placeholder="Required: explain why this record is invalid"
-              multiline
-            />
             <View style={styles.modalButtons}>
               <Button
                 title="Cancel"
                 variant="outline"
-                onPress={() => setVoidTarget(null)}
-                disabled={voiding}
+                onPress={() => setDeleteTarget(null)}
+                disabled={deleting}
                 style={styles.modalButton}
               />
               <Button
-                title="Void Record"
+                title={deleteTarget?.kind === 'TRANSFER' ? 'Delete Transfer' : 'Delete Record'}
                 variant="danger"
-                onPress={confirmVoid}
-                loading={voiding}
-                disabled={!voidReason.trim()}
+                onPress={confirmDelete}
+                loading={deleting}
+                disabled={deleting}
                 style={styles.modalButton}
               />
             </View>
@@ -1217,14 +994,6 @@ const styles = StyleSheet.create({
     marginTop: SPACING.sm,
   },
   loadOlderButton: { alignSelf: 'center', minWidth: 210, marginTop: SPACING.md },
-  legacySection: { marginTop: SPACING.xl },
-  legacyAuditBlock: { marginBottom: SPACING.md },
-  legacyHint: {
-    fontSize: FONTS.sm,
-    lineHeight: 20,
-    marginTop: -SPACING.sm,
-    marginBottom: SPACING.md,
-  },
   emptyActivity: { borderRadius: BORDER_RADIUS.lg, alignItems: 'center', padding: SPACING.xl },
   emptyActivityTitle: {
     fontSize: FONTS.base,

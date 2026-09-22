@@ -83,8 +83,8 @@ describe('fuel inventory presentation', () => {
     voided.voided = true;
     voided.voidKind = 'ERROR';
 
-    expect(fuelOperationAuditLabel(amended)).toBe('Amended fuel received');
-    expect(fuelOperationAuditLabel(voided)).toBe('Voided fuel consumed');
+    expect(fuelOperationAuditLabel(amended)).toBe('Edited fuel received');
+    expect(fuelOperationAuditLabel(voided)).toBe('Deleted fuel consumed');
     expect(fuelOperationAuditLabel(operation('SOUNDING', [800]))).toBe('Tank sounding');
   });
 
