@@ -14,6 +14,7 @@ import {
   Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
@@ -25,7 +26,6 @@ import {
   Input,
   ButtonTagCard,
   ButtonTagRow,
-  LoadingSpinner,
   PageHeader,
   ExportButton,
   ExportBar,
@@ -192,7 +192,7 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
               variant="search"
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder="Search by date, location, description…"
+              placeholder="Search waste logs"
               style={styles.searchInput}
               returnKeyType="search"
             />
@@ -223,8 +223,18 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
           }
         >
           {filteredLogs.length === 0 ? (
-            <View style={[styles.emptyState, { backgroundColor: themeColors.surface }]}>
-              <Text style={styles.emptyIcon}>🗑️</Text>
+            <View
+              style={[
+                styles.emptyState,
+                {
+                  backgroundColor: themeColors.surface,
+                  borderColor: themeColors.border,
+                },
+              ]}
+            >
+              <View style={[styles.emptyIconCircle, { backgroundColor: themeColors.accentSoft }]}>
+                <Ionicons name="trash-outline" size={26} color={themeColors.accent} />
+              </View>
               <Text style={[styles.emptyTitle, { color: themeColors.textPrimary }]}>
                 {logs.length === 0 ? 'No entries yet' : 'No matching entries'}
               </Text>
@@ -257,16 +267,18 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
                   summary={
                     <ButtonTagRow
                       label="Date"
-                      value={[log.logDate, log.logTime].filter(Boolean).join('  ·  ')}
+                      value={[log.logDate, log.logTime].filter(Boolean).join(' · ')}
                     />
                   }
                 >
-                  <ButtonTagRow label="Time" value={log.logTime ?? ''} />
-                  <ButtonTagRow
-                    label="Description of Garbage"
-                    value={log.descriptionOfGarbage ?? ''}
-                  />
-                  <ButtonTagRow label="Weight" value={weightStr} />
+                  <View style={styles.detailGrid}>
+                    <View style={styles.descriptionColumn}>
+                      <ButtonTagRow label="Description" value={log.descriptionOfGarbage ?? ''} />
+                    </View>
+                    <View style={styles.weightColumn}>
+                      <ButtonTagRow label="Weight" value={weightStr} />
+                    </View>
+                  </View>
                 </ButtonTagCard>
               );
             })
@@ -297,7 +309,8 @@ const styles = StyleSheet.create({
   listContent: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   emptyContent: { flexGrow: 1, justifyContent: 'center' },
   emptyState: {
-    borderRadius: 12,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
     padding: SPACING.xl,
     alignItems: 'center',
     shadowColor: COLORS.black,
@@ -306,7 +319,20 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  emptyIcon: { fontSize: 48, marginBottom: SPACING.md },
+  emptyIconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: BORDER_RADIUS.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.md,
+  },
   emptyTitle: { fontSize: FONTS.xl, fontWeight: '700', marginBottom: SPACING.sm },
   emptyText: { fontSize: FONTS.base, textAlign: 'center', lineHeight: 22 },
+  detailGrid: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+  },
+  descriptionColumn: { flex: 1.5 },
+  weightColumn: { flex: 0.7, minWidth: 72 },
 });
