@@ -97,6 +97,7 @@ export const CrewLeaveScreen = ({ navigation }: any) => {
   const requestIdRef = useRef(0);
   const offsetRef = useRef(0);
   const loadingMoreRef = useRef(false);
+  const loadedVesselIdRef = useRef<string | null>(null);
 
   const vesselId = user?.vesselId ?? null;
   const canManage = user?.role === 'CAPTAIN_MOV' || user?.role === 'HOD';
@@ -123,7 +124,11 @@ export const CrewLeaveScreen = ({ navigation }: any) => {
       const requestId = mode === 'replace' ? ++requestIdRef.current : requestIdRef.current;
       const offset = mode === 'append' ? offsetRef.current : 0;
       if (mode === 'replace') {
-        setLoading(true);
+        if (loadedVesselIdRef.current !== vesselId) {
+          loadedVesselIdRef.current = vesselId;
+          setLeave([]);
+          setLoading(true);
+        }
       } else {
         loadingMoreRef.current = true;
         setLoadingMore(true);

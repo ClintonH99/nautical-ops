@@ -3,7 +3,7 @@
  * Create button, department filter, list of uniform labels. Export mode:
  * select labels → Export to PDF.
  */
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -49,6 +49,7 @@ export const UniformsScreen = ({ navigation }: any) => {
   const [exporting, setExporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const loadedVesselIdRef = useRef<string | null>(null);
 
   const vesselId = user?.vesselId ?? null;
 
@@ -136,7 +137,11 @@ export const UniformsScreen = ({ navigation }: any) => {
 
   const loadUniforms = useCallback(async () => {
     if (!vesselId) return;
-    setLoading(true);
+    if (loadedVesselIdRef.current !== vesselId) {
+      loadedVesselIdRef.current = vesselId;
+      setUniforms([]);
+      setLoading(true);
+    }
     try {
       const data = await uniformsService.getByVessel(vesselId);
       setUniforms(data);

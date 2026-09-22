@@ -2,7 +2,7 @@
  * Contractor Database Screen
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -84,6 +84,7 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
   const [searchFilter, setSearchFilter] = useState<SearchFilter>('all');
   const [searchFilterOpen, setSearchFilterOpen] = useState(false);
   const [expandedContractorId, setExpandedContractorId] = useState<string | null>(null);
+  const loadedVesselIdRef = useRef<string | null>(null);
 
   const vesselId = user?.vesselId ?? null;
 
@@ -125,7 +126,11 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
     .filter(matchesKeyword);
   const loadContractors = useCallback(async () => {
     if (!vesselId) return;
-    setLoading(true);
+    if (loadedVesselIdRef.current !== vesselId) {
+      loadedVesselIdRef.current = vesselId;
+      setContractors([]);
+      setLoading(true);
+    }
     try {
       const data = await contractorsService.getByVessel(vesselId);
       setContractors(data);

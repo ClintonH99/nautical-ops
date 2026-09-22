@@ -1,7 +1,7 @@
 /**
  * Notepad Screen
  */
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { PageHeader, PreviewActionButtons } from '../components';
 import {
   View,
@@ -34,15 +34,23 @@ export const NotepadScreen = ({ navigation }: any) => {
   const { user } = useAuthStore();
   const themeColors = useThemeColors();
   const [notes, setNotes] = useState<Note[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
+  const loadedUserIdRef = useRef<string | null>(null);
   const vesselId = user?.vesselId ?? null;
 
   const userId = user?.id ?? null;
 
   const loadNotes = useCallback(async () => {
-    if (!userId) return;
-    setLoading(true);
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+    if (loadedUserIdRef.current !== userId) {
+      loadedUserIdRef.current = userId;
+      setNotes([]);
+      setLoading(true);
+    }
     try {
       const data = await notesService.getMyNotes(userId);
       setNotes(data);

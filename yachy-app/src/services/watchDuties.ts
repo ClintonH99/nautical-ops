@@ -134,6 +134,30 @@ export async function addDutyItem(
   return data.id;
 }
 
+export async function addDutyItems(groupId: string, labels: string[]): Promise<DutyItem[]> {
+  if (labels.length === 0) return [];
+
+  const rows = labels.map((label, sortOrder) => ({
+    group_id: groupId,
+    label,
+    sort_order: sortOrder,
+  }));
+  const { data, error } = await supabase
+    .from('watch_duty_items')
+    .insert(rows)
+    .select('id, label, sort_order');
+  if (error) throw error;
+
+  return (data ?? [])
+    .map((item) => ({
+      id: item.id,
+      label: item.label,
+      sortOrder: item.sort_order,
+      checked: false,
+    }))
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
 export async function deleteDutyItem(itemId: string): Promise<void> {
   const { data, error } = await supabase
     .from('watch_duty_items')

@@ -63,6 +63,7 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
   const pendingItemsRef = useRef(new Map<string, ShoppingListItem[]>());
   const savingListIdsRef = useRef(new Set<string>());
   const mountedRef = useRef(true);
+  const loadedVesselIdRef = useRef<string | null>(null);
 
   const vesselId = user?.vesselId ?? null;
 
@@ -94,7 +95,11 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
 
   const loadLists = useCallback(async () => {
     if (!vesselId) return;
-    setLoading(true);
+    if (loadedVesselIdRef.current !== vesselId) {
+      loadedVesselIdRef.current = vesselId;
+      replaceLists([]);
+      setLoading(true);
+    }
     try {
       const data = await shoppingListsService.getByVessel(vesselId);
       data.forEach((list) => confirmedItemsRef.current.set(list.id, list.items));

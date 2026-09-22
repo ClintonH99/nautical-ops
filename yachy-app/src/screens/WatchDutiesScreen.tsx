@@ -46,6 +46,7 @@ import {
   createDutyGroup,
   deleteDutyGroup,
   addDutyItem,
+  addDutyItems,
   deleteDutyItem,
   addWatchAssignment,
   removeWatchAssignment,
@@ -137,6 +138,7 @@ export const WatchDutiesScreen = () => {
   const pendingDutyStatesRef = useRef(new Map<string, boolean>());
   const savingDutyItemIdsRef = useRef(new Set<string>());
   const mountedRef = useRef(true);
+  const loadedContextRef = useRef<string | null>(null);
 
   const weekStartDate = getMonday(new Date());
   const weekStart = toDateStr(weekStartDate);
@@ -176,7 +178,15 @@ export const WatchDutiesScreen = () => {
 
   const loadData = useCallback(async () => {
     if (!user?.vesselId) return;
-    setLoading(true);
+    const contextKey = `${user.vesselId}:${user.id}:${weekStart}`;
+    if (loadedContextRef.current !== contextKey) {
+      loadedContextRef.current = contextKey;
+      setLoading(true);
+      setRules('');
+      setAssignments([]);
+      replaceDutyGroups([]);
+      setCrewList([]);
+    }
     try {
       const [rulesData, assignmentData, dutyData] = await Promise.all([
         getRules(user.vesselId),
@@ -305,10 +315,10 @@ export const WatchDutiesScreen = () => {
   };
 
   const handleRemoveAssignment = (assignmentId: string) => {
-    Alert.alert('Remove Watch Assignment', 'Remove this watch assignment?', [
+    Alert.alert('Delete Watch Assignment', 'Delete this watch assignment?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Remove',
+        text: 'Delete',
         style: 'destructive',
         onPress: async () => {
           try {
@@ -428,12 +438,17 @@ export const WatchDutiesScreen = () => {
     setSavingGroup(true);
     try {
       createdGroupId = await createDutyGroup(user.vesselId, title, newGroupDept);
-      for (const [index, label] of itemLabels.entries()) {
-        await addDutyItem(createdGroupId, label, index);
-      }
-
-      const refreshedGroups = await getDutyGroups(user.vesselId, user.id);
-      setDutyGroups(refreshedGroups);
+      const createdItems = await addDutyItems(createdGroupId, itemLabels);
+      createdItems.forEach((item) => confirmedDutyStatesRef.current.set(item.id, false));
+      replaceDutyGroups([
+        ...dutyGroupsRef.current,
+        {
+          id: createdGroupId,
+          title,
+          department: newGroupDept,
+          items: createdItems,
+        },
+      ]);
       setNewGroupTitle('');
       setNewGroupItems(['']);
       setAddGroupModalVisible(false);
@@ -502,10 +517,10 @@ export const WatchDutiesScreen = () => {
   };
 
   const handleDeleteItem = (groupId: string, itemId: string) => {
-    Alert.alert('Remove Duty Item', 'Remove this duty item?', [
+    Alert.alert('Delete Duty Item', 'Delete this duty item?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Remove',
+        text: 'Delete',
         style: 'destructive',
         onPress: async () => {
           try {
@@ -561,9 +576,10 @@ export const WatchDutiesScreen = () => {
         style={styles.scroll}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.sectionHeaderRow}>
-          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary, marginBottom: 0 }]}>
+          <Text style={[styles.sectionTitle, { color: themeColors.accent, marginBottom: 0 }]}>
             This week
           </Text>
           {canManage && (
@@ -614,10 +630,11 @@ export const WatchDutiesScreen = () => {
                   canManage ? (
                     <View
                       style={{
-                        backgroundColor: themeColors.accentSoft,
-                        borderRadius: 12,
+                        borderColor: themeColors.accent,
+                        borderWidth: 1,
+                        borderRadius: BORDER_RADIUS.md,
                         paddingHorizontal: 10,
-                        paddingVertical: 4,
+                        paddingVertical: 6,
                       }}
                     >
                       <Text
@@ -627,7 +644,7 @@ export const WatchDutiesScreen = () => {
                           fontWeight: '600',
                         }}
                       >
-                        {'\u2192'} Select a crew member
+                        Assign crew
                       </Text>
                     </View>
                   ) : (
@@ -672,7 +689,7 @@ export const WatchDutiesScreen = () => {
               >
                 {crewPickerVisible ? (
                   <>
-                    <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+                    <Text style={[styles.modalTitle, { color: themeColors.accent }]}>
                       Select crew
                     </Text>
                     <ScrollView
@@ -728,7 +745,7 @@ export const WatchDutiesScreen = () => {
                     nestedScrollEnabled
                     showsVerticalScrollIndicator
                   >
-                    <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+                    <Text style={[styles.modalTitle, { color: themeColors.accent }]}>
                       {new Date(assignDate + 'T00:00:00').toLocaleDateString(undefined, {
                         weekday: 'long',
                         day: 'numeric',
@@ -743,20 +760,24 @@ export const WatchDutiesScreen = () => {
                           .map((a) => (
                             <View
                               key={a.id}
-                              style={{
-                                flexDirection: 'row',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                paddingVertical: 6,
-                              }}
+                              style={[
+                                styles.currentAssignment,
+                                { borderColor: themeColors.border },
+                              ]}
                             >
                               <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>
                                 {a.userName} {'\u00b7'} {a.startTime}
                                 {'\u2013'}
                                 {a.endTime}
                               </Text>
-                              <TouchableOpacity onPress={() => handleRemoveAssignment(a.id)}>
-                                <Text style={{ color: '#dc2626', fontSize: FONTS.sm }}>Remove</Text>
+                              <TouchableOpacity
+                                onPress={() => handleRemoveAssignment(a.id)}
+                                style={styles.assignmentDeleteButton}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Delete ${a.userName} watch assignment`}
+                              >
+                                <Ionicons name="trash-outline" size={16} color={COLORS.danger} />
+                                <Text style={styles.assignmentDeleteText}>Delete</Text>
                               </TouchableOpacity>
                             </View>
                           ))}
@@ -770,7 +791,7 @@ export const WatchDutiesScreen = () => {
                         marginBottom: 6,
                       }}
                     >
-                      Add crew member
+                      Crew member
                     </Text>
                     <TouchableOpacity
                       style={[
@@ -788,41 +809,67 @@ export const WatchDutiesScreen = () => {
                           ? (crewList.find((c) => c.id === selectedCrewId)?.name ?? 'Select crew')
                           : 'Select crew'}
                       </Text>
+                      <Ionicons name="chevron-down" size={18} color={themeColors.textSecondary} />
                     </TouchableOpacity>
 
-                    <View
-                      style={{ flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md }}
-                    >
-                      <TouchableOpacity
-                        style={[
-                          styles.dropdown,
-                          {
-                            backgroundColor: themeColors.control,
-                            borderColor: themeColors.border,
-                            flex: 1,
-                          },
-                        ]}
-                        onPress={() => setActiveTimeField('start')}
-                      >
-                        <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>
-                          Start {assignStartTime}
+                    <View style={styles.assignmentTimeRow}>
+                      <View style={styles.assignmentTimeField}>
+                        <Text
+                          style={[styles.assignmentFieldLabel, { color: themeColors.textPrimary }]}
+                        >
+                          Start
                         </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[
-                          styles.dropdown,
-                          {
-                            backgroundColor: themeColors.control,
-                            borderColor: themeColors.border,
-                            flex: 1,
-                          },
-                        ]}
-                        onPress={() => setActiveTimeField('end')}
+                        <TouchableOpacity
+                          style={[
+                            styles.timeButton,
+                            {
+                              backgroundColor: themeColors.control,
+                              borderColor: themeColors.border,
+                            },
+                          ]}
+                          onPress={() => setActiveTimeField('start')}
+                        >
+                          <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>
+                            {assignStartTime}
+                          </Text>
+                          <Ionicons
+                            name="time-outline"
+                            size={18}
+                            color={themeColors.textSecondary}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                      <Text
+                        style={[styles.assignmentTimeArrow, { color: themeColors.textSecondary }]}
                       >
-                        <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>
-                          End {assignEndTime}
+                        →
+                      </Text>
+                      <View style={styles.assignmentTimeField}>
+                        <Text
+                          style={[styles.assignmentFieldLabel, { color: themeColors.textPrimary }]}
+                        >
+                          End
                         </Text>
-                      </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[
+                            styles.timeButton,
+                            {
+                              backgroundColor: themeColors.control,
+                              borderColor: themeColors.border,
+                            },
+                          ]}
+                          onPress={() => setActiveTimeField('end')}
+                        >
+                          <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>
+                            {assignEndTime}
+                          </Text>
+                          <Ionicons
+                            name="time-outline"
+                            size={18}
+                            color={themeColors.textSecondary}
+                          />
+                        </TouchableOpacity>
+                      </View>
                     </View>
 
                     {activeTimeField && (
@@ -867,7 +914,7 @@ export const WatchDutiesScreen = () => {
                             { borderColor: themeColors.borderStrong },
                           ]}
                         >
-                          <Text style={{ color: themeColors.textPrimary }}>Done</Text>
+                          <Text style={{ color: themeColors.textPrimary }}>Cancel</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                           onPress={handleAssignCrew}
@@ -904,9 +951,7 @@ export const WatchDutiesScreen = () => {
           ]}
         >
           <View style={styles.cardHeaderRow}>
-            <Text
-              style={[styles.sectionTitle, { color: themeColors.textPrimary, marginBottom: 0 }]}
-            >
+            <Text style={[styles.sectionTitle, { color: themeColors.accent, marginBottom: 0 }]}>
               Rules
             </Text>
           </View>
@@ -990,29 +1035,24 @@ export const WatchDutiesScreen = () => {
           includeAll
         />
 
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginTop: SPACING.xl,
-            marginBottom: SPACING.md,
-          }}
-        >
-          <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.base, fontWeight: '600' }}>
+        <View style={styles.dutiesHeaderRow}>
+          <Text style={[styles.sectionTitle, { color: themeColors.accent, marginBottom: 0 }]}>
             Duties
           </Text>
-          {canManage && (
-            <TouchableOpacity onPress={openAddGroupModal}>
-              <Text style={{ color: themeColors.accent, fontSize: FONTS.sm, fontWeight: '600' }}>
-                Create Duty Group
-              </Text>
-            </TouchableOpacity>
-          )}
         </View>
 
         {canManage && (
-          <View style={styles.dutiesResetRow}>
+          <View style={styles.dutiesActionRow}>
+            <TouchableOpacity
+              onPress={openAddGroupModal}
+              style={[styles.createGroupButton, { backgroundColor: themeColors.controlSelected }]}
+              accessibilityRole="button"
+            >
+              <Ionicons name="add" size={18} color={themeColors.textOnAccent} />
+              <Text style={[styles.createGroupButtonText, { color: themeColors.textOnAccent }]}>
+                Create Duty Group
+              </Text>
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={handleResetDuties}
               disabled={resettingDuties || dutyGroups.every((group) => group.items.length === 0)}
@@ -1032,25 +1072,28 @@ export const WatchDutiesScreen = () => {
                 {resettingDuties ? 'Resetting…' : 'Reset Duties'}
               </Text>
             </TouchableOpacity>
-            <Text style={[styles.resetNote, { color: themeColors.textSecondary }]}>
-              Resets duties for all crew members.
-            </Text>
           </View>
         )}
 
         {addGroupModalVisible && (
-          <Modal visible transparent animationType="slide" onRequestClose={closeAddGroupModal}>
+          <Modal visible transparent animationType="fade" onRequestClose={closeAddGroupModal}>
             <KeyboardAvoidingView
               style={styles.groupSheetBackdrop}
               behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
               <Pressable style={StyleSheet.absoluteFill} onPress={closeAddGroupModal} />
               <View
-                style={[styles.groupSheet, { backgroundColor: themeColors.surface }]}
+                style={[
+                  styles.groupSheet,
+                  {
+                    backgroundColor: themeColors.surfaceElevated,
+                    borderColor: themeColors.border,
+                  },
+                ]}
                 onStartShouldSetResponder={() => true}
               >
                 <View style={styles.groupSheetHeader}>
-                  <Text style={[styles.groupSheetTitle, { color: themeColors.textPrimary }]}>
+                  <Text style={[styles.groupSheetTitle, { color: themeColors.accent }]}>
                     Create Duty Group
                   </Text>
                   <TouchableOpacity
@@ -1068,6 +1111,7 @@ export const WatchDutiesScreen = () => {
                 </View>
 
                 <ScrollView
+                  style={styles.groupSheetScroll}
                   showsVerticalScrollIndicator={false}
                   keyboardShouldPersistTaps="handled"
                   contentContainerStyle={styles.groupSheetContent}
@@ -1084,8 +1128,8 @@ export const WatchDutiesScreen = () => {
                       styles.groupNameInput,
                       {
                         color: themeColors.textPrimary,
-                        borderColor: themeColors.textSecondary,
-                        backgroundColor: themeColors.background,
+                        borderColor: themeColors.border,
+                        backgroundColor: themeColors.control,
                       },
                     ]}
                   />
@@ -1110,8 +1154,8 @@ export const WatchDutiesScreen = () => {
                         style={[
                           styles.groupItemInputRow,
                           {
-                            borderColor: themeColors.textSecondary,
-                            backgroundColor: themeColors.background,
+                            borderColor: themeColors.border,
+                            backgroundColor: themeColors.control,
                           },
                         ]}
                       >
@@ -1135,9 +1179,7 @@ export const WatchDutiesScreen = () => {
                             accessibilityLabel={`Remove duty item ${index + 1}`}
                             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                           >
-                            <Text
-                              style={[styles.groupItemRemove, { color: themeColors.textPrimary }]}
-                            >
+                            <Text style={[styles.groupItemRemove, { color: COLORS.danger }]}>
                               ×
                             </Text>
                           </TouchableOpacity>
@@ -1146,7 +1188,25 @@ export const WatchDutiesScreen = () => {
                       {index === newGroupItems.length - 1 && <EnterToAddHint />}
                     </View>
                   ))}
-
+                </ScrollView>
+                <View
+                  style={[
+                    styles.groupActionRow,
+                    {
+                      backgroundColor: themeColors.surfaceElevated,
+                      borderColor: themeColors.border,
+                    },
+                  ]}
+                >
+                  <TouchableOpacity
+                    onPress={closeAddGroupModal}
+                    disabled={savingGroup}
+                    style={[styles.groupCancelButton, { borderColor: themeColors.borderStrong }]}
+                  >
+                    <Text style={[styles.groupCancelText, { color: themeColors.textPrimary }]}>
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
                   <TouchableOpacity
                     onPress={handleCreateGroup}
                     disabled={savingGroup || !newGroupTitle.trim()}
@@ -1162,16 +1222,7 @@ export const WatchDutiesScreen = () => {
                       {savingGroup ? 'Creating…' : 'Create Duty Group'}
                     </Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={closeAddGroupModal}
-                    disabled={savingGroup}
-                    style={styles.groupCancelButton}
-                  >
-                    <Text style={[styles.groupCancelText, { color: themeColors.textPrimary }]}>
-                      Cancel
-                    </Text>
-                  </TouchableOpacity>
-                </ScrollView>
+                </View>
               </View>
             </KeyboardAvoidingView>
           </Modal>
@@ -1203,9 +1254,9 @@ export const WatchDutiesScreen = () => {
               <View style={{ flex: 1 }}>
                 <Text
                   style={{
-                    color: themeColors.textPrimary,
+                    color: themeColors.accent,
                     fontSize: FONTS.base,
-                    fontWeight: '600',
+                    fontWeight: '700',
                   }}
                 >
                   {group.title}
@@ -1279,9 +1330,9 @@ export const WatchDutiesScreen = () => {
                         onPress={() => handleDeleteItem(group.id, item.id)}
                         style={styles.dutyItemRemove}
                         accessibilityRole="button"
-                        accessibilityLabel={`Remove ${item.label}`}
+                        accessibilityLabel={`Delete ${item.label}`}
                       >
-                        <Text style={{ color: '#dc2626', fontSize: FONTS.xs }}>Remove</Text>
+                        <Ionicons name="close" size={22} color={COLORS.danger} />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -1319,8 +1370,10 @@ export const WatchDutiesScreen = () => {
                       }}
                       style={{ marginTop: 6 }}
                     >
-                      <Text style={{ color: themeColors.accent, fontSize: FONTS.sm }}>
-                        + Add item
+                      <Text
+                        style={{ color: themeColors.accent, fontSize: FONTS.sm, fontWeight: '700' }}
+                      >
+                        + Add Item
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -1348,7 +1401,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   resetButton: {
-    minHeight: 34,
+    minHeight: 44,
     borderWidth: 1,
     borderColor: '#dc2626',
     borderRadius: BORDER_RADIUS.md,
@@ -1361,17 +1414,29 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sm,
     fontWeight: '600',
   },
-  dutiesResetRow: {
+  dutiesHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: SPACING.xl,
+    marginBottom: SPACING.md,
+  },
+  dutiesActionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.sm,
-    marginTop: -SPACING.xs,
     marginBottom: SPACING.md,
   },
-  resetNote: {
+  createGroupButton: {
     flex: 1,
-    fontSize: FONTS.xs,
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderRadius: BORDER_RADIUS.md,
   },
+  createGroupButtonText: { fontSize: FONTS.sm, fontWeight: '700' },
   card: {
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.md,
@@ -1408,7 +1473,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    minHeight: 52,
+    paddingVertical: SPACING.sm,
   },
   weekRowBorder: { borderBottomWidth: 1 },
   rulesInput: {
@@ -1479,16 +1545,57 @@ const styles = StyleSheet.create({
   assignmentFormContent: {
     flexGrow: 0,
   },
+  currentAssignment: {
+    minHeight: 48,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    marginBottom: SPACING.sm,
+  },
+  assignmentDeleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    minHeight: 36,
+    paddingLeft: SPACING.sm,
+  },
+  assignmentDeleteText: { color: COLORS.danger, fontSize: FONTS.xs, fontWeight: '700' },
+  assignmentTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  assignmentTimeField: { flex: 1 },
+  assignmentFieldLabel: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: 6 },
+  timeButton: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.md,
+  },
+  assignmentTimeArrow: { fontSize: FONTS.lg, paddingBottom: SPACING.sm },
   groupSheetBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
   },
   groupSheet: {
     width: '100%',
-    maxHeight: '92%',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    maxWidth: 440,
+    maxHeight: '85%',
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.lg,
     overflow: 'hidden',
   },
   groupSheetHeader: {
@@ -1519,8 +1626,9 @@ const styles = StyleSheet.create({
   },
   groupSheetContent: {
     paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.xl,
+    paddingBottom: SPACING.md,
   },
+  groupSheetScroll: { flexShrink: 1 },
   groupFieldLabel: {
     fontSize: FONTS.base,
     fontWeight: '600',
@@ -1564,12 +1672,12 @@ const styles = StyleSheet.create({
     marginLeft: SPACING.sm,
   },
   groupCreateButton: {
+    flex: 1.4,
     minHeight: 50,
     backgroundColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: SPACING.sm,
   },
   groupCreateButtonText: {
     color: COLORS.white,
@@ -1577,12 +1685,23 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   groupCancelButton: {
+    flex: 1,
+    minHeight: 50,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: SPACING.md,
   },
   groupCancelText: {
     fontSize: FONTS.base,
     fontWeight: '600',
+  },
+  groupActionRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    borderTopWidth: 1,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.lg,
   },
 });

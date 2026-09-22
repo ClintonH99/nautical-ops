@@ -39,6 +39,7 @@ export const SignatureSetupScreen = () => {
   const navigation = useNavigation<any>();
   const { user } = useAuthStore();
   const signatureRef = useRef<SignatureViewRef>(null);
+  const loadedUserIdRef = useRef<string | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState<UserSignature | null>(null);
@@ -48,8 +49,15 @@ export const SignatureSetupScreen = () => {
   const [saving, setSaving] = useState(false);
 
   const loadSignature = useCallback(async () => {
-    if (!user?.id) return;
-    setLoading(true);
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+    if (loadedUserIdRef.current !== user.id) {
+      loadedUserIdRef.current = user.id;
+      setSaved(null);
+      setLoading(true);
+    }
     try {
       const data = await getSignatureForUser(user.id);
       setSaved(data);

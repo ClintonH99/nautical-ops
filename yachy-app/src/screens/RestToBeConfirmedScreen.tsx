@@ -8,7 +8,7 @@
  * month for any number of crew.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -79,13 +79,19 @@ export const RestToBeConfirmedScreen = () => {
   const [exportModalVisible, setExportModalVisible] = useState(false);
   const [selectedExportIds, setSelectedExportIds] = useState<Set<string>>(new Set());
   const [exporting, setExporting] = useState(false);
+  const loadedCurrentContextRef = useRef<string | null>(null);
 
   const pastMonths = user?.createdAt ? getPastMonths(user.createdAt) : [];
 
   const loadCurrent = useCallback(async () => {
     if (!user?.vesselId) return;
-    setLoading(true);
     const now = new Date();
+    const contextKey = `${user.vesselId}:${now.getFullYear()}-${now.getMonth() + 1}`;
+    if (loadedCurrentContextRef.current !== contextKey) {
+      loadedCurrentContextRef.current = contextKey;
+      setDays([]);
+      setLoading(true);
+    }
     const result = await getMonthReview(user.vesselId, now.getFullYear(), now.getMonth() + 1);
     setDays(result);
     setLoading(false);
@@ -258,9 +264,9 @@ export const RestToBeConfirmedScreen = () => {
               },
             ]}
             onPress={() => {
+              setLoading(true);
               setTab('current');
               setSelectedMonth(null);
-              loadCurrent();
             }}
           >
             <Text

@@ -4,13 +4,8 @@
  */
 
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES, SHADOWS } from '../constants/theme';
 import { useThemeStore, BACKGROUND_THEMES } from '../store';
 import { CATEGORIES } from '../components/CategorySheet';
@@ -27,22 +22,30 @@ export const CategoriesScreen = ({ navigation }: any) => {
     >
       <View style={styles.header}>
         <Text style={[styles.title, { color: themeColors.textPrimary }]}>All Categories</Text>
-        <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-          Everything available in the app
-        </Text>
       </View>
 
       <View style={styles.list}>
         {CATEGORIES.map((cat) => (
           <TouchableOpacity
             key={cat.key}
-            style={[styles.card, { backgroundColor: themeColors.surface }]}
+            style={[
+              styles.card,
+              {
+                backgroundColor: themeColors.surface,
+                borderColor: themeColors.border,
+              },
+              !themeColors.isDark && SHADOWS.md,
+            ]}
             onPress={() => navigation.navigate(cat.nav)}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={`Open ${cat.label}`}
           >
-            <Text style={styles.cardIcon}>{cat.icon}</Text>
+            <View style={styles.iconTile}>
+              <Ionicons name={cat.icon} size={22} color={COLORS.white} />
+            </View>
             <Text style={[styles.cardLabel, { color: themeColors.textPrimary }]}>{cat.label}</Text>
-            <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>›</Text>
+            <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
           </TouchableOpacity>
         ))}
       </View>
@@ -60,36 +63,38 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: SPACING.xl,
-    paddingBottom: SPACING.xl,
-    marginBottom: SPACING.md,
+    paddingBottom: SPACING.lg,
   },
   title: {
     fontSize: FONTS['2xl'],
     fontWeight: '700',
-    marginBottom: SPACING.sm,
+    textAlign: 'center',
   },
-  subtitle: {
-    fontSize: FONTS.base,
+  list: {
+    gap: SPACING.sm,
   },
-  list: {},
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: SPACING.lg,
+    minHeight: 68,
+    paddingVertical: SPACING.sm,
+    paddingLeft: SPACING.sm,
+    paddingRight: SPACING.md,
+    borderWidth: 1,
     borderRadius: BORDER_RADIUS.lg,
-    marginBottom: SPACING.md,
-    ...SHADOWS.lg,
   },
-  cardIcon: {
-    fontSize: 28,
-    marginRight: SPACING.lg,
+  iconTile: {
+    width: 46,
+    height: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.primary,
   },
   cardLabel: {
     flex: 1,
-    fontSize: FONTS.lg,
+    fontSize: FONTS.base,
     fontWeight: '600',
-  },
-  chevron: {
-    fontSize: 24,
   },
 });

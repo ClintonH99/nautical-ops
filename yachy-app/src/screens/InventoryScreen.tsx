@@ -3,7 +3,7 @@
  * Create button, department filter, list of inventory items. Export mode: select items → Export to PDF.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -62,6 +62,7 @@ export const InventoryScreen = ({ navigation }: any) => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exporting, setExporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const loadedVesselIdRef = useRef<string | null>(null);
 
   const vesselId = user?.vesselId ?? null;
 
@@ -132,7 +133,11 @@ export const InventoryScreen = ({ navigation }: any) => {
 
   const loadItems = useCallback(async () => {
     if (!vesselId) return;
-    setLoading(true);
+    if (loadedVesselIdRef.current !== vesselId) {
+      loadedVesselIdRef.current = vesselId;
+      setItems([]);
+      setLoading(true);
+    }
     try {
       const data = await inventoryService.getByVessel(vesselId);
       setItems(data);

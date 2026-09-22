@@ -16,6 +16,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -24,12 +25,22 @@ const PILL_BG = '#2C2C2E';
 const SHEET_MARGIN_H = 20;
 
 export const CATEGORIES = [
-  { key: 'maintenance', label: 'Maintenance', icon: '🔧', nav: 'MaintenanceLog' },
-  { key: 'watch', label: 'Watch Keeping', icon: '⏱️', nav: 'WatchKeeping' },
-  { key: 'logs', label: 'Vessel Logs', icon: '🗒️', nav: 'VesselLogs' },
-  { key: 'contractors', label: 'Contractor Database', icon: '👷', nav: 'ContractorDatabase' },
-  { key: 'import', label: 'Import / Export', icon: '📥', nav: 'ImportExport' },
-];
+  { key: 'maintenance', label: 'Maintenance', icon: 'build-outline', nav: 'MaintenanceLog' },
+  { key: 'watch', label: 'Watch Keeping', icon: 'time-outline', nav: 'WatchKeeping' },
+  { key: 'logs', label: 'Vessel Logs', icon: 'document-text-outline', nav: 'VesselLogs' },
+  {
+    key: 'contractors',
+    label: 'Contractor Database',
+    icon: 'people-outline',
+    nav: 'ContractorDatabase',
+  },
+  { key: 'import', label: 'Import / Export', icon: 'swap-vertical-outline', nav: 'ImportExport' },
+] satisfies Array<{
+  key: string;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  nav: string;
+}>;
 
 type CategorySheetProps = {
   visible: boolean;
@@ -120,7 +131,12 @@ export const CategorySheet = ({ visible, onClose, onSelectCategory }: CategorySh
                   onPress={() => handleSelect(cat.nav)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.categoryIcon}>{cat.icon}</Text>
+                  <Ionicons
+                    name={cat.icon}
+                    size={28}
+                    color={COLORS.white}
+                    style={styles.categoryIcon}
+                  />
                   <Text style={styles.categoryLabel}>{cat.label}</Text>
                 </TouchableOpacity>
               ))}
@@ -198,7 +214,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   categoryIcon: {
-    fontSize: 32,
     marginBottom: SPACING.xs,
   },
   categoryLabel: {
