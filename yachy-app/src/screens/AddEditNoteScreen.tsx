@@ -2,7 +2,7 @@
  * Add / Edit Note Screen
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -15,23 +15,25 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
-import { useAuthStore, useThemeStore, BACKGROUND_THEMES } from '../store';
+import { useAuthStore } from '../store';
+import { useThemeColors } from '../hooks/useThemeColors';
 import notesService from '../services/notes';
-import { PageHeader } from '../components';
+import { Button, Input, PageHeader } from '../components';
 
 export const AddEditNoteScreen = ({ navigation, route }: any) => {
   const noteId: string | undefined = route.params?.noteId;
   const isEdit = !!noteId;
 
   const { user } = useAuthStore();
-  const backgroundTheme = useThemeStore((s) => s.backgroundTheme);
-  const themeColors = BACKGROUND_THEMES[backgroundTheme];
+  const themeColors = useThemeColors();
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
+  const contentInputRef = useRef<TextInput | null>(null);
 
   useEffect(() => {
     if (isEdit) {
@@ -72,7 +74,7 @@ export const AddEditNoteScreen = ({ navigation, route }: any) => {
         );
       }
       navigation.goBack();
-    } catch (e) {
+    } catch {
       Alert.alert('Error', 'Could not save note. Please try again.');
     } finally {
       setSaving(false);
@@ -107,7 +109,7 @@ export const AddEditNoteScreen = ({ navigation, route }: any) => {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={[styles.page, { backgroundColor: themeColors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <PageHeader title={noteId ? 'Edit Note' : 'Create Note'} />
@@ -116,67 +118,76 @@ export const AddEditNoteScreen = ({ navigation, route }: any) => {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={[styles.label, { color: themeColors.textSecondary }]}>Title</Text>
-        <TextInput
+        <View
           style={[
-            styles.input,
-            {
-              backgroundColor: themeColors.surface,
-              color: themeColors.textPrimary,
-              borderColor: themeColors.surfaceAlt,
-            },
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
           ]}
-          value={title}
-          onChangeText={setTitle}
-          placeholder="Note title"
-          placeholderTextColor={themeColors.textSecondary}
-          maxLength={120}
-          returnKeyType="next"
-        />
-
-        <Text style={[styles.label, { color: themeColors.textSecondary }]}>Content</Text>
-        <TextInput
-          style={[
-            styles.textarea,
-            {
-              backgroundColor: themeColors.surface,
-              color: themeColors.textPrimary,
-              borderColor: themeColors.surfaceAlt,
-            },
-          ]}
-          value={content}
-          onChangeText={setContent}
-          placeholder="Write your note here..."
-          placeholderTextColor={themeColors.textSecondary}
-          multiline
-          textAlignVertical="top"
-          returnKeyType="default"
-        />
-
-        <TouchableOpacity
-          style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
-          onPress={handleSave}
-          disabled={saving}
-          activeOpacity={0.8}
         >
-          {saving ? (
-            <ActivityIndicator size="small" color={COLORS.white} />
-          ) : (
-            <Text style={styles.saveBtnText}>{isEdit ? 'Save Changes' : 'Create Note'}</Text>
-          )}
-        </TouchableOpacity>
+          <Input
+            label="Title"
+            value={title}
+            onChangeText={setTitle}
+            placeholder="Note title"
+            maxLength={120}
+            returnKeyType="next"
+            submitBehavior="submit"
+            onSubmitEditing={() => contentInputRef.current?.focus()}
+          />
+          <View style={styles.noteField}>
+            <Text style={[styles.fieldLabel, { color: themeColors.textPrimary }]}>Note</Text>
+            <TextInput
+              ref={contentInputRef}
+              value={content}
+              onChangeText={setContent}
+              placeholder="Write your note here..."
+              placeholderTextColor={themeColors.textMuted}
+              multiline
+              textAlignVertical="top"
+              returnKeyType="default"
+              style={[
+                styles.noteInput,
+                {
+                  color: themeColors.textPrimary,
+                  backgroundColor: themeColors.control,
+                  borderColor: themeColors.border,
+                },
+              ]}
+            />
+          </View>
+        </View>
 
-        {isEdit && (
-          <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete} activeOpacity={0.8}>
-            <Text style={styles.deleteBtnText}>Delete Note</Text>
-          </TouchableOpacity>
-        )}
+        <View style={styles.actions}>
+          <Button
+            title={isEdit ? 'Save Changes' : 'Create Note'}
+            onPress={handleSave}
+            variant="primary"
+            loading={saving}
+            disabled={saving}
+            fullWidth
+          />
+
+          {isEdit && (
+            <TouchableOpacity
+              style={[styles.deleteBtn, { borderColor: COLORS.danger }]}
+              onPress={handleDelete}
+              activeOpacity={0.8}
+              disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel="Delete Note"
+            >
+              <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
+              <Text style={styles.deleteBtnText}>Delete Note</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
+  page: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   container: { flex: 1 },
   content: {
@@ -184,52 +195,41 @@ const styles = StyleSheet.create({
     paddingTop: SPACING.xl,
     paddingBottom: SIZES.bottomScrollPadding,
   },
-  label: {
+  formSection: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+  },
+  noteField: { marginBottom: 0 },
+  fieldLabel: {
     fontSize: FONTS.sm,
     fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: SPACING.sm,
-    marginTop: SPACING.md,
+    marginBottom: SPACING.xs,
   },
-  input: {
+  noteInput: {
+    minHeight: 250,
     borderWidth: 1,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
     fontSize: FONTS.base,
-    marginBottom: SPACING.md,
+    lineHeight: FONTS.base * 1.4,
+    textAlignVertical: 'top',
   },
-  textarea: {
-    borderWidth: 1,
-    borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.md,
-    fontSize: FONTS.base,
-    minHeight: 200,
-    marginBottom: SPACING.xl,
-  },
-  saveBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
-    alignItems: 'center',
-    marginBottom: SPACING.md,
-  },
-  saveBtnDisabled: { opacity: 0.6 },
-  saveBtnText: {
-    color: COLORS.white,
-    fontSize: FONTS.base,
-    fontWeight: '700',
-  },
+  actions: { marginTop: SPACING.md },
   deleteBtn: {
+    minHeight: SIZES.buttonHeight,
     borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
+    paddingHorizontal: SPACING.lg,
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: SPACING.sm,
     borderWidth: 1,
-    borderColor: '#ef4444',
+    marginTop: SPACING.sm,
   },
   deleteBtnText: {
-    color: '#ef4444',
+    color: COLORS.danger,
     fontSize: FONTS.base,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

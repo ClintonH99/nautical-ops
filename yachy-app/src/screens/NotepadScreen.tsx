@@ -14,8 +14,9 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES, SHADOWS } from '../constants/theme';
-import { useAuthStore, useThemeStore, BACKGROUND_THEMES } from '../store';
+import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
+import { useAuthStore } from '../store';
+import { useThemeColors } from '../hooks/useThemeColors';
 import notesService, { Note } from '../services/notes';
 
 const NOTEPAD_INFO = {
@@ -31,8 +32,7 @@ const NOTEPAD_INFO = {
 
 export const NotepadScreen = ({ navigation }: any) => {
   const { user } = useAuthStore();
-  const backgroundTheme = useThemeStore((s) => s.backgroundTheme);
-  const themeColors = BACKGROUND_THEMES[backgroundTheme];
+  const themeColors = useThemeColors();
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(false);
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
@@ -101,44 +101,68 @@ export const NotepadScreen = ({ navigation }: any) => {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header row with Create Note button */}
-        <View style={styles.headerRow}>
-          <View>
-            <Text style={[styles.title, { color: themeColors.textPrimary }]}>Notepad</Text>
-            <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-              Only visible to you
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={[styles.newBtn, { backgroundColor: COLORS.primary }]}
-            onPress={goToNewNote}
-            activeOpacity={0.8}
+        <TouchableOpacity
+          style={[
+            styles.newBtn,
+            { backgroundColor: themeColors.isDark ? themeColors.controlSelected : COLORS.primary },
+          ]}
+          onPress={goToNewNote}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Create Note"
+        >
+          <Ionicons name="add" size={20} color={COLORS.white} />
+          <Text style={styles.newBtnText}>Create Note</Text>
+        </TouchableOpacity>
+
+        <View style={styles.listHeading}>
+          <Text
+            style={[
+              styles.listHeadingTitle,
+              { color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
+            ]}
           >
-            <Ionicons name="add" size={18} color="#fff" />
-            <Text style={styles.newBtnText}>Create Note</Text>
-          </TouchableOpacity>
+            Your Notes
+          </Text>
+          <Text style={[styles.privateText, { color: themeColors.textSecondary }]}>
+            Only visible to you
+          </Text>
         </View>
 
         {loading ? (
           <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
         ) : notes.length === 0 ? (
           <TouchableOpacity
-            style={[styles.emptyCard, { backgroundColor: themeColors.surface }]}
+            style={[
+              styles.emptyCard,
+              { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+            ]}
             onPress={goToNewNote}
             activeOpacity={0.8}
           >
-            <Text style={styles.emptyIcon}>📝</Text>
+            <Ionicons
+              name="document-text-outline"
+              size={42}
+              color={themeColors.isDark ? themeColors.textPrimary : COLORS.primary}
+              style={styles.emptyIcon}
+            />
             <Text style={[styles.emptyTitle, { color: themeColors.textPrimary }]}>
               No notes yet
             </Text>
             <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
-              Tap here or "Create Note" to get started.
+              Tap here to create your first note.
             </Text>
           </TouchableOpacity>
         ) : (
           <>
             {notes.map((note) => (
-              <View key={note.id} style={[styles.card, { backgroundColor: themeColors.surface }]}>
+              <View
+                key={note.id}
+                style={[
+                  styles.card,
+                  { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+                ]}
+              >
                 <TouchableOpacity
                   style={styles.cardHeader}
                   onPress={() =>
@@ -148,7 +172,10 @@ export const NotepadScreen = ({ navigation }: any) => {
                 >
                   <View style={styles.cardBody}>
                     <Text
-                      style={[styles.cardTitle, { color: themeColors.textPrimary }]}
+                      style={[
+                        styles.cardTitle,
+                        { color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
+                      ]}
                       numberOfLines={1}
                     >
                       {note.title}
@@ -162,7 +189,7 @@ export const NotepadScreen = ({ navigation }: any) => {
                       </Text>
                     ) : null}
                     <Text style={[styles.cardMeta, { color: themeColors.textSecondary }]}>
-                      {formatDate(note.updated_at)}
+                      Updated {formatDate(note.updated_at)}
                     </Text>
                   </View>
                   <Ionicons
@@ -173,19 +200,21 @@ export const NotepadScreen = ({ navigation }: any) => {
                 </TouchableOpacity>
                 {expandedNoteId === note.id && (
                   <>
-                    {note.content ? (
-                      <Text style={[styles.cardContent, { color: themeColors.textPrimary }]}>
-                        {note.content}
-                      </Text>
-                    ) : (
-                      <Text style={[styles.cardPreview, { color: themeColors.textSecondary }]}>
-                        No content
-                      </Text>
-                    )}
-                    <PreviewActionButtons
-                      onEdit={() => navigation.navigate('AddEditNote', { noteId: note.id })}
-                      onDelete={() => handleDelete(note)}
-                    />
+                    <View style={[styles.expandedContent, { borderTopColor: themeColors.border }]}>
+                      {note.content ? (
+                        <Text style={[styles.cardContent, { color: themeColors.textPrimary }]}>
+                          {note.content}
+                        </Text>
+                      ) : (
+                        <Text style={[styles.cardContent, { color: themeColors.textSecondary }]}>
+                          No content
+                        </Text>
+                      )}
+                      <PreviewActionButtons
+                        onEdit={() => navigation.navigate('AddEditNote', { noteId: note.id })}
+                        onDelete={() => handleDelete(note)}
+                      />
+                    </View>
                   </>
                 )}
               </View>
@@ -203,33 +232,36 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.xl },
   content: {
     padding: SPACING.lg,
-    paddingTop: SPACING.xl * 2,
     paddingBottom: SIZES.bottomScrollPadding,
   },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.xl,
-  },
-  title: { fontSize: FONTS['2xl'], fontWeight: '700', marginBottom: 2 },
-  subtitle: { fontSize: FONTS.sm },
   newBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    minHeight: 52,
+    paddingHorizontal: SPACING.lg,
     borderRadius: BORDER_RADIUS.md,
   },
-  newBtnText: { color: '#fff', fontSize: FONTS.sm, fontWeight: '700', marginLeft: 4 },
-  loader: { marginTop: SPACING.xl * 2 },
+  newBtnText: { color: COLORS.white, fontSize: FONTS.base, fontWeight: '700' },
+  listHeading: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginTop: SPACING.lg,
+    marginBottom: SPACING.sm,
+    paddingHorizontal: 2,
+  },
+  listHeadingTitle: { fontSize: FONTS.lg, fontWeight: '700' },
+  privateText: { fontSize: FONTS.xs },
+  loader: { marginTop: SPACING.xl },
   emptyCard: {
+    borderWidth: 1,
     padding: SPACING.xl,
     borderRadius: BORDER_RADIUS.lg,
     alignItems: 'center',
-    ...SHADOWS.md,
   },
-  emptyIcon: { fontSize: 48, marginBottom: SPACING.md },
+  emptyIcon: { marginBottom: SPACING.md },
   emptyTitle: {
     fontSize: FONTS.xl,
     fontWeight: '700',
@@ -238,20 +270,29 @@ const styles = StyleSheet.create({
   },
   emptyText: { fontSize: FONTS.base, textAlign: 'center', lineHeight: 22 },
   card: {
-    padding: SPACING.lg,
+    borderWidth: 1,
     borderRadius: BORDER_RADIUS.lg,
     marginBottom: SPACING.md,
-    ...SHADOWS.sm,
+    overflow: 'hidden',
   },
-  cardHeader: { flexDirection: 'row', alignItems: 'center' },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SPACING.md,
+  },
   cardBody: { flex: 1, marginRight: SPACING.sm },
-  cardTitle: { fontSize: FONTS.lg, fontWeight: '700', marginBottom: 4 },
+  cardTitle: { fontSize: FONTS.lg, fontWeight: '700', marginBottom: SPACING.xs },
   cardPreview: { fontSize: FONTS.sm, lineHeight: 18, marginBottom: 6 },
+  expandedContent: {
+    marginHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.md,
+    borderTopWidth: 1,
+  },
   cardContent: {
     fontSize: FONTS.base,
     lineHeight: 22,
-    marginTop: SPACING.md,
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.md,
   },
   cardMeta: { fontSize: FONTS.xs },
 });
