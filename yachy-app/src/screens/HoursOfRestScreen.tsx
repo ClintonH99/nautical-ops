@@ -5,27 +5,15 @@
  * are flagged completed (green) or not completed (red).
  */
 
-import React, { useState, useCallback, useEffect, useLayoutEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { PageHeader, ExportButton } from '../components';
-import {
-  RestEntry,
-  checkRollingCompliance,
-  getMonthDataForPdf,
-} from '../services/restEntries';
+import { Button, PageHeader, ExportButton } from '../components';
+import { RestEntry, getMonthDataForPdf } from '../services/restEntries';
 import { generateHoursOfRestPdf } from '../utils/hoursOfRestPdf';
 import { supabase } from '../services/supabase';
 
@@ -39,28 +27,25 @@ function daysAgo(n: number): Date {
   d.setHours(0, 0, 0, 0);
   return d;
 }
-
-
 const HOURS_OF_REST_INFO = {
-            title: 'Hours of Rest',
-            description: 'Track your daily rest, work, and lunch hours to stay compliant with STCW/MLC regulations.',
-            features: [
-              'Tap any date on the calendar to log your hours of rest, time worked, and lunch break',
-              'Green dates are completed, red dates still need an entry',
-              'Once your week is filled in, submit it for your Captain or department signer to confirm',
-              'Confirmed entries can still be corrected later by the Captain if needed',
-              'Compliance is checked against real STCW rules: minimum 10 hours rest in any 24-hour period, minimum 77 hours in any 7-day period, and no more than a 14-hour gap between rest periods',
-            ],
-          };
+  title: 'Hours of Rest',
+  description:
+    'Track your daily rest, work, and lunch hours to stay compliant with STCW/MLC regulations.',
+  features: [
+    'Tap any date on the calendar to log your hours of rest, time worked, and lunch break',
+    'Green dates are completed, red dates still need an entry',
+    'Once your week is filled in, submit it for your Captain or department signer to confirm',
+    'Confirmed entries can still be corrected later by the Captain if needed',
+    'Compliance is checked against real STCW rules: minimum 10 hours rest in any 24-hour period, minimum 77 hours in any 7-day period, and no more than a 14-hour gap between rest periods',
+  ],
+};
 
 export const HoursOfRestScreen = ({ navigation }: any) => {
-
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const isCaptainOrMov = user?.role === 'CAPTAIN_MOV';
 
   const [entries, setEntries] = useState<Record<string, RestEntry>>({});
-  const [allEntriesForRolling, setAllEntriesForRolling] = useState<RestEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [viewedMonth, setViewedMonth] = useState(new Date());
@@ -87,10 +72,10 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
         .lte('date', until);
 
       const byDate: Record<string, RestEntry> = {};
-      (rows ?? []).forEach((r) => { byDate[r.date] = r; });
+      (rows ?? []).forEach((r) => {
+        byDate[r.date] = r;
+      });
       setEntries(byDate);
-      setAllEntriesForRolling(rows ?? []);
-
     } catch (e) {
       console.error('Load rest entries error:', e);
     } finally {
@@ -99,8 +84,14 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
     }
   }, [user?.id, viewedMonth]);
 
-  useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
-  useEffect(() => { loadData(); }, [loadData]);
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // Build calendar bar markers (matching the Home screen's calendar style)
   // for the past 30 days: green bar if completed, red bar if a day in the
@@ -117,8 +108,12 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
   const todayForMarking = new Date();
   todayForMarking.setHours(0, 0, 0, 0);
   const lastDayToMark = lastOfViewedMonth < todayForMarking ? lastOfViewedMonth : todayForMarking;
-  const daysAgoAtMonthStart = Math.round((todayForMarking.getTime() - firstOfViewedMonth.getTime()) / 86400000);
-  const daysAgoAtLastDayToMark = Math.round((todayForMarking.getTime() - lastDayToMark.getTime()) / 86400000);
+  const daysAgoAtMonthStart = Math.round(
+    (todayForMarking.getTime() - firstOfViewedMonth.getTime()) / 86400000
+  );
+  const daysAgoAtLastDayToMark = Math.round(
+    (todayForMarking.getTime() - lastDayToMark.getTime()) / 86400000
+  );
   for (let i = daysAgoAtLastDayToMark; i <= daysAgoAtMonthStart; i++) {
     const d = daysAgo(i);
     const dateStr = toYYYYMMDD(d);
@@ -144,7 +139,11 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
     if (!user?.id) return;
     setExporting(true);
     try {
-      const data = await getMonthDataForPdf(user.id, viewedMonth.getFullYear(), viewedMonth.getMonth() + 1);
+      const data = await getMonthDataForPdf(
+        user.id,
+        viewedMonth.getFullYear(),
+        viewedMonth.getMonth() + 1
+      );
       if (!data || data.days.length === 0) {
         Alert.alert('No data', 'No rest entries found for this month yet.');
         return;
@@ -161,58 +160,75 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.pageWrap}>
-      <PageHeader title="Hours of Rest" info={HOURS_OF_REST_INFO} infoScreenKey="hours_of_rest"
+      <PageHeader
+        title="Hours of Rest"
+        info={HOURS_OF_REST_INFO}
+        infoScreenKey="hours_of_rest"
         actions={<ExportButton active={false} busy={exporting} onPress={handleExportOwnMonth} />}
       />
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.title, { color: themeColors.textPrimary }]}>Hours of Rest</Text>
-        <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-          Tap a date to enter or edit your hours
-        </Text>
-
         {loading && !hasLoadedOnce ? (
           <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.xl }} />
         ) : (
           <>
-            <Calendar
-              current={todayStr}
-              maxDate={todayStr}
-              markedDates={markedDates}
-              markingType="multi-period"
-              onDayPress={handleDayPress}
-              onMonthChange={(m: { year: number; month: number }) => setViewedMonth(new Date(m.year, m.month - 1, 1))}
-              theme={{
-                backgroundColor: 'transparent',
-                calendarBackground: 'transparent',
-                todayTextColor: COLORS.primary,
-                arrowColor: themeColors.textPrimary,
-                monthTextColor: themeColors.textPrimary,
-                dayTextColor: themeColors.textPrimary,
-                textDisabledColor: themeColors.textSecondary,
-              }}
-            />
+            <View
+              style={[
+                styles.calendarCard,
+                { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+              ]}
+            >
+              <Calendar
+                current={todayStr}
+                maxDate={todayStr}
+                markedDates={markedDates}
+                markingType="multi-period"
+                onDayPress={handleDayPress}
+                onMonthChange={(month: { year: number; month: number }) =>
+                  setViewedMonth(new Date(month.year, month.month - 1, 1))
+                }
+                theme={{
+                  backgroundColor: 'transparent',
+                  calendarBackground: 'transparent',
+                  todayTextColor: COLORS.white,
+                  todayBackgroundColor: COLORS.primary,
+                  arrowColor: themeColors.textSecondary,
+                  monthTextColor: themeColors.isDark ? COLORS.white : COLORS.primary,
+                  dayTextColor: themeColors.textPrimary,
+                  textDisabledColor: themeColors.textMuted,
+                  textMonthFontWeight: '700',
+                }}
+              />
+              <Text style={[styles.calendarNote, { color: themeColors.textSecondary }]}>
+                Tap a date to enter or edit your hours.
+              </Text>
+            </View>
 
             <View style={styles.legendRow}>
               <View style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: '#16a34a' }]} />
-                <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.xs }}>Completed</Text>
+                <Text style={[styles.legendText, { color: themeColors.textSecondary }]}>
+                  Completed
+                </Text>
               </View>
               <View style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: '#dc2626' }]} />
-                <Text style={{ color: themeColors.textSecondary, fontSize: FONTS.xs }}>Not completed</Text>
+                <Text style={[styles.legendText, { color: themeColors.textSecondary }]}>
+                  Not completed
+                </Text>
               </View>
             </View>
 
             {isCaptainOrMov && (
-              <TouchableOpacity
-                style={styles.reviewButton}
+              <Button
+                title="Rest to Be Confirmed"
                 onPress={() => navigation.navigate('RestToBeConfirmed')}
-              >
-                <Text style={styles.reviewButtonText}>Rest to be confirmed</Text>
-              </TouchableOpacity>
+                variant="primary"
+                fullWidth
+              />
             )}
           </>
         )}
@@ -225,15 +241,19 @@ const styles = StyleSheet.create({
   pageWrap: { flex: 1 },
   container: { flex: 1 },
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
-  title: { fontSize: FONTS['2xl'], fontWeight: '700' },
-  subtitle: { fontSize: FONTS.base, marginBottom: SPACING.lg },
-  signerBox: { padding: SPACING.md, borderRadius: BORDER_RADIUS.md, marginBottom: SPACING.lg },
-  signerSelect: { borderWidth: 1, borderRadius: BORDER_RADIUS.sm, padding: SPACING.sm },
-  signerOptions: { marginTop: SPACING.sm, gap: 4 },
-  signerOption: { paddingVertical: SPACING.sm },
-  legendRow: { flexDirection: 'row', gap: SPACING.lg, justifyContent: 'center', marginTop: SPACING.md },
+  calendarCard: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.sm,
+  },
+  calendarNote: { fontSize: FONTS.xs, marginHorizontal: SPACING.sm, marginTop: SPACING.sm },
+  legendRow: {
+    flexDirection: 'row',
+    gap: SPACING.lg,
+    justifyContent: 'center',
+    marginVertical: SPACING.md,
+  },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
-  reviewButton: { backgroundColor: COLORS.primary, padding: SPACING.md, borderRadius: BORDER_RADIUS.md, alignItems: 'center', marginTop: SPACING.lg, marginBottom: SPACING.lg },
-  reviewButtonText: { color: '#fff', fontWeight: '600' },
+  legendText: { fontSize: FONTS.xs },
 });

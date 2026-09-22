@@ -20,6 +20,7 @@ import {
   Pressable,
   Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
@@ -54,6 +55,14 @@ function categorizeDay(entries: DayReviewEntry[]): DayCategory {
   );
   if (hasPending) return 'complete';
   return 'confirmed';
+}
+
+function formatReviewDate(dateString: string): string {
+  return new Date(`${dateString}T00:00:00`).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  });
 }
 
 export const RestToBeConfirmedScreen = () => {
@@ -175,23 +184,39 @@ export const RestToBeConfirmedScreen = () => {
   const renderSection = (title: string, color: string, list: DayReview[]) => {
     if (list.length === 0) return null;
     return (
-      <View style={{ marginBottom: SPACING.lg }}>
-        <Text style={[styles.sectionLabel, { color }]}>{title}</Text>
+      <View style={styles.reviewSection}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionLabel, { color }]}>{title}</Text>
+          <Text style={[styles.sectionCount, { color: themeColors.textSecondary }]}>
+            {list.length} {list.length === 1 ? 'day' : 'days'}
+          </Text>
+        </View>
         {list.map((day) => (
-          <View key={day.date} style={[styles.dayCard, { borderColor: color }]}>
-            <Text style={[styles.dayTitle, { color: themeColors.textPrimary, marginBottom: 4 }]}>
-              {day.date}
-            </Text>
+          <View
+            key={day.date}
+            style={[
+              styles.dayCard,
+              { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+            ]}
+          >
+            <View style={styles.dayHeader}>
+              <Text style={[styles.dayTitle, { color: themeColors.accent }]}>
+                {formatReviewDate(day.date)}
+              </Text>
+              <Ionicons name="chevron-forward" size={18} color={themeColors.textSecondary} />
+            </View>
             {day.entries.map((e) => (
               <TouchableOpacity
                 key={e.userId}
+                style={styles.crewRow}
                 onPress={() => openDay(day.date, e.userId, e.userName)}
+                accessibilityRole="button"
+                accessibilityLabel={`Review ${e.userName}, ${STATUS_LABEL[e.status]}`}
               >
-                <Text
-                  style={{ color: themeColors.textSecondary, fontSize: FONTS.sm, marginTop: 2 }}
-                >
-                  - {e.userName} - {STATUS_LABEL[e.status]}
+                <Text style={[styles.crewName, { color: themeColors.textPrimary }]}>
+                  {e.userName}
                 </Text>
+                <Text style={[styles.crewStatus, { color }]}>{STATUS_LABEL[e.status]}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -220,6 +245,7 @@ export const RestToBeConfirmedScreen = () => {
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.tabRow}>
           <TouchableOpacity
@@ -493,14 +519,38 @@ const styles = StyleSheet.create({
   },
   modalItemText: { fontSize: FONTS.base },
   monthRow: { padding: SPACING.md, borderRadius: BORDER_RADIUS.md, borderWidth: 1 },
-  sectionLabel: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.sm },
+  reviewSection: { marginBottom: SPACING.lg },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.sm,
+  },
+  sectionLabel: { fontSize: FONTS.base, fontWeight: '700' },
+  sectionCount: { fontSize: FONTS.sm, fontWeight: '600' },
   dayCard: {
     padding: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
+    borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
     marginBottom: SPACING.sm,
   },
-  dayTitle: { fontSize: FONTS.base, fontWeight: '600' },
+  dayHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.sm,
+  },
+  dayTitle: { fontSize: FONTS.base, fontWeight: '700' },
+  crewRow: {
+    minHeight: 42,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: SPACING.md,
+    paddingVertical: SPACING.xs,
+  },
+  crewName: { flex: 1, fontSize: FONTS.sm, fontWeight: '600' },
+  crewStatus: { flexShrink: 1, fontSize: FONTS.xs, fontWeight: '700', textAlign: 'right' },
   reviewButton: {
     backgroundColor: COLORS.primary,
     padding: SPACING.md,
