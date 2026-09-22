@@ -14,6 +14,7 @@ import {
   Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
@@ -200,7 +201,7 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
               variant="search"
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder="Search by date, location, service, description…"
+              placeholder="Search discharge logs"
               style={styles.searchInput}
               returnKeyType="search"
             />
@@ -231,8 +232,18 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
           }
         >
           {filteredLogs.length === 0 ? (
-            <View style={[styles.emptyState, { backgroundColor: themeColors.surface }]}>
-              <Text style={styles.emptyIcon}>🚿</Text>
+            <View
+              style={[
+                styles.emptyState,
+                {
+                  backgroundColor: themeColors.surface,
+                  borderColor: themeColors.border,
+                },
+              ]}
+            >
+              <View style={[styles.emptyIconCircle, { backgroundColor: themeColors.accentSoft }]}>
+                <Ionicons name="water-outline" size={27} color={themeColors.accent} />
+              </View>
               <Text style={[styles.emptyTitle, { color: themeColors.textPrimary }]}>
                 {logs.length === 0 ? 'No entries yet' : 'No matching entries'}
               </Text>
@@ -262,11 +273,10 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
                   summary={
                     <ButtonTagRow
                       label="Date"
-                      value={[log.logDate, log.logTime].filter(Boolean).join('  ·  ')}
+                      value={[log.logDate, log.logTime].filter(Boolean).join(' · ')}
                     />
                   }
                 >
-                  <ButtonTagRow label="Time" value={log.logTime ?? ''} />
                   <View
                     style={[
                       styles.badge,
@@ -279,13 +289,19 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
                       {DISCHARGE_LABELS[log.dischargeType]}
                     </Text>
                   </View>
-                  {log.dischargeType === 'PUMPOUT_SERVICE' && (
-                    <ButtonTagRow label="Service" value={log.pumpoutServiceName ?? ''} />
-                  )}
-                  <ButtonTagRow
-                    label="Amount"
-                    value={log.amountInGallons ? `${log.amountInGallons} gallons` : ''}
-                  />
+                  <View style={styles.detailGrid}>
+                    {log.dischargeType === 'PUMPOUT_SERVICE' && (
+                      <View style={styles.serviceColumn}>
+                        <ButtonTagRow label="Service" value={log.pumpoutServiceName ?? ''} />
+                      </View>
+                    )}
+                    <View style={styles.amountColumn}>
+                      <ButtonTagRow
+                        label="Amount"
+                        value={log.amountInGallons ? `${log.amountInGallons} gallons` : ''}
+                      />
+                    </View>
+                  </View>
                   <ButtonTagRow label="Description" value={log.description ?? ''} />
                 </ButtonTagCard>
               );
@@ -317,7 +333,8 @@ const styles = StyleSheet.create({
   listContent: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   emptyContent: { flexGrow: 1, justifyContent: 'center' },
   emptyState: {
-    borderRadius: 12,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
     padding: SPACING.xl,
     alignItems: 'center',
     shadowColor: COLORS.black,
@@ -326,7 +343,14 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  emptyIcon: { fontSize: 48, marginBottom: SPACING.md },
+  emptyIconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: BORDER_RADIUS.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.md,
+  },
   emptyTitle: { fontSize: FONTS.xl, fontWeight: '700', marginBottom: SPACING.sm },
   emptyText: { fontSize: FONTS.base, textAlign: 'center', lineHeight: 22 },
   badge: {
@@ -337,4 +361,10 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   badgeText: { fontSize: FONTS.sm, fontWeight: '700' },
+  detailGrid: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+  },
+  serviceColumn: { flex: 1.5 },
+  amountColumn: { flex: 0.8, minWidth: 88 },
 });

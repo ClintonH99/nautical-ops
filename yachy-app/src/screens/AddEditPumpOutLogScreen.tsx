@@ -14,10 +14,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
-  TextInput,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import pumpOutLogsService from '../services/pumpOutLogs';
@@ -180,137 +180,178 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Discharge Type selector */}
-        <View style={styles.fieldContainer}>
-          <Text style={[styles.label, { color: themeColors.textPrimary }]}>Discharge Type</Text>
-          <View style={styles.optionsCol}>
-            {DISCHARGE_OPTIONS.map((opt) => {
-              const selected = dischargeType === opt.value;
-              return (
-                <TouchableOpacity
-                  key={opt.value}
+        <View
+          style={[
+            styles.section,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+            ]}
+          >
+            Entry details
+          </Text>
+
+          <Input
+            label="Location"
+            value={location}
+            onChangeText={setLocation}
+            placeholder="e.g. Port Miami, Dock B"
+          />
+
+          <View style={styles.dateTimeRow}>
+            <View style={styles.dateTimeColumn}>
+              <DateOnlyPicker
+                label="Date"
+                value={formatDate(date)}
+                onChange={(nextDate) => setDate(parseLocalDate(nextDate))}
+                title="Select discharge date"
+              />
+            </View>
+
+            <View style={[styles.fieldContainer, styles.dateTimeColumn]}>
+              <Text style={[styles.label, { color: themeColors.textPrimary }]}>Time</Text>
+              {Platform.OS === 'ios' ? (
+                <View
                   style={[
-                    styles.optionRow,
-                    { backgroundColor: themeColors.surface },
-                    selected && styles.optionRowSelected,
+                    styles.pickerTrigger,
+                    styles.iosPickerTrigger,
+                    { backgroundColor: themeColors.control, borderColor: themeColors.border },
                   ]}
-                  onPress={() => setDischargeType(opt.value)}
-                  activeOpacity={0.7}
                 >
-                  <View style={[styles.radio, selected && styles.radioSelected]}>
-                    {selected && <View style={styles.radioDot} />}
-                  </View>
-                  <Text
+                  <DateTimePicker
+                    value={time}
+                    mode="time"
+                    display="compact"
+                    onChange={(_: DateTimePickerEvent, selected?: Date) => {
+                      if (selected) setTime(selected);
+                    }}
+                  />
+                </View>
+              ) : (
+                <>
+                  <TouchableOpacity
                     style={[
-                      styles.optionLabel,
-                      { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-                      selected && styles.optionLabelSelected,
+                      styles.pickerTrigger,
+                      { backgroundColor: themeColors.control, borderColor: themeColors.border },
                     ]}
+                    onPress={() => setShowTimePicker(true)}
+                    activeOpacity={0.7}
                   >
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+                    <Text style={[styles.pickerValue, { color: themeColors.textPrimary }]}>
+                      {formatTime(time)}
+                    </Text>
+                    <Ionicons name="time-outline" size={20} color={themeColors.textSecondary} />
+                  </TouchableOpacity>
+                  {showTimePicker && (
+                    <DateTimePicker
+                      value={time}
+                      mode="time"
+                      is24Hour
+                      display="default"
+                      onChange={(_: DateTimePickerEvent, selected?: Date) => {
+                        setShowTimePicker(false);
+                        if (selected) setTime(selected);
+                      }}
+                    />
+                  )}
+                </>
+              )}
+            </View>
           </View>
         </View>
 
-        {/* Pump-out Service Name — only shown when Pump-out Service is selected */}
-        {dischargeType === 'PUMPOUT_SERVICE' && (
+        <View
+          style={[
+            styles.section,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+            ]}
+          >
+            Discharge details
+          </Text>
+
           <View style={styles.fieldContainer}>
-            <Text style={[styles.label, { color: themeColors.textPrimary }]}>Pump-out Service</Text>
-            <TextInput
-              style={[
-                styles.textInput,
-                { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
-              ]}
+            <Text style={[styles.label, { color: themeColors.textPrimary }]}>Discharge Type</Text>
+            <View style={styles.optionsCol}>
+              {DISCHARGE_OPTIONS.map((opt) => {
+                const selected = dischargeType === opt.value;
+                const selectedTint = themeColors.isDark ? COLORS.white : COLORS.primary;
+                return (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[
+                      styles.optionRow,
+                      {
+                        backgroundColor: selected ? themeColors.accentSoft : themeColors.control,
+                        borderColor: selected ? selectedTint : themeColors.border,
+                      },
+                    ]}
+                    onPress={() => setDischargeType(opt.value)}
+                    activeOpacity={0.7}
+                  >
+                    <View
+                      style={[
+                        styles.radio,
+                        { borderColor: selected ? selectedTint : themeColors.borderStrong },
+                      ]}
+                    >
+                      {selected && (
+                        <View style={[styles.radioDot, { backgroundColor: selectedTint }]} />
+                      )}
+                    </View>
+                    <Text
+                      style={[
+                        styles.optionLabel,
+                        {
+                          color: selected ? selectedTint : themeColors.textPrimary,
+                          fontWeight: selected ? '700' : '500',
+                        },
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {dischargeType === 'PUMPOUT_SERVICE' && (
+            <Input
+              label="Pump-out Service"
               value={pumpoutServiceName}
               onChangeText={setPumpoutServiceName}
               placeholder="Pump-out truck or marina pump-out"
-              placeholderTextColor={themeColors.textSecondary}
               autoCapitalize="words"
             />
-          </View>
-        )}
-
-        {/* Location */}
-        <Input
-          label="Location"
-          value={location}
-          onChangeText={setLocation}
-          placeholder="e.g. Port Miami, Dock B"
-        />
-
-        {/* Amount in Gallons */}
-        <Input
-          label="Amount (gallons)"
-          value={amountInGallons}
-          onChangeText={setAmountInGallons}
-          placeholder="e.g. 150"
-          keyboardType="decimal-pad"
-        />
-
-        {/* Description (optional) */}
-        <Input
-          label="Description (optional)"
-          value={description}
-          onChangeText={setDescription}
-          placeholder="Tipped the dockhand $20"
-          placeholderTextColor={themeColors.textSecondary}
-          multiline
-          numberOfLines={3}
-        />
-
-        <DateOnlyPicker
-          label="Date"
-          value={formatDate(date)}
-          onChange={(nextDate) => setDate(parseLocalDate(nextDate))}
-          title="Select discharge date"
-        />
-
-        {/* Time */}
-        <View style={styles.fieldContainer}>
-          <Text style={[styles.label, { color: themeColors.textPrimary }]}>Time</Text>
-          {Platform.OS === 'ios' ? (
-            <View style={[styles.pickerTrigger, { backgroundColor: themeColors.surface }]}>
-              <Text style={[styles.pickerValue, { color: themeColors.textPrimary }]}>
-                {formatTime(time)}
-              </Text>
-              <DateTimePicker
-                value={time}
-                mode="time"
-                display="compact"
-                onChange={(_: DateTimePickerEvent, selected?: Date) => {
-                  if (selected) setTime(selected);
-                }}
-              />
-            </View>
-          ) : (
-            <>
-              <TouchableOpacity
-                style={[styles.pickerTrigger, { backgroundColor: themeColors.surface }]}
-                onPress={() => setShowTimePicker(true)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.pickerValue, { color: themeColors.textPrimary }]}>
-                  {formatTime(time)}
-                </Text>
-                <Text style={styles.pickerIcon}>🕐</Text>
-              </TouchableOpacity>
-              {showTimePicker && (
-                <DateTimePicker
-                  value={time}
-                  mode="time"
-                  is24Hour
-                  display="default"
-                  onChange={(_: DateTimePickerEvent, selected?: Date) => {
-                    setShowTimePicker(false);
-                    if (selected) setTime(selected);
-                  }}
-                />
-              )}
-            </>
           )}
+
+          <Input
+            label="Amount (gallons)"
+            value={amountInGallons}
+            onChangeText={setAmountInGallons}
+            placeholder="e.g. 150"
+            keyboardType="decimal-pad"
+          />
+
+          <Input
+            label="Description (optional)"
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Tipped the dockhand $20"
+            multiline
+            numberOfLines={3}
+            containerStyle={styles.lastInput}
+          />
         </View>
 
         <View style={styles.actions}>
@@ -323,14 +364,17 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
             fullWidth
           />
           <TouchableOpacity
-            style={styles.cancelBtn}
+            style={[
+              styles.cancelBtn,
+              { borderColor: themeColors.isDark ? COLORS.white : COLORS.primary },
+            ]}
             onPress={() => navigation.goBack()}
             disabled={saving}
           >
             <Text
               style={[
                 styles.cancelText,
-                { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+                { color: themeColors.isDark ? COLORS.white : COLORS.primary },
               ]}
             >
               Cancel
@@ -366,6 +410,18 @@ const styles = StyleSheet.create({
   fieldContainer: {
     marginBottom: SPACING.md,
   },
+  section: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    ...SHADOWS.sm,
+  },
+  sectionTitle: {
+    fontSize: FONTS.lg,
+    fontWeight: '700',
+    marginBottom: SPACING.md,
+  },
   label: {
     fontSize: FONTS.sm,
     fontWeight: '600',
@@ -378,48 +434,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: COLORS.gray200,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
     gap: SPACING.md,
-  },
-  optionRowSelected: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primary + '08',
   },
   radio: {
     width: 20,
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: COLORS.gray300,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  radioSelected: {
-    borderColor: COLORS.primary,
   },
   radioDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: COLORS.primary,
   },
   optionLabel: {
     fontSize: FONTS.base,
     fontWeight: '500',
-  },
-  optionLabelSelected: {
-    color: COLORS.primary,
-    fontWeight: '700',
-  },
-  textInput: {
-    height: SIZES.inputHeight,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: BORDER_RADIUS.md,
-    paddingHorizontal: SPACING.md,
-    fontSize: FONTS.base,
   },
   pickerTrigger: {
     flexDirection: 'row',
@@ -427,25 +461,39 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     height: SIZES.inputHeight,
     borderWidth: 1,
-    borderColor: COLORS.border,
     borderRadius: BORDER_RADIUS.md,
     paddingHorizontal: SPACING.md,
   },
   pickerValue: {
     fontSize: FONTS.base,
   },
-  pickerIcon: {
-    fontSize: 18,
+  iosPickerTrigger: {
+    justifyContent: 'center',
   },
   actions: {
-    marginTop: SPACING.lg,
+    marginTop: SPACING.sm,
     gap: SPACING.sm,
   },
   cancelBtn: {
-    alignSelf: 'center',
-    padding: SPACING.sm,
+    minHeight: SIZES.buttonHeight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.md,
   },
   cancelText: {
     fontSize: FONTS.base,
+    fontWeight: '600',
+  },
+  dateTimeRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  dateTimeColumn: {
+    flex: 1,
+  },
+  lastInput: {
+    marginBottom: 0,
   },
 });
