@@ -5,7 +5,7 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { FONTS, SPACING, SIZES } from '../constants/theme';
+import { COLORS, FONTS, SPACING, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import rulesService from '../services/rules';
@@ -25,7 +25,7 @@ function RulesPreview({
   themeColors,
 }: {
   rules: string[];
-  themeColors: { textPrimary: string; textSecondary: string };
+  themeColors: { textPrimary: string; textSecondary: string; border: string };
 }) {
   const items = (rules || []).filter(Boolean);
   if (items.length === 0)
@@ -37,20 +37,15 @@ function RulesPreview({
 
   return (
     <View style={styles.preview}>
-      {items.slice(0, 4).map((r, i) => (
-        <Text
-          key={i}
-          style={[styles.previewRow, { color: themeColors.textPrimary }]}
-          numberOfLines={1}
+      {items.map((rule, index) => (
+        <View
+          key={`${index}-${rule}`}
+          style={[styles.previewRow, { borderBottomColor: themeColors.border }]}
         >
-          {i + 1}. {r}
-        </Text>
+          <Text style={[styles.ruleNumber, { color: themeColors.textSecondary }]}>{index + 1}</Text>
+          <Text style={[styles.ruleText, { color: themeColors.textPrimary }]}>{rule}</Text>
+        </View>
       ))}
-      {items.length > 4 && (
-        <Text style={[styles.previewMore, { color: themeColors.textSecondary }]}>
-          +{items.length - 4} more rules
-        </Text>
-      )}
     </View>
   );
 }
@@ -197,7 +192,8 @@ export const RulesScreen = ({ navigation }: any) => {
       )}
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, items.length === 0 && styles.contentEmpty]}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -208,30 +204,6 @@ export const RulesScreen = ({ navigation }: any) => {
           />
         }
       >
-        <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>Published</Text>
-        {items.map((item) => (
-          <ButtonTagCard
-            key={item.id}
-            headerTitle={item.data?.title || item.title}
-            showCheckbox={exportMode}
-            checked={selectedIds.has(item.id)}
-            onToggleSelect={exportMode ? () => toggleSelect(item.id) : undefined}
-            collapsible={!exportMode}
-            expanded={expandedId === item.id}
-            onToggleExpand={() =>
-              setExpandedId((current) => (current === item.id ? null : item.id))
-            }
-            onEdit={isHOD && !exportMode ? () => onEdit(item) : undefined}
-            onDelete={isHOD && !exportMode ? () => onDelete(item) : undefined}
-          >
-            <RulesPreview rules={item.data?.rules ?? []} themeColors={themeColors} />
-          </ButtonTagCard>
-        ))}
-        {items.length === 0 && (
-          <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
-            No published rules yet.{isHOD ? ' Create one below.' : ''}
-          </Text>
-        )}
         {isHOD && (
           <View style={styles.createSection}>
             <Button
@@ -242,6 +214,51 @@ export const RulesScreen = ({ navigation }: any) => {
             />
           </View>
         )}
+        <View style={styles.listHeading}>
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
+            ]}
+          >
+            Published Rules
+          </Text>
+          <Text style={[styles.recordCount, { color: themeColors.textSecondary }]}>
+            {items.length} {items.length === 1 ? 'record' : 'records'}
+          </Text>
+        </View>
+        {items.map((item) => {
+          const rules = (item.data?.rules ?? []).filter(Boolean);
+          return (
+            <ButtonTagCard
+              key={item.id}
+              headerTitle={item.data?.title || item.title}
+              minimal
+              showCheckbox={exportMode}
+              checked={selectedIds.has(item.id)}
+              onToggleSelect={exportMode ? () => toggleSelect(item.id) : undefined}
+              collapsible={!exportMode}
+              expanded={expandedId === item.id}
+              onToggleExpand={() =>
+                setExpandedId((current) => (current === item.id ? null : item.id))
+              }
+              onEdit={isHOD && !exportMode ? () => onEdit(item) : undefined}
+              onDelete={isHOD && !exportMode ? () => onDelete(item) : undefined}
+              summary={
+                <Text style={[styles.cardSummary, { color: themeColors.textSecondary }]}>
+                  {rules.length} {rules.length === 1 ? 'rule' : 'rules'}
+                </Text>
+              }
+            >
+              <RulesPreview rules={rules} themeColors={themeColors} />
+            </ButtonTagCard>
+          );
+        })}
+        {items.length === 0 && (
+          <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
+            No published rules yet.
+          </Text>
+        )}
       </ScrollView>
     </View>
   );
@@ -251,15 +268,31 @@ const styles = StyleSheet.create({
   pageWrap: { flex: 1 },
   container: { flex: 1 },
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
+  contentEmpty: { flexGrow: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
-  sectionTitle: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.md },
-  preview: {
-    marginBottom: SPACING.md,
+  listHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.sm,
+    paddingHorizontal: 2,
   },
-  previewRow: { fontSize: FONTS.sm, marginBottom: 2 },
-  previewMore: { fontSize: FONTS.xs, marginTop: 2 },
+  sectionTitle: { fontSize: FONTS.base, fontWeight: '700' },
+  recordCount: { fontSize: FONTS.sm },
+  cardSummary: { fontSize: FONTS.sm, lineHeight: 19 },
+  preview: {
+    marginBottom: SPACING.sm,
+  },
+  previewRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  ruleNumber: { width: 24, fontSize: FONTS.xs, fontWeight: '700' },
+  ruleText: { flex: 1, fontSize: FONTS.sm, lineHeight: 19 },
   previewEmpty: { fontSize: FONTS.sm, fontStyle: 'italic', marginTop: SPACING.sm },
   emptyText: { fontSize: FONTS.base, marginBottom: SPACING.xl, textAlign: 'center' },
-  createSection: { marginTop: SPACING.lg },
+  createSection: { marginBottom: SPACING.lg },
 });

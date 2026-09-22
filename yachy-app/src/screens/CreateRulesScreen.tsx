@@ -15,6 +15,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
@@ -24,6 +25,7 @@ import { generateRulesPdf } from '../utils/rulesPdf';
 
 export const CreateRulesScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
+  const actionColor = themeColors.isDark ? COLORS.white : COLORS.primary;
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
   const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
@@ -151,64 +153,81 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
         style={styles.scroll}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator
+        showsVerticalScrollIndicator={false}
       >
-        <Text
+        <View
           style={[
-            styles.label,
-            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
           ]}
         >
-          Rule Title
-        </Text>
-        <TextInput
+          <Text style={[styles.sectionTitle, { color: actionColor }]}>Rule Details</Text>
+          <Text style={[styles.label, { color: themeColors.textPrimary }]}>Rule Title</Text>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: themeColors.control,
+                borderColor: themeColors.border,
+                color: themeColors.textPrimary,
+              },
+            ]}
+            value={title}
+            onChangeText={setTitle}
+            placeholder="e.g. General Rules On-Board"
+            placeholderTextColor={themeColors.textMuted}
+          />
+        </View>
+        <View
           style={[
-            styles.input,
-            { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
-          ]}
-          value={title}
-          onChangeText={setTitle}
-          placeholder="eg. Deck/Interior Team or Miami to Nassau"
-          placeholderTextColor={themeColors.textSecondary}
-        />
-        <Text
-          style={[
-            styles.label,
-            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
           ]}
         >
-          Rules
-        </Text>
-        {rules.map((r, i) => (
-          <React.Fragment key={i}>
-            <View style={styles.ruleRow}>
-              <TextInput
-                ref={(element) => {
-                  ruleInputRefs.current[i] = element;
-                }}
-                style={[
-                  styles.input,
-                  styles.flex,
-                  { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
-                ]}
-                value={r}
-                onChangeText={(v) => setRule(i, v)}
-                placeholder="Enter rule"
-                placeholderTextColor={themeColors.textSecondary}
-                returnKeyType="done"
-                submitBehavior="submit"
-                onFocus={() => setActiveRuleIndex(i)}
-                onSubmitEditing={() => handleRuleSubmit(i)}
-              />
-              {rules.length > 1 && (
-                <TouchableOpacity onPress={() => removeRule(i)}>
-                  <Text style={styles.remove}>✕</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            {i === activeRuleIndex && <EnterToAddHint />}
-          </React.Fragment>
-        ))}
+          <Text style={[styles.sectionTitle, { color: actionColor }]}>Rules</Text>
+          {rules.map((rule, index) => (
+            <React.Fragment key={index}>
+              <View style={styles.ruleRow}>
+                <Text style={[styles.ruleNumber, { color: themeColors.textSecondary }]}>
+                  {index + 1}
+                </Text>
+                <TextInput
+                  ref={(element) => {
+                    ruleInputRefs.current[index] = element;
+                  }}
+                  style={[
+                    styles.input,
+                    styles.ruleInput,
+                    {
+                      backgroundColor: themeColors.control,
+                      borderColor: themeColors.border,
+                      color: themeColors.textPrimary,
+                    },
+                  ]}
+                  value={rule}
+                  onChangeText={(value) => setRule(index, value)}
+                  placeholder="Enter rule"
+                  placeholderTextColor={themeColors.textMuted}
+                  returnKeyType="done"
+                  submitBehavior="submit"
+                  onFocus={() => setActiveRuleIndex(index)}
+                  onSubmitEditing={() => handleRuleSubmit(index)}
+                />
+                {rules.length > 1 && (
+                  <TouchableOpacity
+                    onPress={() => removeRule(index)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete rule ${index + 1}`}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="close" size={22} color={COLORS.danger} />
+                  </TouchableOpacity>
+                )}
+              </View>
+              {index === activeRuleIndex && <EnterToAddHint style={styles.enterHint} />}
+            </React.Fragment>
+          ))}
+        </View>
 
         <View style={styles.actions}>
           <Button
@@ -230,8 +249,16 @@ const styles = StyleSheet.create({
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding + 100 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
-  label: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: 4, marginTop: SPACING.md },
+  formSection: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  sectionTitle: { fontSize: FONTS.base, fontWeight: '700', marginBottom: SPACING.md },
+  label: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs },
   input: {
+    minHeight: 48,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
     fontSize: FONTS.base,
@@ -244,8 +271,14 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     marginBottom: SPACING.sm,
   },
-  flex: { flex: 1 },
-  remove: { fontSize: FONTS.sm, color: COLORS.primary, padding: SPACING.sm },
-  actions: { marginTop: SPACING.xl, gap: SPACING.md },
+  ruleNumber: {
+    width: 24,
+    fontSize: FONTS.xs,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  ruleInput: { flex: 1, minWidth: 0 },
+  enterHint: { marginLeft: 32, marginBottom: SPACING.sm },
+  actions: { marginTop: SPACING.sm, gap: SPACING.md },
   btn: { marginBottom: SPACING.sm },
 });
