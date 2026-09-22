@@ -16,6 +16,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -75,6 +76,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
   const musterStationId = route.params?.musterStationId as string | undefined;
   const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
   const isEdit = !!musterStationId;
+  const actionColor = themeColors.isDark ? themeColors.textPrimary : COLORS.primary;
 
   const [title, setTitle] = useState('');
   const [vesselName, setVesselName] = useState('');
@@ -356,271 +358,369 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
         style={styles.scroll}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator
+        showsVerticalScrollIndicator={false}
       >
-        <Text
+        <View
           style={[
-            styles.label,
-            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
           ]}
         >
-          Title
-        </Text>
-        <TextInput
-          style={[
-            styles.input,
-            { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
-          ]}
-          value={title}
-          onChangeText={setTitle}
-          placeholder="e.g. Main Muster Station Plan"
-          placeholderTextColor={themeColors.textSecondary}
-        />
-        <Text
-          style={[
-            styles.label,
-            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-          ]}
-        >
-          Muster Station Locations
-        </Text>
-        {musterStationLocations.map((location, index) => (
-          <View key={index} style={styles.row}>
-            <TextInput
-              ref={(input) => {
-                registerLocationRef(musterStationLocationRefs, index, input);
-              }}
-              style={[
-                styles.input,
-                styles.flex,
-                { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
-              ]}
-              value={location}
-              onChangeText={(value) => setLoc(setMusterStationLocations, index, value)}
-              autoFocus={shouldAutoFocusLocation(musterStationLocationRefs, index)}
-              placeholder="e.g. Sundeck"
-              placeholderTextColor={themeColors.textSecondary}
-            />
-            <TouchableOpacity onPress={() => removeLocation(setMusterStationLocations, index)}>
-              <Text style={styles.remove}>✕</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
-        <TouchableOpacity
-          onPress={() =>
-            addLocation(
-              setMusterStationLocations,
-              musterStationLocationRefs,
-              musterStationLocations.length
-            )
-          }
-        >
-          <Text style={styles.add}>+ Add Location</Text>
-        </TouchableOpacity>
-        <Text
-          style={[
-            styles.label,
-            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-          ]}
-        >
-          Medical Bags Locations
-        </Text>
-        {medicalChest.map((loc, i) => (
-          <View key={i} style={styles.row}>
-            <TextInput
-              ref={(el) => {
-                registerLocationRef(medicalChestRefs, i, el);
-              }}
-              style={[
-                styles.input,
-                styles.flex,
-                { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
-              ]}
-              value={loc}
-              onChangeText={(v) => setLoc(setMedicalChest, i, v)}
-              autoFocus={shouldAutoFocusLocation(medicalChestRefs, i)}
-              placeholder="Location"
-              placeholderTextColor={themeColors.textSecondary}
-            />
-            <TouchableOpacity onPress={() => removeLocation(setMedicalChest, i)}>
-              <Text style={styles.remove}>✕</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
-        <TouchableOpacity
-          onPress={() => addLocation(setMedicalChest, medicalChestRefs, medicalChest.length)}
-        >
-          <Text style={styles.add}>+ Add Location</Text>
-        </TouchableOpacity>
+          <Text style={[styles.sectionTitle, { color: actionColor }]}>Muster Station Details</Text>
+          <Text style={[styles.label, { color: themeColors.textPrimary }]}>Title</Text>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: themeColors.control,
+                borderColor: themeColors.border,
+                color: themeColors.textPrimary,
+              },
+            ]}
+            value={title}
+            onChangeText={setTitle}
+            placeholder="e.g. Main Muster Station Plan"
+            placeholderTextColor={themeColors.textMuted}
+          />
+          <Text style={[styles.label, { color: themeColors.textPrimary }]}>
+            Muster Station Locations
+          </Text>
+          {musterStationLocations.map((location, index) => {
+            const deleteDisabled = musterStationLocations.length <= 1;
+            const deleteColor = deleteDisabled ? themeColors.textMuted : COLORS.danger;
+            return (
+              <View key={index} style={styles.row}>
+                <TextInput
+                  ref={(input) => {
+                    registerLocationRef(musterStationLocationRefs, index, input);
+                  }}
+                  style={[
+                    styles.input,
+                    styles.flex,
+                    {
+                      backgroundColor: themeColors.control,
+                      borderColor: themeColors.border,
+                      color: themeColors.textPrimary,
+                    },
+                  ]}
+                  value={location}
+                  onChangeText={(value) => setLoc(setMusterStationLocations, index, value)}
+                  autoFocus={shouldAutoFocusLocation(musterStationLocationRefs, index)}
+                  placeholder="e.g. Sundeck"
+                  placeholderTextColor={themeColors.textMuted}
+                />
+                <TouchableOpacity
+                  style={[styles.deleteButton, { borderColor: deleteColor }]}
+                  onPress={() => removeLocation(setMusterStationLocations, index)}
+                  disabled={deleteDisabled}
+                >
+                  <Ionicons name="trash-outline" size={16} color={deleteColor} />
+                  <Text style={[styles.deleteText, { color: deleteColor }]}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+          <TouchableOpacity
+            style={[styles.addButton, { borderColor: actionColor }]}
+            onPress={() =>
+              addLocation(
+                setMusterStationLocations,
+                musterStationLocationRefs,
+                musterStationLocations.length
+              )
+            }
+          >
+            <Ionicons name="add" size={18} color={actionColor} />
+            <Text style={[styles.addText, { color: actionColor }]}>Add Location</Text>
+          </TouchableOpacity>
+        </View>
 
-        <Text
+        <View
           style={[
-            styles.label,
-            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
           ]}
         >
-          Grab bag locations
-        </Text>
-        {grabBag.map((loc, i) => (
-          <View key={i} style={styles.row}>
-            <TextInput
-              ref={(el) => {
-                registerLocationRef(grabBagRefs, i, el);
-              }}
-              style={[
-                styles.input,
-                styles.flex,
-                { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
-              ]}
-              value={loc}
-              onChangeText={(v) => setLoc(setGrabBag, i, v)}
-              autoFocus={shouldAutoFocusLocation(grabBagRefs, i)}
-              placeholder="Location"
-              placeholderTextColor={themeColors.textSecondary}
-            />
-            <TouchableOpacity onPress={() => removeLocation(setGrabBag, i)}>
-              <Text style={styles.remove}>✕</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
-        <TouchableOpacity onPress={() => addLocation(setGrabBag, grabBagRefs, grabBag.length)}>
-          <Text style={styles.add}>+ Add Location</Text>
-        </TouchableOpacity>
+          <Text style={[styles.sectionTitle, { color: actionColor }]}>
+            Emergency Equipment Locations
+          </Text>
 
-        <Text
+          <Text style={[styles.label, { color: themeColors.textPrimary }]}>Medical Bags</Text>
+          {medicalChest.map((loc, i) => {
+            const deleteDisabled = medicalChest.length <= 1;
+            const deleteColor = deleteDisabled ? themeColors.textMuted : COLORS.danger;
+            return (
+              <View key={i} style={styles.row}>
+                <TextInput
+                  ref={(el) => registerLocationRef(medicalChestRefs, i, el)}
+                  style={[
+                    styles.input,
+                    styles.flex,
+                    {
+                      backgroundColor: themeColors.control,
+                      borderColor: themeColors.border,
+                      color: themeColors.textPrimary,
+                    },
+                  ]}
+                  value={loc}
+                  onChangeText={(v) => setLoc(setMedicalChest, i, v)}
+                  autoFocus={shouldAutoFocusLocation(medicalChestRefs, i)}
+                  placeholder="Location"
+                  placeholderTextColor={themeColors.textMuted}
+                />
+                <TouchableOpacity
+                  style={[styles.deleteButton, { borderColor: deleteColor }]}
+                  onPress={() => removeLocation(setMedicalChest, i)}
+                  disabled={deleteDisabled}
+                >
+                  <Ionicons name="trash-outline" size={16} color={deleteColor} />
+                  <Text style={[styles.deleteText, { color: deleteColor }]}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+          <TouchableOpacity
+            style={[styles.addButton, styles.equipmentAddButton, { borderColor: actionColor }]}
+            onPress={() => addLocation(setMedicalChest, medicalChestRefs, medicalChest.length)}
+          >
+            <Ionicons name="add" size={18} color={actionColor} />
+            <Text style={[styles.addText, { color: actionColor }]}>Add Location</Text>
+          </TouchableOpacity>
+
+          <Text style={[styles.label, { color: themeColors.textPrimary }]}>Grab Bags</Text>
+          {grabBag.map((loc, i) => {
+            const deleteDisabled = grabBag.length <= 1;
+            const deleteColor = deleteDisabled ? themeColors.textMuted : COLORS.danger;
+            return (
+              <View key={i} style={styles.row}>
+                <TextInput
+                  ref={(el) => registerLocationRef(grabBagRefs, i, el)}
+                  style={[
+                    styles.input,
+                    styles.flex,
+                    {
+                      backgroundColor: themeColors.control,
+                      borderColor: themeColors.border,
+                      color: themeColors.textPrimary,
+                    },
+                  ]}
+                  value={loc}
+                  onChangeText={(v) => setLoc(setGrabBag, i, v)}
+                  autoFocus={shouldAutoFocusLocation(grabBagRefs, i)}
+                  placeholder="Location"
+                  placeholderTextColor={themeColors.textMuted}
+                />
+                <TouchableOpacity
+                  style={[styles.deleteButton, { borderColor: deleteColor }]}
+                  onPress={() => removeLocation(setGrabBag, i)}
+                  disabled={deleteDisabled}
+                >
+                  <Ionicons name="trash-outline" size={16} color={deleteColor} />
+                  <Text style={[styles.deleteText, { color: deleteColor }]}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+          <TouchableOpacity
+            style={[styles.addButton, styles.equipmentAddButton, { borderColor: actionColor }]}
+            onPress={() => addLocation(setGrabBag, grabBagRefs, grabBag.length)}
+          >
+            <Ionicons name="add" size={18} color={actionColor} />
+            <Text style={[styles.addText, { color: actionColor }]}>Add Location</Text>
+          </TouchableOpacity>
+
+          <Text style={[styles.label, { color: themeColors.textPrimary }]}>Grab Bag Contents</Text>
+          <TextInput
+            style={[
+              styles.input,
+              styles.textArea,
+              {
+                backgroundColor: themeColors.control,
+                borderColor: themeColors.border,
+                color: themeColors.textPrimary,
+              },
+            ]}
+            value={grabBagContents}
+            onChangeText={setGrabBagContents}
+            placeholder="e.g. Flares, EPIRB, SART, VHF batteries, medical kit, water"
+            placeholderTextColor={themeColors.textMuted}
+            multiline
+          />
+
+          <Text style={[styles.label, { color: themeColors.textPrimary }]}>Life Rings</Text>
+          {lifeRings.map((loc, i) => {
+            const deleteDisabled = lifeRings.length <= 1;
+            const deleteColor = deleteDisabled ? themeColors.textMuted : COLORS.danger;
+            return (
+              <View key={i} style={styles.row}>
+                <TextInput
+                  ref={(el) => registerLocationRef(lifeRingRefs, i, el)}
+                  style={[
+                    styles.input,
+                    styles.flex,
+                    {
+                      backgroundColor: themeColors.control,
+                      borderColor: themeColors.border,
+                      color: themeColors.textPrimary,
+                    },
+                  ]}
+                  value={loc}
+                  onChangeText={(v) => setLoc(setLifeRings, i, v)}
+                  autoFocus={shouldAutoFocusLocation(lifeRingRefs, i)}
+                  placeholder="Location"
+                  placeholderTextColor={themeColors.textMuted}
+                />
+                <TouchableOpacity
+                  style={[styles.deleteButton, { borderColor: deleteColor }]}
+                  onPress={() => removeLocation(setLifeRings, i)}
+                  disabled={deleteDisabled}
+                >
+                  <Ionicons name="trash-outline" size={16} color={deleteColor} />
+                  <Text style={[styles.deleteText, { color: deleteColor }]}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+          <TouchableOpacity
+            style={[styles.addButton, { borderColor: actionColor }]}
+            onPress={() => addLocation(setLifeRings, lifeRingRefs, lifeRings.length)}
+          >
+            <Ionicons name="add" size={18} color={actionColor} />
+            <Text style={[styles.addText, { color: actionColor }]}>Add Location</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View
           style={[
-            styles.label,
-            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
           ]}
         >
-          Grab bag contents
-        </Text>
-        <TextInput
-          style={[
-            styles.input,
-            styles.textArea,
-            { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
-          ]}
-          value={grabBagContents}
-          onChangeText={setGrabBagContents}
-          placeholder="e.g. Flares, EPIRB, SART, VHF batteries, medical kit, water"
-          placeholderTextColor={themeColors.textSecondary}
-          multiline
-        />
-
-        <Text
-          style={[
-            styles.label,
-            { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-          ]}
-        >
-          Life rings
-        </Text>
-        {lifeRings.map((loc, i) => (
-          <View key={i} style={styles.row}>
-            <TextInput
-              ref={(el) => {
-                registerLocationRef(lifeRingRefs, i, el);
-              }}
-              style={[
-                styles.input,
-                styles.flex,
-                { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
-              ]}
-              value={loc}
-              onChangeText={(v) => setLoc(setLifeRings, i, v)}
-              autoFocus={shouldAutoFocusLocation(lifeRingRefs, i)}
-              placeholder="Location"
-              placeholderTextColor={themeColors.textSecondary}
-            />
-            <TouchableOpacity onPress={() => removeLocation(setLifeRings, i)}>
-              <Text style={styles.remove}>✕</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
-        <TouchableOpacity onPress={() => addLocation(setLifeRings, lifeRingRefs, lifeRings.length)}>
-          <Text style={styles.add}>+ Add Location</Text>
-        </TouchableOpacity>
-
-        <Text style={[styles.section, { color: themeColors.textPrimary }]}>Emergency signals</Text>
-        {(Object.keys(emergencySignals) as (keyof typeof DEFAULT_SIGNALS)[]).map((k) => (
-          <View key={k}>
-            <Text
-              style={[
-                styles.smlabel,
-                { color: themeColors.isDark ? COLORS.white : themeColors.textSecondary },
-              ]}
-            >
-              {EMERGENCY_SIGNAL_LABELS[k]}
-            </Text>
-            <TextInput
-              style={[
-                styles.input,
-                { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
-              ]}
-              value={emergencySignals[k]}
-              onChangeText={(v) => setEmergencySignals({ ...emergencySignals, [k]: v })}
-              placeholderTextColor={themeColors.textSecondary}
-            />
-          </View>
-        ))}
-
-        <Text style={[styles.section, { color: themeColors.textPrimary }]}>Crew duties</Text>
-        {crewMembers.map((c, i) => (
-          <View key={i} style={[styles.crewCard, { backgroundColor: themeColors.surface }]}>
-            <View style={styles.row}>
+          <Text style={[styles.sectionTitle, { color: actionColor }]}>Emergency Signals</Text>
+          {(Object.keys(emergencySignals) as (keyof typeof DEFAULT_SIGNALS)[]).map((k) => (
+            <View key={k} style={styles.fieldGroup}>
+              <Text style={[styles.label, { color: themeColors.textPrimary }]}>
+                {EMERGENCY_SIGNAL_LABELS[k]}
+              </Text>
               <TextInput
-                ref={(el) => {
-                  crewDutyRefs.current[`${i}-roleName`] = el;
-                }}
                 style={[
                   styles.input,
-                  styles.flex,
-                  { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+                  {
+                    backgroundColor: themeColors.control,
+                    borderColor: themeColors.border,
+                    color: themeColors.textPrimary,
+                  },
                 ]}
-                value={c.roleName}
-                onChangeText={(v) => setCrew(i, 'roleName', v)}
-                placeholder="Role name"
-                placeholderTextColor={themeColors.textSecondary}
-                returnKeyType="next"
-                submitBehavior="blurAndSubmit"
-                onKeyPress={({ nativeEvent }) => {
-                  if (nativeEvent.key === 'Enter') focusNextCrewDuty(i, 'roleName');
-                }}
-                onSubmitEditing={() => focusNextCrewDuty(i, 'roleName')}
+                value={emergencySignals[k]}
+                onChangeText={(v) => setEmergencySignals({ ...emergencySignals, [k]: v })}
+                placeholderTextColor={themeColors.textMuted}
               />
-              <TouchableOpacity onPress={() => removeCrew(i)}>
-                <Text style={styles.remove}>✕ Remove</Text>
-              </TouchableOpacity>
             </View>
-            {(['fire', 'manOverboard', 'grounding', 'abandonShip', 'medical'] as const).map((f) => (
-              <TextInput
-                key={f}
-                ref={(el) => {
-                  crewDutyRefs.current[`${i}-${f}`] = el;
-                }}
+          ))}
+        </View>
+
+        <View
+          style={[
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: actionColor }]}>Crew Duties</Text>
+          {crewMembers.map((c, i) => {
+            const deleteDisabled = crewMembers.length <= 1;
+            const deleteColor = deleteDisabled ? themeColors.textMuted : COLORS.danger;
+            return (
+              <View
+                key={i}
                 style={[
-                  styles.input,
-                  styles.sm,
-                  { backgroundColor: themeColors.surface, color: themeColors.textPrimary },
+                  styles.crewCard,
+                  { backgroundColor: themeColors.surfaceAlt, borderColor: themeColors.border },
                 ]}
-                value={c[f]}
-                onChangeText={(v) => setCrew(i, f, v)}
-                placeholder={CREW_DUTY_LABELS[f]}
-                placeholderTextColor={themeColors.textSecondary}
-                returnKeyType={f === 'medical' && i === crewMembers.length - 1 ? 'done' : 'next'}
-                submitBehavior="blurAndSubmit"
-                onKeyPress={({ nativeEvent }) => {
-                  if (nativeEvent.key === 'Enter') focusNextCrewDuty(i, f);
-                }}
-                onSubmitEditing={() => focusNextCrewDuty(i, f)}
-              />
-            ))}
-          </View>
-        ))}
-        <TouchableOpacity onPress={addCrew}>
-          <Text style={styles.add}>+ Add Crew Member</Text>
-        </TouchableOpacity>
+              >
+                <View style={styles.crewHeader}>
+                  <Text style={[styles.crewTitle, { color: actionColor }]}>
+                    Crew Member {i + 1}
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.deleteButton, { borderColor: deleteColor }]}
+                    onPress={() => removeCrew(i)}
+                    disabled={deleteDisabled}
+                  >
+                    <Ionicons name="trash-outline" size={16} color={deleteColor} />
+                    <Text style={[styles.deleteText, { color: deleteColor }]}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={[styles.label, { color: themeColors.textPrimary }]}>Role Name</Text>
+                <TextInput
+                  ref={(el) => {
+                    crewDutyRefs.current[`${i}-roleName`] = el;
+                  }}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: themeColors.control,
+                      borderColor: themeColors.border,
+                      color: themeColors.textPrimary,
+                    },
+                  ]}
+                  value={c.roleName}
+                  onChangeText={(v) => setCrew(i, 'roleName', v)}
+                  placeholder="Role name"
+                  placeholderTextColor={themeColors.textMuted}
+                  returnKeyType="next"
+                  submitBehavior="blurAndSubmit"
+                  onKeyPress={({ nativeEvent }) => {
+                    if (nativeEvent.key === 'Enter') focusNextCrewDuty(i, 'roleName');
+                  }}
+                  onSubmitEditing={() => focusNextCrewDuty(i, 'roleName')}
+                />
+
+                {(['fire', 'manOverboard', 'grounding', 'abandonShip', 'medical'] as const).map(
+                  (f) => (
+                    <View key={f} style={styles.fieldGroup}>
+                      <Text style={[styles.label, { color: themeColors.textPrimary }]}>
+                        {CREW_DUTY_LABELS[f]} Duty
+                      </Text>
+                      <TextInput
+                        ref={(el) => {
+                          crewDutyRefs.current[`${i}-${f}`] = el;
+                        }}
+                        style={[
+                          styles.input,
+                          {
+                            backgroundColor: themeColors.control,
+                            borderColor: themeColors.border,
+                            color: themeColors.textPrimary,
+                          },
+                        ]}
+                        value={c[f]}
+                        onChangeText={(v) => setCrew(i, f, v)}
+                        placeholder={CREW_DUTY_LABELS[f]}
+                        placeholderTextColor={themeColors.textMuted}
+                        returnKeyType={
+                          f === 'medical' && i === crewMembers.length - 1 ? 'done' : 'next'
+                        }
+                        submitBehavior="blurAndSubmit"
+                        onKeyPress={({ nativeEvent }) => {
+                          if (nativeEvent.key === 'Enter') focusNextCrewDuty(i, f);
+                        }}
+                        onSubmitEditing={() => focusNextCrewDuty(i, f)}
+                      />
+                    </View>
+                  )
+                )}
+              </View>
+            );
+          })}
+          <TouchableOpacity
+            style={[styles.addButton, { borderColor: actionColor }]}
+            onPress={addCrew}
+          >
+            <Ionicons name="add" size={18} color={actionColor} />
+            <Text style={[styles.addText, { color: actionColor }]}>Add Crew Member</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.actions}>
           <Button
@@ -644,34 +744,71 @@ const styles = StyleSheet.create({
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding + 100 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
-  label: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: 4, marginTop: SPACING.md },
-  smlabel: { fontSize: FONTS.xs, marginBottom: 2 },
-  section: {
-    fontSize: FONTS.lg,
+  formSection: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  sectionTitle: {
+    fontSize: FONTS.base,
     fontWeight: '700',
-    marginTop: SPACING.xl,
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  label: {
+    fontSize: FONTS.sm,
+    fontWeight: '600',
+    marginBottom: SPACING.xs,
   },
   input: {
+    minHeight: 48,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
     fontSize: FONTS.base,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    marginBottom: SPACING.sm,
   },
-  textArea: { minHeight: 60, textAlignVertical: 'top' },
-  sm: { marginTop: 4 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.sm },
+  textArea: { minHeight: 88, textAlignVertical: 'top' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   flex: { flex: 1 },
-  remove: { fontSize: FONTS.sm, color: COLORS.primary },
-  add: { fontSize: FONTS.base, color: COLORS.primary, fontWeight: '600', marginBottom: SPACING.sm },
+  deleteButton: {
+    minHeight: 42,
+    paddingHorizontal: SPACING.sm,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    marginBottom: SPACING.sm,
+  },
+  deleteText: { fontSize: FONTS.xs, fontWeight: '700' },
+  addButton: {
+    minHeight: 46,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+  },
+  addText: { fontSize: FONTS.sm, fontWeight: '700' },
+  equipmentAddButton: { marginBottom: SPACING.md },
+  fieldGroup: { marginTop: SPACING.sm },
   crewCard: {
     padding: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
     marginBottom: SPACING.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
-  actions: { marginTop: SPACING.xl, gap: SPACING.md },
+  crewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: SPACING.md,
+    marginBottom: SPACING.sm,
+  },
+  crewTitle: { fontSize: FONTS.sm, fontWeight: '700' },
+  actions: { marginTop: SPACING.sm, gap: SPACING.md },
   btn: { marginBottom: SPACING.sm },
 });

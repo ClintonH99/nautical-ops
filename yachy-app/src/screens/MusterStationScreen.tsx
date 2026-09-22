@@ -6,7 +6,7 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { FONTS, SPACING, SIZES } from '../constants/theme';
+import { COLORS, FONTS, SPACING, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import musterStationsService, { getMusterStationLocations } from '../services/musterStations';
@@ -175,7 +175,7 @@ export const MusterStationScreen = ({ navigation }: any) => {
           try {
             await musterStationsService.delete(item.id);
             load();
-          } catch (e) {
+          } catch {
             Alert.alert('Error', 'Could not delete muster station');
           }
         },
@@ -229,31 +229,8 @@ export const MusterStationScreen = ({ navigation }: any) => {
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={[styles.content, items.length === 0 && styles.contentEmpty]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>Published</Text>
-        {items.map((item) => (
-          <ButtonTagCard
-            key={item.id}
-            headerTitle={item.title}
-            showCheckbox={exportMode}
-            checked={selectedIds.has(item.id)}
-            onToggleSelect={exportMode ? () => toggleSelect(item.id) : undefined}
-            collapsible={!exportMode}
-            expanded={expandedId === item.id}
-            onToggleExpand={() =>
-              setExpandedId((current) => (current === item.id ? null : item.id))
-            }
-            onEdit={isHOD && !exportMode ? () => onEdit(item) : undefined}
-            onDelete={isHOD && !exportMode ? () => onDelete(item) : undefined}
-          >
-            <MusterStationPreview data={item.data} themeColors={themeColors} />
-          </ButtonTagCard>
-        ))}
-        {items.length === 0 && (
-          <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
-            No published muster stations yet.{isHOD ? ' Create one below.' : ''}
-          </Text>
-        )}
         {isHOD && (
           <View style={styles.createSection}>
             <Button
@@ -263,6 +240,55 @@ export const MusterStationScreen = ({ navigation }: any) => {
               fullWidth
             />
           </View>
+        )}
+        <View style={styles.listHeading}>
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
+            ]}
+          >
+            Published Muster Stations
+          </Text>
+          <Text style={[styles.recordCount, { color: themeColors.textSecondary }]}>
+            {items.length} {items.length === 1 ? 'record' : 'records'}
+          </Text>
+        </View>
+        {items.map((item) => {
+          const locations = getMusterStationLocations(item.data).filter(Boolean);
+          const crewCount = (item.data?.crewMembers ?? []).filter((crew) =>
+            crew?.roleName?.trim()
+          ).length;
+          return (
+            <ButtonTagCard
+              key={item.id}
+              headerTitle={item.title}
+              minimal
+              showCheckbox={exportMode}
+              checked={selectedIds.has(item.id)}
+              onToggleSelect={exportMode ? () => toggleSelect(item.id) : undefined}
+              collapsible={!exportMode}
+              expanded={expandedId === item.id}
+              onToggleExpand={() =>
+                setExpandedId((current) => (current === item.id ? null : item.id))
+              }
+              onEdit={isHOD && !exportMode ? () => onEdit(item) : undefined}
+              onDelete={isHOD && !exportMode ? () => onDelete(item) : undefined}
+              summary={
+                <Text style={[styles.cardSummary, { color: themeColors.textSecondary }]}>
+                  {locations.join(', ') || 'No location'} · {crewCount}{' '}
+                  {crewCount === 1 ? 'crew duty' : 'crew duties'}
+                </Text>
+              }
+            >
+              <MusterStationPreview data={item.data} themeColors={themeColors} />
+            </ButtonTagCard>
+          );
+        })}
+        {items.length === 0 && (
+          <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
+            No published muster stations yet.
+          </Text>
         )}
       </ScrollView>
     </View>
@@ -276,7 +302,17 @@ const styles = StyleSheet.create({
   contentEmpty: { flexGrow: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
-  sectionTitle: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.md },
+  createSection: { marginBottom: SPACING.lg },
+  listHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.sm,
+    paddingHorizontal: 2,
+  },
+  sectionTitle: { fontSize: FONTS.base, fontWeight: '700' },
+  recordCount: { fontSize: FONTS.sm },
+  cardSummary: { fontSize: FONTS.sm, lineHeight: 19 },
   preview: {
     marginBottom: SPACING.md,
   },
@@ -290,5 +326,4 @@ const styles = StyleSheet.create({
   previewMetaWrap: { marginBottom: SPACING.sm },
   previewMeta: { fontSize: FONTS.xs },
   emptyText: { fontSize: FONTS.base, marginBottom: SPACING.xl, textAlign: 'center' },
-  createSection: { marginTop: SPACING.lg },
 });

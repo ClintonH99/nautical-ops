@@ -5,49 +5,61 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { COLORS, FONTS, SPACING, SIZES } from '../constants/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { PageHeader } from '../components';
 import { useAuthStore } from '../store';
 
 const CATEGORIES = [
   {
-    icon: '✅',
+    icon: 'checkbox-outline',
     label: 'Pre-Departure Checklist',
     nav: 'PreDepartureChecklist' as const,
     enabled: true,
   },
   {
-    icon: '📍',
+    icon: 'location-outline',
     label: 'Muster Station & Duties',
     nav: 'MusterStation' as const,
     enabled: true,
   },
   {
-    icon: '🦺',
+    icon: 'help-buoy-outline',
     label: 'Safety Equipment',
     nav: 'SafetyEquipment' as const,
     enabled: true,
   },
   {
-    icon: '📜',
+    icon: 'reader-outline',
     label: 'Rules On-Board',
     nav: 'Rules' as const,
     enabled: true,
   },
   {
-    icon: '💤',
+    icon: 'moon-outline',
     label: 'Hours of Rest',
     nav: 'HoursOfRest' as const,
     enabled: true,
   },
   {
-    icon: '📝',
+    icon: 'list-outline',
     label: 'Watch Duties',
     nav: 'WatchDuties' as const,
     enabled: true,
   },
-];
+] satisfies Array<{
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  nav:
+    | 'PreDepartureChecklist'
+    | 'MusterStation'
+    | 'SafetyEquipment'
+    | 'Rules'
+    | 'HoursOfRest'
+    | 'WatchDuties';
+  enabled: boolean;
+}>;
 const VESSEL_CREW_SAFETY_INFO = {
   title: 'Vessel & Crew Safety',
   description: 'Central hub for safety information and procedures.',
@@ -84,40 +96,56 @@ export const VesselCrewSafetyScreen = ({ navigation }: any) => {
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
       >
-        {CATEGORIES.map((category) => (
-          <TouchableOpacity
-            key={category.label}
-            style={[
-              styles.card,
-              {
-                backgroundColor: themeColors.surface,
-                borderColor: themeColors.border,
-                borderWidth: themeColors.isDark ? 1 : 0,
-              },
-              !category.enabled && styles.cardDisabled,
-            ]}
-            onPress={() => category.enabled && category.nav && navigation.navigate(category.nav)}
-            activeOpacity={category.enabled ? 0.8 : 1}
-            disabled={!category.enabled}
-          >
-            <Text style={styles.cardIcon}>{category.icon}</Text>
-            <Text
+        <Text
+          style={[
+            styles.sectionTitle,
+            { color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
+          ]}
+        >
+          Safety Features
+        </Text>
+        <View style={styles.grid}>
+          {CATEGORIES.map((category) => (
+            <TouchableOpacity
+              key={category.label}
               style={[
-                styles.cardLabel,
-                { color: themeColors.textPrimary },
-                !category.enabled && { color: themeColors.textSecondary },
+                styles.card,
+                {
+                  backgroundColor: themeColors.surface,
+                  borderColor: themeColors.border,
+                },
+                !category.enabled && styles.cardDisabled,
               ]}
+              onPress={() => category.enabled && navigation.navigate(category.nav)}
+              activeOpacity={category.enabled ? 0.8 : 1}
+              disabled={!category.enabled}
+              accessibilityRole="button"
+              accessibilityLabel={category.label}
             >
-              {category.label}
-            </Text>
-            {category.enabled ? (
-              <Text style={[styles.cardChevron, { color: themeColors.textSecondary }]}>›</Text>
-            ) : (
-              <Text style={[styles.comingSoon, { color: themeColors.textMuted }]}>Coming soon</Text>
-            )}
-          </TouchableOpacity>
-        ))}
+              <View style={[styles.iconCircle, { backgroundColor: themeColors.accentSoft }]}>
+                <Ionicons name={category.icon} size={24} color={themeColors.accent} />
+              </View>
+              <View style={styles.cardFooter}>
+                <Text
+                  style={[
+                    styles.cardLabel,
+                    { color: themeColors.textPrimary },
+                    !category.enabled && { color: themeColors.textSecondary },
+                  ]}
+                >
+                  {category.label}
+                </Text>
+                {category.enabled ? (
+                  <Ionicons name="chevron-forward" size={19} color={themeColors.textSecondary} />
+                ) : (
+                  <Text style={[styles.comingSoon, { color: themeColors.textMuted }]}>Soon</Text>
+                )}
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
       </ScrollView>
     </View>
   );
@@ -129,25 +157,45 @@ const styles = StyleSheet.create({
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: SPACING.lg,
-    borderRadius: 12,
+  sectionTitle: {
+    fontSize: FONTS.lg,
+    fontWeight: '700',
     marginBottom: SPACING.md,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    paddingHorizontal: 2,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.md,
+  },
+  card: {
+    width: '47.5%',
+    minHeight: 134,
+    justifyContent: 'space-between',
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
   },
   cardDisabled: { opacity: 0.7 },
-  cardIcon: { fontSize: FONTS['2xl'], marginRight: SPACING.lg },
-  cardLabel: { flex: 1, fontSize: FONTS.lg, fontWeight: '600' },
-  cardChevron: { fontSize: 24, fontWeight: '300' },
-  comingSoon: {
+  iconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: BORDER_RADIUS.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: SPACING.xs,
+  },
+  cardLabel: {
+    flex: 1,
     fontSize: FONTS.sm,
-    color: COLORS.textTertiary,
+    lineHeight: 19,
+    fontWeight: '700',
+  },
+  comingSoon: {
+    fontSize: FONTS.xs,
   },
 });
