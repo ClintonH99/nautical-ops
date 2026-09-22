@@ -16,6 +16,7 @@ import {
   Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -45,7 +46,6 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
   const [rows, setRows] = useState<InventoryItemRow[]>([{ ...defaultRow }]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeRowIndex, setActiveRowIndex] = useState(0);
 
   const vesselId = user?.vesselId ?? null;
 
@@ -81,22 +81,17 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
     }, [loadItem])
   );
 
-  const amountInputRefs = useRef<Array<any>>([]);
+  const amountInputRefs = useRef<Array<TextInput | null>>([]);
+  const itemInputRefs = useRef<Array<TextInput | null>>([]);
 
   const addRow = () => {
     const newIndex = rows.length;
-    setActiveRowIndex(newIndex);
     setRows((prev) => [...prev, { ...defaultRow }]);
     setTimeout(() => amountInputRefs.current[newIndex]?.focus(), 50);
   };
   const removeRow = (index: number) => {
     if (rows.length <= 1) return;
     setRows((prev) => prev.filter((_, i) => i !== index));
-    setActiveRowIndex((current) => {
-      if (index < current) return current - 1;
-      if (index === current) return Math.max(0, Math.min(index, rows.length - 2));
-      return current;
-    });
   };
   const setRowAt = (index: number, field: 'amount' | 'item', value: string) => {
     setRows((prev) => {
@@ -184,107 +179,165 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <DepartmentSelector
-          value={department}
-          onChange={(value) => value && setDepartment(value)}
-        />
-
-        <Input
-          label="Title"
-          value={title}
-          onChangeText={setTitle}
-          placeholder="e.g. Engine spares"
-          autoCapitalize="words"
-        />
-        <Input
-          label="Location"
-          value={location}
-          onChangeText={setLocation}
-          placeholder="e.g. Starboard locker"
-          autoCapitalize="words"
-        />
-        <Input
-          label="Description"
-          value={description}
-          onChangeText={setDescription}
-          placeholder="Optional description"
-          multiline
-          numberOfLines={3}
-          style={styles.descriptionInput}
-        />
-
-        <Text style={[styles.tableLabel, { color: themeColors.textSecondary }]}>Amount & Item</Text>
         <View
           style={[
-            styles.table,
-            { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border },
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
           ]}
         >
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
+            ]}
+          >
+            Inventory Details
+          </Text>
+          <DepartmentSelector
+            value={department}
+            onChange={(value) => value && setDepartment(value)}
+            layout="stacked"
+            tightTop
+          />
+          <Input
+            label="Title"
+            value={title}
+            onChangeText={setTitle}
+            placeholder="e.g. Deck Supplies"
+            autoCapitalize="words"
+          />
+          <Input
+            label="Location"
+            value={location}
+            onChangeText={setLocation}
+            placeholder="e.g. Bosun Locker"
+            autoCapitalize="words"
+          />
+          <Input
+            label="Description"
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Optional description"
+            multiline
+            numberOfLines={3}
+            style={styles.descriptionInput}
+          />
+        </View>
+
+        <View
+          style={[
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
+            ]}
+          >
+            Inventory Items
+          </Text>
           {rows.map((row, index) => (
-            <React.Fragment key={index}>
-              <View style={[styles.tableRow, { borderBottomColor: themeColors.border }]}>
-                <TextInput
-                  ref={(el) => {
-                    amountInputRefs.current[index] = el;
-                  }}
+            <View
+              key={index}
+              style={[
+                styles.itemCard,
+                { backgroundColor: themeColors.surfaceAlt, borderColor: themeColors.border },
+              ]}
+            >
+              <View style={styles.itemCardHeader}>
+                <Text
                   style={[
-                    styles.tableInput,
-                    styles.amountCol,
-                    {
-                      color: themeColors.textPrimary,
-                      backgroundColor: themeColors.control,
-                      borderColor: themeColors.border,
-                    },
+                    styles.itemCardTitle,
+                    { color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
                   ]}
-                  value={row.amount}
-                  onChangeText={(v) => setRowAt(index, 'amount', v)}
-                  placeholder="#"
-                  keyboardType="decimal-pad"
-                  placeholderTextColor={themeColors.textSecondary}
-                  onFocus={() => setActiveRowIndex(index)}
-                />
-                <TextInput
-                  style={[
-                    styles.tableInput,
-                    styles.itemCol,
-                    {
-                      color: themeColors.textPrimary,
-                      backgroundColor: themeColors.control,
-                      borderColor: themeColors.border,
-                    },
-                  ]}
-                  value={row.item}
-                  onChangeText={(v) => setRowAt(index, 'item', v)}
-                  placeholder="Item"
-                  placeholderTextColor={themeColors.textSecondary}
-                  returnKeyType="done"
-                  submitBehavior="submit"
-                  onFocus={() => setActiveRowIndex(index)}
-                  onSubmitEditing={() => {
-                    if (index === rows.length - 1) addRow();
-                    else amountInputRefs.current[index + 1]?.focus();
-                  }}
-                />
+                >
+                  Item {index + 1}
+                </Text>
                 <TouchableOpacity
                   onPress={() => removeRow(index)}
-                  style={styles.removeBtn}
+                  style={[
+                    styles.removeBtn,
+                    { borderColor: rows.length <= 1 ? themeColors.textMuted : COLORS.danger },
+                  ]}
                   disabled={rows.length <= 1}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Delete item ${index + 1}`}
                 >
+                  <Ionicons
+                    name="trash-outline"
+                    size={17}
+                    color={rows.length <= 1 ? themeColors.textMuted : COLORS.danger}
+                  />
                   <Text
                     style={[
                       styles.removeBtnText,
-                      {
-                        color: rows.length <= 1 ? themeColors.textMuted : themeColors.accent,
-                      },
+                      { color: rows.length <= 1 ? themeColors.textMuted : COLORS.danger },
                     ]}
                   >
-                    Remove
+                    Delete
                   </Text>
                 </TouchableOpacity>
               </View>
-              {index === activeRowIndex && <EnterToAddHint style={styles.tableHint} />}
-            </React.Fragment>
+              <View style={styles.itemFieldsRow}>
+                <View style={styles.quantityField}>
+                  <Text style={[styles.fieldLabel, { color: themeColors.textSecondary }]}>Qty</Text>
+                  <TextInput
+                    ref={(el) => {
+                      amountInputRefs.current[index] = el;
+                    }}
+                    style={[
+                      styles.itemInput,
+                      styles.quantityInput,
+                      {
+                        color: themeColors.textPrimary,
+                        backgroundColor: themeColors.control,
+                        borderColor: themeColors.border,
+                      },
+                    ]}
+                    value={row.amount}
+                    onChangeText={(v) => setRowAt(index, 'amount', v)}
+                    placeholder="0"
+                    keyboardType="decimal-pad"
+                    placeholderTextColor={themeColors.textSecondary}
+                    returnKeyType="default"
+                    submitBehavior="submit"
+                    onSubmitEditing={() => itemInputRefs.current[index]?.focus()}
+                  />
+                </View>
+                <View style={styles.itemField}>
+                  <Text style={[styles.fieldLabel, { color: themeColors.textSecondary }]}>
+                    Item
+                  </Text>
+                  <TextInput
+                    ref={(el) => {
+                      itemInputRefs.current[index] = el;
+                    }}
+                    style={[
+                      styles.itemInput,
+                      {
+                        color: themeColors.textPrimary,
+                        backgroundColor: themeColors.control,
+                        borderColor: themeColors.border,
+                      },
+                    ]}
+                    value={row.item}
+                    onChangeText={(v) => setRowAt(index, 'item', v)}
+                    placeholder="Inventory item"
+                    placeholderTextColor={themeColors.textSecondary}
+                    returnKeyType="default"
+                    submitBehavior="submit"
+                    onSubmitEditing={() => {
+                      if (index === rows.length - 1) addRow();
+                      else amountInputRefs.current[index + 1]?.focus();
+                    }}
+                  />
+                </View>
+              </View>
+            </View>
           ))}
+          <EnterToAddHint style={styles.enterHint} />
         </View>
 
         <View style={styles.actions}>
@@ -345,79 +398,64 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
   },
   message: { fontSize: FONTS.base, fontFamily: FONTS.regular },
-  label: { fontSize: FONTS.sm, fontFamily: FONTS.medium, marginBottom: SPACING.xs },
-  hint: { fontSize: FONTS.xs, fontFamily: FONTS.regular, marginBottom: SPACING.sm },
-  dropdown: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
+  formSection: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.lg,
+    marginBottom: SPACING.md,
+  },
+  sectionTitle: { fontSize: FONTS.base, fontWeight: '700', marginBottom: SPACING.md },
+  descriptionInput: { minHeight: 80, textAlignVertical: 'top' as const },
+  itemCard: {
     borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: SPACING.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
   },
-  dropdownText: { fontSize: FONTS.base, fontWeight: '500' },
-  dropdownChevron: { fontSize: 10 },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
+  itemCardHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: SPACING.lg,
-  },
-  modalBox: { borderRadius: BORDER_RADIUS.lg, paddingVertical: SPACING.sm, minWidth: 200 },
-  modalItem: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg },
-  modalItemSelected: {},
-  modalItemText: { fontSize: FONTS.base },
-  modalItemTextSelected: { color: COLORS.primary, fontWeight: '600' },
-  descriptionInput: { minHeight: 80, textAlignVertical: 'top' as const },
-  tableLabel: {
-    fontSize: FONTS.sm,
-    fontFamily: FONTS.medium,
-    marginTop: SPACING.lg,
+    justifyContent: 'space-between',
+    gap: SPACING.md,
     marginBottom: SPACING.sm,
   },
-  table: {
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    overflow: 'hidden',
-  },
-  tableHeader: {
+  itemCardTitle: { fontSize: FONTS.sm, fontWeight: '700' },
+  itemFieldsRow: {
     flexDirection: 'row',
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    alignItems: 'flex-end',
+    gap: SPACING.sm,
   },
-  tableHeaderCell: { fontSize: FONTS.sm, fontFamily: FONTS.bold },
-  tableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
-    paddingVertical: SPACING.xs,
-    paddingHorizontal: SPACING.sm,
+  quantityField: { width: 72 },
+  itemField: { flex: 1, minWidth: 0 },
+  fieldLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    marginBottom: 5,
   },
-  tableHint: { paddingHorizontal: SPACING.sm },
-  tableInput: {
+  itemInput: {
     flex: 1,
-    height: SIZES.inputHeight,
+    minHeight: 48,
     fontSize: FONTS.base,
     fontFamily: FONTS.regular,
     paddingHorizontal: SPACING.sm,
     borderRadius: BORDER_RADIUS.sm,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
-  amountCol: { width: 48, minWidth: 48, flex: 0 },
-  itemCol: { flex: 1, marginLeft: SPACING.sm },
-  actionsCol: { width: 70, minWidth: 70 },
-  removeBtn: { paddingVertical: SPACING.xs, paddingHorizontal: SPACING.sm, marginLeft: SPACING.sm },
-  removeBtnText: { fontSize: FONTS.xs, fontFamily: FONTS.medium, color: COLORS.primary },
-  removeBtnDisabled: { color: COLORS.gray400 },
-  actions: { marginTop: SPACING.xl },
+  quantityInput: { textAlign: 'center', fontWeight: '700' },
+  removeBtn: {
+    minHeight: 38,
+    paddingHorizontal: SPACING.sm,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+  },
+  removeBtnText: { fontSize: FONTS.xs, fontWeight: '600' },
+  enterHint: { marginTop: 0, marginBottom: 0 },
+  actions: { marginTop: SPACING.sm },
   deleteBtn: { marginTop: SPACING.md },
 });

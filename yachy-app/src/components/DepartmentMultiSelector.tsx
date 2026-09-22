@@ -39,6 +39,7 @@ interface DepartmentMultiSelectorProps {
   maxSelections?: number;
   tightTop?: boolean;
   presentation?: 'modal' | 'inline';
+  layout?: 'row' | 'stacked';
 }
 
 /**
@@ -58,6 +59,7 @@ export const DepartmentMultiSelector: React.FC<DepartmentMultiSelectorProps> = (
   maxSelections,
   tightTop = false,
   presentation = 'modal',
+  layout = 'row',
 }) => {
   const [open, setOpen] = useState(false);
   const themeColors = useThemeColors();
@@ -233,6 +235,7 @@ export const DepartmentMultiSelector: React.FC<DepartmentMultiSelectorProps> = (
         open={open}
         onPress={toggle}
         tightTop={tightTop}
+        layout={layout}
         valueColor={triggerColor}
         iconColor={triggerColor}
       />

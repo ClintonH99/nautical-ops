@@ -3,7 +3,7 @@
  * Create button, department filter, list of inventory items. Export mode: select items → Export to PDF.
  */
 
-import React, { useState, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,10 +12,12 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
-import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
+import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import inventoryService, { InventoryItem } from '../services/inventory';
 import { Department } from '../types';
@@ -24,7 +26,6 @@ import {
   Button,
   Input,
   ButtonTagCard,
-  ButtonTagRow,
   PageHeader,
   ExportButton,
   ExportBar,
@@ -46,7 +47,6 @@ const INVENTORY_INFO = {
 export const InventoryScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
-  const overrides = useDepartmentColorStore((s) => s.overrides);
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -197,16 +197,6 @@ export const InventoryScreen = ({ navigation }: any) => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
         }
       >
-        <View style={styles.searchRow}>
-          <Input
-            variant="search"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search by item, title, location…"
-            style={styles.searchInput}
-            returnKeyType="search"
-          />
-        </View>
         <View style={styles.createRow}>
           <Button
             title="Create Inventory Item"
@@ -214,12 +204,38 @@ export const InventoryScreen = ({ navigation }: any) => {
             variant="primary"
             fullWidth
           />
-          <Button
-            title="Uniforms"
+          <TouchableOpacity
             onPress={() => navigation.navigate('Uniforms')}
-            variant={themeColors.isDark ? 'outlineLight' : 'outline'}
-            fullWidth
-            style={styles.exportBtn}
+            style={[
+              styles.uniformsButton,
+              { borderColor: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Open Uniforms"
+          >
+            <Ionicons
+              name="shirt-outline"
+              size={18}
+              color={themeColors.isDark ? themeColors.textPrimary : COLORS.primary}
+            />
+            <Text
+              style={[
+                styles.uniformsButtonText,
+                { color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
+              ]}
+            >
+              Uniforms
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.searchRow}>
+          <Input
+            variant="search"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search item, title or location…"
+            style={styles.searchInput}
+            returnKeyType="search"
           />
         </View>
         <DepartmentMultiSelector
@@ -234,7 +250,23 @@ export const InventoryScreen = ({ navigation }: any) => {
           }
           includeAll
           minSelections={1}
+          layout="stacked"
+          tightTop
         />
+
+        <View style={styles.listHeading}>
+          <Text
+            style={[
+              styles.listHeadingTitle,
+              { color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
+            ]}
+          >
+            Inventory Items
+          </Text>
+          <Text style={[styles.recordCount, { color: themeColors.textSecondary }]}>
+            {filteredItems.length} {filteredItems.length === 1 ? 'record' : 'records'}
+          </Text>
+        </View>
 
         {loading ? (
           <ActivityIndicator size="small" color={COLORS.primary} style={styles.loader} />
@@ -258,39 +290,87 @@ export const InventoryScreen = ({ navigation }: any) => {
               <ButtonTagCard
                 key={item.id}
                 headerTitle={item.title ?? ''}
+                minimal
                 showCheckbox={exportMode}
                 checked={selected}
                 onToggleSelect={() => toggleSelect(item.id)}
                 selected={exportMode && selected}
                 onEdit={() => navigation.navigate('AddEditInventoryItem', { itemId: item.id })}
                 onDelete={() => handleDelete(item)}
-                onPress={
-                  !exportMode
-                    ? () => navigation.navigate('AddEditInventoryItem', { itemId: item.id })
-                    : undefined
-                }
                 collapsible={!exportMode}
                 expanded={expandedId === item.id}
                 onToggleExpand={() => setExpandedId(expandedId === item.id ? null : item.id)}
-                summary={dateStr ? <ButtonTagRow label="Date" value={dateStr} /> : undefined}
+                summary={
+                  <View style={styles.cardMetaLine}>
+                    <View
+                      style={[styles.departmentBadge, { backgroundColor: themeColors.accentSoft }]}
+                    >
+                      <Text
+                        style={[
+                          styles.departmentBadgeText,
+                          { color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
+                        ]}
+                      >
+                        {item.department ?? 'INTERIOR'}
+                      </Text>
+                    </View>
+                    {dateStr ? (
+                      <Text style={[styles.cardMetaText, { color: themeColors.textSecondary }]}>
+                        {dateStr}
+                      </Text>
+                    ) : null}
+                  </View>
+                }
               >
                 <View
-                  style={[
-                    styles.deptBadge,
-                    { backgroundColor: getDepartmentColor(item.department, overrides) },
-                  ]}
+                  style={[styles.inventorySummary, { backgroundColor: themeColors.surfaceAlt }]}
                 >
-                  <Text style={styles.deptBadgeText}>
-                    {(item.department ?? 'INTERIOR').charAt(0) +
-                      (item.department ?? 'INTERIOR').slice(1).toLowerCase()}
-                  </Text>
+                  <View style={styles.summaryColumn}>
+                    <Text style={[styles.summaryLabel, { color: themeColors.textSecondary }]}>
+                      Location
+                    </Text>
+                    <Text style={[styles.summaryValue, { color: themeColors.textPrimary }]}>
+                      {item.location || 'Not specified'}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryColumn}>
+                    <Text style={[styles.summaryLabel, { color: themeColors.textSecondary }]}>
+                      Items
+                    </Text>
+                    <Text style={[styles.summaryValue, { color: themeColors.textPrimary }]}>
+                      {item.items?.length ?? 0} {(item.items?.length ?? 0) === 1 ? 'line' : 'lines'}
+                    </Text>
+                  </View>
                 </View>
-                <ButtonTagRow label="Location" value={item.location ?? ''} />
-                <ButtonTagRow label="Description" value={item.description ?? ''} />
-                <ButtonTagRow
-                  label="Items"
-                  value={`${item.items?.length ?? 0} ${(item.items?.length ?? 0) === 1 ? 'row' : 'rows'} (Amount · Item)`}
-                />
+                {item.description ? (
+                  <Text style={[styles.description, { color: themeColors.textSecondary }]}>
+                    {item.description}
+                  </Text>
+                ) : null}
+                {(item.items?.length ?? 0) > 0 ? (
+                  <View style={[styles.itemLines, { borderTopColor: themeColors.border }]}>
+                    {item.items.map((row, index) => (
+                      <View
+                        key={`${item.id}-${index}`}
+                        style={[styles.itemLine, { borderBottomColor: themeColors.border }]}
+                      >
+                        <Text style={[styles.itemName, { color: themeColors.textPrimary }]}>
+                          {row.item || 'Unnamed item'}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.itemAmount,
+                            {
+                              color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary,
+                            },
+                          ]}
+                        >
+                          {row.amount || '—'}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
               </ButtonTagCard>
             );
           })
@@ -308,50 +388,69 @@ const styles = StyleSheet.create({
   message: { fontSize: FONTS.base, textAlign: 'center' },
   searchRow: { marginBottom: SPACING.sm },
   searchInput: {},
-  createRow: { marginBottom: SPACING.lg },
-  exportBtn: { marginTop: SPACING.sm },
-  filterLabel: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs },
-  dropdown: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
+  createRow: { marginBottom: SPACING.sm },
+  uniformsButton: {
+    minHeight: SIZES.buttonHeight,
+    marginTop: SPACING.sm,
+    borderWidth: 2,
     borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: SPACING.lg,
-  },
-  dropdownText: { fontSize: FONTS.base, fontWeight: '500' },
-  dropdownChevron: { fontSize: 10 },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: SPACING.lg,
+    justifyContent: 'center',
+    gap: SPACING.sm,
   },
-  modalBox: { borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, minWidth: 260, maxHeight: 400 },
-  modalTitle: { fontSize: FONTS.lg, fontWeight: '600', marginBottom: SPACING.md },
-  modalItem: {
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  modalItemSelected: { backgroundColor: COLORS.gray200 },
-  modalItemText: { fontSize: FONTS.base },
+  uniformsButtonText: { fontSize: FONTS.base, fontWeight: '600', letterSpacing: 0.2 },
   loader: { marginVertical: SPACING.xl },
   empty: { fontSize: FONTS.base, paddingVertical: SPACING.xl },
-  deptBadge: {
+  listHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: SPACING.md,
+    marginBottom: SPACING.sm,
+  },
+  listHeadingTitle: { fontSize: FONTS.base, fontWeight: '700' },
+  recordCount: { fontSize: FONTS.sm },
+  cardMetaLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+  },
+  departmentBadge: {
     paddingHorizontal: SPACING.sm,
     paddingVertical: 4,
     borderRadius: BORDER_RADIUS.sm,
-    marginTop: SPACING.xs,
-    marginBottom: SPACING.sm,
     alignSelf: 'flex-start',
   },
-  deptBadgeText: { fontSize: FONTS.xs, fontWeight: '600', color: COLORS.white },
-  cardMeta: { fontSize: FONTS.sm, marginTop: 2 },
-  cardDesc: { fontSize: FONTS.sm, marginTop: 2 },
-  cardRows: { fontSize: FONTS.xs, marginTop: 4 },
+  departmentBadgeText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.4 },
+  cardMetaText: { fontSize: FONTS.xs },
+  inventorySummary: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    marginTop: SPACING.sm,
+  },
+  summaryColumn: { flex: 1, minWidth: 0 },
+  summaryLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    marginBottom: 3,
+  },
+  summaryValue: { fontSize: FONTS.sm, fontWeight: '600' },
+  description: { fontSize: FONTS.sm, lineHeight: 20, marginTop: SPACING.md },
+  itemLines: { marginTop: SPACING.md, borderTopWidth: 1 },
+  itemLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: 1,
+  },
+  itemName: { flex: 1, fontSize: FONTS.sm },
+  itemAmount: { fontSize: FONTS.sm, fontWeight: '700' },
 });

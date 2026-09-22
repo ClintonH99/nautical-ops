@@ -52,11 +52,11 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
 
-  const amountRefs = useRef<Array<any>>([]);
-  const sizeRefs = useRef<Array<any>>([]);
-  const colorRefs = useRef<Array<any>>([]);
-  const genderRefs = useRef<Array<any>>([]);
-  const dayNightRefs = useRef<Array<any>>([]);
+  const amountRefs = useRef<Array<TextInput | null>>([]);
+  const sizeRefs = useRef<Array<TextInput | null>>([]);
+  const colorRefs = useRef<Array<TextInput | null>>([]);
+  const genderRefs = useRef<Array<TextInput | null>>([]);
+  const dayNightRefs = useRef<Array<TextInput | null>>([]);
 
   useEffect(() => {
     if (!uniformId) {
@@ -187,193 +187,234 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        {!isEdit && (
-          <View style={styles.deptSection}>
+        <View
+          style={[
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
+            ]}
+          >
+            Uniform Details
+          </Text>
+          {!isEdit && (
             <DepartmentSelector
               value={department}
               onChange={(value) => value && setDepartment(value)}
+              layout="stacked"
+              tightTop
             />
-          </View>
-        )}
+          )}
+          <Input
+            label="Label Name"
+            value={label}
+            onChangeText={setLabel}
+            placeholder="e.g. Guest Swimwear"
+            autoCapitalize="words"
+          />
+        </View>
 
-        <Input
-          label="Label"
-          value={label}
-          onChangeText={setLabel}
-          placeholder="e.g. Swimwear"
-          autoCapitalize="words"
-        />
-
-        <Text style={[styles.label, { color: themeColors.textPrimary }]}>Entries</Text>
-        {entries.map((entry, index) => {
-          const isLast = index === entries.length - 1;
-          return (
-            <View
-              key={index}
-              style={[
-                styles.entryCard,
-                {
-                  backgroundColor: themeColors.surfaceElevated,
-                  borderColor: themeColors.border,
-                },
-              ]}
-            >
-              <View style={styles.entryRow}>
-                <View style={styles.amountField}>
-                  <Text style={[styles.fieldLabel, { color: themeColors.textSecondary }]}>#</Text>
-                  <TextInput
-                    ref={(el) => {
-                      amountRefs.current[index] = el;
-                    }}
-                    style={[
-                      styles.input,
-                      {
-                        backgroundColor: themeColors.control,
-                        color: themeColors.textPrimary,
-                        borderColor: themeColors.border,
-                      },
-                    ]}
-                    value={entry.amount}
-                    onChangeText={(v) => setEntryAt(index, 'amount', v)}
-                    placeholder="#"
-                    keyboardType="decimal-pad"
-                    placeholderTextColor={themeColors.textSecondary}
-                    returnKeyType="next"
-                    onSubmitEditing={() => sizeRefs.current[index]?.focus()}
-                  />
-                </View>
-                <View style={styles.wideField}>
-                  <Text style={[styles.fieldLabel, { color: themeColors.textSecondary }]}>
-                    Size
-                  </Text>
-                  <TextInput
-                    ref={(el) => {
-                      sizeRefs.current[index] = el;
-                    }}
-                    style={[
-                      styles.input,
-                      {
-                        backgroundColor: themeColors.control,
-                        color: themeColors.textPrimary,
-                        borderColor: themeColors.border,
-                      },
-                    ]}
-                    value={entry.size}
-                    onChangeText={(v) => setEntryAt(index, 'size', v)}
-                    placeholder="Size"
-                    placeholderTextColor={themeColors.textSecondary}
-                    returnKeyType="next"
-                    onSubmitEditing={() => colorRefs.current[index]?.focus()}
-                  />
-                </View>
-                <View style={styles.wideField}>
-                  <Text style={[styles.fieldLabel, { color: themeColors.textSecondary }]}>
-                    Color
-                  </Text>
-                  <TextInput
-                    ref={(el) => {
-                      colorRefs.current[index] = el;
-                    }}
-                    style={[
-                      styles.input,
-                      {
-                        backgroundColor: themeColors.control,
-                        color: themeColors.textPrimary,
-                        borderColor: themeColors.border,
-                      },
-                    ]}
-                    value={entry.color}
-                    onChangeText={(v) => setEntryAt(index, 'color', v)}
-                    placeholder="Color"
-                    placeholderTextColor={themeColors.textSecondary}
-                    returnKeyType="next"
-                    onSubmitEditing={() => genderRefs.current[index]?.focus()}
-                  />
-                </View>
-              </View>
-              <View style={styles.entryRow}>
-                <View style={styles.wideField}>
-                  <Text style={[styles.fieldLabel, { color: themeColors.textSecondary }]}>
-                    Male / female
-                  </Text>
-                  <TextInput
-                    ref={(el) => {
-                      genderRefs.current[index] = el;
-                    }}
-                    style={[
-                      styles.input,
-                      {
-                        backgroundColor: themeColors.control,
-                        color: themeColors.textPrimary,
-                        borderColor: themeColors.border,
-                      },
-                    ]}
-                    value={entry.gender}
-                    onChangeText={(v) => setEntryAt(index, 'gender', v)}
-                    placeholder="M / F"
-                    placeholderTextColor={themeColors.textSecondary}
-                    returnKeyType="next"
-                    onSubmitEditing={() => dayNightRefs.current[index]?.focus()}
-                  />
-                </View>
-                <View style={styles.wideField}>
-                  <Text style={[styles.fieldLabel, { color: themeColors.textSecondary }]}>
-                    Day / night (optional)
-                  </Text>
-                  <TextInput
-                    ref={(el) => {
-                      dayNightRefs.current[index] = el;
-                    }}
-                    style={[
-                      styles.input,
-                      {
-                        backgroundColor: themeColors.control,
-                        color: themeColors.textPrimary,
-                        borderColor: themeColors.border,
-                      },
-                    ]}
-                    value={entry.dayNight ?? ''}
-                    onChangeText={(v) => setEntryAt(index, 'dayNight', v)}
-                    placeholder="Day / Night"
-                    placeholderTextColor={themeColors.textSecondary}
-                    returnKeyType="done"
-                    onSubmitEditing={() => {
-                      if (isLast) addEntry();
-                    }}
-                  />
-                </View>
-                <TouchableOpacity
-                  onPress={() => removeEntry(index)}
+        <View
+          style={[
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
+            ]}
+          >
+            Uniform Entries
+          </Text>
+          {entries.map((entry, index) => {
+            const isLast = index === entries.length - 1;
+            return (
+              <View
+                key={index}
+                style={[
+                  styles.entryCard,
+                  {
+                    backgroundColor: themeColors.surfaceAlt,
+                    borderColor: themeColors.border,
+                  },
+                ]}
+              >
+                <Text
                   style={[
-                    styles.removeBtn,
-                    {
-                      borderColor: entries.length <= 1 ? themeColors.textMuted : COLORS.danger,
-                    },
+                    styles.entryTitle,
+                    { color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
                   ]}
-                  disabled={entries.length <= 1}
                 >
-                  <Ionicons
-                    name="trash-outline"
-                    size={18}
-                    color={entries.length <= 1 ? themeColors.textMuted : COLORS.danger}
-                  />
-                  <Text
+                  Entry {index + 1}
+                </Text>
+                <View style={styles.entryRow}>
+                  <View style={styles.amountField}>
+                    <Text style={[styles.fieldLabel, { color: themeColors.textSecondary }]}>
+                      Qty
+                    </Text>
+                    <TextInput
+                      ref={(el) => {
+                        amountRefs.current[index] = el;
+                      }}
+                      style={[
+                        styles.input,
+                        styles.quantityInput,
+                        {
+                          backgroundColor: themeColors.control,
+                          color: themeColors.textPrimary,
+                          borderColor: themeColors.border,
+                        },
+                      ]}
+                      value={entry.amount}
+                      onChangeText={(v) => setEntryAt(index, 'amount', v)}
+                      placeholder="0"
+                      keyboardType="number-pad"
+                      placeholderTextColor={themeColors.textSecondary}
+                      returnKeyType="next"
+                      onSubmitEditing={() => sizeRefs.current[index]?.focus()}
+                    />
+                  </View>
+                  <View style={styles.wideField}>
+                    <Text style={[styles.fieldLabel, { color: themeColors.textSecondary }]}>
+                      Size
+                    </Text>
+                    <TextInput
+                      ref={(el) => {
+                        sizeRefs.current[index] = el;
+                      }}
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: themeColors.control,
+                          color: themeColors.textPrimary,
+                          borderColor: themeColors.border,
+                        },
+                      ]}
+                      value={entry.size}
+                      onChangeText={(v) => setEntryAt(index, 'size', v)}
+                      placeholder="Size"
+                      placeholderTextColor={themeColors.textSecondary}
+                      returnKeyType="next"
+                      onSubmitEditing={() => colorRefs.current[index]?.focus()}
+                    />
+                  </View>
+                  <View style={styles.colorField}>
+                    <Text style={[styles.fieldLabel, { color: themeColors.textSecondary }]}>
+                      Colour
+                    </Text>
+                    <TextInput
+                      ref={(el) => {
+                        colorRefs.current[index] = el;
+                      }}
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: themeColors.control,
+                          color: themeColors.textPrimary,
+                          borderColor: themeColors.border,
+                        },
+                      ]}
+                      value={entry.color}
+                      onChangeText={(v) => setEntryAt(index, 'color', v)}
+                      placeholder="Colour"
+                      placeholderTextColor={themeColors.textSecondary}
+                      returnKeyType="next"
+                      onSubmitEditing={() => genderRefs.current[index]?.focus()}
+                    />
+                  </View>
+                </View>
+                <View style={styles.entryRowSecondary}>
+                  <View style={styles.wideField}>
+                    <Text style={[styles.fieldLabel, { color: themeColors.textSecondary }]}>
+                      Male / Female
+                    </Text>
+                    <TextInput
+                      ref={(el) => {
+                        genderRefs.current[index] = el;
+                      }}
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: themeColors.control,
+                          color: themeColors.textPrimary,
+                          borderColor: themeColors.border,
+                        },
+                      ]}
+                      value={entry.gender}
+                      onChangeText={(v) => setEntryAt(index, 'gender', v)}
+                      placeholder="Male / Female"
+                      placeholderTextColor={themeColors.textSecondary}
+                      returnKeyType="next"
+                      onSubmitEditing={() => dayNightRefs.current[index]?.focus()}
+                    />
+                  </View>
+                  <View style={styles.wideField}>
+                    <Text style={[styles.fieldLabel, { color: themeColors.textSecondary }]}>
+                      Day / Night
+                    </Text>
+                    <TextInput
+                      ref={(el) => {
+                        dayNightRefs.current[index] = el;
+                      }}
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: themeColors.control,
+                          color: themeColors.textPrimary,
+                          borderColor: themeColors.border,
+                        },
+                      ]}
+                      value={entry.dayNight ?? ''}
+                      onChangeText={(v) => setEntryAt(index, 'dayNight', v)}
+                      placeholder="Day / Night"
+                      placeholderTextColor={themeColors.textSecondary}
+                      returnKeyType="done"
+                      onSubmitEditing={() => {
+                        if (isLast) addEntry();
+                      }}
+                    />
+                  </View>
+                </View>
+                <View style={styles.entryDeleteRow}>
+                  <TouchableOpacity
+                    onPress={() => removeEntry(index)}
                     style={[
-                      styles.removeBtnText,
-                      { color: entries.length <= 1 ? themeColors.textMuted : COLORS.danger },
+                      styles.removeBtn,
+                      {
+                        borderColor: entries.length <= 1 ? themeColors.textMuted : COLORS.danger,
+                      },
                     ]}
+                    disabled={entries.length <= 1}
                   >
-                    Delete
-                  </Text>
-                </TouchableOpacity>
+                    <Ionicons
+                      name="trash-outline"
+                      size={18}
+                      color={entries.length <= 1 ? themeColors.textMuted : COLORS.danger}
+                    />
+                    <Text
+                      style={[
+                        styles.removeBtnText,
+                        { color: entries.length <= 1 ? themeColors.textMuted : COLORS.danger },
+                      ]}
+                    >
+                      Delete
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          );
-        })}
-        <TouchableOpacity onPress={addEntry} style={styles.addEntryBtn}>
-          <Ionicons name="add" size={16} color={themeColors.accent} />
-          <Text style={[styles.addEntryBtnText, { color: themeColors.accent }]}>Add Entry</Text>
-        </TouchableOpacity>
+            );
+          })}
+          <TouchableOpacity onPress={addEntry} style={styles.addEntryBtn}>
+            <Ionicons name="add" size={18} color={themeColors.accent} />
+            <Text style={[styles.addEntryBtnText, { color: themeColors.accent }]}>Add Entry</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.actions}>
           <Button
@@ -397,48 +438,41 @@ const styles = StyleSheet.create({
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
-  label: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs, marginTop: SPACING.md },
-  deptSection: { marginBottom: SPACING.lg },
-  deptLabel: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs },
-  dropdown: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: BORDER_RADIUS.md,
+  formSection: {
     borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  dropdownText: { fontSize: FONTS.base, fontWeight: '500' },
-  dropdownChevron: { fontSize: 10 },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.lg,
+    marginBottom: SPACING.md,
   },
-  modalBox: { borderRadius: BORDER_RADIUS.lg, paddingVertical: SPACING.sm, minWidth: 200 },
-  modalItem: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg },
-  modalItemSelected: {},
-  modalItemText: { fontSize: FONTS.base },
-  modalItemTextSelected: { color: COLORS.primary, fontWeight: '600' },
+  sectionTitle: { fontSize: FONTS.base, fontWeight: '700', marginBottom: SPACING.md },
   entryCard: {
     borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,
     padding: SPACING.md,
     marginBottom: SPACING.md,
   },
+  entryTitle: { fontSize: FONTS.sm, fontWeight: '700', marginBottom: SPACING.md },
   entryRow: {
     flexDirection: 'row',
     gap: SPACING.sm,
-    marginBottom: SPACING.sm,
     alignItems: 'flex-end',
   },
-  amountField: { width: 48 },
+  entryRowSecondary: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginTop: SPACING.sm,
+    alignItems: 'flex-end',
+  },
+  amountField: { width: 62 },
   wideField: { flex: 1 },
-  fieldLabel: { fontSize: FONTS.xs, marginBottom: 3 },
+  colorField: { flex: 1.2 },
+  fieldLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    marginBottom: 5,
+  },
   input: {
     height: SIZES.inputHeight,
     fontSize: FONTS.base,
@@ -447,13 +481,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
+  quantityInput: { textAlign: 'center', fontWeight: '700' },
+  entryDeleteRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: SPACING.md },
   removeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    minHeight: 38,
-    paddingHorizontal: SPACING.sm,
+    minHeight: 40,
+    paddingHorizontal: SPACING.md,
     borderWidth: 1,
     borderRadius: BORDER_RADIUS.md,
   },
@@ -463,8 +499,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     paddingVertical: SPACING.sm,
-    marginBottom: SPACING.md,
   },
   addEntryBtnText: { fontSize: FONTS.sm, fontWeight: '600', color: COLORS.primary },
-  actions: { marginTop: SPACING.xl },
+  actions: { marginTop: SPACING.sm },
 });

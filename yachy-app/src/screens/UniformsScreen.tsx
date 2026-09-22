@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
-import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
+import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import uniformsService, { Uniform } from '../services/uniforms';
 import { Department } from '../types';
@@ -24,7 +24,6 @@ import {
   Button,
   Input,
   ButtonTagCard,
-  ButtonTagRow,
   PageHeader,
   ExportButton,
   ExportBar,
@@ -35,7 +34,6 @@ import { DEPARTMENT_OPTIONS as DEPARTMENTS } from '../utils/departmentSelection'
 export const UniformsScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
-  const overrides = useDepartmentColorStore((s) => s.overrides);
   const [uniforms, setUniforms] = useState<Uniform[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -50,6 +48,7 @@ export const UniformsScreen = ({ navigation }: any) => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exporting, setExporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const vesselId = user?.vesselId ?? null;
 
@@ -67,6 +66,25 @@ export const UniformsScreen = ({ navigation }: any) => {
   const filteredUniforms = (uniforms ?? [])
     .filter((u) => visibleDepartments[u.department ?? 'INTERIOR'])
     .filter(matchesSearch);
+
+  const uniqueValues = (values: Array<string | undefined>) => {
+    const unique = Array.from(
+      new Set(values.map((value) => value?.trim()).filter((value): value is string => !!value))
+    );
+    return unique.length ? unique.join(', ') : 'Not specified';
+  };
+
+  const uniformUse = (uniform: Uniform) => {
+    const combined = (uniform.entries ?? [])
+      .map((entry) => entry.dayNight?.trim().toLowerCase() ?? '')
+      .join(' ');
+    const hasDay = combined.includes('day');
+    const hasNight = combined.includes('night');
+    if (hasDay && hasNight) return 'Day & Night';
+    if (hasDay) return 'Day';
+    if (hasNight) return 'Night';
+    return 'Not specified';
+  };
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -181,22 +199,22 @@ export const UniformsScreen = ({ navigation }: any) => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
         }
       >
-        <View style={styles.searchRow}>
-          <Input
-            variant="search"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search by label, size, color…"
-            style={styles.searchInput}
-            returnKeyType="search"
-          />
-        </View>
         <View style={styles.createRow}>
           <Button
             title="Create Uniform Label"
             onPress={() => navigation.navigate('AddEditUniform')}
             variant="primary"
             fullWidth
+          />
+        </View>
+        <View style={styles.searchRow}>
+          <Input
+            variant="search"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search label, size or colour…"
+            style={styles.searchInput}
+            returnKeyType="search"
           />
         </View>
         <DepartmentMultiSelector
@@ -211,7 +229,23 @@ export const UniformsScreen = ({ navigation }: any) => {
           }
           includeAll
           minSelections={1}
+          layout="stacked"
+          tightTop
         />
+
+        <View style={styles.listHeading}>
+          <Text
+            style={[
+              styles.listHeadingTitle,
+              { color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
+            ]}
+          >
+            Uniform Labels
+          </Text>
+          <Text style={[styles.recordCount, { color: themeColors.textSecondary }]}>
+            {filteredUniforms.length} {filteredUniforms.length === 1 ? 'label' : 'labels'}
+          </Text>
+        </View>
 
         {loading ? (
           <ActivityIndicator size="small" color={COLORS.primary} style={styles.loader} />
@@ -224,37 +258,76 @@ export const UniformsScreen = ({ navigation }: any) => {
         ) : (
           filteredUniforms.map((u) => {
             const selected = selectedIds.has(u.id);
+            const use = uniformUse(u);
+            const sizes = uniqueValues((u.entries ?? []).map((entry) => entry.size));
+            const colours = uniqueValues((u.entries ?? []).map((entry) => entry.color));
+            const entryCount = u.entries?.length ?? 0;
             return (
               <ButtonTagCard
                 key={u.id}
                 headerTitle={u.label ?? ''}
+                minimal
                 showCheckbox={exportMode}
                 checked={selected}
                 onToggleSelect={() => toggleSelect(u.id)}
                 selected={exportMode && selected}
                 onEdit={() => navigation.navigate('AddEditUniform', { uniformId: u.id })}
                 onDelete={() => handleDelete(u)}
-                onPress={
-                  !exportMode
-                    ? () => navigation.navigate('AddEditUniform', { uniformId: u.id })
-                    : undefined
+                collapsible={!exportMode}
+                expanded={expandedId === u.id}
+                onToggleExpand={() => setExpandedId(expandedId === u.id ? null : u.id)}
+                summary={
+                  <View style={styles.cardMetaLine}>
+                    <View
+                      style={[styles.departmentBadge, { backgroundColor: themeColors.accentSoft }]}
+                    >
+                      <Text
+                        style={[
+                          styles.departmentBadgeText,
+                          { color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
+                        ]}
+                      >
+                        {u.department ?? 'INTERIOR'}
+                      </Text>
+                    </View>
+                    <Text style={[styles.cardMetaText, { color: themeColors.textSecondary }]}>
+                      {entryCount} {entryCount === 1 ? 'entry' : 'entries'}
+                    </Text>
+                    <Text style={[styles.cardMetaDivider, { color: themeColors.textMuted }]}>
+                      •
+                    </Text>
+                    <Text style={[styles.cardMetaText, { color: themeColors.textSecondary }]}>
+                      {use}
+                    </Text>
+                  </View>
                 }
               >
-                <View
-                  style={[
-                    styles.deptBadge,
-                    { backgroundColor: getDepartmentColor(u.department, overrides) },
-                  ]}
-                >
-                  <Text style={styles.deptBadgeText}>
-                    {(u.department ?? 'INTERIOR').charAt(0) +
-                      (u.department ?? 'INTERIOR').slice(1).toLowerCase()}
-                  </Text>
+                <View style={[styles.uniformSummary, { backgroundColor: themeColors.surfaceAlt }]}>
+                  <View style={styles.summaryColumn}>
+                    <Text style={[styles.summaryLabel, { color: themeColors.textSecondary }]}>
+                      Sizes
+                    </Text>
+                    <Text style={[styles.summaryValue, { color: themeColors.textPrimary }]}>
+                      {sizes}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryColumn}>
+                    <Text style={[styles.summaryLabel, { color: themeColors.textSecondary }]}>
+                      Colours
+                    </Text>
+                    <Text style={[styles.summaryValue, { color: themeColors.textPrimary }]}>
+                      {colours}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryColumn}>
+                    <Text style={[styles.summaryLabel, { color: themeColors.textSecondary }]}>
+                      Use
+                    </Text>
+                    <Text style={[styles.summaryValue, { color: themeColors.textPrimary }]}>
+                      {use}
+                    </Text>
+                  </View>
                 </View>
-                <ButtonTagRow
-                  label="Entries"
-                  value={`${u.entries?.length ?? 0} ${(u.entries?.length ?? 0) === 1 ? 'entry' : 'entries'}`}
-                />
               </ButtonTagCard>
             );
           })
@@ -272,47 +345,47 @@ const styles = StyleSheet.create({
   message: { fontSize: FONTS.base, textAlign: 'center' },
   searchRow: { marginBottom: SPACING.sm },
   searchInput: {},
-  createRow: { marginBottom: SPACING.lg },
-  exportBtn: { marginTop: SPACING.sm },
-  filterLabel: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs },
-  dropdown: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: SPACING.lg,
-  },
-  dropdownText: { fontSize: FONTS.base, fontWeight: '500' },
-  dropdownChevron: { fontSize: 10 },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.lg,
-  },
-  modalBox: { borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, minWidth: 260, maxHeight: 400 },
-  modalTitle: { fontSize: FONTS.lg, fontWeight: '600', marginBottom: SPACING.md },
-  modalItem: {
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  modalItemSelected: { backgroundColor: COLORS.gray200 },
-  modalItemText: { fontSize: FONTS.base },
+  createRow: { marginBottom: SPACING.sm },
   loader: { marginVertical: SPACING.xl },
   empty: { fontSize: FONTS.base, paddingVertical: SPACING.xl },
-  deptBadge: {
+  listHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: SPACING.md,
+    marginBottom: SPACING.sm,
+  },
+  listHeadingTitle: { fontSize: FONTS.base, fontWeight: '700' },
+  recordCount: { fontSize: FONTS.sm },
+  cardMetaLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: SPACING.xs,
+  },
+  departmentBadge: {
     paddingHorizontal: SPACING.sm,
     paddingVertical: 4,
     borderRadius: BORDER_RADIUS.sm,
-    marginTop: SPACING.xs,
-    marginBottom: SPACING.sm,
     alignSelf: 'flex-start',
   },
-  deptBadgeText: { fontSize: FONTS.xs, fontWeight: '600', color: COLORS.white },
+  departmentBadgeText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.4 },
+  cardMetaText: { fontSize: FONTS.xs },
+  cardMetaDivider: { fontSize: FONTS.xs },
+  uniformSummary: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    marginTop: SPACING.sm,
+  },
+  summaryColumn: { flex: 1, minWidth: 0 },
+  summaryLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    marginBottom: 3,
+  },
+  summaryValue: { fontSize: FONTS.sm, fontWeight: '600' },
 });
