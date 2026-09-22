@@ -22,7 +22,14 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import uniformsService, { UniformEntry } from '../services/uniforms';
 import { Department } from '../types';
-import { Input, Button, LoadingSpinner, PageHeader, DepartmentSelector } from '../components';
+import {
+  Input,
+  Button,
+  LoadingSpinner,
+  PageHeader,
+  DepartmentSelector,
+  PreviewActionButtons,
+} from '../components';
 
 const emptyEntry = (): UniformEntry => ({
   amount: '',
@@ -337,7 +344,12 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
                 </View>
                 <TouchableOpacity
                   onPress={() => removeEntry(index)}
-                  style={styles.removeBtn}
+                  style={[
+                    styles.removeBtn,
+                    {
+                      borderColor: entries.length <= 1 ? themeColors.textMuted : COLORS.danger,
+                    },
+                  ]}
                   disabled={entries.length <= 1}
                 >
                   <Ionicons
@@ -345,6 +357,14 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
                     size={18}
                     color={entries.length <= 1 ? themeColors.textMuted : COLORS.danger}
                   />
+                  <Text
+                    style={[
+                      styles.removeBtnText,
+                      { color: entries.length <= 1 ? themeColors.textMuted : COLORS.danger },
+                    ]}
+                  >
+                    Delete
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -364,11 +384,7 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
             disabled={saving}
             fullWidth
           />
-          {isEdit && (
-            <TouchableOpacity onPress={handleDelete} style={styles.deleteBtn}>
-              <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-            </TouchableOpacity>
-          )}
+          {isEdit && <PreviewActionButtons onDelete={handleDelete} />}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -431,7 +447,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  removeBtn: { paddingHorizontal: SPACING.xs, paddingBottom: SPACING.sm },
+  removeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    minHeight: 38,
+    paddingHorizontal: SPACING.sm,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  removeBtnText: { fontSize: FONTS.xs, fontWeight: '600' },
   addEntryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -441,5 +467,4 @@ const styles = StyleSheet.create({
   },
   addEntryBtnText: { fontSize: FONTS.sm, fontWeight: '600', color: COLORS.primary },
   actions: { marginTop: SPACING.xl },
-  deleteBtn: { marginTop: SPACING.md, alignItems: 'center', paddingVertical: SPACING.sm },
 });

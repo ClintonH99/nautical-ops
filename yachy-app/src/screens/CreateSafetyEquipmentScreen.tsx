@@ -352,9 +352,12 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
               </Text>
               <TouchableOpacity
                 onPress={() => removeCategory(key)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={styles.categoryDeleteButton}
+                accessibilityRole="button"
+                accessibilityLabel={`Delete ${getLabel(key, customLabels)}`}
               >
-                <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
+                <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
+                <Text style={styles.categoryDeleteText}>Delete</Text>
               </TouchableOpacity>
             </View>
             {(data[key] || [emptyItem()]).map((item, i) => (
@@ -482,6 +485,22 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   catLabel: { fontSize: FONTS.base, fontWeight: '600', flex: 1 },
+  categoryDeleteButton: {
+    minHeight: 38,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingHorizontal: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.danger,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  categoryDeleteText: {
+    color: COLORS.danger,
+    fontSize: FONTS.xs,
+    fontWeight: '600',
+  },
   input: {
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,

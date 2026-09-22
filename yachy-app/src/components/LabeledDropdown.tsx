@@ -1,6 +1,6 @@
 /**
- * The standard labelled dropdown: label on the left, the control on the
- * right, both on one line.
+ * The standard labelled dropdown. It uses the app-wide horizontal layout by
+ * default and can stack the label above the control inside compact forms.
  *
  * This is the Watch Duties department layout, adopted as the app-wide
  * standard. Screens keep their own picker (modal, inline list, whatever they
@@ -27,6 +27,8 @@ interface LabeledDropdownProps {
   valueColor?: string;
   /** Optional chevron colour; defaults to valueColor when supplied. */
   iconColor?: string;
+  /** Use a full-width control below the label inside stacked forms. */
+  layout?: 'row' | 'stacked';
 }
 
 export const LabeledDropdown: React.FC<LabeledDropdownProps> = ({
@@ -37,17 +39,29 @@ export const LabeledDropdown: React.FC<LabeledDropdownProps> = ({
   tightTop = false,
   valueColor,
   iconColor,
+  layout = 'row',
 }) => {
   const themeColors = useThemeColors();
   const resolvedValueColor = valueColor ?? themeColors.accent;
   const resolvedIconColor = iconColor ?? resolvedValueColor;
 
   return (
-    <View style={[styles.row, tightTop && styles.rowTight]}>
-      <Text style={[styles.label, { color: themeColors.textPrimary }]}>{label}</Text>
+    <View
+      style={[styles.row, layout === 'stacked' && styles.rowStacked, tightTop && styles.rowTight]}
+    >
+      <Text
+        style={[
+          styles.label,
+          layout === 'stacked' && styles.labelStacked,
+          { color: themeColors.textPrimary },
+        ]}
+      >
+        {label}
+      </Text>
       <TouchableOpacity
         style={[
           styles.dropdown,
+          layout === 'stacked' && styles.dropdownStacked,
           {
             backgroundColor: themeColors.control,
             borderColor: open ? themeColors.borderStrong : themeColors.border,
@@ -80,10 +94,18 @@ const styles = StyleSheet.create({
   rowTight: {
     marginTop: 0,
   },
+  rowStacked: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 0,
+  },
   label: {
     fontSize: FONTS.base,
     fontWeight: '600',
     flexShrink: 0,
+  },
+  labelStacked: {
+    marginBottom: SPACING.xs,
   },
   dropdown: {
     flexDirection: 'row',
@@ -99,6 +121,11 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     flexShrink: 1,
     minWidth: 0,
+  },
+  dropdownStacked: {
+    width: '100%',
+    flexGrow: 0,
+    flexBasis: 'auto',
   },
   value: {
     fontSize: FONTS.base,

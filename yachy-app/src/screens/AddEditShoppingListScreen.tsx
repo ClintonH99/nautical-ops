@@ -32,6 +32,7 @@ import {
   PageHeader,
   DepartmentSelector,
   EnterToAddHint,
+  PreviewActionButtons,
 } from '../components';
 
 export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
@@ -49,7 +50,6 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isMaster, setIsMaster] = useState(false);
-  const [activeItemIndex, setActiveItemIndex] = useState(0);
 
   const vesselId = user?.vesselId ?? null;
 
@@ -91,7 +91,7 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
     }
   }, [isEdit, presetTitle]);
 
-  const amountInputRefs = useRef<Array<TextInput | null>>([]);
+  const quantityInputRefs = useRef<Array<TextInput | null>>([]);
   const itemInputRefs = useRef<Array<TextInput | null>>([]);
   const nextItemIndexRef = useRef(items.length);
 
@@ -102,20 +102,14 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
   const addItem = () => {
     const newIndex = nextItemIndexRef.current;
     nextItemIndexRef.current += 1;
-    setActiveItemIndex(newIndex);
     setItems((prev) => [...prev, { text: '', checked: false }]);
-    setTimeout(() => amountInputRefs.current[newIndex]?.focus(), 50);
+    setTimeout(() => quantityInputRefs.current[newIndex]?.focus(), 50);
   };
   const removeItem = (index: number) => {
     if (items.length <= 1) return;
     setItems((prev) => prev.filter((_, i) => i !== index));
-    setActiveItemIndex((current) => {
-      if (index < current) return current - 1;
-      if (index === current) return Math.max(0, Math.min(index, items.length - 2));
-      return current;
-    });
   };
-  const setItemAt = (index: number, field: 'text' | 'amount', value: string) => {
+  const setItemAt = (index: number, field: 'amount' | 'text', value: string) => {
     setItems((prev) => {
       const next = [...prev];
       next[index] = { ...next[index], [field]: value };
@@ -199,59 +193,126 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
     );
   }
 
+  const screenTitle = isEdit
+    ? 'Edit Shopping List'
+    : asMasterList
+      ? 'Create Personalized List'
+      : listType === 'trip'
+        ? 'Create Trip Shopping List'
+        : 'Create General Shopping List';
+  const saveButtonTitle = isEdit
+    ? 'Save Changes'
+    : asMasterList
+      ? 'Create Personalized List'
+      : listType === 'trip'
+        ? 'Create Trip Shopping List'
+        : 'Create Shopping List';
+
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: themeColors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={0}
     >
-      <PageHeader title={isEdit ? 'Edit Shopping List' : 'Create Shopping List'} />
+      <PageHeader title={screenTitle} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <Input
-          label="Title"
-          value={title}
-          onChangeText={setTitle}
-          placeholder="e.g. Galley weekly shop"
-          autoCapitalize="words"
-        />
-        {!isEdit && !asMasterList && (
-          <View style={styles.deptSection}>
+        <View
+          style={[
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.borderStrong },
+          ]}
+        >
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
+            ]}
+          >
+            List details
+          </Text>
+          <Input
+            label="List name"
+            value={title}
+            onChangeText={setTitle}
+            placeholder={
+              listType === 'trip' ? 'e.g. Bahamas charter shopping' : 'e.g. Weekly galley supplies'
+            }
+            autoCapitalize="words"
+          />
+          {!isEdit && !asMasterList && (
             <DepartmentSelector
               value={department}
               onChange={(value) => value && setDepartment(value)}
+              tightTop
+              layout="stacked"
             />
-          </View>
-        )}
+          )}
+        </View>
 
-        <Text style={[styles.label, { color: themeColors.textPrimary }]}>Items</Text>
-        {items.map((item, index) => (
-          <React.Fragment key={index}>
-            <View style={styles.itemRow}>
+        <View
+          style={[
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.borderStrong },
+          ]}
+        >
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
+            ]}
+          >
+            Shopping items
+          </Text>
+          <View style={styles.itemColumnLabels}>
+            <Text
+              style={[
+                styles.itemColumnLabel,
+                styles.quantityColumnLabel,
+                { color: themeColors.textSecondary },
+              ]}
+            >
+              QTY
+            </Text>
+            <Text
+              style={[
+                styles.itemColumnLabel,
+                styles.itemNameColumnLabel,
+                { color: themeColors.textSecondary },
+              ]}
+            >
+              ITEM
+            </Text>
+            <View style={styles.removeColumnSpacer} />
+          </View>
+          {items.map((item, index) => (
+            <View key={index} style={styles.itemRow}>
               <TextInput
-                ref={(el) => {
-                  amountInputRefs.current[index] = el;
+                ref={(element) => {
+                  quantityInputRefs.current[index] = element;
                 }}
                 style={[
-                  styles.amountInput,
+                  styles.quantityInput,
                   {
                     backgroundColor: themeColors.control,
-                    color: themeColors.textPrimary,
                     borderColor: themeColors.border,
+                    color: themeColors.textPrimary,
                   },
                 ]}
                 value={item.amount ?? ''}
-                onChangeText={(v) => setItemAt(index, 'amount', v)}
-                placeholder="#"
-                keyboardType="decimal-pad"
-                placeholderTextColor={themeColors.textSecondary}
-                returnKeyType="next"
+                onChangeText={(value) => setItemAt(index, 'amount', value.replace(/[^0-9]/g, ''))}
+                placeholder="0"
+                placeholderTextColor={themeColors.textMuted}
+                keyboardType="number-pad"
+                returnKeyType="default"
                 submitBehavior="submit"
-                onFocus={() => setActiveItemIndex(index)}
+                autoFocus={!isEdit && index === 0}
+                selectTextOnFocus
                 onSubmitEditing={() => itemInputRefs.current[index]?.focus()}
+                accessibilityLabel={`Quantity for item ${index + 1}`}
               />
               <TextInput
                 ref={(el) => {
@@ -261,57 +322,50 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
                   styles.itemInput,
                   {
                     backgroundColor: themeColors.control,
-                    color: themeColors.textPrimary,
                     borderColor: themeColors.border,
+                    color: themeColors.textPrimary,
                   },
                 ]}
                 value={item.text}
-                onChangeText={(v) => setItemAt(index, 'text', v)}
-                placeholder="Item"
-                placeholderTextColor={themeColors.textSecondary}
-                returnKeyType="done"
+                onChangeText={(value) => setItemAt(index, 'text', value)}
+                placeholder="Shopping item"
+                placeholderTextColor={themeColors.textMuted}
+                returnKeyType="default"
                 submitBehavior="submit"
-                onFocus={() => setActiveItemIndex(index)}
                 onSubmitEditing={() => {
                   if (index === items.length - 1) addItem();
-                  else amountInputRefs.current[index + 1]?.focus();
+                  else quantityInputRefs.current[index + 1]?.focus();
                 }}
+                accessibilityLabel={`Item name ${index + 1}`}
               />
               <TouchableOpacity
                 onPress={() => removeItem(index)}
                 style={styles.removeBtn}
                 disabled={items.length <= 1}
+                accessibilityRole="button"
+                accessibilityLabel={`Remove item ${index + 1}`}
               >
-                <Text
-                  style={[
-                    styles.removeBtnText,
-                    {
-                      color: items.length <= 1 ? themeColors.textMuted : COLORS.danger,
-                    },
-                  ]}
-                >
-                  Remove
-                </Text>
+                <Ionicons
+                  name="close"
+                  size={20}
+                  color={items.length <= 1 ? themeColors.textMuted : COLORS.danger}
+                />
               </TouchableOpacity>
             </View>
-            {index === activeItemIndex && <EnterToAddHint />}
-          </React.Fragment>
-        ))}
+          ))}
+          <EnterToAddHint style={styles.enterHint} />
+        </View>
 
         <View style={styles.actions}>
           <Button
-            title={isEdit ? 'Save Changes' : 'Create Shopping List'}
+            title={saveButtonTitle}
             onPress={handleSave}
             variant="primary"
             loading={saving}
             disabled={saving}
             fullWidth
           />
-          {isEdit && !isMaster && (
-            <TouchableOpacity onPress={handleDelete} style={styles.deleteBtn}>
-              <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-            </TouchableOpacity>
-          )}
+          {isEdit && !isMaster && <PreviewActionButtons onDelete={handleDelete} />}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -324,58 +378,73 @@ const styles = StyleSheet.create({
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
-  label: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs, marginTop: SPACING.md },
-  dropdown: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: BORDER_RADIUS.md,
+  formSection: {
     borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: SPACING.lg,
-  },
-  dropdownText: { fontSize: FONTS.base, fontWeight: '500' },
-  dropdownChevron: { fontSize: 10 },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.lg,
+    marginBottom: SPACING.md,
   },
-  modalBox: { borderRadius: BORDER_RADIUS.lg, paddingVertical: SPACING.sm, minWidth: 200 },
-  modalItem: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg },
-  modalItemSelected: {},
-  modalItemText: { fontSize: FONTS.base },
-  modalItemTextSelected: { color: COLORS.primary, fontWeight: '600' },
-  deptSection: { marginBottom: SPACING.lg },
-  deptLabel: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs },
-  itemRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm },
-  amountInput: {
-    width: 62,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: BORDER_RADIUS.md,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
+  sectionTitle: {
     fontSize: FONTS.base,
-    marginRight: SPACING.sm,
+    fontWeight: '700',
+    marginBottom: SPACING.md,
+  },
+  itemColumnLabels: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.xs,
+  },
+  itemColumnLabel: {
+    fontSize: FONTS.xs,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+  },
+  quantityColumnLabel: {
+    width: 68,
+    textAlign: 'center',
+  },
+  itemNameColumnLabel: {
+    flex: 1,
+  },
+  removeColumnSpacer: {
+    width: 44,
+  },
+  itemRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  quantityInput: {
+    width: 68,
+    minHeight: 48,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: 0,
+    fontSize: FONTS.base,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   itemInput: {
     flex: 1,
+    minWidth: 0,
+    minHeight: 48,
     borderWidth: 1,
-    borderColor: COLORS.border,
     borderRadius: BORDER_RADIUS.md,
-    paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.md,
+    paddingVertical: 0,
     fontSize: FONTS.base,
   },
-  removeBtn: { paddingVertical: SPACING.sm, paddingHorizontal: SPACING.sm, marginLeft: SPACING.xs },
-  removeBtnText: { fontSize: FONTS.sm, color: COLORS.danger },
-  removeBtnDisabled: { color: COLORS.textTertiary },
-  actions: { marginTop: SPACING.xl },
-  deleteBtn: { marginTop: SPACING.md, alignItems: 'center', paddingVertical: SPACING.sm },
-  deleteBtnText: { fontSize: FONTS.sm, color: COLORS.danger, fontWeight: '600' },
+  removeBtn: {
+    width: 44,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  enterHint: { marginTop: 0, marginBottom: 0 },
+  actions: { marginTop: SPACING.sm },
 });
