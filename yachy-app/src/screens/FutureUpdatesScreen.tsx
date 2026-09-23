@@ -16,9 +16,10 @@ import {
   Linking,
   Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES, SHADOWS } from '../constants/theme';
-import { useThemeStore, BACKGROUND_THEMES } from '../store';
+import { useThemeColors } from '../hooks/useThemeColors';
 import { supabase } from '../services/supabase';
 import { PageHeader } from '../components';
 
@@ -31,19 +32,17 @@ interface AppUpdate {
   created_at: string;
 }
 
-const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  released: { label: 'Released', color: '#16a34a', bg: 'rgba(22,163,74,0.1)' },
-  coming_soon: { label: 'Coming Soon', color: '#d97706', bg: 'rgba(217,119,6,0.1)' },
-  in_progress: { label: 'In Progress', color: '#0d9488', bg: 'rgba(13,148,136,0.1)' },
-  planned: { label: 'Planned', color: '#6366f1', bg: 'rgba(99,102,241,0.1)' },
+const STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  released: { label: 'Released', color: '#16A34A' },
+  coming_soon: { label: 'Coming Soon', color: '#D97706' },
+  in_progress: { label: 'In Progress', color: '#0D9488' },
+  planned: { label: 'Planned', color: '#6366F1' },
 };
 
-// Section display order
-const STATUS_ORDER = ['released', 'coming_soon', 'in_progress', 'planned'];
+const STATUS_ORDER = ['in_progress', 'coming_soon', 'planned', 'released'];
 
 export const FutureUpdatesScreen = () => {
-  const backgroundTheme = useThemeStore((s) => s.backgroundTheme);
-  const themeColors = BACKGROUND_THEMES[backgroundTheme];
+  const themeColors = useThemeColors();
 
   const [updates, setUpdates] = useState<AppUpdate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,11 +66,27 @@ export const FutureUpdatesScreen = () => {
   const renderCard = (item: AppUpdate) => (
     <View
       key={item.id}
-      style={[styles.card, { backgroundColor: themeColors.surface }]}
+      style={[
+        styles.card,
+        {
+          backgroundColor: themeColors.surface,
+          borderColor: themeColors.border,
+        },
+      ]}
     >
-      <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]}>
-        {item.title}
-      </Text>
+      <View style={styles.cardTitleRow}>
+        <View
+          style={[
+            styles.statusMarker,
+            { backgroundColor: STATUS_LABELS[item.status]?.color ?? themeColors.accent },
+          ]}
+        />
+        <Text
+          style={[styles.cardTitle, { color: themeColors.isDark ? COLORS.white : COLORS.primary }]}
+        >
+          {item.title}
+        </Text>
+      </View>
       <Text style={[styles.cardDesc, { color: themeColors.textSecondary }]}>
         {item.description}
       </Text>
@@ -79,21 +94,16 @@ export const FutureUpdatesScreen = () => {
   );
 
   return (
-    <View style={styles.pageWrap}>
-      <PageHeader title="Future Updates" />
+    <View style={[styles.pageWrap, { backgroundColor: themeColors.background }]}>
+      <PageHeader title="Future Updates & Features" />
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: themeColors.textPrimary }]}>
-            What's Coming Next
-          </Text>
-          <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-            Nautical Ops is always evolving. Here's what we're working on.
-          </Text>
-        </View>
+        <Text style={[styles.intro, { color: themeColors.textSecondary }]}>
+          See what is coming next to Nautical Ops.
+        </Text>
 
         {loading ? (
           <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.xl }} />
@@ -110,31 +120,53 @@ export const FutureUpdatesScreen = () => {
             return (
               <View key={statusKey} style={styles.section}>
                 <View style={styles.sectionHeaderRow}>
-                  <Text style={[styles.sectionHeader, { color: themeColors.textPrimary }]}>
+                  <Text
+                    style={[
+                      styles.sectionHeader,
+                      { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                    ]}
+                  >
                     {statusStyle.label}
                   </Text>
-                  <View style={[styles.badge, { backgroundColor: statusStyle.bg }]}>
-                    <Text style={[styles.badgeText, { color: statusStyle.color }]}>
+                  <View style={[styles.badge, { backgroundColor: themeColors.accentSoft }]}>
+                    <Text
+                      style={[
+                        styles.badgeText,
+                        { color: themeColors.isDark ? '#DBE7FF' : COLORS.primary },
+                      ]}
+                    >
                       {itemsForStatus.length}
                     </Text>
                   </View>
                 </View>
-                <View style={styles.list}>
-                  {itemsForStatus.map(renderCard)}
-                </View>
+                <View style={styles.list}>{itemsForStatus.map(renderCard)}</View>
               </View>
             );
           })
         )}
 
-        <View style={[styles.feedbackCard, { backgroundColor: themeColors.surface }]}>
-          <Text style={[styles.feedbackTitle, { color: themeColors.textPrimary }]}>
+        <View
+          style={[
+            styles.feedbackCard,
+            {
+              backgroundColor: themeColors.surface,
+              borderColor: themeColors.border,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.feedbackTitle,
+              { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+            ]}
+          >
             Have a feature idea?
           </Text>
           <Text style={[styles.feedbackText, { color: themeColors.textSecondary }]}>
-            We build Nautical Ops based on feedback from real crew. Send your ideas to:
+            We build Nautical Ops around feedback from real crew.
           </Text>
           <TouchableOpacity
+            style={styles.emailRow}
             onPress={() => Linking.openURL('mailto:support@nautical-ops.com')}
             onLongPress={async () => {
               await Clipboard.setStringAsync('support@nautical-ops.com');
@@ -142,7 +174,14 @@ export const FutureUpdatesScreen = () => {
             }}
             activeOpacity={0.7}
           >
-            <Text style={{ color: COLORS.primary, fontWeight: '600', marginTop: SPACING.xs }}>
+            <Ionicons
+              name="mail-outline"
+              size={18}
+              color={themeColors.isDark ? '#DBE7FF' : COLORS.primary}
+            />
+            <Text
+              style={[styles.emailText, { color: themeColors.isDark ? '#DBE7FF' : COLORS.primary }]}
+            >
               support@nautical-ops.com
             </Text>
           </TouchableOpacity>
@@ -157,56 +196,59 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: {
     padding: SPACING.lg,
-    paddingTop: SPACING.xl * 2,
     paddingBottom: SIZES.bottomScrollPadding,
   },
-  header: { marginBottom: SPACING.xl },
-  title: {
-    fontSize: FONTS['2xl'],
-    fontWeight: '700',
-    marginBottom: SPACING.sm,
+  intro: {
+    fontSize: FONTS.sm,
+    lineHeight: 20,
+    marginBottom: SPACING.md,
   },
-  subtitle: {
-    fontSize: FONTS.base,
-    lineHeight: 22,
-  },
-  section: { marginBottom: SPACING.xl },
+  section: { marginBottom: SPACING.lg },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
-    marginBottom: SPACING.md,
+    justifyContent: 'space-between',
+    gap: SPACING.md,
+    marginBottom: SPACING.sm,
   },
   sectionHeader: {
     fontSize: FONTS.lg,
-    fontWeight: '700',
+    fontWeight: '600',
   },
-  list: { gap: SPACING.md },
+  list: { gap: SPACING.sm },
   card: {
-    padding: SPACING.lg,
+    padding: SPACING.md,
     borderRadius: BORDER_RADIUS.lg,
-    ...SHADOWS.sm,
+    borderWidth: 1,
+    ...SHADOWS.md,
   },
-  cardTop: {
+  cardTitleRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: SPACING.sm,
-    gap: SPACING.md,
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: 6,
   },
-  cardIcon: { fontSize: 28, marginTop: 2 },
-  cardMeta: { flex: 1, gap: 6 },
+  statusMarker: {
+    width: 9,
+    height: 9,
+    borderRadius: BORDER_RADIUS.full,
+  },
   cardTitle: {
-    fontSize: FONTS.lg,
-    fontWeight: '700',
+    flex: 1,
+    fontSize: FONTS.base,
+    fontWeight: '600',
   },
   badge: {
-    alignSelf: 'flex-start',
+    minWidth: 28,
+    minHeight: 28,
     paddingHorizontal: SPACING.sm,
-    paddingVertical: 3,
-    borderRadius: BORDER_RADIUS.sm,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.full,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   badgeText: {
-    fontSize: FONTS.xs,
+    fontSize: FONTS.sm,
     fontWeight: '600',
   },
   cardDesc: {
@@ -214,17 +256,29 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   feedbackCard: {
-    padding: SPACING.lg,
+    padding: SPACING.md,
     borderRadius: BORDER_RADIUS.lg,
-    ...SHADOWS.sm,
+    borderWidth: 1,
+    ...SHADOWS.md,
   },
   feedbackTitle: {
     fontSize: FONTS.lg,
-    fontWeight: '700',
-    marginBottom: SPACING.sm,
+    fontWeight: '600',
+    marginBottom: SPACING.xs,
   },
   feedbackText: {
     fontSize: FONTS.sm,
     lineHeight: 20,
+  },
+  emailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginTop: SPACING.sm,
+    minHeight: 24,
+  },
+  emailText: {
+    fontSize: FONTS.sm,
+    fontWeight: '600',
   },
 });

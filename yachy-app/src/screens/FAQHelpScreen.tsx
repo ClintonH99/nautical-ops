@@ -15,7 +15,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
+import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES, SHADOWS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { PageHeader } from '../components';
 import { useAuthStore } from '../store';
@@ -29,7 +29,7 @@ interface FAQ {
   display_order: number;
 }
 
-export const FAQScreen = ({ navigation }: any) => {
+export const FAQScreen = () => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const [faqs, setFaqs] = useState<FAQ[]>([]);
@@ -78,7 +78,7 @@ export const FAQScreen = ({ navigation }: any) => {
         'Question Submitted',
         'Your question has been received. We will get back to you as soon as possible.'
       );
-    } catch (e) {
+    } catch {
       Alert.alert('Error', 'Could not submit your question. Please try again.');
     } finally {
       setSubmitting(false);
@@ -94,7 +94,7 @@ export const FAQScreen = ({ navigation }: any) => {
         showsVerticalScrollIndicator={false}
       >
         <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-          Find answers to common questions about Nautical Ops
+          Find answers to common questions about Nautical Ops.
         </Text>
 
         {loading ? (
@@ -148,7 +148,7 @@ export const FAQScreen = ({ navigation }: any) => {
             Still have a question?
           </Text>
           <Text style={[styles.submitSubtitle, { color: themeColors.textSecondary }]}>
-            Can't find what you're looking for? Submit your question and we'll get back to you.
+            Submit your question and we will get back to you.
           </Text>
           <TextInput
             style={[
@@ -183,11 +183,19 @@ export const FAQScreen = ({ navigation }: any) => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.websiteButton, { borderColor: themeColors.accent }]}
+            style={[
+              styles.websiteButton,
+              { borderColor: themeColors.isDark ? COLORS.white : COLORS.primary },
+            ]}
             onPress={() => Linking.openURL('https://www.nautical-ops.com/support').catch(() => {})}
             activeOpacity={0.8}
           >
-            <Text style={[styles.websiteButtonText, { color: themeColors.accent }]}>
+            <Text
+              style={[
+                styles.websiteButtonText,
+                { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+              ]}
+            >
               Visit Website
             </Text>
           </TouchableOpacity>
@@ -202,11 +210,11 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: {
     padding: SPACING.lg,
-    paddingBottom: (SIZES as any).bottomScrollPadding ?? 48,
+    paddingBottom: SIZES.bottomScrollPadding,
   },
   subtitle: {
     fontSize: FONTS.sm,
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
     lineHeight: 20,
   },
   faqList: {
@@ -215,18 +223,22 @@ const styles = StyleSheet.create({
   },
   faqItem: {
     borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
     borderWidth: 1,
+    overflow: 'hidden',
+    ...SHADOWS.md,
   },
   faqHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: SPACING.sm,
+    minHeight: 62,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 13,
   },
   faqQuestion: {
     fontSize: FONTS.base,
-    fontWeight: '600',
+    fontWeight: '500',
     flex: 1,
     lineHeight: 22,
   },
@@ -237,16 +249,18 @@ const styles = StyleSheet.create({
   faqAnswer: {
     fontSize: FONTS.sm,
     lineHeight: 22,
-    marginTop: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.md,
   },
   submitCard: {
     borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.xl,
+    padding: SPACING.md,
     borderWidth: 1,
+    ...SHADOWS.md,
   },
   submitTitle: {
     fontSize: FONTS.lg,
-    fontWeight: '700',
+    fontWeight: '600',
     marginBottom: SPACING.xs,
   },
   submitSubtitle: {
@@ -256,22 +270,26 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderRadius: BORDER_RADIUS.md,
+    borderRadius: 14,
     padding: SPACING.md,
     fontSize: FONTS.base,
     minHeight: 100,
     marginBottom: SPACING.md,
   },
   submitButton: {
-    borderRadius: BORDER_RADIUS.md,
+    minHeight: 46,
+    borderRadius: 14,
     padding: SPACING.md,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   websiteButton: {
-    borderRadius: BORDER_RADIUS.md,
+    minHeight: 46,
+    borderRadius: 14,
     borderWidth: 1.5,
     padding: SPACING.md,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: SPACING.sm,
   },
   websiteButtonText: {
