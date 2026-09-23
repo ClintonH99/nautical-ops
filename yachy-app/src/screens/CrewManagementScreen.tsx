@@ -15,16 +15,13 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
-import {
-  useAuthStore,
-  useDepartmentColorStore,
-  getDepartmentColor as getDeptColor,
-} from '../store';
+import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus';
 import userService from '../services/user';
-import { User, Department } from '../types';
+import { User } from '../types';
 import { getPlanTier } from '../constants/subscriptionPlans';
 import { LoadingSpinner, PageHeader } from '../components';
 import { canAccessVesselManagement, isMasterOfVessel } from '../utils/access';
@@ -209,9 +206,6 @@ export const CrewManagementScreen = ({ navigation }: any) => {
   const needsUpgrade =
     currentPlan && crew.length >= currentPlan.maxCrew && currentPlan.maxCrew !== Infinity;
 
-  const overrides = useDepartmentColorStore((s) => s.overrides);
-  const getDepartmentColor = (department: Department) => getDeptColor(department, overrides);
-
   const formatDepartmentDisplay = (user: User) => {
     const dept1 = user.department
       ? user.department.charAt(0) + user.department.slice(1).toLowerCase()
@@ -306,9 +300,14 @@ export const CrewManagementScreen = ({ navigation }: any) => {
               {[item.department, item.department2].filter(Boolean).map((dept) => (
                 <View
                   key={dept}
-                  style={[styles.departmentBadge, { backgroundColor: getDepartmentColor(dept!) }]}
+                  style={[styles.departmentBadge, { backgroundColor: themeColors.accentSoft }]}
                 >
-                  <Text style={styles.departmentText}>
+                  <Text
+                    style={[
+                      styles.departmentText,
+                      { color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
+                    ]}
+                  >
                     {dept!.charAt(0) + dept!.slice(1).toLowerCase()}
                   </Text>
                 </View>
@@ -340,6 +339,9 @@ export const CrewManagementScreen = ({ navigation }: any) => {
             </View>
           </View>
         </View>
+        {!isCurrentUser ? (
+          <Ionicons name="chevron-forward" size={19} color={themeColors.textSecondary} />
+        ) : null}
       </TouchableOpacity>
     );
   };
@@ -367,22 +369,6 @@ export const CrewManagementScreen = ({ navigation }: any) => {
           </Text>
         </TouchableOpacity>
       )}
-
-      {/* Rotational Captain Info Banner */}
-      <View
-        style={[
-          styles.rotationalInfoBanner,
-          { backgroundColor: themeColors.surface, borderColor: themeColors.border },
-        ]}
-      >
-        <Text style={[styles.rotationalInfoTitle, { color: themeColors.textPrimary }]}>
-          Adding a Rotational Captain?
-        </Text>
-        <Text style={[styles.rotationalInfoText, { color: themeColors.textSecondary }]}>
-          A second captain should join via the Invite Code on the Create Crew Account page — they
-          should NOT create a new vessel. Once joined, promote them to Captain/MOV from this screen.
-        </Text>
-      </View>
 
       <View style={styles.statsContainer}>
         <View
@@ -420,16 +406,71 @@ export const CrewManagementScreen = ({ navigation }: any) => {
 
       <View
         style={[
-          styles.infoCard,
+          styles.rotationalInfoBanner,
           { backgroundColor: themeColors.surface, borderColor: themeColors.border },
         ]}
       >
-        <Text style={[styles.infoText, { color: themeColors.textPrimary }]}>
-          💡 Tap any crew member to view details and manage their role
-        </Text>
+        <View style={[styles.infoIcon, { backgroundColor: themeColors.accentSoft }]}>
+          <Ionicons
+            name="information-circle-outline"
+            size={22}
+            color={themeColors.isDark ? themeColors.textPrimary : COLORS.primary}
+          />
+        </View>
+        <View style={styles.rotationalInfoCopy}>
+          <Text style={[styles.rotationalInfoTitle, { color: themeColors.textPrimary }]}>
+            Adding a Rotational Captain?
+          </Text>
+          <Text style={[styles.rotationalInfoText, { color: themeColors.textSecondary }]}>
+            They join with the vessel invite code, then you promote them here.
+          </Text>
+        </View>
       </View>
 
-      {/* Filter row */}
+      <View
+        style={[
+          styles.actionGroup,
+          { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+        ]}
+      >
+        <TouchableOpacity
+          style={[styles.groupedActionRow, { borderBottomColor: themeColors.border }]}
+          onPress={() => navigation.navigate('RotationalGroups')}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.actionIcon, { backgroundColor: themeColors.accentSoft }]}>
+            <Ionicons
+              name="swap-horizontal-outline"
+              size={19}
+              color={themeColors.isDark ? themeColors.textPrimary : COLORS.primary}
+            />
+          </View>
+          <Text style={[styles.groupedActionLabel, { color: themeColors.textPrimary }]}>
+            Rotational Groups
+          </Text>
+          <Ionicons name="chevron-forward" size={19} color={themeColors.textSecondary} />
+        </TouchableOpacity>
+        {isMOV ? (
+          <TouchableOpacity
+            style={styles.groupedActionRowLast}
+            onPress={() => navigation.navigate('SeaMilesReview')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.actionIcon, { backgroundColor: themeColors.accentSoft }]}>
+              <Ionicons
+                name="document-text-outline"
+                size={19}
+                color={themeColors.isDark ? themeColors.textPrimary : COLORS.primary}
+              />
+            </View>
+            <Text style={[styles.groupedActionLabel, { color: themeColors.textPrimary }]}>
+              Sign Off Sea Miles
+            </Text>
+            <Ionicons name="chevron-forward" size={19} color={themeColors.textSecondary} />
+          </TouchableOpacity>
+        ) : null}
+      </View>
+
       <TouchableOpacity
         style={[
           styles.actionRow,
@@ -447,51 +488,16 @@ export const CrewManagementScreen = ({ navigation }: any) => {
         activeOpacity={0.7}
       >
         <Text style={[styles.actionRowLabel, { color: themeColors.textPrimary }]}>
-          Filter: {filterLabel}
+          {filterLabel} ({filteredCrew.length})
         </Text>
-        <Text style={[styles.actionRowChevron, { color: themeColors.textSecondary }]}>›</Text>
+        <Ionicons name="chevron-down" size={19} color={themeColors.textSecondary} />
       </TouchableOpacity>
-
-      {/* Rotational Groups row */}
-      <TouchableOpacity
-        style={[
-          styles.actionRow,
-          { backgroundColor: themeColors.surface, borderColor: themeColors.border },
-        ]}
-        onPress={() => navigation.navigate('RotationalGroups')}
-        activeOpacity={0.7}
-      >
-        <Text style={[styles.actionRowLabel, { color: themeColors.accent }]}>
-          Rotational Groups
-        </Text>
-        <Text style={[styles.actionRowChevron, { color: themeColors.accent }]}>›</Text>
-      </TouchableOpacity>
-
-      {isMOV ? (
-        <TouchableOpacity
-          style={[
-            styles.actionRow,
-            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
-          ]}
-          onPress={() => navigation.navigate('SeaMilesReview')}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.actionRowLabel, { color: themeColors.accent }]}>
-            Sign Off Sea Miles
-          </Text>
-          <Text style={[styles.actionRowChevron, { color: themeColors.accent }]}>›</Text>
-        </TouchableOpacity>
-      ) : null}
-
-      <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
-        {filterLabel} ({filteredCrew.length})
-      </Text>
     </View>
   );
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyIcon}>👥</Text>
+      <Ionicons name="people-outline" size={48} color={themeColors.textSecondary} />
       <Text style={[styles.emptyTitle, { color: themeColors.textPrimary }]}>No Crew Members</Text>
       <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
         Crew members will appear here once they join. Manage invite code in Vessel Settings.
@@ -578,9 +584,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
     borderWidth: 1,
   },
   statNumber: {
@@ -593,25 +599,23 @@ const styles = StyleSheet.create({
     fontSize: FONTS.xs,
     textAlign: 'center',
   },
-  infoCard: {
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.md,
-    marginBottom: SPACING.lg,
-    borderWidth: 1,
-  },
-  infoText: {
-    fontSize: FONTS.sm,
-    lineHeight: 20,
-  },
   rotationalInfoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.md,
     marginBottom: SPACING.md,
-    borderLeftWidth: 4,
     borderWidth: 1,
-    borderLeftColor: COLORS.primaryLight,
   },
+  infoIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rotationalInfoCopy: { flex: 1 },
   rotationalInfoTitle: {
     fontSize: FONTS.sm,
     fontWeight: '700',
@@ -629,27 +633,41 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
     marginBottom: SPACING.sm,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 2,
-    elevation: 1,
     borderWidth: 1,
   },
   actionRowLabel: {
     fontSize: FONTS.base,
     fontWeight: '600',
   },
-  actionRowChevron: {
-    fontSize: 22,
-    lineHeight: 24,
-    fontWeight: '300',
-  },
-  sectionTitle: {
-    fontSize: FONTS.lg,
-    fontWeight: '600',
+  actionGroup: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.lg,
+    overflow: 'hidden',
     marginBottom: SPACING.md,
   },
+  groupedActionRow: {
+    minHeight: 58,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderBottomWidth: 1,
+  },
+  groupedActionRowLast: {
+    minHeight: 58,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+  },
+  actionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  groupedActionLabel: { flex: 1, fontSize: FONTS.sm, fontWeight: '600' },
   crewCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -659,9 +677,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
     borderWidth: 1,
   },
   crewCardLeft: {
@@ -732,7 +750,6 @@ const styles = StyleSheet.create({
   departmentText: {
     fontSize: FONTS.xs,
     fontWeight: '600',
-    color: COLORS.white,
   },
   roleBadge: {
     paddingHorizontal: SPACING.xs,
@@ -773,10 +790,6 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     paddingVertical: SPACING.xl * 2,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: SPACING.md,
   },
   emptyTitle: {
     fontSize: FONTS.xl,

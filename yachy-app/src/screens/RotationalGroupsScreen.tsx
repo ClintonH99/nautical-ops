@@ -256,13 +256,11 @@ export const RotationalGroupsScreen = () => {
         ]}
         onPress={() => {
           if (!canEdit) return;
-          if (inGroup) {
-            handleRemoveFromGroup(member);
-          } else {
+          if (!inGroup) {
             toggleSelect(member.id);
           }
         }}
-        activeOpacity={0.7}
+        activeOpacity={inGroup ? 1 : 0.7}
       >
         <View style={styles.memberAvatar}>
           <Text style={styles.memberAvatarText}>{member.name.charAt(0).toUpperCase()}</Text>
@@ -278,9 +276,15 @@ export const RotationalGroupsScreen = () => {
             <Ionicons name="checkmark" size={14} color={COLORS.white} />
           </View>
         )}
-        {inGroup && canEdit && (
-          <Text style={[styles.removeHint, { color: COLORS.danger }]}>Tap to remove</Text>
-        )}
+        {inGroup && canEdit ? (
+          <TouchableOpacity
+            style={styles.removeButton}
+            onPress={() => handleRemoveFromGroup(member)}
+            activeOpacity={0.75}
+          >
+            <Text style={styles.removeButtonText}>Remove</Text>
+          </TouchableOpacity>
+        ) : null}
       </TouchableOpacity>
     );
   };
@@ -318,14 +322,23 @@ export const RotationalGroupsScreen = () => {
             },
           ]}
         >
-          <Text style={[styles.infoBannerTitle, { color: themeColors.textPrimary }]}>
-            About Rotation Groups
-          </Text>
-          <Text style={[styles.infoBannerText, { color: themeColors.textSecondary }]}>
-            {canEdit
-              ? 'Select ungrouped crew members below then tap "Create Rotation Group" to link them. Tap a group name to rename it. Tap a grouped member to remove them.'
-              : 'Rotation groups show which crew members share the same role on rotation. Only MOV can edit groups.'}
-          </Text>
+          <View style={[styles.infoIcon, { backgroundColor: themeColors.accentSoft }]}>
+            <Ionicons
+              name="information-circle-outline"
+              size={22}
+              color={themeColors.isDark ? themeColors.textPrimary : COLORS.primary}
+            />
+          </View>
+          <View style={styles.infoCopy}>
+            <Text style={[styles.infoBannerTitle, { color: themeColors.textPrimary }]}>
+              About Rotation Groups
+            </Text>
+            <Text style={[styles.infoBannerText, { color: themeColors.textSecondary }]}>
+              {canEdit
+                ? 'Link crew members who share the same role on rotation.'
+                : 'Rotation groups show which crew members share the same role on rotation. Only MOV can edit groups.'}
+            </Text>
+          </View>
         </View>
 
         {canEdit && (
@@ -335,6 +348,7 @@ export const RotationalGroupsScreen = () => {
               onPress={() => setCrewPickerOpen((open) => !open)}
               activeOpacity={0.85}
             >
+              <Ionicons name="add" size={20} color={COLORS.white} />
               <Text style={styles.addRotationButtonText}>Add Rotational Crew</Text>
             </TouchableOpacity>
 
@@ -443,7 +457,7 @@ export const RotationalGroupsScreen = () => {
                         onPress={() => handleAddToExistingGroup(group.id, group.name)}
                       >
                         <Text style={[styles.addToGroupText, { color: themeColors.accent }]}>
-                          + Add selected to "{group.name}"
+                          Add selected to "{group.name}"
                         </Text>
                       </TouchableOpacity>
                     )}
@@ -509,8 +523,11 @@ export const RotationalGroupsScreen = () => {
             </Text>
             <Text style={[styles.modalSubtitle, { color: themeColors.textSecondary }]}>
               {nameModalMode === 'create'
-                ? 'Give this rotation group a name, e.g. "Bridge Team" or "Stew Team".'
+                ? 'Give this rotation group a clear name.'
                 : 'Enter a new name for this rotation group.'}
+            </Text>
+            <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>
+              Group Name
             </Text>
             <TextInput
               ref={nameInputRef}
@@ -541,7 +558,11 @@ export const RotationalGroupsScreen = () => {
                 ]}
                 onPress={() => setNameModalVisible(false)}
               >
-                <Text style={[styles.modalBtnText, { color: themeColors.textSecondary }]}>
+                <Text
+                  style={[styles.modalBtnText, { color: themeColors.textSecondary }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
                   Cancel
                 </Text>
               </TouchableOpacity>
@@ -553,7 +574,12 @@ export const RotationalGroupsScreen = () => {
                 ]}
                 onPress={handleNameSubmit}
               >
-                <Text style={[styles.modalBtnText, { color: COLORS.white }]}>
+                <Text
+                  style={[styles.modalBtnText, { color: COLORS.white }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.85}
+                >
                   {nameModalMode === 'create' ? 'Create Rotation Group' : 'Save Changes'}
                 </Text>
               </TouchableOpacity>
@@ -570,11 +596,22 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scrollContent: { padding: SPACING.lg, paddingBottom: 120 },
   infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.md,
     marginBottom: SPACING.lg,
     borderWidth: 1,
   },
+  infoIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoCopy: { flex: 1 },
   infoBannerTitle: {
     fontSize: FONTS.sm,
     fontWeight: '700',
@@ -586,8 +623,11 @@ const styles = StyleSheet.create({
   },
   addRotationButton: {
     width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: SPACING.xs,
     backgroundColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.lg,
+    borderRadius: BORDER_RADIUS.md,
     paddingVertical: SPACING.md,
     alignItems: 'center',
     marginBottom: SPACING.md,
@@ -595,7 +635,7 @@ const styles = StyleSheet.create({
   addRotationButtonText: {
     color: COLORS.white,
     fontSize: FONTS.base,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   crewPickerCard: {
     borderWidth: 1,
@@ -639,7 +679,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: FONTS.xs,
-    fontWeight: '700',
+    fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -656,6 +696,7 @@ const styles = StyleSheet.create({
   memberRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 68,
     padding: SPACING.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
@@ -684,7 +725,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  removeHint: { fontSize: FONTS.xs, marginLeft: SPACING.sm },
+  removeButton: {
+    minHeight: 38,
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.sm,
+    marginLeft: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.danger,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  removeButtonText: { color: COLORS.danger, fontSize: FONTS.xs, fontWeight: '600' },
   addToGroupBtn: {
     margin: SPACING.sm,
     borderWidth: 1,
@@ -708,17 +758,17 @@ const styles = StyleSheet.create({
   fab: {
     backgroundColor: COLORS.primary,
     paddingVertical: SPACING.md,
-    borderRadius: BORDER_RADIUS.lg,
+    borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 4,
   },
   fabText: {
     color: COLORS.white,
-    fontWeight: '700',
+    fontWeight: '600',
     fontSize: FONTS.base,
   },
   // Modal
@@ -729,18 +779,21 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
   },
   modalCard: {
-    borderRadius: BORDER_RADIUS.xl,
-    padding: SPACING.xl,
+    width: '100%',
+    maxWidth: 420,
+    alignSelf: 'center',
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.lg,
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 10,
+    shadowOpacity: 0.2,
+    shadowRadius: 14,
+    elevation: 8,
     borderWidth: 1,
   },
   modalTitle: {
     fontSize: FONTS.xl,
-    fontWeight: '700',
+    fontWeight: '600',
     marginBottom: SPACING.xs,
   },
   modalSubtitle: {
@@ -756,22 +809,34 @@ const styles = StyleSheet.create({
     fontSize: FONTS.base,
     marginBottom: SPACING.lg,
   },
+  inputLabel: {
+    fontSize: FONTS.xs,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: SPACING.xs,
+  },
   modalActions: {
     flexDirection: 'row',
     gap: SPACING.sm,
-  },
-  modalBtn: {
-    flex: 1,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
   },
+  modalBtn: {
+    height: 48,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.sm,
+  },
   modalBtnCancel: {
+    flex: 0.85,
     borderWidth: 1,
   },
-  modalBtnConfirm: {},
+  modalBtnConfirm: { flex: 1.45 },
   modalBtnText: {
-    fontSize: FONTS.base,
+    width: '100%',
+    fontSize: FONTS.sm,
     fontWeight: '600',
+    textAlign: 'center',
   },
 });

@@ -27,12 +27,10 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus';
-import { Button } from '../components';
+import { Button, PageHeader } from '../components';
 import {
   PLAN_TIERS,
   BILLING_PERIODS,
-  PLAN_BOARD_SMALL_MEDIUM,
-  PLAN_BOARD_MEDIUM_LARGE,
   getPrice,
   getPlanTier,
   getBillingPeriod,
@@ -336,88 +334,51 @@ export const VesselPlansScreen = ({ navigation }: any) => {
         }}
         activeOpacity={0.7}
       >
-        <Text style={[styles.planCrewRange, { color: themeColors.textSecondary }]}>
-          {plan.label}
-        </Text>
-        <View style={styles.planBottomRow}>
-          <View>
-            {available ? (
-              <>
-                <Text style={[styles.planPrice, { color: themeColors.textPrimary }]}>
-                  {price.displayMonthly}
-                </Text>
-                {price.savingsPercent > 0 && (
-                  <Text style={[styles.planTotal, { color: themeColors.textSecondary }]}>
-                    {price.displayTotal} total
-                  </Text>
-                )}
-              </>
-            ) : (
-              <Text
-                style={[styles.planPrice, { color: themeColors.textSecondary, fontSize: FONTS.sm }]}
-              >
-                Not available for this period
+        <Text style={[styles.planCrewRange, { color: themeColors.textPrimary }]}>{plan.label}</Text>
+        <View style={styles.planPriceColumn}>
+          {available ? (
+            <>
+              <Text style={[styles.planPrice, { color: themeColors.textPrimary }]}>
+                {price.displayMonthly}
               </Text>
-            )}
-          </View>
-          <View
-            style={[
-              styles.radioOuter,
-              {
-                borderColor: isSelected
-                  ? themeColors.accent
-                  : themeColors.isDark
-                    ? themeColors.borderStrong
-                    : themeColors.textSecondary,
-              },
-            ]}
-          >
-            {isSelected && (
-              <View style={[styles.radioInner, { backgroundColor: themeColors.controlSelected }]} />
-            )}
-          </View>
+              {price.savingsPercent > 0 && (
+                <Text style={[styles.planTotal, { color: themeColors.textSecondary }]}>
+                  {price.displayTotal} total
+                </Text>
+              )}
+            </>
+          ) : (
+            <Text
+              style={[styles.planPrice, { color: themeColors.textSecondary, fontSize: FONTS.sm }]}
+            >
+              Not available for this period
+            </Text>
+          )}
+        </View>
+        <View
+          style={[
+            styles.radioOuter,
+            {
+              borderColor: isSelected
+                ? themeColors.accent
+                : themeColors.isDark
+                  ? themeColors.borderStrong
+                  : themeColors.textSecondary,
+            },
+          ]}
+        >
+          {isSelected && (
+            <View style={[styles.radioInner, { backgroundColor: themeColors.controlSelected }]} />
+          )}
         </View>
       </TouchableOpacity>
     );
   };
 
-  const renderBoard = (title: string, planIds: PlanTierId[]) => (
-    <View
-      key={title}
-      style={[
-        styles.boardCard,
-        {
-          backgroundColor: themeColors.surface,
-          borderColor: themeColors.border,
-        },
-      ]}
-    >
-      <Text style={[styles.boardTitle, { color: themeColors.textPrimary }]}>{title}</Text>
-      <Text style={[styles.boardSubtitle, { color: themeColors.textSecondary }]}>
-        All plans include full access to Nautical Ops. Select the tier that fits your crew size.
-      </Text>
-      <View style={styles.planCardList}>{planIds.map(renderPlanCard)}</View>
-    </View>
-  );
-
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <PageHeader title="Vessel Plans" showBack={!captainPaymentRequired} />
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {!captainPaymentRequired ? (
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="chevron-back" size={28} color={themeColors.textPrimary} />
-          </TouchableOpacity>
-        ) : null}
-
-        <Text style={[styles.title, { color: themeColors.textPrimary }]}>Vessel Plans</Text>
-        <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-          Select a billing period and crew tier for your vessel
-        </Text>
-
         {captainPaymentRequired ? (
           <View style={styles.paymentNotice}>
             <Ionicons name="alert-circle-outline" size={22} color={COLORS.danger} />
@@ -474,8 +435,9 @@ export const VesselPlansScreen = ({ navigation }: any) => {
             <Text style={[styles.sectionLabel, { color: themeColors.textSecondary }]}>
               CREW SIZE
             </Text>
-            {renderBoard('Small to Medium Vessels', PLAN_BOARD_SMALL_MEDIUM)}
-            {renderBoard('Medium to Large Vessels', PLAN_BOARD_MEDIUM_LARGE)}
+            <View style={styles.planCardList}>
+              {PLAN_TIERS.map((plan) => renderPlanCard(plan.id))}
+            </View>
 
             <View style={styles.actions}>
               <Button
@@ -559,28 +521,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: SPACING.xl,
-    paddingTop: 56,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.lg,
     paddingBottom: (SIZES as any).bottomScrollPadding ?? 48,
-  },
-  backButton: {
-    position: 'absolute',
-    top: 56,
-    left: SPACING.lg,
-    zIndex: 10,
-  },
-  title: {
-    fontSize: FONTS['2xl'],
-    fontWeight: '700',
-    textAlign: 'center',
-    marginTop: 48,
-    marginBottom: SPACING.xs,
-    letterSpacing: -0.3,
-  },
-  subtitle: {
-    fontSize: FONTS.sm,
-    textAlign: 'center',
-    marginBottom: SPACING.xl,
   },
   paymentNotice: {
     flexDirection: 'row',
@@ -630,10 +573,13 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   billingList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: SPACING.sm,
     marginBottom: SPACING.xl,
   },
   billingRow: {
+    width: '48.5%',
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: SPACING.md,
@@ -671,44 +617,26 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: COLORS.primary,
   },
-  boardCard: {
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.xl,
-    borderWidth: 1,
-  },
-  boardTitle: {
-    fontSize: FONTS.lg,
-    fontWeight: '700',
-    marginBottom: SPACING.xs,
-  },
-  boardSubtitle: {
-    fontSize: FONTS.sm,
-    lineHeight: 20,
-    marginBottom: SPACING.md,
-  },
   planCardList: {
     gap: SPACING.sm,
+    marginBottom: SPACING.xl,
   },
   planCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
   },
   planCrewRange: {
-    fontSize: FONTS.xs,
+    flex: 1,
+    fontSize: FONTS.sm,
     fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-    marginBottom: SPACING.xs,
+    marginRight: SPACING.sm,
   },
-  planBottomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
+  planPriceColumn: { alignItems: 'flex-end', marginRight: SPACING.md },
   planPrice: {
-    fontSize: FONTS.lg,
-    fontWeight: '700',
+    fontSize: FONTS.sm,
+    fontWeight: '600',
   },
   planTotal: {
     fontSize: FONTS.xs,

@@ -163,7 +163,7 @@ const APP_SCREEN_PATHS = {
   },
   JoinVessel: 'join-vessel',
   Settings: 'settings',
-  Profile: 'settings/profile',
+  AccountProfile: 'settings/profile',
   VesselPlans: 'vessel-plans',
   TermsConditions: 'terms',
   PrivacyPolicy: 'privacy',
@@ -911,7 +911,7 @@ export const RootNavigator = () => {
                 options={{ headerShown: false }}
               />
               <Stack.Screen
-                name="Profile"
+                name="AccountProfile"
                 component={ProfileScreen}
                 options={{ headerShown: false }}
               />

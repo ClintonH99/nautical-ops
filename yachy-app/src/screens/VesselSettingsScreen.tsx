@@ -14,9 +14,11 @@ import {
   Alert,
   TextInput,
   Share,
+  Image,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -28,6 +30,10 @@ import { Vessel } from '../types';
 import { getPlanTier, getBillingPeriod } from '../constants/subscriptionPlans';
 import { canAccessVesselManagement } from '../utils/access';
 import { usePostHog } from 'posthog-react-native';
+
+// React Native resolves static image assets through require().
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const DEFAULT_VESSEL_BANNER = require('../../assets/default-vessel-banner.png');
 
 export const VesselSettingsScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -44,6 +50,8 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
   const [isEditingImo, setIsEditingImo] = useState(false);
   const [isSavingImo, setIsSavingImo] = useState(false);
   const [crewCount, setCrewCount] = useState(0);
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null);
+  const [bannerLoadFailed, setBannerLoadFailed] = useState(false);
 
   const {
     hasActiveSubscription: _hasActiveSubscription,
@@ -65,6 +73,8 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
       ]);
       if (vesselData) {
         setVessel(vesselData);
+        setBannerUrl(vesselService.getBannerPublicUrl(user.vesselId));
+        setBannerLoadFailed(false);
         setVesselName(vesselData.name);
         setImoNumber(vesselData.imoNumber || '');
       }
@@ -193,7 +203,12 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
       if (!result.canceled && result.assets[0]) {
         setIsUploadingBanner(true);
         try {
-          await vesselService.uploadBannerImage(user.vesselId, result.assets[0].uri);
+          const uploadedUrl = await vesselService.uploadBannerImage(
+            user.vesselId,
+            result.assets[0].uri
+          );
+          setBannerUrl(uploadedUrl);
+          setBannerLoadFailed(false);
           Alert.alert('Success', 'Vessel photo updated.');
         } catch (error) {
           console.error('Banner upload error:', error);
@@ -275,13 +290,15 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
         <View style={styles.content}>
           {/* Subscription / Vessel Plans Link */}
           <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
+              Subscription
+            </Text>
             <View
               style={[
                 styles.card,
                 {
                   backgroundColor: themeColors.surface,
                   borderColor: themeColors.border,
-                  borderWidth: themeColors.isDark ? 1 : 0,
                 },
               ]}
             >
@@ -330,10 +347,9 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                 </Text>
               )}
               <Button
-                title="Manage Subscription in Vessel Plans"
+                title="Manage"
                 onPress={() => navigation.navigate('VesselPlans')}
                 variant="outline"
-                fullWidth
                 style={styles.planButton}
               />
             </View>
@@ -341,7 +357,7 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
 
           {/* Vessel Photo Section */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+            <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
               Vessel Photo
             </Text>
             <View
@@ -350,27 +366,44 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                 {
                   backgroundColor: themeColors.surface,
                   borderColor: themeColors.border,
-                  borderWidth: themeColors.isDark ? 1 : 0,
                 },
               ]}
             >
-              <Button
-                title={isUploadingBanner ? 'Uploading...' : '📷 Change vessel photo'}
-                onPress={handleChangeVesselPhoto}
-                variant="outline"
-                fullWidth
-                disabled={isUploadingBanner}
+              <Image
+                source={bannerUrl && !bannerLoadFailed ? { uri: bannerUrl } : DEFAULT_VESSEL_BANNER}
+                style={styles.vesselPhoto}
+                onError={() => setBannerLoadFailed(true)}
               />
-              <Text style={[styles.photoHint, { color: themeColors.textSecondary }]}>
-                Updates the banner shown on the home screen. Changes appear when you return to Home.
-              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.photoButton,
+                  { borderColor: themeColors.isDark ? themeColors.borderStrong : COLORS.primary },
+                ]}
+                onPress={handleChangeVesselPhoto}
+                disabled={isUploadingBanner}
+                activeOpacity={0.75}
+              >
+                <Ionicons
+                  name="camera-outline"
+                  size={19}
+                  color={themeColors.isDark ? themeColors.textPrimary : COLORS.primary}
+                />
+                <Text
+                  style={[
+                    styles.photoButtonText,
+                    { color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
+                  ]}
+                >
+                  {isUploadingBanner ? 'Uploading...' : 'Change Photo'}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
 
           {/* Vessel Name Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+              <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
                 Vessel Name
               </Text>
               {!isEditingName && (
@@ -385,7 +418,6 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                 {
                   backgroundColor: themeColors.surface,
                   borderColor: themeColors.border,
-                  borderWidth: themeColors.isDark ? 1 : 0,
                 },
               ]}
             >
@@ -436,7 +468,7 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
           {/* IMO Number Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+              <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
                 IMO Number
               </Text>
               {!isEditingImo && (
@@ -451,7 +483,6 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                 {
                   backgroundColor: themeColors.surface,
                   borderColor: themeColors.border,
-                  borderWidth: themeColors.isDark ? 1 : 0,
                 },
               ]}
             >
@@ -502,7 +533,7 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
 
           {/* Invite Code Section */}
           <View style={[styles.section, !hasActiveSubscription && { opacity: 0.6 }]}>
-            <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+            <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
               Invite Code
             </Text>
 
@@ -514,7 +545,6 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                     {
                       backgroundColor: themeColors.surface,
                       borderColor: themeColors.border,
-                      borderWidth: themeColors.isDark ? 1 : 0,
                     },
                   ]}
                 >
@@ -542,14 +572,14 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                   </View>
                   <View style={styles.codeActions}>
                     <Button
-                      title="📋 Copy"
+                      title="Copy"
                       onPress={handleCopyCode}
                       variant="outline"
                       fullWidth
                       style={styles.codeButton}
                     />
                     <Button
-                      title="📤 Share"
+                      title="Share"
                       onPress={handleShareCode}
                       variant="outline"
                       fullWidth
@@ -560,42 +590,22 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                     style={[styles.regenerateContainer, { borderTopColor: themeColors.border }]}
                   >
                     <Button
-                      title={isRegeneratingCode ? 'Generating...' : '🔄 Regenerate Code'}
+                      title={isRegeneratingCode ? 'Generating...' : 'Regenerate Code'}
                       onPress={handleRegenerateCode}
                       variant="outline"
                       fullWidth
                       disabled={isRegeneratingCode}
                     />
-                    <Text style={[styles.regenerateWarning, { color: themeColors.textSecondary }]}>
-                      ⚠️ This will expire the current code
-                    </Text>
+                    <View style={styles.regenerateWarningRow}>
+                      <Ionicons name="warning-outline" size={16} color={COLORS.warning} />
+                      <Text
+                        style={[styles.regenerateWarning, { color: themeColors.textSecondary }]}
+                      >
+                        Regenerating expires the current code. Each code can be used by one crew
+                        member.
+                      </Text>
+                    </View>
                   </View>
-                </View>
-                <View
-                  style={[
-                    styles.infoCard,
-                    {
-                      backgroundColor: themeColors.surfaceAlt,
-                      borderColor: themeColors.border,
-                      borderWidth: themeColors.isDark ? 1 : 0,
-                    },
-                  ]}
-                >
-                  <Text style={[styles.infoTitle, { color: themeColors.textPrimary }]}>
-                    💡 About Invite Codes
-                  </Text>
-                  <Text style={[styles.infoText, { color: themeColors.textPrimary }]}>
-                    • Each code is valid for one crew member only
-                  </Text>
-                  <Text style={[styles.infoText, { color: themeColors.textPrimary }]}>
-                    • Code automatically regenerates after each join
-                  </Text>
-                  <Text style={[styles.infoText, { color: themeColors.textPrimary }]}>
-                    • Crew use this code during registration or in Join Vessel
-                  </Text>
-                  <Text style={[styles.infoText, { color: themeColors.textPrimary }]}>
-                    • You can manually regenerate the code anytime
-                  </Text>
                 </View>
               </>
             ) : hasActiveSubscription && crewLimitReached ? (
@@ -606,7 +616,6 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                   {
                     backgroundColor: themeColors.surface,
                     borderColor: themeColors.border,
-                    borderWidth: themeColors.isDark ? 1 : 0,
                   },
                 ]}
               >
@@ -624,7 +633,6 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                   {
                     backgroundColor: themeColors.surface,
                     borderColor: themeColors.border,
-                    borderWidth: themeColors.isDark ? 1 : 0,
                   },
                 ]}
               >
@@ -641,7 +649,6 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                   {
                     backgroundColor: themeColors.surface,
                     borderColor: themeColors.border,
-                    borderWidth: themeColors.isDark ? 1 : 0,
                   },
                 ]}
               >
@@ -657,7 +664,7 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
 
           {/* Vessel Info Section */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+            <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
               Vessel Information
             </Text>
             <View
@@ -666,7 +673,6 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                 {
                   backgroundColor: themeColors.surface,
                   borderColor: themeColors.border,
-                  borderWidth: themeColors.isDark ? 1 : 0,
                 },
               ]}
             >
@@ -718,14 +724,19 @@ const styles = StyleSheet.create({
   loadingText: { marginTop: SPACING.md, fontSize: FONTS.base },
   errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   errorText: { fontSize: FONTS.lg, color: COLORS.error, marginBottom: SPACING.lg },
-  section: { marginBottom: SPACING.xl },
+  section: { marginBottom: SPACING.lg },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: SPACING.sm,
   },
-  sectionTitle: { fontSize: FONTS.lg, fontWeight: '600' },
+  sectionTitle: {
+    fontSize: FONTS.xs,
+    fontWeight: '600',
+    letterSpacing: 0.7,
+    textTransform: 'uppercase',
+  },
   sectionSubtitle: { fontSize: FONTS.sm, marginBottom: SPACING.md },
   billingPeriodRow: {
     flexDirection: 'row',
@@ -756,7 +767,7 @@ const styles = StyleSheet.create({
   planCardPrice: { fontSize: FONTS.base, fontWeight: '700' },
   planCardTotal: { fontSize: FONTS.xs, marginTop: 2 },
   planActions: { marginTop: SPACING.lg, gap: SPACING.sm },
-  planButton: { marginBottom: SPACING.sm },
+  planButton: { marginTop: SPACING.sm, alignSelf: 'flex-start', minWidth: 110 },
   plansLinkText: { fontSize: FONTS.base, marginBottom: SPACING.md, lineHeight: 22 },
   currentPlanLabel: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs },
   currentPlanValue: { fontSize: FONTS.lg, fontWeight: 'bold', marginBottom: SPACING.xs },
@@ -774,12 +785,12 @@ const styles = StyleSheet.create({
   editButton: { fontSize: FONTS.base, color: COLORS.primary, fontWeight: '600' },
   card: {
     borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
+    padding: SPACING.md,
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
     borderWidth: 1,
   },
   vesselNameDisplay: { fontSize: FONTS.xl, fontWeight: 'bold' },
@@ -798,7 +809,7 @@ const styles = StyleSheet.create({
   codeBox: {
     backgroundColor: COLORS.primaryLight,
     paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.lg,
+    paddingVertical: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
     marginBottom: SPACING.xs,
   },
@@ -807,11 +818,17 @@ const styles = StyleSheet.create({
   codeActions: { flexDirection: 'row', gap: SPACING.md, marginBottom: SPACING.lg },
   codeButton: { flex: 1 },
   regenerateContainer: { borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: SPACING.lg },
-  regenerateWarning: {
-    fontSize: FONTS.xs,
-    color: COLORS.warning,
-    textAlign: 'center',
+  regenerateWarningRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    gap: SPACING.xs,
     marginTop: SPACING.sm,
+  },
+  regenerateWarning: {
+    flex: 1,
+    fontSize: FONTS.xs,
+    lineHeight: 17,
   },
   infoCard: {
     backgroundColor: COLORS.primaryLight,
@@ -836,7 +853,22 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
   infoRowLast: { borderBottomWidth: 0 },
-  photoHint: { fontSize: FONTS.sm, marginTop: SPACING.sm, textAlign: 'center' },
+  vesselPhoto: {
+    width: '100%',
+    height: 150,
+    borderRadius: BORDER_RADIUS.md,
+    marginBottom: SPACING.md,
+  },
+  photoButton: {
+    minHeight: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  photoButtonText: { fontSize: FONTS.sm, fontWeight: '600' },
   infoRowLabel: { fontSize: FONTS.sm },
   infoRowValue: { fontSize: FONTS.sm, fontWeight: '500' },
 });

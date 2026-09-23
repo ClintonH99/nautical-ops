@@ -133,7 +133,7 @@ export const SettingsScreen = ({ navigation }: any) => {
           icon: 'person-outline',
           label: 'My Profile',
           description: 'Edit your personal information, join another vessel here',
-          onPress: () => navigation.navigate('Profile'),
+          onPress: () => navigation.navigate('AccountProfile'),
           disabled: false,
         },
       ],
@@ -314,7 +314,7 @@ export const SettingsScreen = ({ navigation }: any) => {
               borderColor: themeColors.border,
             },
           ]}
-          onPress={() => navigation.navigate('Profile')}
+          onPress={() => navigation.navigate('AccountProfile')}
           activeOpacity={0.75}
           accessibilityRole="button"
           accessibilityLabel="Open my profile"
