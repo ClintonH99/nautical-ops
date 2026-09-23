@@ -31,7 +31,7 @@ const CREW_BENEFITS = [
 ];
 // React Native resolves bundled bitmap assets through a static require.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const APP_ICON = require('../../assets/icon-playstore.png');
+const NAUTICAL_OPS_LOGO = require('../../assets/nautical-ops-vessel-logo.png');
 const MIN_CONTENT_TOP_PADDING = 52;
 const MIN_BACK_BUTTON_TOP = 48;
 
@@ -63,14 +63,28 @@ export const CreateAccountChoiceScreen = ({ navigation }: any) => {
           <Ionicons name="chevron-back" size={28} color={themeColors.textPrimary} />
         </TouchableOpacity>
 
-        <View style={styles.brand}>
+        <View
+          style={[
+            styles.brand,
+            {
+              backgroundColor: themeColors.surface,
+            },
+          ]}
+        >
           <Image
-            source={APP_ICON}
+            source={NAUTICAL_OPS_LOGO}
             style={styles.appIcon}
             resizeMode="contain"
             accessibilityIgnoresInvertColors
           />
-          <Text style={[styles.appName, { color: themeColors.textPrimary }]}>Nautical Ops</Text>
+          <Text
+            style={[
+              styles.appName,
+              { color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
+            ]}
+          >
+            Nautical Ops
+          </Text>
         </View>
 
         <Text style={[styles.title, { color: themeColors.textPrimary }]}>Welcome aboard</Text>
@@ -253,21 +267,30 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   brand: {
+    width: 252,
+    minHeight: 72,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: SPACING.sm,
+    alignSelf: 'center',
+    gap: 13,
+    paddingVertical: 9,
+    paddingLeft: 12,
+    paddingRight: 20,
+    borderRadius: 19,
     marginTop: SPACING.sm,
     marginBottom: SPACING.lg,
+    ...SHADOWS.md,
   },
   appIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: BORDER_RADIUS.md,
+    width: 52,
+    height: 52,
+    borderRadius: 13,
   },
   appName: {
-    fontSize: FONTS.xl,
+    fontSize: 23,
     fontWeight: '800',
+    letterSpacing: -0.5,
   },
   roleHeader: {
     flexDirection: 'row',

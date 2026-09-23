@@ -18,6 +18,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from 'react-native-calendars';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { useFocusEffect } from '@react-navigation/native';
 import { Button } from '../components';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES, SHADOWS } from '../constants/theme';
@@ -358,7 +359,15 @@ export const HomeScreen = ({ navigation }: any) => {
         <View style={styles.content}>
           {/* Vessel banner */}
           {hasVessel && (
-            <View style={styles.bannerWrap}>
+            <View
+              style={[
+                styles.bannerWrap,
+                {
+                  backgroundColor: themeColors.surface,
+                  borderColor: themeColors.border,
+                },
+              ]}
+            >
               <ImageBackground
                 source={
                   !bannerLoadFailed && bannerImageUrl
@@ -371,7 +380,21 @@ export const HomeScreen = ({ navigation }: any) => {
                   if (bannerImageUrl) setBannerLoadFailed(true);
                 }}
               >
-                <View style={styles.bannerOverlay} />
+                <Svg
+                  pointerEvents="none"
+                  style={StyleSheet.absoluteFill}
+                  width="100%"
+                  height="100%"
+                >
+                  <Defs>
+                    <LinearGradient id="vesselBannerGradient" x1="0" y1="0" x2="0" y2="1">
+                      <Stop offset="0%" stopColor="#0F172A" stopOpacity={0.02} />
+                      <Stop offset="38%" stopColor="#0F172A" stopOpacity={0.02} />
+                      <Stop offset="100%" stopColor="#0F172A" stopOpacity={0.82} />
+                    </LinearGradient>
+                  </Defs>
+                  <Rect width="100%" height="100%" fill="url(#vesselBannerGradient)" />
+                </Svg>
                 {vesselName && (
                   <Text style={styles.bannerVesselName} numberOfLines={1}>
                     {vesselName}
@@ -646,27 +669,25 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   bannerWrap: {
-    marginHorizontal: -SPACING.xl,
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.lg,
     overflow: 'hidden',
+    borderRadius: 22,
+    borderWidth: 1,
+    ...SHADOWS.lg,
   },
   bannerImage: {
     height: BANNER_HEIGHT,
     justifyContent: 'flex-end',
-    padding: SPACING.lg,
+    paddingHorizontal: SPACING.md + 2,
+    paddingBottom: SPACING.md,
   },
-  bannerImageStyle: { resizeMode: 'cover' },
-  bannerOverlay: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+  bannerImageStyle: {
+    resizeMode: 'cover',
+    borderRadius: 21,
   },
   bannerVesselName: {
     fontSize: FONTS['2xl'],
-    fontWeight: '700',
+    fontWeight: '600',
     color: COLORS.white,
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 1 },

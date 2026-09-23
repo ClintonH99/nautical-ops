@@ -14,12 +14,13 @@ import {
   Alert,
   StatusBar,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { Button, Input } from '../components';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import authService from '../services/auth';
 import { supabase } from '../services/supabase';
@@ -33,6 +34,9 @@ import { useAuthStore } from '../store';
 import { usePostHog } from 'posthog-react-native';
 
 const ACCENT_GOLD = '#c9a227';
+// React Native resolves bundled bitmap assets through a static require.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const NAUTICAL_OPS_LOGO = require('../../assets/nautical-ops-vessel-logo.png');
 
 /** Google's official four-colour "G", required by their branding guidelines. */
 const GoogleG = () => (
@@ -65,12 +69,7 @@ export const LoginScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({ email: '', password: '' });
 
-  const {
-    setUser,
-    loginNotice,
-    setLoginNotice,
-    setCaptainPaymentRequired,
-  } = useAuthStore();
+  const { setUser, loginNotice, setLoginNotice, setCaptainPaymentRequired } = useAuthStore();
   const [loginError, setLoginError] = useState('');
   const posthog = usePostHog();
 
@@ -205,8 +204,20 @@ export const LoginScreen = ({ navigation }: any) => {
           {/* Hero */}
           <View style={styles.hero}>
             <View style={[styles.heroBadge, { backgroundColor: themeColors.surface }]}>
-              <Ionicons name="boat-outline" size={20} color={ACCENT_GOLD} />
-              <Text style={[styles.heroBadgeText, { color: themeColors.textPrimary }]}>Nautical Ops</Text>
+              <Image
+                source={NAUTICAL_OPS_LOGO}
+                style={styles.heroBadgeLogo}
+                resizeMode="contain"
+                accessibilityIgnoresInvertColors
+              />
+              <Text
+                style={[
+                  styles.heroBadgeText,
+                  { color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
+                ]}
+              >
+                Nautical Ops
+              </Text>
             </View>
             <Text style={[styles.heroTitle, { color: themeColors.textPrimary }]}>Welcome back</Text>
             <Text style={[styles.heroSubtitle, { color: themeColors.textSecondary }]}>
@@ -286,14 +297,20 @@ export const LoginScreen = ({ navigation }: any) => {
               <View
                 style={[
                   styles.dividerLine,
-                  { backgroundColor: themeColors.isDark ? 'rgba(255,255,255,0.12)' : COLORS.border },
+                  {
+                    backgroundColor: themeColors.isDark ? 'rgba(255,255,255,0.12)' : COLORS.border,
+                  },
                 ]}
               />
-              <Text style={[styles.dividerText, { color: themeColors.textSecondary }]}>New here?</Text>
+              <Text style={[styles.dividerText, { color: themeColors.textSecondary }]}>
+                New here?
+              </Text>
               <View
                 style={[
                   styles.dividerLine,
-                  { backgroundColor: themeColors.isDark ? 'rgba(255,255,255,0.12)' : COLORS.border },
+                  {
+                    backgroundColor: themeColors.isDark ? 'rgba(255,255,255,0.12)' : COLORS.border,
+                  },
                 ]}
               />
             </View>
@@ -311,7 +328,10 @@ export const LoginScreen = ({ navigation }: any) => {
 
           <View style={styles.footer}>
             <Ionicons name="shield-checkmark-outline" size={14} color={themeColors.textSecondary} />
-            <Text style={[styles.footerText, { color: themeColors.textSecondary }]}> An App for Crew from Crew.</Text>
+            <Text style={[styles.footerText, { color: themeColors.textSecondary }]}>
+              {' '}
+              An App for Crew from Crew.
+            </Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -338,18 +358,28 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.xl,
   },
   heroBadge: {
+    width: 252,
+    minHeight: 72,
     flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: SPACING.xs,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: 9999,
+    gap: 13,
+    paddingVertical: 9,
+    paddingLeft: 12,
+    paddingRight: 20,
+    borderRadius: 19,
     marginBottom: SPACING.lg,
+    ...SHADOWS.md,
+  },
+  heroBadgeLogo: {
+    width: 52,
+    height: 52,
+    borderRadius: 13,
   },
   heroBadgeText: {
-    fontSize: FONTS.sm,
-    fontWeight: '600',
-    letterSpacing: 0.5,
+    fontSize: 23,
+    fontWeight: '800',
+    letterSpacing: -0.5,
   },
   heroTitle: {
     fontSize: 36,
