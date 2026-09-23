@@ -14,6 +14,7 @@ import {
   Pressable,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { PageHeader } from '../components';
@@ -61,15 +62,14 @@ export const DepartmentColorSettingsScreen = () => {
 
   return (
     <View style={[styles.pageWrap, { backgroundColor: themeColors.background }]}>
-      <PageHeader title="Department colors" />
+      <PageHeader title="Department Colors" />
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.title, { color: themeColors.textPrimary }]}>Department colors</Text>
-        <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-          Choose a color for each department, or No color for neutral.
+        <Text style={[styles.intro, { color: themeColors.textSecondary }]}>
+          Choose the identifying color used for each department.
         </Text>
 
         <View
@@ -78,7 +78,7 @@ export const DepartmentColorSettingsScreen = () => {
             {
               backgroundColor: themeColors.surface,
               borderColor: themeColors.border,
-              borderWidth: themeColors.isDark ? 1 : 0,
+              borderWidth: 1,
             },
           ]}
         >
@@ -108,7 +108,7 @@ export const DepartmentColorSettingsScreen = () => {
                   ) : (
                     <View style={[styles.swatch, { backgroundColor: effectiveColor }]} />
                   )}
-                  <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>›</Text>
+                  <Ionicons name="chevron-forward" size={18} color={themeColors.textSecondary} />
                 </View>
               </TouchableOpacity>
             );
@@ -187,16 +187,10 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
 
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
-  title: {
-    fontSize: FONTS.xl,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    marginBottom: SPACING.xs,
-  },
-  subtitle: {
+  intro: {
     fontSize: FONTS.sm,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.xl,
+    lineHeight: 20,
+    marginBottom: SPACING.md,
   },
   section: {
     backgroundColor: COLORS.white,
@@ -204,16 +198,18 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
     borderWidth: 1,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: SPACING.lg,
+    minHeight: 62,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
@@ -234,7 +230,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  chevron: { fontSize: 20, color: COLORS.textTertiary },
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',

@@ -6,14 +6,15 @@
 import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeStore, BACKGROUND_THEMES, BackgroundThemeId } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { PageHeader } from '../components';
 
 const THEMES: { id: BackgroundThemeId; label: string; description: string }[] = [
-  { id: 'day', label: 'Day', description: 'Light mode — clean and bright' },
-  { id: 'night', label: 'Night', description: 'Dark mode — easy on the eyes' },
+  { id: 'day', label: 'Day', description: 'Clean and bright' },
+  { id: 'night', label: 'Night', description: 'Easy on the eyes' },
 ];
 
 export const ThemeSettingsScreen = () => {
@@ -36,9 +37,8 @@ export const ThemeSettingsScreen = () => {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.title, { color: themeColors.textPrimary }]}>Appearance</Text>
-        <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-          Background theme: Day or Night Mode
+        <Text style={[styles.intro, { color: themeColors.textSecondary }]}>
+          Choose how Nautical Ops looks on this device.
         </Text>
 
         <View
@@ -69,11 +69,10 @@ export const ThemeSettingsScreen = () => {
                     { backgroundColor: colors.background, borderColor: colors.border },
                   ]}
                 >
-                  <View
-                    style={[
-                      styles.previewDot,
-                      { backgroundColor: colors.surface, borderColor: colors.borderStrong },
-                    ]}
+                  <Ionicons
+                    name={theme.id === 'day' ? 'sunny-outline' : 'moon-outline'}
+                    size={20}
+                    color={theme.id === 'day' ? COLORS.primary : COLORS.white}
                   />
                 </View>
                 <View style={styles.rowText}>
@@ -111,29 +110,27 @@ const styles = StyleSheet.create({
   pageWrap: { flex: 1 },
   container: { flex: 1 },
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
-  title: {
-    fontSize: FONTS.xl,
-    fontWeight: '700',
-    marginBottom: SPACING.xs,
-  },
-  subtitle: {
+  intro: {
     fontSize: FONTS.sm,
-    marginBottom: SPACING.xl,
+    lineHeight: 20,
+    marginBottom: SPACING.md,
   },
   section: {
     borderRadius: BORDER_RADIUS.lg,
     overflow: 'hidden',
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
     borderWidth: 1,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: SPACING.lg,
+    minHeight: 72,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
     borderBottomWidth: 1,
     gap: SPACING.md,
   },
@@ -146,13 +143,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  previewDot: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 1,
-    borderColor: COLORS.border,
   },
   rowText: { flex: 1 },
   rowLabel: {

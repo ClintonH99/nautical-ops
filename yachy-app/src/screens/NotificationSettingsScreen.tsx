@@ -6,6 +6,7 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Switch, ActivityIndicator, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
@@ -158,9 +159,8 @@ export const NotificationSettingsScreen = () => {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.title, { color: themeColors.textPrimary }]}>Notifications</Text>
-        <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-          Receive push notifications for tasks, trips, and important updates.
+        <Text style={[styles.intro, { color: themeColors.textSecondary }]}>
+          Receive push notifications for tasks, trips and important updates.
         </Text>
 
         <View
@@ -169,14 +169,19 @@ export const NotificationSettingsScreen = () => {
             {
               backgroundColor: themeColors.surface,
               borderColor: themeColors.border,
-              borderWidth: themeColors.isDark ? 1 : 0,
+              borderWidth: 1,
             },
           ]}
         >
           <View style={styles.row}>
-            <Text style={[styles.rowLabel, { color: themeColors.textPrimary }]}>
-              Push notifications
-            </Text>
+            <View style={styles.rowCopy}>
+              <Text style={[styles.rowLabel, { color: themeColors.textPrimary }]}>
+                Push notifications
+              </Text>
+              <Text style={[styles.rowDetail, { color: themeColors.textSecondary }]}>
+                Notifications on this device
+              </Text>
+            </View>
             {loading ? (
               <ActivityIndicator size="small" color={themeColors.accent} />
             ) : (
@@ -192,15 +197,21 @@ export const NotificationSettingsScreen = () => {
             )}
           </View>
           {enabled && (
-            <Text style={[styles.statusText, { color: themeColors.textSecondary }]}>
-              This device will receive push notifications.
-            </Text>
+            <View style={styles.statusRow}>
+              <Ionicons name="checkmark-circle-outline" size={17} color={COLORS.success} />
+              <Text style={styles.statusText}>Enabled on this device</Text>
+            </View>
           )}
         </View>
 
         {enabled && (
           <View style={styles.preferencesSection}>
-            <Text style={[styles.preferencesTitle, { color: themeColors.textPrimary }]}>
+            <Text
+              style={[
+                styles.preferencesTitle,
+                { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+              ]}
+            >
               What to receive
             </Text>
             <Text style={[styles.preferencesSubtitle, { color: themeColors.textSecondary }]}>
@@ -212,7 +223,7 @@ export const NotificationSettingsScreen = () => {
                 {
                   backgroundColor: themeColors.surface,
                   borderColor: themeColors.border,
-                  borderWidth: themeColors.isDark ? 1 : 0,
+                  borderWidth: 1,
                 },
               ]}
             >
@@ -269,40 +280,45 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  title: {
-    fontSize: FONTS['2xl'],
-    fontWeight: 'bold',
-    marginBottom: SPACING.xs,
-  },
-  subtitle: {
+  intro: {
     fontSize: FONTS.sm,
-    marginBottom: SPACING.xl,
+    lineHeight: 20,
+    marginBottom: SPACING.md,
   },
   card: {
     borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
+    padding: SPACING.md,
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
     borderWidth: 1,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: SPACING.md,
   },
+  rowCopy: { flex: 1, minWidth: 0 },
   rowLabel: {
     fontSize: FONTS.base,
     fontWeight: '600',
   },
-  statusText: {
-    fontSize: FONTS.sm,
+  rowDetail: { fontSize: FONTS.sm, marginTop: 2 },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
     marginTop: SPACING.sm,
   },
+  statusText: {
+    fontSize: FONTS.sm,
+    color: COLORS.success,
+  },
   preferencesSection: {
-    marginTop: SPACING.xl,
+    marginTop: SPACING.md,
   },
   preferencesTitle: {
     fontSize: FONTS.lg,
@@ -318,16 +334,18 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
     borderWidth: 1,
   },
   preferenceRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: SPACING.lg,
+    minHeight: 58,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
   },
   preferenceLabel: { fontSize: FONTS.base },
   warning: {
