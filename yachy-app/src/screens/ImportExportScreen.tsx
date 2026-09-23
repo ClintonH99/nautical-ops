@@ -3,9 +3,18 @@
  * Download Excel templates and import data for Tasks, Maintenance Log, Yard Period
  */
 
-import React, { useState, useLayoutEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -21,7 +30,7 @@ import {
   parseInventoryFile,
   TemplateType,
 } from '../services/excelTemplates';
-import { Button, PageHeader } from '../components';
+import { PageHeader } from '../components';
 import inventoryService from '../services/inventory';
 
 const IMPORT_EXPORT_INFO = {
@@ -240,39 +249,88 @@ export const ImportExportScreen = ({ navigation }: any) => {
   }: {
     type: TemplateType;
     title: string;
-    icon: string;
+    icon: React.ComponentProps<typeof Ionicons>['name'];
     description: string;
-  }) => (
-    <View style={[styles.section, { backgroundColor: themeColors.surface }]}>
-      <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
-        {icon} {title}
-      </Text>
-      <Text style={[styles.sectionDesc, { color: themeColors.textSecondary }]}>{description}</Text>
-      {!vesselId && (
-        <Text style={[styles.vesselNote, { color: themeColors.textSecondary }]}>
-          Join a vessel to import data.
+  }) => {
+    const downloadActive = downloading === type;
+    const importActive = importing === type;
+    const downloadDisabled = !!downloading;
+    const importDisabled = !!importing || !vesselId;
+    const outlineColor = themeColors.isDark ? COLORS.white : COLORS.primary;
+
+    return (
+      <View
+        style={[
+          styles.section,
+          {
+            backgroundColor: themeColors.surface,
+            borderColor: themeColors.border,
+          },
+        ]}
+      >
+        <View style={styles.sectionHeader}>
+          <View style={[styles.sectionIcon, { backgroundColor: themeColors.accentSoft }]}>
+            <Ionicons name={icon} size={19} color={outlineColor} />
+          </View>
+          <Text style={[styles.sectionTitle, { color: outlineColor }]}>{title}</Text>
+        </View>
+        <Text style={[styles.sectionDesc, { color: themeColors.textSecondary }]}>
+          {description}
         </Text>
-      )}
-      <View style={styles.actions}>
-        <Button
-          title={downloading === type ? 'Creating…' : 'Download Template'}
-          onPress={() => handleDownload(type)}
-          variant={themeColors.isDark ? 'outlineLight' : 'outline'}
-          disabled={!!downloading}
-          loading={downloading === type}
-          style={styles.btn}
-        />
-        <Button
-          title={importing === type ? 'Importing…' : 'Import from File'}
-          onPress={() => handleImport(type)}
-          variant="primary"
-          disabled={!!importing || !vesselId}
-          loading={importing === type}
-          style={styles.btn}
-        />
+        {!vesselId && (
+          <Text style={[styles.vesselNote, { color: themeColors.textSecondary }]}>
+            Join a vessel to import data.
+          </Text>
+        )}
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              styles.downloadButton,
+              { borderColor: outlineColor },
+              downloadDisabled && styles.disabledButton,
+            ]}
+            onPress={() => handleDownload(type)}
+            disabled={downloadDisabled}
+            activeOpacity={0.72}
+            accessibilityRole="button"
+            accessibilityLabel={`Download ${title} template`}
+          >
+            {downloadActive ? (
+              <ActivityIndicator size="small" color={outlineColor} />
+            ) : (
+              <Ionicons name="download-outline" size={17} color={outlineColor} />
+            )}
+            <Text style={[styles.actionButtonText, { color: outlineColor }]}>
+              {downloadActive ? 'Creating…' : 'Download Template'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              styles.importButton,
+              importDisabled && styles.disabledButton,
+            ]}
+            onPress={() => handleImport(type)}
+            disabled={importDisabled}
+            activeOpacity={0.72}
+            accessibilityRole="button"
+            accessibilityLabel={`Import ${title} from file`}
+          >
+            {importActive ? (
+              <ActivityIndicator size="small" color={COLORS.white} />
+            ) : (
+              <Ionicons name="cloud-upload-outline" size={17} color={COLORS.white} />
+            )}
+            <Text style={[styles.actionButtonText, styles.importButtonText]}>
+              {importActive ? 'Importing…' : 'Import from File'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={styles.pageWrap}>
@@ -280,61 +338,33 @@ export const ImportExportScreen = ({ navigation }: any) => {
       <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]}>
         <View style={styles.content}>
           <Text style={[styles.intro, { color: themeColors.textSecondary }]}>
-            Download a template, fill it with your data in Excel or Google Sheets, then import it
-            here.
+            Download a template, complete it in Excel or Google Sheets, then import the file here.
           </Text>
 
           <TemplateSection
             type="tasks"
             title="Tasks"
-            icon="📋"
-            description="Daily, Weekly, and Monthly tasks. Columns: Category, Title, Notes, Done By Date, Recurring."
+            icon="checkbox-outline"
+            description="Daily, Weekly and Monthly tasks, including department, dates, notes and recurring schedules."
           />
           <TemplateSection
             type="maintenance"
             title="Maintenance Log"
-            icon="📝"
-            description="Equipment maintenance records. Columns: Equipment, Location, Serial #, Hours, Service details."
+            icon="build-outline"
+            description="Equipment, location, serial numbers, service hours, work completed and service notes."
           />
           <TemplateSection
             type="yard"
             title="Shipyard List"
-            icon="🔧"
-            description="Shipyard jobs with complete job details, department, priority, yard contacts, and individual Start and End Dates."
+            icon="boat-outline"
+            description="Shipyard jobs, departments, priority, dates, yard location and contractor details."
           />
-
-          <View style={[styles.section, { backgroundColor: themeColors.surface }]}>
-            <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
-              📦 Inventory
-            </Text>
-            <Text style={[styles.sectionDesc, { color: themeColors.textSecondary }]}>
-              Download a template, fill it with your inventory items, then import it here. You can
-              also export all current inventory to PDF.
-            </Text>
-            {!vesselId && (
-              <Text style={[styles.vesselNote, { color: themeColors.textSecondary }]}>
-                Join a vessel to import or export inventory.
-              </Text>
-            )}
-            <View style={styles.actions}>
-              <Button
-                title={downloading === 'inventory' ? 'Creating…' : 'Download Template'}
-                onPress={() => handleDownload('inventory')}
-                variant={themeColors.isDark ? 'outlineLight' : 'outline'}
-                disabled={!!downloading}
-                loading={downloading === 'inventory'}
-                style={styles.btn}
-              />
-              <Button
-                title={importing === 'inventory' ? 'Importing…' : 'Import from File'}
-                onPress={() => handleImport('inventory')}
-                variant="primary"
-                disabled={!!importing || !vesselId}
-                loading={importing === 'inventory'}
-                style={styles.btn}
-              />
-            </View>
-          </View>
+          <TemplateSection
+            type="inventory"
+            title="Inventory"
+            icon="cube-outline"
+            description="Inventory items, quantities, departments, storage locations and descriptions."
+          />
         </View>
       </ScrollView>
     </View>
@@ -362,9 +392,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   intro: {
-    fontSize: FONTS.base,
-    marginBottom: SPACING.xl,
-    lineHeight: 22,
+    fontSize: FONTS.sm,
+    marginBottom: SPACING.lg,
+    lineHeight: 21,
+    textAlign: 'center',
   },
   vesselNote: {
     fontSize: FONTS.sm,
@@ -374,17 +405,31 @@ const styles = StyleSheet.create({
   section: {
     padding: SPACING.lg,
     borderRadius: BORDER_RADIUS.lg,
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  sectionIcon: {
+    width: 34,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
   },
   sectionTitle: {
     fontSize: FONTS.lg,
-    fontWeight: '600',
-    marginBottom: SPACING.xs,
+    fontWeight: '700',
+    flex: 1,
   },
   sectionDesc: {
     fontSize: FONTS.sm,
@@ -394,10 +439,36 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     gap: SPACING.sm,
-    flexWrap: 'wrap',
   },
-  btn: {
+  actionButton: {
     flex: 1,
-    minWidth: 140,
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  downloadButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+  },
+  importButton: {
+    backgroundColor: COLORS.primary,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  actionButtonText: {
+    fontSize: FONTS.xs,
+    fontWeight: '600',
+    flexShrink: 1,
+    textAlign: 'center',
+  },
+  importButtonText: {
+    color: COLORS.white,
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
 });
