@@ -19,14 +19,29 @@ import { useThemeColors } from '../hooks/useThemeColors';
 const Tab = createBottomTabNavigator();
 const DESKTOP_BREAKPOINT = 768;
 
-const PILL_HEIGHT = 64;
-const PILL_MARGIN_H = 20;
+const PILL_HEIGHT = 72;
+const PILL_MARGIN_H = 16;
 
 /** Assign each button to a screen. Change these to reassign. */
 const BUTTON_CONFIG = [
-  { route: 'Home', label: 'Home', icon: 'home-outline' as const },
-  { route: 'Categories', label: 'Categories', icon: 'grid-outline' as const },
-  { route: 'Profile', label: 'Settings', icon: 'settings-outline' as const },
+  {
+    route: 'Home',
+    label: 'Home',
+    icon: 'home-outline' as const,
+    activeIcon: 'home' as const,
+  },
+  {
+    route: 'Categories',
+    label: 'Categories',
+    icon: 'grid-outline' as const,
+    activeIcon: 'grid' as const,
+  },
+  {
+    route: 'Profile',
+    label: 'Settings',
+    icon: 'settings-outline' as const,
+    activeIcon: 'settings' as const,
+  },
 ];
 
 function CustomPillBar(props: BottomTabBarProps) {
@@ -58,6 +73,7 @@ function CustomPillBar(props: BottomTabBarProps) {
           {
             marginHorizontal: PILL_MARGIN_H,
             backgroundColor: pillBg,
+            borderColor: themeColors.border,
           },
         ]}
       >
@@ -69,21 +85,20 @@ function CustomPillBar(props: BottomTabBarProps) {
             <Pressable
               key={route.key}
               onPress={() => navigation.navigate(route.name)}
-              style={[styles.button, focused && styles.buttonSelected]}
+              style={styles.button}
               accessibilityRole="button"
               accessibilityState={{ selected: focused }}
             >
               <View
                 style={[
                   styles.buttonInner,
-                  focused && { backgroundColor: selectedBg, borderRadius: 9999 },
+                  focused && { backgroundColor: selectedBg, borderRadius: 16 },
                 ]}
               >
                 <Ionicons
-                  name={config.icon}
-                  size={24}
+                  name={focused ? config.activeIcon : config.icon}
+                  size={21}
                   color={focused ? themeColors.textOnAccent : themeColors.textSecondary}
-                  style={{ opacity: focused ? 1 : 0.65 }}
                 />
                 <Text
                   style={[
@@ -91,7 +106,6 @@ function CustomPillBar(props: BottomTabBarProps) {
                     {
                       color: focused ? themeColors.textOnAccent : themeColors.textSecondary,
                     },
-                    !focused && styles.labelUnselected,
                   ]}
                 >
                   {config.label}
@@ -217,30 +231,31 @@ const styles = StyleSheet.create({
     height: PILL_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
-    borderRadius: 9999,
+    gap: 6,
+    padding: 6,
+    borderRadius: 22,
+    borderWidth: 1,
     ...(Platform.OS === 'ios' ? SHADOWS.lg : { elevation: 12 }),
   },
   button: {
     flex: 1,
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
+    borderRadius: 16,
+    overflow: 'hidden',
   },
-  buttonSelected: {},
   buttonInner: {
+    flex: 1,
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 20,
+    gap: 3,
+    paddingHorizontal: 4,
   },
   label: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
-    marginTop: 2,
-  },
-  labelUnselected: {
-    opacity: 0.65,
   },
   desktopLayout: {
     flex: 1,
