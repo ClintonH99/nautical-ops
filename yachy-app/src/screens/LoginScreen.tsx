@@ -33,7 +33,6 @@ import type { User } from '../types';
 import { useAuthStore } from '../store';
 import { usePostHog } from 'posthog-react-native';
 
-const ACCENT_GOLD = '#c9a227';
 // React Native resolves bundled bitmap assets through a static require.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const NAUTICAL_OPS_LOGO = require('../../assets/nautical-ops-vessel-logo.png');
@@ -221,9 +220,8 @@ export const LoginScreen = ({ navigation }: any) => {
             </View>
             <Text style={[styles.heroTitle, { color: themeColors.textPrimary }]}>Welcome back</Text>
             <Text style={[styles.heroSubtitle, { color: themeColors.textSecondary }]}>
-              Sign in to access your vessel, tasks, and crew—all in one place.
+              Sign in to continue
             </Text>
-            <View style={styles.heroAccent} />
           </View>
 
           {/* Sign-in card */}
@@ -244,7 +242,7 @@ export const LoginScreen = ({ navigation }: any) => {
             ) : null}
             <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]}>Sign in</Text>
             <Text style={[styles.cardSubtitle, { color: themeColors.textSecondary }]}>
-              Enter your credentials to get started
+              Enter your account details
             </Text>
 
             <Input
@@ -285,7 +283,7 @@ export const LoginScreen = ({ navigation }: any) => {
               onPress={() => navigation.navigate('ForgotPassword')}
               style={styles.forgotBtn}
             >
-              <Text style={[styles.forgotText, { color: themeColors.textSecondary }]}>
+              <Text style={[styles.forgotText, { color: themeColors.accent }]}>
                 Forgot password?
               </Text>
             </TouchableOpacity>
@@ -303,7 +301,7 @@ export const LoginScreen = ({ navigation }: any) => {
                 ]}
               />
               <Text style={[styles.dividerText, { color: themeColors.textSecondary }]}>
-                New here?
+                New to Nautical Ops?
               </Text>
               <View
                 style={[
@@ -314,9 +312,6 @@ export const LoginScreen = ({ navigation }: any) => {
                 ]}
               />
             </View>
-            <Text style={[styles.createAccountPrompt, { color: themeColors.textSecondary }]}>
-              Create a Captain or Crew Account and Join the Fleet.
-            </Text>
             <Button
               title="Create New Account"
               onPress={() => navigation.navigate('CreateAccountChoice')}
@@ -327,10 +322,8 @@ export const LoginScreen = ({ navigation }: any) => {
           </View>
 
           <View style={styles.footer}>
-            <Ionicons name="shield-checkmark-outline" size={14} color={themeColors.textSecondary} />
             <Text style={[styles.footerText, { color: themeColors.textSecondary }]}>
-              {' '}
-              An App for Crew from Crew.
+              An app for crew, from crew.
             </Text>
           </View>
         </ScrollView>
@@ -348,14 +341,14 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: SPACING.xl,
+    paddingHorizontal: SPACING.md + 4,
     paddingTop: 56,
     paddingBottom: SPACING['2xl'],
   },
   hero: {
     alignItems: 'center',
-    paddingTop: SPACING.xl,
-    paddingBottom: SPACING.xl,
+    paddingTop: SPACING.md,
+    paddingBottom: 26,
   },
   heroBadge: {
     width: 252,
@@ -382,30 +375,24 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   heroTitle: {
-    fontSize: 36,
+    fontSize: 33,
     fontWeight: '800',
-    marginBottom: SPACING.sm,
-    letterSpacing: -0.5,
+    marginBottom: 0,
+    letterSpacing: -0.8,
   },
   heroSubtitle: {
     fontSize: FONTS.base,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 22,
     maxWidth: 300,
-    marginBottom: SPACING.lg,
-  },
-  heroAccent: {
-    width: 48,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: ACCENT_GOLD,
-    opacity: 0.9,
+    marginTop: SPACING.sm,
   },
   card: {
-    borderRadius: BORDER_RADIUS.xl,
-    padding: SPACING.xl,
-    marginBottom: SPACING.xl,
+    borderRadius: 22,
+    paddingHorizontal: SPACING.md + 2,
+    paddingVertical: 22,
     borderWidth: 1,
+    ...SHADOWS.md,
   },
   cardTitle: {
     fontSize: FONTS.xl,
@@ -414,7 +401,7 @@ const styles = StyleSheet.create({
   },
   cardSubtitle: {
     fontSize: FONTS.sm,
-    marginBottom: SPACING.lg,
+    marginBottom: 21,
   },
   signInButton: {
     marginTop: SPACING.md,
@@ -436,8 +423,8 @@ const styles = StyleSheet.create({
   googleButtonText: { fontSize: 15, fontWeight: '500', color: '#3c4043' },
   appleButton: { height: 48, width: '100%', marginBottom: 10 },
   socialDisabled: { opacity: 0.6 },
-  forgotBtn: { marginTop: 14, alignItems: 'center', paddingVertical: 6 },
-  forgotText: { fontSize: 14, fontWeight: '600' },
+  forgotBtn: { marginTop: SPACING.sm, alignItems: 'center', paddingVertical: SPACING.sm },
+  forgotText: { fontSize: 14, fontWeight: '700' },
   loginError: {
     marginTop: SPACING.md,
     fontSize: FONTS.sm,
@@ -463,12 +450,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   createSection: {
+    marginTop: 26,
     marginBottom: SPACING.xl,
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: 18,
   },
   dividerLine: {
     flex: 1,
@@ -479,20 +467,15 @@ const styles = StyleSheet.create({
     marginHorizontal: SPACING.md,
     fontWeight: '600',
   },
-  createAccountPrompt: {
-    fontSize: FONTS.sm,
-    textAlign: 'center',
-    marginBottom: SPACING.md,
-    lineHeight: 20,
-  },
   createAccountButton: {},
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: SPACING.lg,
+    paddingVertical: 0,
   },
   footerText: {
     fontSize: FONTS.xs,
+    textAlign: 'center',
   },
 });
