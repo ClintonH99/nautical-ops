@@ -15,6 +15,7 @@ import {
   TextInput,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES, SHADOWS } from '../constants/theme';
 import { useAuthStore, useThemeStore, BACKGROUND_THEMES } from '../store';
 import { supabase } from '../services/supabase';
@@ -22,6 +23,7 @@ import authService from '../services/auth';
 import { Button, LoadingSpinner, PageHeader, DepartmentSelector } from '../components';
 import userService from '../services/user';
 import { Department } from '../types';
+import { formatDepartmentLabel } from '../utils/departmentSelection';
 import Constants from 'expo-constants';
 
 // Read from app.json at build time, so it can never drift from the
@@ -193,39 +195,6 @@ export const ProfileScreen = ({ navigation }: any) => {
     }
   };
 
-  const handleRemovePhoto = async () => {
-    Alert.alert('Remove Photo', 'Are you sure you want to remove your profile photo?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: async () => {
-          setIsUploadingPhoto(true);
-          try {
-            await userService.deleteProfilePhoto(user!.id);
-            setProfilePhoto(undefined);
-            setPhotoLoadFailed(true);
-
-            const updatedUser = await userService.updateProfile(user!.id, {
-              profilePhoto: '',
-            });
-
-            if (updatedUser) {
-              setUser(updatedUser);
-            }
-
-            Alert.alert('Success', 'Profile photo removed!');
-          } catch (error) {
-            console.error('Remove photo error:', error);
-            Alert.alert('Error', 'Failed to remove photo. Please try again.');
-          } finally {
-            setIsUploadingPhoto(false);
-          }
-        },
-      },
-    ]);
-  };
-
   const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert('Error', 'Name is required');
@@ -266,24 +235,21 @@ export const ProfileScreen = ({ navigation }: any) => {
     setIsEditing(false);
   };
 
-  const settingsSections: Array<{
-    title: string;
-    items: Array<{
-      icon: string;
-      label: string;
-      description: string;
-      onPress: () => void;
-      disabled: boolean;
-    }>;
-  }> = [];
-
   return (
     <View style={[styles.pageWrap, { backgroundColor: themeColors.background }]}>
       <PageHeader title="Settings & Profile" />
       <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]}>
         <View style={styles.content}>
-          {/* Profile Photo Section */}
-          <View style={styles.photoSection}>
+          {/* Profile summary */}
+          <View
+            style={[
+              styles.profileSummary,
+              {
+                backgroundColor: themeColors.surfaceElevated,
+                borderColor: themeColors.border,
+              },
+            ]}
+          >
             <View style={styles.photoContainer}>
               {isUploadingPhoto ? (
                 <View
@@ -316,27 +282,26 @@ export const ProfileScreen = ({ navigation }: any) => {
                 </View>
               )}
             </View>
-            <View style={styles.photoActions}>
+            <View style={styles.profileSummaryText}>
+              <Text
+                style={[
+                  styles.profileSummaryName,
+                  { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                ]}
+              >
+                {user?.name}
+              </Text>
+              <Text style={[styles.profileSummaryDetails, { color: themeColors.textSecondary }]}>
+                {user?.position} · {formatDepartmentLabel(user?.department ?? 'BRIDGE')}
+              </Text>
               <Button
                 title="Change Photo"
                 onPress={handlePickImage}
                 variant="outline"
-                shape="pill"
                 size="small"
                 style={styles.photoButton}
                 disabled={isUploadingPhoto}
               />
-              {profilePhoto && (
-                <Button
-                  title="Remove"
-                  onPress={handleRemovePhoto}
-                  variant="outline"
-                  shape="pill"
-                  size="small"
-                  style={styles.photoButton}
-                  disabled={isUploadingPhoto}
-                />
-              )}
             </View>
           </View>
 
@@ -356,11 +321,12 @@ export const ProfileScreen = ({ navigation }: any) => {
             <View
               style={[
                 styles.card,
+                !isEditing && styles.profileFields,
                 { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border },
               ]}
             >
               {/* Name */}
-              <View style={styles.field}>
+              <View style={[styles.field, !isEditing && styles.fieldHalf]}>
                 <Text style={[styles.label, { color: themeColors.textSecondary }]}>Name</Text>
                 {isEditing ? (
                   <TextInput
@@ -385,7 +351,7 @@ export const ProfileScreen = ({ navigation }: any) => {
               </View>
 
               {/* Position */}
-              <View style={styles.field}>
+              <View style={[styles.field, !isEditing && styles.fieldHalf]}>
                 <Text style={[styles.label, { color: themeColors.textSecondary }]}>Position</Text>
                 {isEditing ? (
                   <TextInput
@@ -410,7 +376,7 @@ export const ProfileScreen = ({ navigation }: any) => {
               </View>
 
               {/* Department */}
-              <View style={styles.field}>
+              <View style={[styles.field, !isEditing && styles.fieldHalf]}>
                 {isEditing ? (
                   <>
                     <DepartmentSelector
@@ -425,14 +391,14 @@ export const ProfileScreen = ({ navigation }: any) => {
                       Department
                     </Text>
                     <Text style={[styles.value, { color: themeColors.textPrimary }]}>
-                      {user?.department}
+                      {formatDepartmentLabel(user?.department ?? 'BRIDGE')}
                     </Text>
                   </>
                 )}
               </View>
 
               {/* Email (read-only) */}
-              <View style={[styles.field, styles.fieldLast]}>
+              <View style={[styles.field, styles.fieldLast, !isEditing && styles.fieldHalf]}>
                 <Text style={[styles.label, { color: themeColors.textSecondary }]}>Email</Text>
                 <Text
                   style={[styles.value, styles.valueDisabled, { color: themeColors.textSecondary }]}
@@ -445,16 +411,23 @@ export const ProfileScreen = ({ navigation }: any) => {
 
           {/* Account Information (read-only) */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
+            <Text
+              style={[
+                styles.sectionTitle,
+                styles.sectionTitleStandalone,
+                { color: themeColors.textSecondary },
+              ]}
+            >
               Account Information
             </Text>
             <View
               style={[
                 styles.card,
+                styles.accountFields,
                 { backgroundColor: themeColors.surfaceElevated, borderColor: themeColors.border },
               ]}
             >
-              <View style={styles.field}>
+              <View style={[styles.field, styles.accountField]}>
                 <Text style={[styles.label, { color: themeColors.textSecondary }]}>Role</Text>
                 <View
                   style={{
@@ -492,7 +465,7 @@ export const ProfileScreen = ({ navigation }: any) => {
                   )}
                 </View>
               </View>
-              <View style={[styles.field, styles.fieldLast]}>
+              <View style={[styles.field, styles.fieldLast, styles.accountField]}>
                 <Text style={[styles.label, { color: themeColors.textSecondary }]}>
                   Member Since
                 </Text>
@@ -511,7 +484,13 @@ export const ProfileScreen = ({ navigation }: any) => {
 
           {/* Personal Records */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
+            <Text
+              style={[
+                styles.sectionTitle,
+                styles.sectionTitleStandalone,
+                { color: themeColors.textSecondary },
+              ]}
+            >
               Personal Records
             </Text>
             <View
@@ -530,7 +509,18 @@ export const ProfileScreen = ({ navigation }: any) => {
                 activeOpacity={0.7}
               >
                 <View style={styles.settingsItemLeft}>
-                  <Text style={styles.settingsIcon}>🧭</Text>
+                  <View
+                    style={[
+                      styles.settingsIconContainer,
+                      { backgroundColor: themeColors.accentSoft },
+                    ]}
+                  >
+                    <Ionicons
+                      name="compass-outline"
+                      size={20}
+                      color={themeColors.isDark ? COLORS.white : COLORS.primary}
+                    />
+                  </View>
                   <View style={styles.settingsTextContainer}>
                     <Text style={[styles.settingsLabel, { color: themeColors.textPrimary }]}>
                       My Sea Miles
@@ -542,16 +532,20 @@ export const ProfileScreen = ({ navigation }: any) => {
                     </Text>
                   </View>
                 </View>
-                <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>
-                  {'\u203A'}
-                </Text>
+                <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
               </TouchableOpacity>
             </View>
           </View>
 
           {/* E-signature */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
+            <Text
+              style={[
+                styles.sectionTitle,
+                styles.sectionTitleStandalone,
+                { color: themeColors.textSecondary },
+              ]}
+            >
               E-signature
             </Text>
             <View
@@ -570,7 +564,18 @@ export const ProfileScreen = ({ navigation }: any) => {
                 activeOpacity={0.7}
               >
                 <View style={styles.settingsItemLeft}>
-                  <Text style={styles.settingsIcon}>{'\u270D\uFE0F'}</Text>
+                  <View
+                    style={[
+                      styles.settingsIconContainer,
+                      { backgroundColor: themeColors.accentSoft },
+                    ]}
+                  >
+                    <Ionicons
+                      name="pencil-outline"
+                      size={20}
+                      color={themeColors.isDark ? COLORS.white : COLORS.primary}
+                    />
+                  </View>
                   <View style={styles.settingsTextContainer}>
                     <Text style={[styles.settingsLabel, { color: themeColors.textPrimary }]}>
                       E-signature
@@ -582,16 +587,20 @@ export const ProfileScreen = ({ navigation }: any) => {
                     </Text>
                   </View>
                 </View>
-                <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>
-                  {'\u203A'}
-                </Text>
+                <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
               </TouchableOpacity>
             </View>
           </View>
           {/* Join Vessel */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
-              Join Vessel
+            <Text
+              style={[
+                styles.sectionTitle,
+                styles.sectionTitleStandalone,
+                { color: themeColors.textSecondary },
+              ]}
+            >
+              Vessel
             </Text>
             <View
               style={[
@@ -609,10 +618,21 @@ export const ProfileScreen = ({ navigation }: any) => {
                 activeOpacity={0.7}
               >
                 <View style={styles.settingsItemLeft}>
-                  <Text style={styles.settingsIcon}>{'\u2693'}</Text>
+                  <View
+                    style={[
+                      styles.settingsIconContainer,
+                      { backgroundColor: themeColors.accentSoft },
+                    ]}
+                  >
+                    <Ionicons
+                      name="boat-outline"
+                      size={20}
+                      color={themeColors.isDark ? COLORS.white : COLORS.primary}
+                    />
+                  </View>
                   <View style={styles.settingsTextContainer}>
                     <Text style={[styles.settingsLabel, { color: themeColors.textPrimary }]}>
-                      Join a different vessel
+                      Join a Different Vessel
                     </Text>
                     <Text
                       style={[styles.settingsDescription, { color: themeColors.textSecondary }]}
@@ -621,9 +641,7 @@ export const ProfileScreen = ({ navigation }: any) => {
                     </Text>
                   </View>
                 </View>
-                <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>
-                  {'\u203A'}
-                </Text>
+                <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
               </TouchableOpacity>
               {!!user?.vesselId && (
                 <TouchableOpacity
@@ -632,7 +650,18 @@ export const ProfileScreen = ({ navigation }: any) => {
                   activeOpacity={0.7}
                 >
                   <View style={styles.settingsItemLeft}>
-                    <Text style={styles.settingsIcon}>{'\u26F5'}</Text>
+                    <View
+                      style={[
+                        styles.settingsIconContainer,
+                        { backgroundColor: themeColors.accentSoft },
+                      ]}
+                    >
+                      <Ionicons
+                        name="log-out-outline"
+                        size={20}
+                        color={themeColors.isDark ? COLORS.white : COLORS.primary}
+                      />
+                    </View>
                     <View style={styles.settingsTextContainer}>
                       <Text style={[styles.settingsLabel, { color: themeColors.textPrimary }]}>
                         Leave Vessel
@@ -644,9 +673,7 @@ export const ProfileScreen = ({ navigation }: any) => {
                       </Text>
                     </View>
                   </View>
-                  <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>
-                    {'\u203A'}
-                  </Text>
+                  <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
                 </TouchableOpacity>
               )}
               {isCaptain && (
@@ -660,7 +687,9 @@ export const ProfileScreen = ({ navigation }: any) => {
                   activeOpacity={0.7}
                 >
                   <View style={styles.settingsItemLeft}>
-                    <Text style={styles.settingsIcon}>{'\u26A0\uFE0F'}</Text>
+                    <View style={[styles.settingsIconContainer, styles.dangerIconContainer]}>
+                      <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
+                    </View>
                     <View style={styles.settingsTextContainer}>
                       <Text style={[styles.settingsLabel, { color: COLORS.danger }]}>
                         Delete Vessel
@@ -672,61 +701,11 @@ export const ProfileScreen = ({ navigation }: any) => {
                       </Text>
                     </View>
                   </View>
-                  <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>
-                    {'\u203A'}
-                  </Text>
+                  <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
                 </TouchableOpacity>
               )}
             </View>
           </View>
-          {/* Settings Sections */}
-          {settingsSections.map((section, sectionIndex) => (
-            <View key={sectionIndex} style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
-                {section.title}
-              </Text>
-              <View
-                style={[
-                  styles.settingsCard,
-                  {
-                    backgroundColor: themeColors.surfaceElevated,
-                    borderColor: themeColors.border,
-                  },
-                ]}
-              >
-                {section.items.map((item, itemIndex) => (
-                  <TouchableOpacity
-                    key={itemIndex}
-                    style={[
-                      styles.settingsItem,
-                      item.disabled && styles.settingsItemDisabled,
-                      itemIndex === section.items.length - 1 && styles.settingsItemLast,
-                      { borderBottomColor: themeColors.border },
-                    ]}
-                    onPress={item.onPress}
-                    disabled={item.disabled}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.settingsItemLeft}>
-                      <Text style={styles.settingsIcon}>{item.icon}</Text>
-                      <View style={styles.settingsTextContainer}>
-                        <Text style={[styles.settingsLabel, { color: themeColors.textPrimary }]}>
-                          {item.label}
-                        </Text>
-                        <Text
-                          style={[styles.settingsDescription, { color: themeColors.textSecondary }]}
-                        >
-                          {item.description}
-                        </Text>
-                      </View>
-                    </View>
-                    <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>›</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          ))}
-
           {/* Version Info */}
           <View style={styles.versionInfo}>
             <Text style={[styles.versionText, { color: themeColors.textSecondary }]}>
@@ -816,46 +795,53 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 4,
   },
-  photoSection: {
+  profileSummary: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.xl,
+    gap: SPACING.md,
+    padding: SPACING.lg,
+    marginBottom: SPACING.lg,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.lg,
+    ...SHADOWS.md,
   },
   photoContainer: {
-    marginBottom: SPACING.md,
+    flexShrink: 0,
   },
   photo: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
   },
   photoPlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     justifyContent: 'center',
     alignItems: 'center',
   },
   photoPlaceholderText: {
-    fontSize: 48,
+    fontSize: FONTS['2xl'],
     fontWeight: 'bold',
   },
   photoLoading: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 1,
   },
-  photoActions: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
+  profileSummaryText: {
+    flex: 1,
   },
+  profileSummaryName: { fontSize: FONTS.lg, fontWeight: '700', marginBottom: 3 },
+  profileSummaryDetails: { fontSize: FONTS.sm, marginBottom: SPACING.sm },
   photoButton: {
-    minWidth: 100,
+    alignSelf: 'flex-start',
   },
   section: {
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.lg,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -870,6 +856,10 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
+  sectionTitleStandalone: {
+    marginLeft: SPACING.xs,
+    marginBottom: SPACING.sm,
+  },
   editButton: {
     fontSize: FONTS.base,
     fontWeight: '600',
@@ -880,8 +870,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     ...SHADOWS.md,
   },
+  profileFields: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.md,
+  },
+  accountFields: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.md,
+  },
   field: {
     marginBottom: SPACING.lg,
+  },
+  fieldHalf: {
+    width: '47%',
+    marginBottom: 0,
+  },
+  accountField: {
+    width: '47%',
+    marginBottom: 0,
   },
   fieldLast: {
     marginBottom: 0,
@@ -983,7 +991,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: SPACING.lg,
+    minHeight: 76,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.md,
     borderBottomWidth: 1,
   },
   settingsItemLast: {
@@ -997,9 +1007,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
-  settingsIcon: {
-    fontSize: 24,
+  settingsIconContainer: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: SPACING.md,
+    borderRadius: 11,
+  },
+  dangerIconContainer: {
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
   },
   settingsTextContainer: {
     flex: 1,
@@ -1011,10 +1028,6 @@ const styles = StyleSheet.create({
   },
   settingsDescription: {
     fontSize: FONTS.sm,
-  },
-  chevron: {
-    fontSize: 24,
-    fontWeight: '300',
   },
   versionInfo: {
     alignItems: 'center',

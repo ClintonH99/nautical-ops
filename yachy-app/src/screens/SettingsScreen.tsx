@@ -15,19 +15,37 @@ import {
   Linking,
   Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore, useThemeStore, BACKGROUND_THEMES } from '../store';
 import { supabase } from '../services/supabase';
-import { Button } from '../components';
+import { Button, PageHeader } from '../components';
 import authService from '../services/auth';
 import userService from '../services/user';
 import { canAccessDepartmentColorSettings, canAccessVesselManagement } from '../utils/access';
 import Constants from 'expo-constants';
+import { formatDepartmentLabel } from '../utils/departmentSelection';
 
 // Read from app.json at build time, so it can never drift from the
 // version actually shipped.
 const APP_VERSION = Constants.expoConfig?.version ?? '';
+
+type SettingsIconName = React.ComponentProps<typeof Ionicons>['name'];
+
+type SettingsItem = {
+  icon: string;
+  label: string;
+  description: string;
+  onPress: () => void;
+  disabled: boolean;
+  destructive?: boolean;
+};
+
+type SettingsSection = {
+  title: string;
+  items: SettingsItem[];
+};
 
 export const SettingsScreen = ({ navigation }: any) => {
   const { user, logout, setUser } = useAuthStore();
@@ -107,15 +125,15 @@ export const SettingsScreen = ({ navigation }: any) => {
     );
   };
 
-  const settingsSections = [
+  const settingsSections: SettingsSection[] = [
     {
       title: 'Account',
       items: [
         {
-          icon: '👤',
+          icon: 'person-outline',
           label: 'My Profile',
           description: 'Edit your personal information, join another vessel here',
-          onPress: () => navigation.navigate('Settings'),
+          onPress: () => navigation.navigate('Profile'),
           disabled: false,
         },
       ],
@@ -126,21 +144,21 @@ export const SettingsScreen = ({ navigation }: any) => {
             title: 'Vessel Management',
             items: [
               {
-                icon: '📋',
+                icon: 'card-outline',
                 label: 'Vessel Plans',
                 description: 'Subscription plans and payment options',
                 onPress: () => navigation.navigate('VesselPlans'),
                 disabled: false,
               },
               {
-                icon: '⚓',
+                icon: 'boat-outline',
                 label: 'Vessel Settings',
                 description: 'Vessel name, invite code, change photo',
                 onPress: () => navigation.navigate('VesselSettings'),
                 disabled: false,
               },
               {
-                icon: '👥',
+                icon: 'people-outline',
                 label: 'Crew Management',
                 description: 'View and manage crew members',
                 onPress: () => navigation.navigate('CrewManagement'),
@@ -154,7 +172,7 @@ export const SettingsScreen = ({ navigation }: any) => {
       title: 'App',
       items: [
         {
-          icon: '🖼️',
+          icon: 'moon-outline',
           label: 'Appearance',
           description: 'Background theme: Day or Night Mode',
           onPress: () => navigation.navigate('ThemeSettings'),
@@ -163,7 +181,7 @@ export const SettingsScreen = ({ navigation }: any) => {
         ...(canDeptColors
           ? [
               {
-                icon: '🎨',
+                icon: 'color-palette-outline',
                 label: 'Department colors',
                 description: 'Choose color scheme or no color per crew department',
                 onPress: () => navigation.navigate('DepartmentColorSettings'),
@@ -174,7 +192,7 @@ export const SettingsScreen = ({ navigation }: any) => {
         ...(Platform.OS !== 'web'
           ? [
               {
-                icon: '🔔',
+                icon: 'notifications-outline',
                 label: 'Notifications',
                 description: 'Manage notification preferences',
                 onPress: () => navigation.navigate('NotificationSettings'),
@@ -183,7 +201,7 @@ export const SettingsScreen = ({ navigation }: any) => {
             ]
           : []),
         {
-          icon: '🚀',
+          icon: 'sparkles-outline',
           label: 'Future Updates & Features',
           description: "See what's coming next to Nautical Ops",
           onPress: () => navigation.navigate('FutureUpdates'),
@@ -192,7 +210,7 @@ export const SettingsScreen = ({ navigation }: any) => {
         ...(Platform.OS !== 'web'
           ? [
               {
-                icon: '🔗',
+                icon: 'open-outline',
                 label: 'Link website',
                 description: 'Open website in your browser to sign in',
                 onPress: () =>
@@ -204,7 +222,7 @@ export const SettingsScreen = ({ navigation }: any) => {
             ]
           : []),
         {
-          icon: '📱',
+          icon: 'information-circle-outline',
           label: 'About',
           description: 'App version and information',
           onPress: () => {
@@ -218,14 +236,14 @@ export const SettingsScreen = ({ navigation }: any) => {
       title: 'Support',
       items: [
         {
-          icon: '❓',
+          icon: 'help-circle-outline',
           label: 'FAQ & Help',
           description: 'Frequently asked questions and guides',
           onPress: () => navigation.navigate('FAQHelp'),
           disabled: false,
         },
         {
-          icon: '💬',
+          icon: 'chatbubble-outline',
           label: 'Contact Support',
           description: 'Email us for help or to report issues',
           onPress: () => {
@@ -242,21 +260,21 @@ export const SettingsScreen = ({ navigation }: any) => {
       title: 'Legal',
       items: [
         {
-          icon: '📜',
+          icon: 'document-text-outline',
           label: 'Terms & Conditions',
           description: 'Terms of use for Nautical Ops',
           onPress: () => navigation.navigate('TermsConditions'),
           disabled: false,
         },
         {
-          icon: '🔒',
+          icon: 'shield-checkmark-outline',
           label: 'Privacy Policy',
           description: 'How we collect and protect your data',
           onPress: () => navigation.navigate('PrivacyPolicy'),
           disabled: false,
         },
         {
-          icon: '💰',
+          icon: 'receipt-outline',
           label: 'Refund Policy',
           description: 'Subscription refund terms and conditions',
           onPress: () => navigation.navigate('RefundPolicy'),
@@ -268,7 +286,7 @@ export const SettingsScreen = ({ navigation }: any) => {
       title: 'Account Actions',
       items: [
         {
-          icon: '🗑️',
+          icon: 'trash-outline',
           label: 'Delete Account',
           description: 'Permanently delete your account and data',
           onPress: handleDeleteAccount,
@@ -280,18 +298,26 @@ export const SettingsScreen = ({ navigation }: any) => {
   ];
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <View style={styles.content}>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <PageHeader title="Settings" />
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         {/* User Header */}
-        <View
+        <TouchableOpacity
           style={[
             styles.userHeader,
             {
               backgroundColor: themeColors.surface,
               borderColor: themeColors.border,
-              borderWidth: themeColors.isDark ? 1 : 0,
             },
           ]}
+          onPress={() => navigation.navigate('Profile')}
+          activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityLabel="Open my profile"
         >
           <View style={styles.avatarContainer}>
             {profilePhotoUrl && !photoLoadFailed ? (
@@ -302,14 +328,14 @@ export const SettingsScreen = ({ navigation }: any) => {
               />
             ) : (
               <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarText}>{user?.name?.charAt(0).toUpperCase()}</Text>
+                <Text style={styles.avatarText}>{user?.name?.charAt(0).toUpperCase() || '?'}</Text>
               </View>
             )}
           </View>
           <View style={styles.userInfo}>
             <Text style={[styles.userName, { color: themeColors.textPrimary }]}>{user?.name}</Text>
             <Text style={[styles.userDetails, { color: themeColors.textSecondary }]}>
-              {user?.position} • {user?.department}
+              {user?.position} · {formatDepartmentLabel(user?.department ?? 'BRIDGE')}
             </Text>
             <View style={styles.roleBadge}>
               <Text style={[styles.roleText, { textTransform: 'none' }]}>
@@ -321,11 +347,12 @@ export const SettingsScreen = ({ navigation }: any) => {
               </Text>
             </View>
           </View>
-        </View>
+          <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
+        </TouchableOpacity>
 
         {/* Settings Sections */}
-        {settingsSections.map((section, sectionIndex) => (
-          <View key={sectionIndex} style={styles.section}>
+        {settingsSections.map((section) => (
+          <View key={section.title} style={styles.section}>
             <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
               {section.title}
             </Text>
@@ -335,13 +362,12 @@ export const SettingsScreen = ({ navigation }: any) => {
                 {
                   backgroundColor: themeColors.surface,
                   borderColor: themeColors.border,
-                  borderWidth: themeColors.isDark ? 1 : 0,
                 },
               ]}
             >
               {section.items.map((item, itemIndex) => (
                 <TouchableOpacity
-                  key={itemIndex}
+                  key={item.label}
                   style={[
                     styles.settingsItem,
                     { borderBottomColor: themeColors.border },
@@ -353,15 +379,28 @@ export const SettingsScreen = ({ navigation }: any) => {
                   activeOpacity={0.7}
                 >
                   <View style={styles.settingsItemLeft}>
-                    <Text style={styles.settingsIcon}>{item.icon}</Text>
+                    <View
+                      style={[
+                        styles.settingsIconContainer,
+                        {
+                          backgroundColor: item.destructive
+                            ? 'rgba(239, 68, 68, 0.1)'
+                            : themeColors.accentSoft,
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name={item.icon as SettingsIconName}
+                        size={20}
+                        color={item.destructive ? COLORS.danger : COLORS.primary}
+                      />
+                    </View>
                     <View style={styles.settingsTextContainer}>
                       <Text
                         style={[
                           styles.settingsLabel,
                           {
-                            color: (item as any).destructive
-                              ? COLORS.danger
-                              : themeColors.textPrimary,
+                            color: item.destructive ? COLORS.danger : themeColors.textPrimary,
                           },
                         ]}
                       >
@@ -374,12 +413,24 @@ export const SettingsScreen = ({ navigation }: any) => {
                       </Text>
                     </View>
                   </View>
-                  <Text style={[styles.chevron, { color: themeColors.textSecondary }]}>›</Text>
+                  <Ionicons name="chevron-forward" size={19} color={themeColors.textSecondary} />
                 </TouchableOpacity>
               ))}
             </View>
           </View>
         ))}
+
+        {/* Sign Out */}
+        <Button
+          title="Sign Out"
+          onPress={async () => {
+            await authService.signOut();
+            logout();
+          }}
+          variant={themeColors.isDark ? 'outlineLight' : 'outline'}
+          fullWidth
+          style={styles.signOutButton}
+        />
 
         {/* Version Info */}
         <View style={styles.versionInfo}>
@@ -390,35 +441,23 @@ export const SettingsScreen = ({ navigation }: any) => {
             Professional yacht operations management
           </Text>
         </View>
-
-        {/* Sign Out */}
-        <Button
-          title="Sign Out"
-          onPress={async () => {
-            await authService.signOut();
-            logout();
-          }}
-          variant={themeColors.isDark ? 'outlineLight' : 'outline'}
-          shape="pill"
-          fullWidth
-          style={styles.signOutButton}
-        />
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  scrollView: { flex: 1 },
   content: {
     padding: SPACING.lg,
-    paddingTop: SPACING.xl * 2,
+    paddingTop: SPACING.lg,
     paddingBottom: SIZES.bottomScrollPadding,
   },
   userHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: SPACING.lg,
+    padding: SPACING.md,
     borderRadius: BORDER_RADIUS.lg,
     marginBottom: SPACING.xl,
     shadowColor: '#0D0D0D',
@@ -429,11 +468,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   avatarContainer: { marginRight: SPACING.md },
-  avatar: { width: 64, height: 64, borderRadius: 32 },
+  avatar: { width: 60, height: 60, borderRadius: 30 },
   avatarPlaceholder: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
@@ -466,7 +505,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     textTransform: 'uppercase',
   },
-  section: { marginBottom: SPACING.xl },
+  section: { marginBottom: SPACING.lg },
   sectionTitle: {
     fontSize: FONTS.xs,
     fontWeight: '600',
@@ -489,7 +528,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: SPACING.lg,
+    minHeight: 70,
+    paddingVertical: 13,
+    paddingHorizontal: SPACING.md,
     borderBottomWidth: 1,
   },
   settingsItemLast: { borderBottomWidth: 0 },
@@ -499,7 +540,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
-  settingsIcon: { fontSize: 24, marginRight: SPACING.md },
+  settingsIconContainer: {
+    width: 38,
+    height: 38,
+    borderRadius: BORDER_RADIUS.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.md,
+  },
   settingsTextContainer: { flex: 1 },
   settingsLabel: {
     fontSize: FONTS.base,
@@ -507,15 +555,15 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   settingsDescription: { fontSize: FONTS.sm },
-  chevron: { fontSize: 24, fontWeight: '300' },
   versionInfo: {
     alignItems: 'center',
-    paddingVertical: SPACING.xl,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.xl,
   },
   versionText: { fontSize: FONTS.sm, marginBottom: 4 },
   versionSubtext: { fontSize: FONTS.xs },
   signOutButton: {
-    marginTop: SPACING.md,
-    marginBottom: SPACING.lg,
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.sm,
   },
 });

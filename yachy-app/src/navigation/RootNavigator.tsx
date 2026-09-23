@@ -24,6 +24,7 @@ import {
   RegisterCaptainScreen,
   RegisterCrewScreen,
   JoinVesselScreen,
+  SettingsScreen,
   ProfileScreen,
   VesselSettingsScreen,
   VesselPlansScreen,
@@ -162,6 +163,7 @@ const APP_SCREEN_PATHS = {
   },
   JoinVessel: 'join-vessel',
   Settings: 'settings',
+  Profile: 'settings/profile',
   VesselPlans: 'vessel-plans',
   TermsConditions: 'terms',
   PrivacyPolicy: 'privacy',
@@ -905,6 +907,11 @@ export const RootNavigator = () => {
               <Stack.Screen name="FAQHelp" component={FAQScreen} options={{ headerShown: false }} />
               <Stack.Screen
                 name="Settings"
+                component={SettingsScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="Profile"
                 component={ProfileScreen}
                 options={{ headerShown: false }}
               />
