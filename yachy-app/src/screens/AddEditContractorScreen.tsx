@@ -14,6 +14,7 @@ import {
   Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
@@ -203,56 +204,83 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <DepartmentSelector
-          value={department}
-          onChange={(value) => value && setDepartment(value)}
-        />
-        <Input
-          label="Company Name"
-          value={companyName}
-          onChangeText={setCompanyName}
-          placeholder="e.g. Marine Services Ltd"
-          autoCapitalize="words"
-        />
-        <Input
-          label="Company Address"
-          value={companyAddress}
-          onChangeText={setCompanyAddress}
-          placeholder="Full address"
-          autoCapitalize="words"
-        />
-        <Input
-          label="Known For"
-          value={knownFor}
-          onChangeText={setKnownFor}
-          placeholder="e.g. plumbing, electrical, refrigeration (keywords for search)"
-          autoCapitalize="none"
-        />
-        <Input
-          label="Description"
-          value={description}
-          onChangeText={setDescription}
-          placeholder="Services offered, notes…"
-          multiline
-        />
+        <View
+          style={[
+            styles.sectionCard,
+            {
+              backgroundColor: themeColors.surface,
+              borderColor: themeColors.border,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+            ]}
+          >
+            Contractor Details
+          </Text>
+          <Input
+            label="Company Name"
+            value={companyName}
+            onChangeText={setCompanyName}
+            placeholder="e.g. Marine Services Ltd"
+            autoCapitalize="words"
+          />
+          <DepartmentSelector
+            value={department}
+            onChange={(value) => value && setDepartment(value)}
+          />
+          <Input
+            label="Known For"
+            value={knownFor}
+            onChangeText={setKnownFor}
+            placeholder="e.g. refrigeration and air conditioning"
+            autoCapitalize="sentences"
+          />
+          <Input
+            label="Company Address"
+            value={companyAddress}
+            onChangeText={setCompanyAddress}
+            placeholder="Full address"
+            autoCapitalize="words"
+          />
+          <Input
+            label="Description"
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Services offered and additional information..."
+            multiline
+            containerStyle={styles.lastField}
+          />
+        </View>
 
-        <Text style={[styles.sectionLabel, { color: themeColors.textPrimary }]}>
-          Contact Person(s)
-        </Text>
         {contacts.map((contact, index) => (
           <View
             key={index}
             style={[
-              styles.contactBlock,
+              styles.sectionCard,
               {
-                backgroundColor: themeColors.surfaceElevated,
+                backgroundColor: themeColors.surface,
                 borderColor: themeColors.border,
               },
             ]}
           >
-            <Text style={[styles.contactBlockLabel, { color: themeColors.textSecondary }]}>
-              Contact {index + 1}
-            </Text>
+            <View style={styles.contactHeader}>
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  styles.contactTitle,
+                  { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+                ]}
+              >
+                {index === 0 ? 'First Contact' : `Additional Contact ${index}`}
+              </Text>
+              <Text style={[styles.contactCount, { color: themeColors.textSecondary }]}>
+                Contact {index + 1}
+              </Text>
+            </View>
             <Input
               label="Name"
               value={contact.name}
@@ -260,7 +288,7 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
               placeholder="Contact name"
             />
             <Input
-              label="Mobile Number"
+              label="Contact Number"
               value={contact.mobile}
               onChangeText={(v) => setContactAt(index, 'mobile', v)}
               placeholder="e.g. +1 234 567 8900"
@@ -274,25 +302,43 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
               keyboardType="email-address"
               autoCapitalize="none"
             />
-            <TouchableOpacity
-              onPress={() => removeContact(index)}
-              style={styles.removeContactBtn}
-              disabled={contacts.length <= 1}
-            >
-              <Text
-                style={[
-                  styles.removeContactText,
-                  { color: contacts.length <= 1 ? themeColors.textSecondary : COLORS.danger },
-                ]}
+            {index > 0 ? (
+              <TouchableOpacity
+                onPress={() => removeContact(index)}
+                style={styles.removeContactBtn}
+                activeOpacity={0.72}
+                accessibilityRole="button"
+                accessibilityLabel={`Delete additional contact ${index}`}
               >
-                Remove contact
-              </Text>
-            </TouchableOpacity>
+                <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
+                <Text style={styles.removeContactText}>Delete</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         ))}
-        <TouchableOpacity onPress={addContact} style={styles.addContactBtn}>
-          <Text style={[styles.addContactText, { color: themeColors.accent }]}>
-            + Add contact person
+
+        <TouchableOpacity
+          onPress={addContact}
+          style={[
+            styles.addContactBtn,
+            { borderColor: themeColors.isDark ? COLORS.white : COLORS.primary },
+          ]}
+          activeOpacity={0.72}
+          accessibilityRole="button"
+          accessibilityLabel="Add another contact"
+        >
+          <Ionicons
+            name="add"
+            size={20}
+            color={themeColors.isDark ? COLORS.white : COLORS.primary}
+          />
+          <Text
+            style={[
+              styles.addContactText,
+              { color: themeColors.isDark ? COLORS.white : COLORS.primary },
+            ]}
+          >
+            Add Another Contact
           </Text>
         </TouchableOpacity>
 
@@ -325,54 +371,55 @@ const styles = StyleSheet.create({
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
   message: { fontSize: FONTS.base, textAlign: 'center' },
-  label: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs },
-  dropdown: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: SPACING.md,
-  },
-  dropdownText: { fontSize: FONTS.base, fontWeight: '500' },
-  dropdownChevron: { fontSize: 10 },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
+  sectionCard: {
+    borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.lg,
-  },
-  modalBox: { borderRadius: BORDER_RADIUS.lg, paddingVertical: SPACING.sm, minWidth: 200 },
-  modalItem: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg },
-  modalItemSelected: {},
-  modalItemText: { fontSize: FONTS.base },
-  modalItemTextSelected: { color: COLORS.primary, fontWeight: '600' },
-  sectionLabel: {
-    fontSize: FONTS.sm,
-    fontWeight: '700',
-    marginTop: SPACING.lg,
-    marginBottom: SPACING.sm,
-  },
-  contactBlock: {
-    borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.md,
     marginBottom: SPACING.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    shadowColor: COLORS.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  contactBlockLabel: {
-    fontSize: FONTS.sm,
-    fontWeight: '600',
-    marginBottom: SPACING.sm,
+  sectionTitle: {
+    fontSize: FONTS.lg,
+    fontWeight: '700',
+    marginBottom: SPACING.md,
   },
-  removeContactBtn: { marginTop: SPACING.xs },
-  removeContactText: { fontSize: FONTS.sm, color: COLORS.danger },
-  removeContactDisabled: { color: COLORS.textTertiary },
-  addContactBtn: { paddingVertical: SPACING.sm, marginBottom: SPACING.lg },
-  addContactText: { fontSize: FONTS.sm, fontWeight: '600', color: COLORS.primary },
-  actions: { marginTop: SPACING.xl },
+  lastField: { marginBottom: 0 },
+  contactHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  contactTitle: { flex: 1, marginBottom: 0 },
+  contactCount: { fontSize: FONTS.xs, fontWeight: '600' },
+  removeContactBtn: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: SPACING.xs,
+    borderWidth: 1,
+    borderColor: COLORS.danger,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  removeContactText: { fontSize: FONTS.sm, fontWeight: '600', color: COLORS.danger },
+  addContactBtn: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  addContactText: { fontSize: FONTS.sm, fontWeight: '600' },
+  actions: { marginTop: SPACING.sm },
 });
