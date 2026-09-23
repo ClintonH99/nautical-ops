@@ -29,6 +29,17 @@ import { isMasterOfVessel } from '../utils/access';
 
 type VesselLengthUnit = 'ft' | 'm';
 
+const VESSEL_LENGTH_UNITS: Array<{ label: string; value: VesselLengthUnit }> = [
+  { label: 'Meters', value: 'm' },
+  { label: 'ft', value: 'ft' },
+];
+
+function vesselLengthUnitLabel(unit: VesselLengthUnit | null): string {
+  if (unit === 'm') return 'Meters';
+  if (unit === 'ft') return 'ft';
+  return 'Meters / ft';
+}
+
 function numberValue(value: string): number | null {
   const normalized = value.trim().replace(',', '.');
   if (!normalized) return null;
@@ -238,6 +249,7 @@ export const AddEditSeaMileScreen = ({ navigation, route }: any) => {
   }
 
   const title = entryId || reviewMode ? 'Edit Sea Miles Entry' : 'Create Sea Miles Entry';
+  const sectionTitleColor = themeColors.isDark ? COLORS.white : COLORS.primary;
 
   return (
     <KeyboardAvoidingView
@@ -259,107 +271,136 @@ export const AddEditSeaMileScreen = ({ navigation, route }: any) => {
           </View>
         ) : null}
 
-        <DateOnlyPicker
-          label="Date"
-          value={voyageDate}
-          onChange={setVoyageDate}
-          title="Select voyage date"
-          maximumDate={toYYYYMMDD(new Date())}
-        />
+        <View
+          style={[
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>Voyage details</Text>
+          <DateOnlyPicker
+            label="Date"
+            value={voyageDate}
+            onChange={setVoyageDate}
+            title="Select voyage date"
+            maximumDate={toYYYYMMDD(new Date())}
+          />
 
-        <Input
-          label="Vessel Name"
-          value={vesselName}
-          onChangeText={setVesselName}
-          placeholder="e.g. M/Y Aurora"
-          maxLength={160}
-        />
-        <View style={styles.lengthRow}>
           <Input
-            containerStyle={styles.lengthInput}
-            label="Vessel Length"
-            value={vesselLength}
-            onChangeText={setVesselLength}
-            placeholder="e.g. 138"
-            keyboardType="decimal-pad"
-            maxLength={12}
+            label="Vessel Name"
+            value={vesselName}
+            onChangeText={setVesselName}
+            placeholder="e.g. M/Y Aurora"
+            maxLength={160}
           />
-          <View style={styles.lengthUnit}>
-            <Text style={[styles.unitLabel, { color: themeColors.textPrimary }]}>Unit</Text>
-            <TouchableOpacity
-              style={[styles.unitDropdown, { backgroundColor: themeColors.surface }]}
-              onPress={() => setLengthUnitPickerOpen(true)}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel={`Unit: ${vesselLengthUnit ?? 'ft or m'}`}
-            >
-              <Text
+          <View style={styles.lengthRow}>
+            <Input
+              containerStyle={styles.lengthInput}
+              label="Vessel Length"
+              value={vesselLength}
+              onChangeText={setVesselLength}
+              placeholder="e.g. 138"
+              keyboardType="decimal-pad"
+              maxLength={12}
+            />
+            <View style={styles.lengthUnit}>
+              <Text style={[styles.unitLabel, { color: themeColors.textPrimary }]}>Unit</Text>
+              <TouchableOpacity
                 style={[
-                  styles.unitValue,
-                  { color: vesselLengthUnit ? themeColors.textPrimary : themeColors.textSecondary },
+                  styles.unitDropdown,
+                  { backgroundColor: themeColors.control, borderColor: themeColors.border },
                 ]}
+                onPress={() => setLengthUnitPickerOpen(true)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Unit: ${vesselLengthUnitLabel(vesselLengthUnit)}`}
               >
-                {vesselLengthUnit ?? 'ft / m'}
-              </Text>
-              <Text style={[styles.unitChevron, { color: themeColors.textSecondary }]}>
-                {lengthUnitPickerOpen ? '▲' : '▼'}
-              </Text>
-            </TouchableOpacity>
+                <Text
+                  style={[
+                    styles.unitValue,
+                    {
+                      color: vesselLengthUnit ? themeColors.textPrimary : themeColors.textSecondary,
+                    },
+                  ]}
+                >
+                  {vesselLengthUnitLabel(vesselLengthUnit)}
+                </Text>
+                <Text style={[styles.unitChevron, { color: sectionTitleColor }]}>
+                  {lengthUnitPickerOpen ? '▲' : '▼'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-        <Input
-          label="From"
-          value={fromLocation}
-          onChangeText={setFromLocation}
-          placeholder="Departure location"
-          maxLength={160}
-        />
-        <Input
-          label="To"
-          value={toLocation}
-          onChangeText={setToLocation}
-          placeholder="Destination"
-          maxLength={160}
-        />
-        <Input
-          label="Capacity / Role"
-          value={capacityRole}
-          onChangeText={setCapacityRole}
-          placeholder="e.g. Deckhand"
-          maxLength={120}
-        />
-        <Input
-          label="Miles Logged"
-          value={milesLogged}
-          onChangeText={setMilesLogged}
-          placeholder="0"
-          keyboardType="decimal-pad"
-        />
-        <View style={styles.twoColumns}>
+          <View style={styles.twoColumns}>
+            <Input
+              containerStyle={styles.half}
+              label="From"
+              value={fromLocation}
+              onChangeText={setFromLocation}
+              placeholder="Departure location"
+              maxLength={160}
+            />
+            <Input
+              containerStyle={styles.half}
+              label="To"
+              value={toLocation}
+              onChangeText={setToLocation}
+              placeholder="Destination"
+              maxLength={160}
+            />
+          </View>
           <Input
-            containerStyle={styles.half}
-            label="Day Hours"
-            value={dayHours}
-            onChangeText={setDayHours}
+            label="Capacity / Role"
+            value={capacityRole}
+            onChangeText={setCapacityRole}
+            placeholder="e.g. Deckhand"
+            maxLength={120}
+          />
+        </View>
+
+        <View
+          style={[
+            styles.formSection,
+            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>Sea service</Text>
+          <Input
+            label="Miles Logged"
+            value={milesLogged}
+            onChangeText={setMilesLogged}
             placeholder="0"
             keyboardType="decimal-pad"
           />
-          <Input
-            containerStyle={styles.half}
-            label="Night Hours"
-            value={nightHours}
-            onChangeText={setNightHours}
-            placeholder="0"
-            keyboardType="decimal-pad"
+          <Text style={[styles.fieldHint, { color: themeColors.textSecondary }]}>
+            Nautical miles
+          </Text>
+          <View style={styles.twoColumns}>
+            <Input
+              containerStyle={styles.half}
+              label="Day Hours"
+              value={dayHours}
+              onChangeText={setDayHours}
+              placeholder="0"
+              keyboardType="decimal-pad"
+            />
+            <Input
+              containerStyle={styles.half}
+              label="Night Hours"
+              value={nightHours}
+              onChangeText={setNightHours}
+              placeholder="0"
+              keyboardType="decimal-pad"
+            />
+          </View>
+          <LabeledDropdown
+            label="Tidal"
+            value={tidal ? 'Yes' : 'No'}
+            open={tidalPickerOpen}
+            onPress={() => setTidalPickerOpen(true)}
+            tightTop
           />
         </View>
-        <LabeledDropdown
-          label="Tidal"
-          value={tidal ? 'Yes' : 'No'}
-          open={tidalPickerOpen}
-          onPress={() => setTidalPickerOpen(true)}
-          tightTop
-        />
 
         {reviewMode ? (
           <Button title="Save Changes" onPress={saveDraftOrChanges} loading={saving} fullWidth />
@@ -391,17 +432,20 @@ export const AddEditSeaMileScreen = ({ navigation, route }: any) => {
             <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
               Vessel length unit
             </Text>
-            {(['ft', 'm'] as VesselLengthUnit[]).map((unit) => (
+            {VESSEL_LENGTH_UNITS.map((unit) => (
               <TouchableOpacity
-                key={unit}
-                style={[styles.modalItem, vesselLengthUnit === unit && styles.modalItemSelected]}
+                key={unit.value}
+                style={[
+                  styles.modalItem,
+                  vesselLengthUnit === unit.value && styles.modalItemSelected,
+                ]}
                 onPress={() => {
-                  setVesselLengthUnit(unit);
+                  setVesselLengthUnit(unit.value);
                   setLengthUnitPickerOpen(false);
                 }}
               >
                 <Text style={[styles.modalItemText, { color: themeColors.textPrimary }]}>
-                  {unit}
+                  {unit.label}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -447,6 +491,22 @@ const styles = StyleSheet.create({
   content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   label: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs },
+  formSection: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  sectionTitle: {
+    fontSize: FONTS.base,
+    fontWeight: '700',
+    marginBottom: SPACING.md,
+  },
+  fieldHint: {
+    fontSize: FONTS.xs,
+    marginTop: -SPACING.sm,
+    marginBottom: SPACING.md,
+  },
   lengthRow: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.md },
   lengthInput: { flex: 1.8 },
   lengthUnit: { flex: 1, marginBottom: SPACING.md },

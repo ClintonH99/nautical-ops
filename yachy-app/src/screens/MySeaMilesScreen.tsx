@@ -397,6 +397,7 @@ export const MySeaMilesScreen = ({ navigation }: any) => {
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholder="Search vessel, departure or destination"
+          variant="search"
           returnKeyType="search"
           autoCapitalize="none"
           autoCorrect={false}
@@ -466,7 +467,8 @@ export const MySeaMilesScreen = ({ navigation }: any) => {
             return (
               <ButtonTagCard
                 key={entry.id}
-                headerTitle={`${entry.vesselName} • ${formatLocalDateString(entry.voyageDate)}`}
+                headerTitle={entry.vesselName}
+                minimal
                 collapsible
                 expanded={expandedId === entry.id}
                 onToggleExpand={() => setExpandedId((id) => (id === entry.id ? null : entry.id))}
@@ -480,28 +482,83 @@ export const MySeaMilesScreen = ({ navigation }: any) => {
                     : undefined
                 }
                 onDelete={editable ? () => handleDelete(entry) : undefined}
-                accentColor={STATUS_COLORS[entry.status]}
                 summary={
-                  <View style={styles.summaryRow}>
-                    <Text
-                      style={[styles.routeSummary, { color: themeColors.textSecondary }]}
-                      numberOfLines={1}
-                    >
-                      {entry.fromLocation} → {entry.toLocation}
-                    </Text>
-                    <View
-                      style={[styles.statusBadge, { borderColor: STATUS_COLORS[entry.status] }]}
-                    >
-                      <Text style={[styles.statusText, { color: STATUS_COLORS[entry.status] }]}>
-                        {STATUS_LABELS[entry.status]}
+                  <View style={styles.entrySummary}>
+                    <View style={styles.summaryRow}>
+                      <Text style={[styles.entryDate, { color: themeColors.textSecondary }]}>
+                        {formatLocalDateString(entry.voyageDate)}
+                      </Text>
+                      <View
+                        style={[
+                          styles.statusBadge,
+                          { backgroundColor: `${STATUS_COLORS[entry.status]}18` },
+                        ]}
+                      >
+                        <Text style={[styles.statusText, { color: STATUS_COLORS[entry.status] }]}>
+                          {STATUS_LABELS[entry.status]}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.routeRow}>
+                      <Ionicons
+                        name="navigate-outline"
+                        size={16}
+                        color={themeColors.textSecondary}
+                      />
+                      <Text
+                        style={[styles.routeSummary, { color: themeColors.textSecondary }]}
+                        numberOfLines={1}
+                      >
+                        {entry.fromLocation} → {entry.toLocation}
                       </Text>
                     </View>
+                    <View style={[styles.metricsRow, { borderColor: themeColors.border }]}>
+                      <View style={styles.metricCell}>
+                        <Text style={[styles.metricLabel, { color: themeColors.textSecondary }]}>
+                          SEA MILES
+                        </Text>
+                        <Text style={[styles.metricValue, { color: themeColors.textPrimary }]}>
+                          {formatAmount(entry.milesLogged)} NM
+                        </Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.metricCell,
+                          styles.metricDivider,
+                          { borderColor: themeColors.border },
+                        ]}
+                      >
+                        <Text style={[styles.metricLabel, { color: themeColors.textSecondary }]}>
+                          DAY
+                        </Text>
+                        <Text style={[styles.metricValue, { color: themeColors.textPrimary }]}>
+                          {formatAmount(entry.dayHours)} hrs
+                        </Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.metricCell,
+                          styles.metricDivider,
+                          { borderColor: themeColors.border },
+                        ]}
+                      >
+                        <Text style={[styles.metricLabel, { color: themeColors.textSecondary }]}>
+                          NIGHT
+                        </Text>
+                        <Text style={[styles.metricValue, { color: themeColors.textPrimary }]}>
+                          {formatAmount(entry.nightHours)} hrs
+                        </Text>
+                      </View>
+                    </View>
+                    {entry.status === 'APPROVED' && approvedBy ? (
+                      <Text style={[styles.approvedBy, { color: themeColors.textSecondary }]}>
+                        Approved by {approvedBy}
+                        {entry.reviewedAt
+                          ? ` on ${new Date(entry.reviewedAt).toLocaleDateString()}`
+                          : ''}
+                      </Text>
+                    ) : null}
                   </View>
-                }
-                footer={
-                  entry.status === 'APPROVED' && approvedBy
-                    ? `Approved by ${approvedBy}${entry.reviewedAt ? ` on ${new Date(entry.reviewedAt).toLocaleDateString()}` : ''}`
-                    : undefined
                 }
               >
                 <ButtonTagRow
@@ -688,14 +745,43 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: SPACING.sm,
   },
+  entrySummary: { gap: SPACING.sm },
+  entryDate: { fontSize: FONTS.sm },
+  routeRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
   routeSummary: { fontSize: FONTS.sm, flex: 1 },
   statusBadge: {
-    borderWidth: 1.5,
     borderRadius: BORDER_RADIUS.pill,
     paddingHorizontal: SPACING.sm,
-    paddingVertical: 3,
+    paddingVertical: SPACING.xs,
   },
   statusText: { fontSize: FONTS.xs, fontWeight: '700' },
+  metricsRow: {
+    flexDirection: 'row',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  metricCell: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.xs,
+  },
+  metricDivider: { borderLeftWidth: 1 },
+  metricLabel: {
+    fontSize: FONTS.xs,
+    fontWeight: '600',
+    letterSpacing: 0.4,
+    textAlign: 'center',
+  },
+  metricValue: {
+    fontSize: FONTS.sm,
+    fontWeight: '700',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  approvedBy: { fontSize: FONTS.xs, fontStyle: 'italic' },
   declineReason: {
     borderLeftWidth: 3,
     borderLeftColor: COLORS.danger,
