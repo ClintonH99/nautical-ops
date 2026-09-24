@@ -64,7 +64,7 @@ A husky pre-commit hook runs `lint-staged` (prettier + eslint --fix on staged fi
 
 - **Post-login routing**: anyone with `user.vesselId` goes straight to Home (`MainTabs`). `CaptainWelcome` / `CreateVessel` is _only_ for a captain with no vessel yet. Never route a user who has a `vesselId` into the vessel-creation flow.
 - **Permissions**: `CAPTAIN_MOV` has full add / edit / delete access to everything in the app, with no restrictions anywhere, and is never excluded by any rule here. A feature described as HOD-managed must also allow the Captain/MOV. Both HOD and Captain/MOV can create, edit and delete all Muster Stations and all pre-departure checklists, including the Captain/All Departments checklist (`department === null`). Crew can view and use published records but cannot manage them.
-- **Date/time pickers**: `@react-native-community/datetimepicker` with `display="compact"` on iOS (no show/hide state) and a trigger + `display="default"` dialog on Android. Never `inline` or `spinner` on iOS; don't combine `is24Hour` with `compact`.
+- **Time selectors**: use the shared `TimePickerField` standard documented in `ADMIN/App Design/TIME_SELECTOR_STANDARD.md`. Existing modal screens must use `TimePickerTrigger` with `TimePickerSheetContent` so React Native modals are never stacked.
 - Web and native share one Supabase account and the same email/password sign-in.
 
 ## Architecture

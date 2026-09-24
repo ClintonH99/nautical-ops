@@ -14,14 +14,19 @@ import {
   Platform,
   TouchableOpacity,
 } from 'react-native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import generalWasteLogsService from '../services/generalWasteLogs';
 import { WeightUnit } from '../types';
-import { DateOnlyPicker, Input, Button, LoadingSpinner, PageHeader } from '../components';
+import {
+  DateOnlyPicker,
+  Input,
+  Button,
+  LoadingSpinner,
+  PageHeader,
+  TimePickerField,
+} from '../components';
 import { parseLocalDate } from '../utils';
 
 function formatDate(d: Date): string {
@@ -52,7 +57,6 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
   const now = new Date();
   const [date, setDate] = useState<Date>(now);
   const [time, setTime] = useState<Date>(now);
-  const [showTimePicker, setShowTimePicker] = useState(false);
   const [positionLocation, setPositionLocation] = useState('');
   const [descriptionOfGarbage, setDescriptionOfGarbage] = useState('');
   const [weight, setWeight] = useState('');
@@ -211,55 +215,13 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
               />
             </View>
 
-            <View style={[styles.fieldContainer, styles.dateTimeColumn]}>
-              <Text style={[styles.label, { color: themeColors.textPrimary }]}>Time</Text>
-              {Platform.OS === 'ios' ? (
-                <View
-                  style={[
-                    styles.pickerTrigger,
-                    styles.iosPickerTrigger,
-                    { backgroundColor: themeColors.control, borderColor: themeColors.border },
-                  ]}
-                >
-                  <DateTimePicker
-                    value={time}
-                    mode="time"
-                    display="compact"
-                    onChange={(_: DateTimePickerEvent, selected?: Date) => {
-                      if (selected) setTime(selected);
-                    }}
-                  />
-                </View>
-              ) : (
-                <>
-                  <TouchableOpacity
-                    style={[
-                      styles.pickerTrigger,
-                      { backgroundColor: themeColors.control, borderColor: themeColors.border },
-                    ]}
-                    onPress={() => setShowTimePicker(true)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.pickerValue, { color: themeColors.textPrimary }]}>
-                      {formatTime(time)}
-                    </Text>
-                    <Ionicons name="time-outline" size={20} color={themeColors.textSecondary} />
-                  </TouchableOpacity>
-                  {showTimePicker && (
-                    <DateTimePicker
-                      value={time}
-                      mode="time"
-                      is24Hour
-                      display="default"
-                      onChange={(_: DateTimePickerEvent, selected?: Date) => {
-                        setShowTimePicker(false);
-                        if (selected) setTime(selected);
-                      }}
-                    />
-                  )}
-                </>
-              )}
-            </View>
+            <TimePickerField
+              label="Time"
+              title="Select Waste Log Time"
+              value={time}
+              onChange={setTime}
+              containerStyle={styles.dateTimeColumn}
+            />
           </View>
         </View>
 

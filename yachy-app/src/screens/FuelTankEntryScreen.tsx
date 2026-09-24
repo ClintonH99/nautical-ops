@@ -10,10 +10,16 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { Button, DateOnlyPicker, Input, LoadingSpinner, PageHeader } from '../components';
+import {
+  Button,
+  DateOnlyPicker,
+  Input,
+  LoadingSpinner,
+  PageHeader,
+  TimePickerField,
+} from '../components';
 import { FuelSelectField, FuelSelectOption } from '../components/FuelSelectField';
 import { BORDER_RADIUS, COLORS, FONTS, SIZES, SPACING } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -108,7 +114,6 @@ export const FuelTankEntryScreen = ({ navigation, route }: any) => {
   const [entryDate, setEntryDate] = useState(localDateString());
   const [entryTime, setEntryTime] = useState(new Date());
   const [utcOffsetMinutes, setUtcOffsetMinutes] = useState(-new Date().getTimezoneOffset());
-  const [showTimePicker, setShowTimePicker] = useState(false);
   const [location, setLocation] = useState('');
   const [reason, setReason] = useState('');
   const [amendmentReason, setAmendmentReason] = useState('');
@@ -706,54 +711,19 @@ export const FuelTankEntryScreen = ({ navigation, route }: any) => {
               value={entryDate}
               onChange={setEntryDate}
             />
-            <View style={styles.field}>
-              <Text style={[styles.label, { color: themeColors.textPrimary }]}>Time</Text>
-              {Platform.OS === 'ios' ? (
-                <View
-                  style={[
-                    styles.timeField,
-                    { backgroundColor: themeColors.control, borderColor: themeColors.border },
-                  ]}
-                >
-                  <Text style={[styles.timeValue, { color: themeColors.textPrimary }]}>
-                    {formatTime(entryTime)}
-                  </Text>
-                  <DateTimePicker
-                    value={entryTime}
-                    mode="time"
-                    display="compact"
-                    onChange={(_: DateTimePickerEvent, selected?: Date) =>
-                      selected && setEntryTime(selected)
-                    }
-                  />
-                </View>
-              ) : (
-                <>
-                  <TouchableOpacity
-                    style={[
-                      styles.timeField,
-                      { backgroundColor: themeColors.control, borderColor: themeColors.border },
-                    ]}
-                    onPress={() => setShowTimePicker(true)}
-                  >
-                    <Text style={[styles.timeValue, { color: themeColors.textPrimary }]}>
-                      {formatTime(entryTime)}
-                    </Text>
-                    <Ionicons name="time-outline" size={22} color={themeColors.textSecondary} />
-                  </TouchableOpacity>
-                  {showTimePicker ? (
-                    <DateTimePicker
-                      value={entryTime}
-                      mode="time"
-                      onChange={(_: DateTimePickerEvent, selected?: Date) => {
-                        setShowTimePicker(false);
-                        if (selected) setEntryTime(selected);
-                      }}
-                    />
-                  ) : null}
-                </>
-              )}
-            </View>
+            <TimePickerField
+              label="Time"
+              title={`Select ${
+                kind === 'SOUNDING'
+                  ? 'Sounding'
+                  : kind === 'CONSUMPTION'
+                    ? 'Consumption'
+                    : 'Adjustment'
+              } Time`}
+              value={entryTime}
+              onChange={setEntryTime}
+              containerStyle={styles.field}
+            />
             <Input
               label={kind === 'ADJUSTMENT' ? 'Reason' : 'Note (optional)'}
               value={reason}

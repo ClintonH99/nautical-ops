@@ -30,7 +30,14 @@ import {
   formatWatchHours,
   getWatchSlotDurations,
 } from '../utils/watchTimetable';
-import { DateOnlyPicker, Input, Button, LoadingSpinner, PageHeader } from '../components';
+import {
+  DateOnlyPicker,
+  Input,
+  Button,
+  LoadingSpinner,
+  PageHeader,
+  TimePickerField,
+} from '../components';
 
 function generateWatchTimetable(
   watchDurationHours: number,
@@ -75,7 +82,16 @@ function generateWatchTimetable(
   return slots;
 }
 
-const TIME_OPTIONS = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`);
+function timeStringToDate(value: string): Date {
+  const date = new Date();
+  const [hour, minute] = value.split(':').map(Number);
+  date.setHours(hour, minute, 0, 0);
+  return date;
+}
+
+function dateToTimeString(value: Date): string {
+  return `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
+}
 
 function sanitizeHoursInput(value: string): string {
   const numeric = value.replace(/,/g, '.').replace(/[^\d.]/g, '');
@@ -111,7 +127,6 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
   const [selectedCrew, setSelectedCrew] = useState<User[]>([]);
   const [crew, setCrew] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [startTimeDropdownOpen, setStartTimeDropdownOpen] = useState(false);
   const [crewDropdownOpen, setCrewDropdownOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [timetableSlots, setTimetableSlots] = useState<Array<{
@@ -517,77 +532,13 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
             onChange={setForDate}
             title="Select voyage start date"
           />
-          <Text style={[styles.label, styles.firstLabel, { color: themeColors.textPrimary }]}>
-            Start Time
-          </Text>
-          <TouchableOpacity
-            style={[
-              styles.dropdown,
-              styles.lastControl,
-              { backgroundColor: themeColors.control, borderColor: themeColors.border },
-            ]}
-            onPress={() => setStartTimeDropdownOpen(!startTimeDropdownOpen)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.dropdownText, { color: themeColors.textPrimary }]}>
-              {startTime}
-            </Text>
-            <Text style={[styles.dropdownChevron, { color: sectionTitleColor }]}>
-              {startTimeDropdownOpen ? '▲' : '▼'}
-            </Text>
-          </TouchableOpacity>
-          {startTimeDropdownOpen && (
-            <Modal visible transparent animationType="fade">
-              <Pressable
-                style={styles.modalBackdrop}
-                onPress={() => setStartTimeDropdownOpen(false)}
-              >
-                <View
-                  style={[
-                    styles.modalBox,
-                    {
-                      backgroundColor: themeColors.surfaceElevated,
-                      borderColor: themeColors.border,
-                    },
-                  ]}
-                  onStartShouldSetResponder={() => true}
-                >
-                  <ScrollView style={styles.timeList} nestedScrollEnabled>
-                    {TIME_OPTIONS.map((time) => (
-                      <TouchableOpacity
-                        key={time}
-                        style={[
-                          styles.modalItem,
-                          startTime === time && {
-                            backgroundColor: themeColors.controlSelected,
-                          },
-                        ]}
-                        onPress={() => {
-                          setStartTime(time);
-                          setStartTimeDropdownOpen(false);
-                        }}
-                      >
-                        <Text
-                          style={[
-                            styles.modalItemText,
-                            startTime === time && styles.modalItemTextSelected,
-                            {
-                              color:
-                                startTime === time
-                                  ? themeColors.textOnAccent
-                                  : themeColors.textPrimary,
-                            },
-                          ]}
-                        >
-                          {time}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              </Pressable>
-            </Modal>
-          )}
+          <TimePickerField
+            label="Start Time"
+            title="Select Start Time"
+            value={timeStringToDate(startTime)}
+            onChange={(selected) => setStartTime(dateToTimeString(selected))}
+            containerStyle={styles.lastControl}
+          />
         </View>
 
         <View

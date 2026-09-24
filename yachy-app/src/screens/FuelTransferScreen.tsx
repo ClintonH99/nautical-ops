@@ -9,10 +9,16 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { Button, DateOnlyPicker, Input, LoadingSpinner, PageHeader } from '../components';
+import {
+  Button,
+  DateOnlyPicker,
+  Input,
+  LoadingSpinner,
+  PageHeader,
+  TimePickerField,
+} from '../components';
 import { FuelSelectField, FuelSelectOption } from '../components/FuelSelectField';
 import { BORDER_RADIUS, COLORS, FONTS, SIZES, SPACING } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -96,7 +102,6 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
   const [transferDate, setTransferDate] = useState(localDateString());
   const [transferTime, setTransferTime] = useState(new Date());
   const [utcOffsetMinutes, setUtcOffsetMinutes] = useState(-new Date().getTimezoneOffset());
-  const [showTimePicker, setShowTimePicker] = useState(false);
   const [location, setLocation] = useState('');
   const [notes, setNotes] = useState('');
   const [previewRefreshing, setPreviewRefreshing] = useState(false);
@@ -830,62 +835,13 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
               value={transferDate}
               onChange={setTransferDate}
             />
-            <View style={styles.field}>
-              <Text style={[styles.label, { color: themeColors.textPrimary }]}>Time</Text>
-              {Platform.OS === 'ios' ? (
-                <View
-                  style={[
-                    styles.timeField,
-                    {
-                      backgroundColor: themeColors.surface,
-                      borderColor: themeColors.border,
-                    },
-                  ]}
-                >
-                  <Text style={[styles.timeValue, { color: themeColors.textPrimary }]}>
-                    {formatTime(transferTime)}
-                  </Text>
-                  <DateTimePicker
-                    value={transferTime}
-                    mode="time"
-                    display="compact"
-                    onChange={(_: DateTimePickerEvent, selected?: Date) => {
-                      if (selected) setTransferTime(selected);
-                    }}
-                  />
-                </View>
-              ) : (
-                <>
-                  <TouchableOpacity
-                    style={[
-                      styles.timeField,
-                      {
-                        backgroundColor: themeColors.surface,
-                        borderColor: themeColors.border,
-                      },
-                    ]}
-                    onPress={() => setShowTimePicker(true)}
-                  >
-                    <Text style={[styles.timeValue, { color: themeColors.textPrimary }]}>
-                      {formatTime(transferTime)}
-                    </Text>
-                    <Ionicons name="time-outline" size={22} color={themeColors.textSecondary} />
-                  </TouchableOpacity>
-                  {showTimePicker ? (
-                    <DateTimePicker
-                      value={transferTime}
-                      mode="time"
-                      display="default"
-                      is24Hour
-                      onChange={(_: DateTimePickerEvent, selected?: Date) => {
-                        setShowTimePicker(false);
-                        if (selected) setTransferTime(selected);
-                      }}
-                    />
-                  ) : null}
-                </>
-              )}
-            </View>
+            <TimePickerField
+              label="Time"
+              title="Select Fuel Transfer Time"
+              value={transferTime}
+              onChange={setTransferTime}
+              containerStyle={styles.field}
+            />
             <Input
               label="Comment"
               value={notes}

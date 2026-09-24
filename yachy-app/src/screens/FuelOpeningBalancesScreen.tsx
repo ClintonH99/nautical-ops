@@ -7,13 +7,18 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { Button, DateOnlyPicker, Input, LoadingSpinner, PageHeader } from '../components';
+import {
+  Button,
+  DateOnlyPicker,
+  Input,
+  LoadingSpinner,
+  PageHeader,
+  TimePickerField,
+} from '../components';
 import { BORDER_RADIUS, COLORS, FONTS, SIZES, SPACING } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { fuelManagementService } from '../services/fuelManagement';
@@ -31,10 +36,6 @@ function localDateString(date = new Date()): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
     date.getDate()
   ).padStart(2, '0')}`;
-}
-
-function formatTime(date: Date): string {
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 
 function parseDecimal(value: string): number {
@@ -69,7 +70,6 @@ export const FuelOpeningBalancesScreen = ({ navigation, route }: any) => {
   const [entryDate, setEntryDate] = useState(localDateString());
   const [entryTime, setEntryTime] = useState(new Date());
   const [utcOffsetMinutes, setUtcOffsetMinutes] = useState(-new Date().getTimezoneOffset());
-  const [showTimePicker, setShowTimePicker] = useState(false);
   const [notes, setNotes] = useState('');
   const [amendmentReason, setAmendmentReason] = useState('');
   const requestRef = useRef<{ fingerprint: string; id: string } | null>(null);
@@ -411,54 +411,13 @@ export const FuelOpeningBalancesScreen = ({ navigation, route }: any) => {
             />
             {!correctionMode ? (
               <>
-                <View style={styles.field}>
-                  <Text style={[styles.label, { color: themeColors.textPrimary }]}>Time</Text>
-                  {Platform.OS === 'ios' ? (
-                    <View
-                      style={[
-                        styles.timeField,
-                        { backgroundColor: themeColors.control, borderColor: themeColors.border },
-                      ]}
-                    >
-                      <Text style={[styles.timeValue, { color: themeColors.textPrimary }]}>
-                        {formatTime(entryTime)}
-                      </Text>
-                      <DateTimePicker
-                        value={entryTime}
-                        mode="time"
-                        display="compact"
-                        onChange={(_: DateTimePickerEvent, selected?: Date) =>
-                          selected && setEntryTime(selected)
-                        }
-                      />
-                    </View>
-                  ) : (
-                    <>
-                      <TouchableOpacity
-                        style={[
-                          styles.timeField,
-                          { backgroundColor: themeColors.control, borderColor: themeColors.border },
-                        ]}
-                        onPress={() => setShowTimePicker(true)}
-                      >
-                        <Text style={[styles.timeValue, { color: themeColors.textPrimary }]}>
-                          {formatTime(entryTime)}
-                        </Text>
-                        <Ionicons name="time-outline" size={22} color={themeColors.textSecondary} />
-                      </TouchableOpacity>
-                      {showTimePicker ? (
-                        <DateTimePicker
-                          value={entryTime}
-                          mode="time"
-                          onChange={(_: DateTimePickerEvent, selected?: Date) => {
-                            setShowTimePicker(false);
-                            if (selected) setEntryTime(selected);
-                          }}
-                        />
-                      ) : null}
-                    </>
-                  )}
-                </View>
+                <TimePickerField
+                  label="Time"
+                  title="Select Opening Level Time"
+                  value={entryTime}
+                  onChange={setEntryTime}
+                  containerStyle={styles.field}
+                />
               </>
             ) : null}
           </View>

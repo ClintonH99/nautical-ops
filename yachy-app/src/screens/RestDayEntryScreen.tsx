@@ -18,16 +18,13 @@ import {
   Alert,
   ActivityIndicator,
   TextInput,
-  Platform,
-  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { Button, PageHeader } from '../components';
+import { Button, PageHeader, TimePickerField } from '../components';
 import {
   RestPeriod,
   RestEntry,
@@ -73,8 +70,6 @@ type TimeField =
   | { type: 'work'; edge: 'start' | 'end' }
   | { type: 'lunch'; edge: 'start' | 'end' };
 
-type ActiveField = TimeField | null;
-
 export const RestDayEntryScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
@@ -90,8 +85,6 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   const [lunchEnd, setLunchEnd] = useState<string | null>('13:00');
   const [status, setStatus] = useState<RestEntryStatus>('draft');
   const [watchPeriods, setWatchPeriods] = useState<WatchWorkPeriod[]>([]);
-  const [activeField, setActiveField] = useState<ActiveField>(null);
-  const [pendingTime, setPendingTime] = useState<Date | null>(null);
   const [saving, setSaving] = useState(false);
   const [isManager, setIsManager] = useState(false);
   const [hasExistingEntry, setHasExistingEntry] = useState(false);
@@ -152,22 +145,6 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   const compliance = checkCompliance(restPeriods);
   const watchRestConflicts = getRestWatchConflicts(restPeriods, watchPeriods);
 
-  const getTimeForField = (field: TimeField): string | null => {
-    if (field.type === 'rest') {
-      return field.edge === 'start' ? restPeriods[field.index].start : restPeriods[field.index].end;
-    }
-    if (field.type === 'work') {
-      return field.edge === 'start' ? workStart : workEnd;
-    }
-    return field.edge === 'start' ? lunchStart : lunchEnd;
-  };
-
-  const openPicker = (field: TimeField) => {
-    if (isLocked) return;
-    setPendingTime(timeStringToDate(getTimeForField(field)));
-    setActiveField(field);
-  };
-
   const applyTime = (field: TimeField, selectedDate: Date) => {
     const timeStr = dateToTimeString(selectedDate);
 
@@ -184,33 +161,6 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
       if (field.edge === 'start') setLunchStart(timeStr);
       else setLunchEnd(timeStr);
     }
-  };
-
-  const closePicker = () => {
-    setActiveField(null);
-    setPendingTime(null);
-  };
-
-  const handleTimeChange = (event: any, selectedDate?: Date) => {
-    if (event.type === 'dismissed') {
-      closePicker();
-      return;
-    }
-    if (!selectedDate || !activeField) return;
-
-    if (Platform.OS === 'ios') {
-      setPendingTime(selectedDate);
-      return;
-    }
-
-    applyTime(activeField, selectedDate);
-    closePicker();
-  };
-
-  const confirmPendingTime = () => {
-    if (!activeField || !pendingTime) return;
-    applyTime(activeField, pendingTime);
-    closePicker();
   };
 
   const addRestPeriod = () => {
@@ -334,25 +284,15 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
     await confirmManagedEntry();
   };
 
-  const renderTimeField = (label: string, value: string | null, onPress: () => void) => (
-    <View style={styles.timeField}>
-      <Text style={[styles.timeLabel, { color: themeColors.textPrimary }]}>{label}</Text>
-      <TouchableOpacity
-        style={[
-          styles.timeButton,
-          { backgroundColor: themeColors.control, borderColor: themeColors.border },
-        ]}
-        onPress={onPress}
-        disabled={isLocked}
-        accessibilityRole="button"
-        accessibilityLabel={`${label} time ${value ?? 'not set'}`}
-      >
-        <Text style={[styles.timeValue, { color: themeColors.textPrimary }]}>
-          {value ?? '--:--'}
-        </Text>
-        <Ionicons name="time-outline" size={18} color={themeColors.textSecondary} />
-      </TouchableOpacity>
-    </View>
+  const renderTimeField = (label: string, value: string | null, field: TimeField) => (
+    <TimePickerField
+      label={label}
+      title={`Select ${label} Time`}
+      value={timeStringToDate(value)}
+      onChange={(selected) => applyTime(field, selected)}
+      disabled={isLocked}
+      containerStyle={styles.timeField}
+    />
   );
 
   return (
@@ -440,9 +380,9 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
         >
           <Text style={[styles.sectionTitle, { color: themeColors.accent }]}>Time Worked</Text>
           <View style={styles.timeRow}>
-            {renderTimeField('Start', workStart, () => openPicker({ type: 'work', edge: 'start' }))}
+            {renderTimeField('Start', workStart, { type: 'work', edge: 'start' })}
             <Text style={[styles.timeArrow, { color: themeColors.textSecondary }]}>→</Text>
-            {renderTimeField('End', workEnd, () => openPicker({ type: 'work', edge: 'end' }))}
+            {renderTimeField('End', workEnd, { type: 'work', edge: 'end' })}
           </View>
         </View>
 
@@ -494,11 +434,9 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
         >
           <Text style={[styles.sectionTitle, { color: themeColors.accent }]}>Lunch Break</Text>
           <View style={styles.timeRow}>
-            {renderTimeField('Start', lunchStart, () =>
-              openPicker({ type: 'lunch', edge: 'start' })
-            )}
+            {renderTimeField('Start', lunchStart, { type: 'lunch', edge: 'start' })}
             <Text style={[styles.timeArrow, { color: themeColors.textSecondary }]}>→</Text>
-            {renderTimeField('End', lunchEnd, () => openPicker({ type: 'lunch', edge: 'end' }))}
+            {renderTimeField('End', lunchEnd, { type: 'lunch', edge: 'end' })}
           </View>
         </View>
 
@@ -512,13 +450,17 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
           {restPeriods.map((period, index) => (
             <View key={index} style={styles.restPeriod}>
               <View style={styles.timeRow}>
-                {renderTimeField('Start', period.start, () =>
-                  openPicker({ type: 'rest', index, edge: 'start' })
-                )}
+                {renderTimeField('Start', period.start, {
+                  type: 'rest',
+                  index,
+                  edge: 'start',
+                })}
                 <Text style={[styles.timeArrow, { color: themeColors.textSecondary }]}>→</Text>
-                {renderTimeField('End', period.end, () =>
-                  openPicker({ type: 'rest', index, edge: 'end' })
-                )}
+                {renderTimeField('End', period.end, {
+                  type: 'rest',
+                  index,
+                  edge: 'end',
+                })}
               </View>
               {!isLocked && restPeriods.length > 1 && (
                 <View style={styles.removePeriodRow}>
@@ -629,57 +571,6 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
           )
         )}
       </ScrollView>
-
-      {activeField && Platform.OS !== 'ios' && (
-        <DateTimePicker
-          value={pendingTime ?? timeStringToDate(getTimeForField(activeField))}
-          mode="time"
-          display="default"
-          is24Hour
-          onChange={handleTimeChange}
-        />
-      )}
-
-      <Modal
-        visible={Boolean(activeField) && Platform.OS === 'ios'}
-        transparent
-        animationType="fade"
-        presentationStyle="overFullScreen"
-        onRequestClose={closePicker}
-      >
-        <View style={styles.pickerModalOverlay}>
-          <View
-            style={[
-              styles.pickerModalCard,
-              { backgroundColor: themeColors.surface, borderColor: themeColors.border },
-            ]}
-          >
-            <Text style={[styles.pickerModalTitle, { color: themeColors.textPrimary }]}>
-              Select Time
-            </Text>
-            {activeField && (
-              <DateTimePicker
-                value={pendingTime ?? timeStringToDate(getTimeForField(activeField))}
-                mode="time"
-                display="spinner"
-                is24Hour
-                themeVariant={themeColors.isDark ? 'dark' : 'light'}
-                onChange={handleTimeChange}
-              />
-            )}
-            <TouchableOpacity
-              accessibilityRole="button"
-              accessibilityLabel="Confirm selected time"
-              style={[styles.pickerDoneButton, { backgroundColor: themeColors.controlSelected }]}
-              onPress={confirmPendingTime}
-            >
-              <Text style={[styles.pickerDoneButtonText, { color: themeColors.textOnAccent }]}>
-                Done
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 };

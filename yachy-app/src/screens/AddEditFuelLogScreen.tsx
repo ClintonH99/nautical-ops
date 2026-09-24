@@ -17,11 +17,17 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import * as Crypto from 'expo-crypto';
 import { useFocusEffect } from '@react-navigation/native';
-import { Button, DateOnlyPicker, Input, LoadingSpinner, PageHeader } from '../components';
+import {
+  Button,
+  DateOnlyPicker,
+  Input,
+  LoadingSpinner,
+  PageHeader,
+  TimePickerField,
+} from '../components';
 import { FuelSelectField } from '../components/FuelSelectField';
 import { BORDER_RADIUS, COLORS, FONTS, SIZES, SPACING } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -154,7 +160,6 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
   const [logDate, setLogDate] = useState(localDateString());
   const [logTime, setLogTime] = useState(new Date());
   const [utcOffsetMinutes, setUtcOffsetMinutes] = useState(-new Date().getTimezoneOffset());
-  const [showTimePicker, setShowTimePicker] = useState(false);
   const [location, setLocation] = useState('');
   const [pricePerUnit, setPricePerUnit] = useState('');
   const [currencyCode, setCurrencyCode] = useState('USD');
@@ -969,62 +974,13 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
               value={logDate}
               onChange={setLogDate}
             />
-            <View style={styles.field}>
-              <Text style={[styles.label, { color: themeColors.textPrimary }]}>Time</Text>
-              {Platform.OS === 'ios' ? (
-                <View
-                  style={[
-                    styles.timeField,
-                    {
-                      backgroundColor: themeColors.surface,
-                      borderColor: themeColors.border,
-                    },
-                  ]}
-                >
-                  <Text style={[styles.timeValue, { color: themeColors.textPrimary }]}>
-                    {formatTime(logTime)}
-                  </Text>
-                  <DateTimePicker
-                    value={logTime}
-                    mode="time"
-                    display="compact"
-                    onChange={(_: DateTimePickerEvent, selected?: Date) => {
-                      if (selected) setLogTime(selected);
-                    }}
-                  />
-                </View>
-              ) : (
-                <>
-                  <TouchableOpacity
-                    style={[
-                      styles.timeField,
-                      {
-                        backgroundColor: themeColors.surface,
-                        borderColor: themeColors.border,
-                      },
-                    ]}
-                    onPress={() => setShowTimePicker(true)}
-                  >
-                    <Text style={[styles.timeValue, { color: themeColors.textPrimary }]}>
-                      {formatTime(logTime)}
-                    </Text>
-                    <Ionicons name="time-outline" size={22} color={themeColors.textSecondary} />
-                  </TouchableOpacity>
-                  {showTimePicker ? (
-                    <DateTimePicker
-                      value={logTime}
-                      mode="time"
-                      display="default"
-                      is24Hour
-                      onChange={(_: DateTimePickerEvent, selected?: Date) => {
-                        setShowTimePicker(false);
-                        if (selected) setLogTime(selected);
-                      }}
-                    />
-                  ) : null}
-                </>
-              )}
-            </View>
+            <TimePickerField
+              label="Time"
+              title="Select Fuel Receipt Time"
+              value={logTime}
+              onChange={setLogTime}
+              containerStyle={styles.field}
+            />
           </View>
 
           <View style={[styles.capacityCard, { backgroundColor: themeColors.surface }]}>

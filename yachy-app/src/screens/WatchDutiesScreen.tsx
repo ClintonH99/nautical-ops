@@ -20,7 +20,6 @@ import {
   Pressable,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import userService from '../services/user';
 import { User } from '../types';
@@ -32,6 +31,8 @@ import {
   PageHeader,
   EnterToAddHint,
   PreviewActionButtons,
+  TimePickerSheetContent,
+  TimePickerTrigger,
 } from '../components';
 import {
   getRules,
@@ -713,21 +714,40 @@ export const WatchDutiesScreen = () => {
 
         {assignModalVisible && assignDate && (
           <Modal visible transparent animationType="fade" onRequestClose={closeAssignModal}>
-            <View style={styles.modalBackdrop}>
-              <Pressable style={StyleSheet.absoluteFill} onPress={closeAssignModal} />
+            <View style={[styles.modalBackdrop, activeTimeField && styles.timePickerModalBackdrop]}>
+              <Pressable
+                style={StyleSheet.absoluteFill}
+                onPress={() => (activeTimeField ? setActiveTimeField(null) : closeAssignModal())}
+              />
               <View
                 style={[
                   styles.modalBox,
+                  activeTimeField && styles.timePickerModalBox,
                   {
                     backgroundColor: themeColors.surfaceElevated,
                     borderColor: themeColors.border,
                     // Let short forms stay compact, while giving long assignment
                     // and crew lists room to scroll on smaller phones.
-                    maxHeight: '85%',
+                    maxHeight: activeTimeField ? '100%' : '85%',
                   },
                 ]}
               >
-                {crewPickerVisible ? (
+                {activeTimeField ? (
+                  <TimePickerSheetContent
+                    key={activeTimeField}
+                    title={`Select ${activeTimeField === 'start' ? 'Start' : 'End'} Time`}
+                    value={timeStringToDate(
+                      activeTimeField === 'start' ? assignStartTime : assignEndTime
+                    )}
+                    onCancel={() => setActiveTimeField(null)}
+                    onDone={(selectedDate) => {
+                      const timeStr = dateToTimeString(selectedDate);
+                      if (activeTimeField === 'start') setAssignStartTime(timeStr);
+                      else setAssignEndTime(timeStr);
+                      setActiveTimeField(null);
+                    }}
+                  />
+                ) : crewPickerVisible ? (
                   <>
                     <Text style={[styles.modalTitle, { color: themeColors.accent }]}>
                       Select crew
@@ -844,126 +864,45 @@ export const WatchDutiesScreen = () => {
                     </TouchableOpacity>
 
                     <View style={styles.assignmentTimeRow}>
-                      <View style={styles.assignmentTimeField}>
-                        <Text
-                          style={[styles.assignmentFieldLabel, { color: themeColors.textPrimary }]}
-                        >
-                          Start
-                        </Text>
-                        <TouchableOpacity
-                          style={[
-                            styles.timeButton,
-                            {
-                              backgroundColor: themeColors.control,
-                              borderColor: themeColors.border,
-                            },
-                          ]}
-                          onPress={() => setActiveTimeField('start')}
-                        >
-                          <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>
-                            {assignStartTime}
-                          </Text>
-                          <Ionicons
-                            name="time-outline"
-                            size={18}
-                            color={themeColors.textSecondary}
-                          />
-                        </TouchableOpacity>
-                      </View>
+                      <TimePickerTrigger
+                        label="Start"
+                        value={timeStringToDate(assignStartTime)}
+                        onPress={() => setActiveTimeField('start')}
+                        containerStyle={styles.assignmentTimeField}
+                      />
                       <Text
                         style={[styles.assignmentTimeArrow, { color: themeColors.textSecondary }]}
                       >
                         →
                       </Text>
-                      <View style={styles.assignmentTimeField}>
-                        <Text
-                          style={[styles.assignmentFieldLabel, { color: themeColors.textPrimary }]}
-                        >
-                          End
-                        </Text>
-                        <TouchableOpacity
-                          style={[
-                            styles.timeButton,
-                            {
-                              backgroundColor: themeColors.control,
-                              borderColor: themeColors.border,
-                            },
-                          ]}
-                          onPress={() => setActiveTimeField('end')}
-                        >
-                          <Text style={{ color: themeColors.textPrimary, fontSize: FONTS.sm }}>
-                            {assignEndTime}
-                          </Text>
-                          <Ionicons
-                            name="time-outline"
-                            size={18}
-                            color={themeColors.textSecondary}
-                          />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-
-                    {activeTimeField && (
-                      <DateTimePicker
-                        value={timeStringToDate(
-                          activeTimeField === 'start' ? assignStartTime : assignEndTime
-                        )}
-                        mode="time"
-                        display="spinner"
-                        themeVariant={themeColors.isDark ? 'dark' : 'light'}
-                        onChange={(event, selectedDate) => {
-                          if (selectedDate) {
-                            const timeStr = dateToTimeString(selectedDate);
-                            if (activeTimeField === 'start') setAssignStartTime(timeStr);
-                            else setAssignEndTime(timeStr);
-                          }
-                          if (Platform.OS === 'android') setActiveTimeField(null);
-                        }}
+                      <TimePickerTrigger
+                        label="End"
+                        value={timeStringToDate(assignEndTime)}
+                        onPress={() => setActiveTimeField('end')}
+                        containerStyle={styles.assignmentTimeField}
                       />
-                    )}
-                    {activeTimeField && Platform.OS === 'ios' && (
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
                       <TouchableOpacity
-                        onPress={() => setActiveTimeField(null)}
+                        onPress={closeAssignModal}
+                        style={[styles.secondaryButton, { borderColor: themeColors.borderStrong }]}
+                      >
+                        <Text style={{ color: themeColors.textPrimary }}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={handleAssignCrew}
+                        disabled={!selectedCrewId}
                         style={[
                           styles.primaryButton,
                           {
                             backgroundColor: themeColors.controlSelected,
-                            marginBottom: SPACING.md,
+                            opacity: !selectedCrewId ? 0.6 : 1,
                           },
                         ]}
                       >
-                        <Text style={{ color: '#fff', fontWeight: '600' }}>Done</Text>
+                        <Text style={{ color: '#fff', fontWeight: '600' }}>Assign Crew Member</Text>
                       </TouchableOpacity>
-                    )}
-
-                    {!activeTimeField && (
-                      <View style={{ flexDirection: 'row', gap: SPACING.sm }}>
-                        <TouchableOpacity
-                          onPress={closeAssignModal}
-                          style={[
-                            styles.secondaryButton,
-                            { borderColor: themeColors.borderStrong },
-                          ]}
-                        >
-                          <Text style={{ color: themeColors.textPrimary }}>Cancel</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={handleAssignCrew}
-                          disabled={!selectedCrewId}
-                          style={[
-                            styles.primaryButton,
-                            {
-                              backgroundColor: themeColors.controlSelected,
-                              opacity: !selectedCrewId ? 0.6 : 1,
-                            },
-                          ]}
-                        >
-                          <Text style={{ color: '#fff', fontWeight: '600' }}>
-                            Assign Crew Member
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
+                    </View>
                   </ScrollView>
                 )}
               </View>
@@ -1549,6 +1488,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: SPACING.lg,
   },
+  timePickerModalBackdrop: {
+    justifyContent: 'flex-end',
+    alignItems: 'stretch',
+    padding: 0,
+  },
   modalBox: {
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.md,
@@ -1557,6 +1501,20 @@ const styles = StyleSheet.create({
     minWidth: 260,
     maxHeight: '85%',
     borderWidth: 1,
+  },
+  timePickerModalBox: {
+    width: '100%',
+    maxWidth: '100%',
+    minWidth: 0,
+    maxHeight: '100%',
+    borderBottomWidth: 0,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    borderTopLeftRadius: BORDER_RADIUS.xl,
+    borderTopRightRadius: BORDER_RADIUS.xl,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.lg,
   },
   modalTitle: { fontSize: FONTS.lg, fontWeight: '600', marginBottom: SPACING.md },
   modalItem: {
