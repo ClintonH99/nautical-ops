@@ -19,6 +19,7 @@ import {
   ActivityIndicator,
   TextInput,
   Platform,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -577,30 +578,6 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
             {comment.length}/40
           </Text>
         </View>
-        {activeField && (
-          <View style={styles.timePickerContainer}>
-            <DateTimePicker
-              value={pendingTime ?? timeStringToDate(getTimeForField(activeField))}
-              mode="time"
-              display="spinner"
-              themeVariant={themeColors.isDark ? 'dark' : 'light'}
-              onChange={handleTimeChange}
-            />
-            {Platform.OS === 'ios' && (
-              <TouchableOpacity
-                accessibilityRole="button"
-                accessibilityLabel="Confirm selected time"
-                style={[styles.pickerDoneButton, { backgroundColor: themeColors.controlSelected }]}
-                onPress={confirmPendingTime}
-              >
-                <Text style={[styles.pickerDoneButtonText, { color: themeColors.textOnAccent }]}>
-                  Done
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
-
         <View
           style={[
             styles.complianceBox,
@@ -652,6 +629,57 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
           )
         )}
       </ScrollView>
+
+      {activeField && Platform.OS !== 'ios' && (
+        <DateTimePicker
+          value={pendingTime ?? timeStringToDate(getTimeForField(activeField))}
+          mode="time"
+          display="default"
+          is24Hour
+          onChange={handleTimeChange}
+        />
+      )}
+
+      <Modal
+        visible={Boolean(activeField) && Platform.OS === 'ios'}
+        transparent
+        animationType="fade"
+        presentationStyle="overFullScreen"
+        onRequestClose={closePicker}
+      >
+        <View style={styles.pickerModalOverlay}>
+          <View
+            style={[
+              styles.pickerModalCard,
+              { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+            ]}
+          >
+            <Text style={[styles.pickerModalTitle, { color: themeColors.textPrimary }]}>
+              Select Time
+            </Text>
+            {activeField && (
+              <DateTimePicker
+                value={pendingTime ?? timeStringToDate(getTimeForField(activeField))}
+                mode="time"
+                display="spinner"
+                is24Hour
+                themeVariant={themeColors.isDark ? 'dark' : 'light'}
+                onChange={handleTimeChange}
+              />
+            )}
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Confirm selected time"
+              style={[styles.pickerDoneButton, { backgroundColor: themeColors.controlSelected }]}
+              onPress={confirmPendingTime}
+            >
+              <Text style={[styles.pickerDoneButtonText, { color: themeColors.textOnAccent }]}>
+                Done
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -777,8 +805,22 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xs,
   },
   characterCount: { alignSelf: 'flex-end', fontSize: FONTS.xs },
-  timePickerContainer: {
-    marginBottom: SPACING.md,
+  pickerModalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: SPACING.lg,
+    backgroundColor: 'rgba(15, 23, 42, 0.48)',
+  },
+  pickerModalCard: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.lg,
+  },
+  pickerModalTitle: {
+    fontSize: FONTS.lg,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: SPACING.sm,
   },
   pickerDoneButton: {
     paddingVertical: SPACING.sm,

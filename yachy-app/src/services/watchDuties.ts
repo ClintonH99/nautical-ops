@@ -251,15 +251,20 @@ export async function addWatchAssignment(
   userId: string,
   startTime: string,
   endTime: string
-): Promise<void> {
-  const { error } = await supabase.from('watch_assignments').insert({
-    vessel_id: vesselId,
-    date,
-    user_id: userId,
-    start_time: startTime,
-    end_time: endTime,
-  });
+): Promise<string> {
+  const { data, error } = await supabase
+    .from('watch_assignments')
+    .insert({
+      vessel_id: vesselId,
+      date,
+      user_id: userId,
+      start_time: startTime,
+      end_time: endTime,
+    })
+    .select('id')
+    .single();
   if (error) throw error;
+  return data.id;
 }
 
 export async function removeWatchAssignment(assignmentId: string): Promise<void> {

@@ -54,18 +54,68 @@ interface WebhookPayload {
   old_record: any | null;
 }
 
-const BRAND_HEADER = `
-  <div style="background:#0D1B2A; padding:32px 20px; text-align:center;">
-    <div style="display:inline-block; border:1.5px solid #C9A227; padding:10px 24px;">
-      <span style="color:#ffffff; font-size:15px; font-weight:500; letter-spacing:2px;">NAUTICAL OPS</span>
+const BRAND_LOGO_URL =
+  'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/a1/50/af/a150aff3-5e28-31a3-b01f-3cbfd2ee26c0/AppIcon-0-0-1x_U007epad-0-1-85-220.png/512x512bb.jpg';
+const APP_URL = 'https://www.nautical-ops.com/login';
+
+function emailButton(label: string): string {
+  return `
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:26px 0 22px;">
+      <tr>
+        <td style="border-radius:14px; background:#1E3A8A;">
+          <a href="${APP_URL}" style="display:inline-block; min-width:190px; padding:15px 24px; color:#ffffff; font-size:15px; font-weight:700; line-height:20px; text-align:center; text-decoration:none;">${escapeHtml(label)}</a>
+        </td>
+      </tr>
+    </table>
+  `;
+}
+
+function emailInfoBox(content: string): string {
+  return `
+    <div style="margin:22px 0 0; padding:17px 18px; border:1px solid #E4E8EF; border-radius:14px; background:#FAFBFC; color:#415066; font-size:14px; line-height:1.55;">
+      ${content}
     </div>
-  </div>
-`;
-const BRAND_FOOTER = `
-  <div style="border-top:1px solid #e5e5e5; padding:16px 24px; text-align:center;">
-    <span style="font-size:11px; color:#888888;">Nautical Ops \u00b7 Built by crew, for crew</span>
-  </div>
-`;
+  `;
+}
+
+function emailShell(kicker: string, title: string, content: string): string {
+  return `
+    <div style="margin:0; padding:24px 12px; background:#EEF2F6; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif; color:#101828;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+        <tr>
+          <td align="center">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%; max-width:620px; overflow:hidden; border:1px solid #E0E5EC; border-radius:18px; background:#ffffff;">
+              <tr>
+                <td align="center" style="padding:14px 24px; border-bottom:1px solid #EDF0F4; background:#ffffff;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                    <tr>
+                      <td style="padding-right:11px; vertical-align:middle;">
+                        <img src="${BRAND_LOGO_URL}" width="46" height="46" alt="Nautical Ops" style="display:block; width:46px; height:46px; border:0; border-radius:12px;" />
+                      </td>
+                      <td style="vertical-align:middle; color:#10295F; font-size:22px; font-weight:800; line-height:24px; letter-spacing:-0.4px; white-space:nowrap;">Nautical Ops</td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:36px 44px 32px; background:#ffffff;">
+                  <p style="margin:0 0 9px; color:#1E3A8A; font-size:12px; font-weight:800; line-height:16px; letter-spacing:1.4px; text-transform:uppercase;">${escapeHtml(kicker)}</p>
+                  <h1 style="margin:0 0 14px; color:#101828; font-size:30px; font-weight:800; line-height:35px; letter-spacing:-0.7px;">${escapeHtml(title)}</h1>
+                  ${content}
+                </td>
+              </tr>
+              <tr>
+                <td align="center" style="padding:21px 28px 23px; border-top:1px solid #EDF0F4; background:#FBFCFD; color:#8792A3; font-size:12px; line-height:19px;">
+                  Nautical Ops<br />An app for crew, from crew.
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </div>
+  `;
+}
 
 async function sendCaptainSignupEmail(captainEmail: string, captainName: string) {
   const safeCaptainName = escapeHtml(captainName || 'Captain');
@@ -73,18 +123,17 @@ async function sendCaptainSignupEmail(captainEmail: string, captainName: string)
     from: 'Nautical Ops <hello@nautical-ops.com>',
     to: captainEmail,
     replyTo: 'support@nautical-ops.com',
-    subject: 'Welcome to Nautical Ops',
-    html: `
-      ${BRAND_HEADER}
-      <div style="padding:28px 24px; font-size:14px; line-height:1.7; color:#111111;">
-        <p style="margin:0 0 14px;">Hi ${safeCaptainName},</p>
-        <p style="margin:0 0 14px;">You're in \u2014 your account and vessel are ready to go. Nautical Ops is built to handle the day-to-day: tasks, watch schedules, hours of rest, safety records, all in one place.</p>
-        <p style="margin:0 0 14px;">When you're ready to bring your crew on board, head to <strong>Vessel Plans</strong> to choose a subscription that fits your crew size \u2014 that's what unlocks your invite code so you can start adding people.</p>
-        <p style="margin:0 0 14px;">If you have any questions, email us at support@nautical-ops.com.</p>
-        <p style="margin:0;">Fair winds and following seas,<br>Clinton Handford<br>Founder & Developer of Nautical Ops</p>
-      </div>
-      ${BRAND_FOOTER}
-    `,
+    subject: 'Welcome aboard, Captain',
+    html: emailShell(
+      'Captain account',
+      'Welcome aboard, Captain',
+      `
+        <p style="margin:0 0 20px; color:#526176; font-size:16px; line-height:1.6;">Hi ${safeCaptainName},</p>
+        <p style="margin:0 0 20px; color:#526176; font-size:16px; line-height:1.6;">Your Captain (MOV) account is ready. You can now create your vessel, invite your crew, and manage operations from one place.</p>
+        ${emailButton('Open Nautical Ops')}
+        ${emailInfoBox('Start by creating your vessel profile. Once it is ready, Nautical Ops will generate the invite code your crew can use to join.')}
+      `
+    ),
   });
 }
 
@@ -116,17 +165,16 @@ async function sendCaptainSubscriptionEmail(vesselId: string) {
     to: captain.email,
     replyTo: 'support@nautical-ops.com',
     subject: "Welcome aboard \u2014 you're officially subscribed",
-    html: `
-      ${BRAND_HEADER}
-      <div style="padding:28px 24px; font-size:14px; line-height:1.7; color:#111111;">
-        <p style="margin:0 0 14px;">Hi ${captainName},</p>
-        <p style="margin:0 0 14px;">Thank you for subscribing to Nautical Ops for <strong>${vesselName}</strong>. You're all set \u2014 head into the app and open <strong>Vessel Settings</strong> to find your crew invite code, and start adding your team.</p>
-        <p style="margin:0 0 14px;">One more thing worth knowing: 5% of every subscription goes straight to ocean cleanup. So beyond running a smoother vessel, you're already doing something good for the water we all work on.</p>
-        <p style="margin:0 0 14px;">If anything's missing or you want a feature added, email us at <span style="color:#0D1B2A; font-weight:500;">support@nautical-ops.com</span>.</p>
-        <p style="margin:0;">Fair winds and following seas,<br>Clinton Handford<br>Founder & Developer of Nautical Ops</p>
-      </div>
-      ${BRAND_FOOTER}
-    `,
+    html: emailShell(
+      'Subscription active',
+      'You are officially subscribed',
+      `
+        <p style="margin:0 0 20px; color:#526176; font-size:16px; line-height:1.6;">Hi ${captainName},</p>
+        <p style="margin:0 0 20px; color:#526176; font-size:16px; line-height:1.6;">Thank you for subscribing to Nautical Ops for <strong>${vesselName}</strong>. Open Vessel Settings to find your crew invite code and start adding your team.</p>
+        ${emailButton('Open Nautical Ops')}
+        ${emailInfoBox('Five percent of every subscription supports ocean cleanup. Thank you for helping protect the waters we all work on.')}
+      `
+    ),
   });
 }
 
@@ -139,15 +187,15 @@ async function sendCrewJoinedEmail(userRecord: any, vesselName: string) {
     to: userRecord.email,
     replyTo: 'support@nautical-ops.com',
     subject: `You're in \u2014 welcome to ${subjectVesselName}`,
-    html: `
-      ${BRAND_HEADER}
-      <div style="padding:28px 24px; font-size:14px; line-height:1.7; color:#111111;">
-        <p style="margin:0 0 14px;">Hi ${safeName},</p>
-        <p style="margin:0 0 14px;">You've just joined <strong>${safeVesselName}</strong> on Nautical Ops. Everything you need day to day \u2014 tasks, watch schedules, hours of rest, safety info \u2014 is right there in the app.</p>
-        <p style="margin:0;">Welcome aboard.</p>
-      </div>
-      ${BRAND_FOOTER}
-    `,
+    html: emailShell(
+      'Crew account',
+      'Welcome aboard',
+      `
+        <p style="margin:0 0 20px; color:#526176; font-size:16px; line-height:1.6;">Hi ${safeName},</p>
+        <p style="margin:0 0 20px; color:#526176; font-size:16px; line-height:1.6;">Your crew member account is ready and connected to <strong>${safeVesselName}</strong>. Your vessel tasks, watch schedules, hours of rest, and safety information are now available in Nautical Ops.</p>
+        ${emailButton('Open Nautical Ops')}
+      `
+    ),
   });
 }
 
@@ -158,15 +206,16 @@ async function sendCrewSoloSignupEmail(userRecord: any) {
     to: userRecord.email,
     replyTo: 'support@nautical-ops.com',
     subject: 'Welcome to Nautical Ops',
-    html: `
-      ${BRAND_HEADER}
-      <div style="padding:28px 24px; font-size:14px; line-height:1.7; color:#111111;">
-        <p style="margin:0 0 14px;">Hi ${safeName},</p>
-        <p style="margin:0 0 14px;">Your account is ready. Nautical Ops is built to handle the day-to-day life on board \u2014 tasks, watch schedules, hours of rest, safety records, all in one place.</p>
-        <p style="margin:0;">When your Captain sends you an invite code for your vessel, head to <strong>Settings \u2192 My Profile \u2192 Join a different vessel</strong> to get connected to your crew's real setup.</p>
-      </div>
-      ${BRAND_FOOTER}
-    `,
+    html: emailShell(
+      'Crew account',
+      'Welcome aboard',
+      `
+        <p style="margin:0 0 20px; color:#526176; font-size:16px; line-height:1.6;">Hi ${safeName},</p>
+        <p style="margin:0 0 20px; color:#526176; font-size:16px; line-height:1.6;">Your crew member account is ready. You can begin using Nautical Ops independently or join your vessel when you receive an invite code.</p>
+        ${emailButton('Open Nautical Ops')}
+        ${emailInfoBox('When your captain sends an invite code, open Nautical Ops and enter it to connect your account to the vessel.')}
+      `
+    ),
   });
 }
 

@@ -293,7 +293,7 @@ class WatchKeepingService {
         .from('watch_keeping_timetables')
         .select('*')
         .eq('vessel_id', vesselId)
-        .order('for_date', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       return (data || []).map(this.mapRow);

@@ -27,6 +27,7 @@ import watchKeepingService, {
 } from '../services/watchKeeping';
 import { formatLocalDateString } from '../utils';
 import { buildWatchSchedulePdfHtml, getWatchScheduleDate } from '../utils/watchSchedulePdf';
+import { formatWatchHours, getPublishedWatchDurations } from '../utils/watchTimetable';
 
 function formatSlotDate(slot: TimetableSlot, fallbackDate: string): string {
   const startDate = slot.startDate || fallbackDate;
@@ -36,6 +37,11 @@ function formatSlotDate(slot: TimetableSlot, fallbackDate: string): string {
     return `${startLabel} – ${endLabel}`;
   }
   return startLabel;
+}
+
+function formatDurationLabel(hours: number | null): string {
+  if (hours === null) return '—';
+  return `${formatWatchHours(hours)} ${hours === 1 ? 'hour' : 'hours'}`;
 }
 
 export const WatchScheduleScreen = ({ navigation, route }: any) => {
@@ -221,6 +227,7 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
             });
             const route = [t.startLocation, t.destination].filter(Boolean).join(' to ');
             const collapsedDetails = [route, `Start ${t.startTime}`].filter(Boolean).join(' · ');
+            const publishedDurations = getPublishedWatchDurations(t.slots);
             return (
               <ButtonTagCard
                 key={t.id}
@@ -274,13 +281,42 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
                         {t.destination || '—'}
                       </Text>
                     </View>
-                    <View style={styles.routeItem}>
+                    <View style={[styles.routeItem, styles.startItem]}>
                       <Text style={[styles.routeLabel, { color: themeColors.textSecondary }]}>
                         Start
                       </Text>
                       <Text style={[styles.routeValue, { color: themeColors.textPrimary }]}>
                         {t.startTime}
                       </Text>
+                    </View>
+                  </View>
+                  <View style={[styles.crewRestSection, { borderTopColor: themeColors.border }]}>
+                    <Text style={[styles.crewRestTitle, { color: themeColors.accent }]}>
+                      Crew Watch and Rest
+                    </Text>
+                    <View style={styles.crewRestGrid}>
+                      <View style={styles.crewRestMetric}>
+                        <Text style={[styles.crewRestLabel, { color: themeColors.textSecondary }]}>
+                          Watch Duration p/p
+                        </Text>
+                        <Text style={[styles.crewRestValue, { color: themeColors.textPrimary }]}>
+                          {formatDurationLabel(publishedDurations.watchDurationHours)}
+                        </Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.crewRestMetric,
+                          styles.crewRestMetricDivider,
+                          { borderLeftColor: themeColors.border },
+                        ]}
+                      >
+                        <Text style={[styles.crewRestLabel, { color: themeColors.textSecondary }]}>
+                          Duration Rest p/p
+                        </Text>
+                        <Text style={[styles.crewRestValue, { color: themeColors.textPrimary }]}>
+                          {formatDurationLabel(publishedDurations.restDurationHours)}
+                        </Text>
+                      </View>
                     </View>
                   </View>
                 </View>
@@ -380,6 +416,9 @@ const styles = StyleSheet.create({
     minWidth: '44%',
     flexGrow: 1,
   },
+  startItem: {
+    flexBasis: '100%',
+  },
   routeLabel: {
     fontSize: FONTS.xs,
     fontWeight: '700',
@@ -390,6 +429,40 @@ const styles = StyleSheet.create({
   routeValue: {
     fontSize: FONTS.base,
     lineHeight: 20,
+  },
+  crewRestSection: {
+    borderTopWidth: 1,
+    marginTop: SPACING.md,
+    paddingTop: SPACING.md,
+  },
+  crewRestTitle: {
+    fontSize: FONTS.sm,
+    fontWeight: '700',
+    marginBottom: SPACING.md,
+  },
+  crewRestGrid: {
+    flexDirection: 'row',
+  },
+  crewRestMetric: {
+    flex: 1,
+    minWidth: 0,
+  },
+  crewRestMetricDivider: {
+    borderLeftWidth: 1,
+    paddingLeft: SPACING.md,
+    marginLeft: SPACING.md,
+  },
+  crewRestLabel: {
+    fontSize: FONTS.xs,
+    fontWeight: '600',
+    lineHeight: 17,
+    minHeight: 34,
+  },
+  crewRestValue: {
+    fontSize: FONTS.lg,
+    fontWeight: '700',
+    lineHeight: 24,
+    marginTop: SPACING.xs,
   },
   notesBlock: {
     marginTop: SPACING.md,

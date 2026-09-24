@@ -12,7 +12,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   TextInput,
   Alert,
   KeyboardAvoidingView,
@@ -100,18 +99,34 @@ const WATCH_DUTIES_INFO = {
   ],
 };
 
+interface WatchDutiesCacheEntry {
+  rules: string;
+  assignments: WatchAssignment[];
+  dutyGroups: DutyGroup[];
+  crewList: User[];
+}
+
+const watchDutiesCache = new Map<string, WatchDutiesCacheEntry>();
+
 export const WatchDutiesScreen = () => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const canManage = user?.role === 'CAPTAIN_MOV' || user?.role === 'HOD';
 
-  const [loading, setLoading] = useState(true);
-  const [rules, setRules] = useState('');
+  const weekStartDate = getMonday(new Date());
+  const weekStart = toDateStr(weekStartDate);
+  const contextKey =
+    user?.vesselId && user.id
+      ? `${user.vesselId}:${user.id}:${canManage ? 'manage' : 'view'}:${weekStart}`
+      : null;
+  const cachedData = contextKey ? watchDutiesCache.get(contextKey) : undefined;
+
+  const [rules, setRules] = useState(cachedData?.rules ?? '');
   const [editingRules, setEditingRules] = useState(false);
   const [rulesDraft, setRulesDraft] = useState('');
   const [savingRules, setSavingRules] = useState(false);
-  const [assignments, setAssignments] = useState<WatchAssignment[]>([]);
-  const [dutyGroups, setDutyGroups] = useState<DutyGroup[]>([]);
+  const [assignments, setAssignments] = useState<WatchAssignment[]>(cachedData?.assignments ?? []);
+  const [dutyGroups, setDutyGroups] = useState<DutyGroup[]>(cachedData?.dutyGroups ?? []);
   const [selectedDept, setSelectedDept] = useState<Department | 'All'>('All');
   const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(new Set());
   const [addGroupModalVisible, setAddGroupModalVisible] = useState(false);
@@ -121,7 +136,7 @@ export const WatchDutiesScreen = () => {
   const [addingItemGroupId, setAddingItemGroupId] = useState<string | null>(null);
   const [newItemText, setNewItemText] = useState('');
   const [savingGroup, setSavingGroup] = useState(false);
-  const [crewList, setCrewList] = useState<User[]>([]);
+  const [crewList, setCrewList] = useState<User[]>(cachedData?.crewList ?? []);
   const [assignModalVisible, setAssignModalVisible] = useState(false);
   const [assignDate, setAssignDate] = useState<string | null>(null);
   const [crewPickerVisible, setCrewPickerVisible] = useState(false);
@@ -129,7 +144,6 @@ export const WatchDutiesScreen = () => {
   const [assignStartTime, setAssignStartTime] = useState('18:00');
   const [assignEndTime, setAssignEndTime] = useState('08:00');
   const [activeTimeField, setActiveTimeField] = useState<'start' | 'end' | null>(null);
-  const [savingAssignment, setSavingAssignment] = useState(false);
   const [resettingWeek, setResettingWeek] = useState(false);
   const [resettingDuties, setResettingDuties] = useState(false);
   const newGroupItemRefs = useRef<Array<TextInput | null>>([]);
@@ -138,10 +152,8 @@ export const WatchDutiesScreen = () => {
   const pendingDutyStatesRef = useRef(new Map<string, boolean>());
   const savingDutyItemIdsRef = useRef(new Set<string>());
   const mountedRef = useRef(true);
-  const loadedContextRef = useRef<string | null>(null);
+  const loadedContextRef = useRef<string | null>(contextKey);
 
-  const weekStartDate = getMonday(new Date());
-  const weekStart = toDateStr(weekStartDate);
   const weekDates = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStartDate);
     d.setDate(weekStartDate.getDate() + i);
@@ -164,6 +176,20 @@ export const WatchDutiesScreen = () => {
     setDutyGroups(nextGroups);
   }, []);
 
+  const replaceAssignments = useCallback(
+    (update: WatchAssignment[] | ((current: WatchAssignment[]) => WatchAssignment[])) => {
+      setAssignments((current) => {
+        const next = typeof update === 'function' ? update(current) : update;
+        if (contextKey) {
+          const cached = watchDutiesCache.get(contextKey);
+          if (cached) watchDutiesCache.set(contextKey, { ...cached, assignments: next });
+        }
+        return next;
+      });
+    },
+    [contextKey]
+  );
+
   const updateDutyItemLocally = useCallback(
     (itemId: string, checked: boolean) => {
       replaceDutyGroups(
@@ -177,39 +203,42 @@ export const WatchDutiesScreen = () => {
   );
 
   const loadData = useCallback(async () => {
-    if (!user?.vesselId) return;
-    const contextKey = `${user.vesselId}:${user.id}:${weekStart}`;
+    if (!user?.vesselId || !user.id || !contextKey) return;
     if (loadedContextRef.current !== contextKey) {
       loadedContextRef.current = contextKey;
-      setLoading(true);
-      setRules('');
-      setAssignments([]);
-      replaceDutyGroups([]);
-      setCrewList([]);
+      const cached = watchDutiesCache.get(contextKey);
+      setRules(cached?.rules ?? '');
+      setAssignments(cached?.assignments ?? []);
+      replaceDutyGroups(cached?.dutyGroups ?? []);
+      setCrewList(cached?.crewList ?? []);
     }
     try {
-      const [rulesData, assignmentData, dutyData] = await Promise.all([
+      const [rulesData, assignmentData, dutyData, crewData] = await Promise.all([
         getRules(user.vesselId),
         getWeekAssignments(user.vesselId, weekStart),
         getDutyGroups(user.vesselId, user.id),
+        canManage ? userService.getVesselCrew(user.vesselId) : Promise.resolve([] as User[]),
       ]);
+
+      watchDutiesCache.set(contextKey, {
+        rules: rulesData,
+        assignments: assignmentData,
+        dutyGroups: dutyData,
+        crewList: crewData,
+      });
+      if (!mountedRef.current) return;
+
       setRules(rulesData);
       setAssignments(assignmentData);
       confirmedDutyStatesRef.current = new Map(
         dutyData.flatMap((group) => group.items.map((item) => [item.id, item.checked] as const))
       );
       replaceDutyGroups(dutyData);
-
-      if (canManage) {
-        const crewData = await userService.getVesselCrew(user.vesselId);
-        setCrewList(crewData);
-      }
+      setCrewList(crewData);
     } catch (e) {
       console.error('Load Watch Duties error:', e);
-    } finally {
-      setLoading(false);
     }
-  }, [canManage, replaceDutyGroups, user?.id, user?.vesselId, weekStart]);
+  }, [canManage, contextKey, replaceDutyGroups, user?.id, user?.vesselId, weekStart]);
 
   useFocusEffect(
     useCallback(() => {
@@ -293,25 +322,49 @@ export const WatchDutiesScreen = () => {
     setCrewPickerVisible(false);
   };
 
-  const handleAssignCrew = async () => {
+  const handleAssignCrew = () => {
     if (!user?.vesselId || !assignDate || !selectedCrewId) return;
-    setSavingAssignment(true);
-    try {
-      await addWatchAssignment(
-        user.vesselId,
-        assignDate,
-        selectedCrewId,
-        assignStartTime,
-        assignEndTime
-      );
-      const updated = await getWeekAssignments(user.vesselId, weekStart);
-      setAssignments(updated);
-      setSelectedCrewId(null);
-    } catch (e) {
-      Alert.alert('Error', 'Failed to assign watch.');
-    } finally {
-      setSavingAssignment(false);
-    }
+    const vesselId = user.vesselId;
+    const date = assignDate;
+    const crewId = selectedCrewId;
+    const startTime = assignStartTime;
+    const endTime = assignEndTime;
+    const crewName = crewList.find((crew) => crew.id === crewId)?.name ?? 'Crew Member';
+    const optimisticId = `pending-${Date.now()}-${crewId}`;
+
+    replaceAssignments((current) => [
+      ...current,
+      {
+        id: optimisticId,
+        date,
+        userId: crewId,
+        userName: crewName,
+        startTime,
+        endTime,
+      },
+    ]);
+    setSelectedCrewId(null);
+    closeAssignModal();
+
+    void (async () => {
+      try {
+        const savedId = await addWatchAssignment(vesselId, date, crewId, startTime, endTime);
+        replaceAssignments((current) =>
+          current.map((assignment) =>
+            assignment.id === optimisticId ? { ...assignment, id: savedId } : assignment
+          )
+        );
+      } catch (error) {
+        console.error('Assign watch error:', error);
+        replaceAssignments((current) =>
+          current.filter((assignment) => assignment.id !== optimisticId)
+        );
+        Alert.alert(
+          'Could not assign crew member',
+          'The assignment was not saved. Please try again.'
+        );
+      }
+    })();
   };
 
   const handleRemoveAssignment = (assignmentId: string) => {
@@ -323,7 +376,7 @@ export const WatchDutiesScreen = () => {
         onPress: async () => {
           try {
             await removeWatchAssignment(assignmentId);
-            setAssignments((prev) => prev.filter((a) => a.id !== assignmentId));
+            replaceAssignments((prev) => prev.filter((a) => a.id !== assignmentId));
           } catch (e) {
             Alert.alert('Error', 'Failed to remove assignment.');
           }
@@ -347,7 +400,7 @@ export const WatchDutiesScreen = () => {
             setResettingWeek(true);
             try {
               await resetWeekAssignments(user.vesselId!, weekStart);
-              setAssignments([]);
+              replaceAssignments([]);
             } catch (e) {
               console.error('Reset week assignments error:', e);
               Alert.alert('Error', 'Failed to reset this week. Please try again.');
@@ -552,19 +605,6 @@ export const WatchDutiesScreen = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <View
-        style={[
-          styles.container,
-          { backgroundColor: themeColors.background, justifyContent: 'center' },
-        ]}
-      >
-        <ActivityIndicator color={themeColors.accent} />
-      </View>
-    );
-  }
-
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: themeColors.background }]}
@@ -727,15 +767,6 @@ export const WatchDutiesScreen = () => {
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
-                    <TouchableOpacity
-                      onPress={() => setCrewPickerVisible(false)}
-                      style={[
-                        styles.secondaryButton,
-                        { marginTop: SPACING.md, borderColor: themeColors.borderStrong },
-                      ]}
-                    >
-                      <Text style={{ color: themeColors.textPrimary }}>Back</Text>
-                    </TouchableOpacity>
                   </>
                 ) : (
                   <ScrollView
@@ -918,17 +949,17 @@ export const WatchDutiesScreen = () => {
                         </TouchableOpacity>
                         <TouchableOpacity
                           onPress={handleAssignCrew}
-                          disabled={savingAssignment || !selectedCrewId}
+                          disabled={!selectedCrewId}
                           style={[
                             styles.primaryButton,
                             {
                               backgroundColor: themeColors.controlSelected,
-                              opacity: savingAssignment || !selectedCrewId ? 0.6 : 1,
+                              opacity: !selectedCrewId ? 0.6 : 1,
                             },
                           ]}
                         >
                           <Text style={{ color: '#fff', fontWeight: '600' }}>
-                            {savingAssignment ? 'Assigning…' : 'Assign Crew Member'}
+                            Assign Crew Member
                           </Text>
                         </TouchableOpacity>
                       </View>

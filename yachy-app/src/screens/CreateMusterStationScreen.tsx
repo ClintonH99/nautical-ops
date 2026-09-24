@@ -52,7 +52,7 @@ const EMPTY_CREW = {
 };
 
 const CREW_DUTY_LABELS: Record<keyof typeof EMPTY_CREW, string> = {
-  roleName: 'Role name',
+  roleName: 'Crew member name',
   fire: 'Fire',
   manOverboard: 'Man Overboard',
   grounding: 'Grounding',
@@ -161,6 +161,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
     index: number;
   } | null>(null);
   const crewDutyRefs = useRef<Record<string, TextInput | null>>({});
+  const pendingCrewNameFocusRef = useRef<number | null>(null);
   const crewFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savingRef = useRef(false);
 
@@ -215,8 +216,26 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
     });
   };
 
-  const addCrew = () =>
-    setCrewMembers((previous) => [...previous, { ...EMPTY_CREW, roleName: 'New crew' }]);
+  const registerCrewDutyRef = (
+    crewIndex: number,
+    field: keyof typeof EMPTY_CREW,
+    input: TextInput | null
+  ) => {
+    crewDutyRefs.current[`${crewIndex}-${field}`] = input;
+    if (field === 'roleName' && input && pendingCrewNameFocusRef.current === crewIndex) {
+      pendingCrewNameFocusRef.current = null;
+      if (crewFocusTimerRef.current) clearTimeout(crewFocusTimerRef.current);
+      crewFocusTimerRef.current = setTimeout(() => {
+        input.focus();
+        crewFocusTimerRef.current = null;
+      }, 50);
+    }
+  };
+
+  const addCrew = () => {
+    pendingCrewNameFocusRef.current = crewMembers.length;
+    setCrewMembers((previous) => [...previous, { ...EMPTY_CREW }]);
+  };
   const removeCrew = (i: number) => {
     setCrewMembers((previous) =>
       previous.length <= 1 ? previous : previous.filter((_, idx) => idx !== i)
@@ -651,10 +670,12 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
                   </TouchableOpacity>
                 </View>
 
-                <Text style={[styles.label, { color: themeColors.textPrimary }]}>Role Name</Text>
+                <Text style={[styles.label, { color: themeColors.textPrimary }]}>
+                  Crew Member Name
+                </Text>
                 <TextInput
                   ref={(el) => {
-                    crewDutyRefs.current[`${i}-roleName`] = el;
+                    registerCrewDutyRef(i, 'roleName', el);
                   }}
                   style={[
                     styles.input,
@@ -666,7 +687,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
                   ]}
                   value={c.roleName}
                   onChangeText={(v) => setCrew(i, 'roleName', v)}
-                  placeholder="Role name"
+                  placeholder="Enter crew member name"
                   placeholderTextColor={themeColors.textMuted}
                   returnKeyType="next"
                   submitBehavior="blurAndSubmit"
@@ -684,7 +705,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
                       </Text>
                       <TextInput
                         ref={(el) => {
-                          crewDutyRefs.current[`${i}-${f}`] = el;
+                          registerCrewDutyRef(i, f, el);
                         }}
                         style={[
                           styles.input,

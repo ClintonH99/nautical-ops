@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -37,26 +38,65 @@ const WATCH_KEEPING_INFO = {
   ],
 };
 
+const watchKeepingRulesCache = new Map<string, WatchKeepingRules | null>();
+const rulesStorageKey = (vesselId: string) => `watch-keeping-rules:${vesselId}`;
+
 export const WatchKeepingScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
   const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
   const actionColor = themeColors.isDark ? COLORS.white : COLORS.primary;
+  const hasCachedRules = vesselId ? watchKeepingRulesCache.has(vesselId) : false;
+  const cachedRules = vesselId ? watchKeepingRulesCache.get(vesselId) : undefined;
 
-  const [rules, setRules] = useState<WatchKeepingRules | null>(null);
-  const [loadingRules, setLoadingRules] = useState(true);
+  const [rules, setRules] = useState<WatchKeepingRules | null>(cachedRules ?? null);
+  const [loadingRules, setLoadingRules] = useState(!hasCachedRules);
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [editContent, setEditContent] = useState('');
+  const [editContent, setEditContent] = useState(cachedRules?.content ?? '');
   const [saving, setSaving] = useState(false);
+  const [rulesExpanded, setRulesExpanded] = useState(false);
+  const [rulesHasOverflow, setRulesHasOverflow] = useState(false);
 
   const loadRules = useCallback(async () => {
     if (!vesselId) return;
-    setLoadingRules(true);
+    const hasCachedValue = watchKeepingRulesCache.has(vesselId);
+    let immediateRules = hasCachedValue ? watchKeepingRulesCache.get(vesselId) : undefined;
+    if (hasCachedValue) {
+      const cached = immediateRules ?? null;
+      setRules(cached);
+      setEditContent(cached?.content ?? '');
+      setLoadingRules(false);
+    } else {
+      setLoadingRules(true);
+    }
+
+    const remoteRulesPromise = watchKeepingService.getRules(vesselId);
     try {
-      const data = await watchKeepingService.getRules(vesselId);
-      setRules(data);
-      setEditContent(data?.content ?? '');
+      if (!hasCachedValue) {
+        try {
+          const storedRules = await AsyncStorage.getItem(rulesStorageKey(vesselId));
+          if (storedRules) {
+            immediateRules = JSON.parse(storedRules) as WatchKeepingRules | null;
+            watchKeepingRulesCache.set(vesselId, immediateRules ?? null);
+            setRules(immediateRules ?? null);
+            setEditContent(immediateRules?.content ?? '');
+            setLoadingRules(false);
+          }
+        } catch (cacheError) {
+          console.warn('Load cached watch rules error:', cacheError);
+        }
+      }
+
+      const data = await remoteRulesPromise;
+      if (data || immediateRules === undefined) {
+        watchKeepingRulesCache.set(vesselId, data);
+        setRules(data);
+        setEditContent(data?.content ?? '');
+        setRulesExpanded(false);
+        setRulesHasOverflow(false);
+        await AsyncStorage.setItem(rulesStorageKey(vesselId), JSON.stringify(data));
+      }
     } catch (e) {
       console.error('Load watch rules error:', e);
     } finally {
@@ -75,7 +115,11 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
     setSaving(true);
     try {
       const updated = await watchKeepingService.upsertRules(vesselId, editContent, user?.id);
+      watchKeepingRulesCache.set(vesselId, updated);
+      await AsyncStorage.setItem(rulesStorageKey(vesselId), JSON.stringify(updated));
       setRules(updated);
+      setRulesExpanded(false);
+      setRulesHasOverflow(false);
       setEditModalOpen(false);
       Alert.alert('Saved', 'Watch Keeping Rules have been updated.');
     } catch (e) {
@@ -118,15 +162,43 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
           <View style={styles.rulesBoardInner}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: actionColor }]}>Watch Keeping Rules</Text>
+              {rulesHasOverflow && rulesExpanded ? (
+                <TouchableOpacity
+                  style={styles.seeLessButton}
+                  onPress={() => setRulesExpanded(false)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.seeMoreText, { color: actionColor }]}>See Less</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
             {loadingRules ? (
               <ActivityIndicator size="small" color={COLORS.primary} style={styles.rulesLoader} />
             ) : (
               <View style={styles.featureList}>
                 {rules?.content ? (
-                  <Text style={[styles.rulesBody, { color: themeColors.textPrimary }]}>
-                    {rules.content}
-                  </Text>
+                  <>
+                    <Text
+                      style={[styles.rulesBody, { color: themeColors.textPrimary }]}
+                      numberOfLines={rulesHasOverflow && !rulesExpanded ? 10 : undefined}
+                      onTextLayout={(event) => {
+                        if (!rulesHasOverflow && event.nativeEvent.lines.length > 10) {
+                          setRulesHasOverflow(true);
+                        }
+                      }}
+                    >
+                      {rules.content}
+                    </Text>
+                    {rulesHasOverflow && !rulesExpanded ? (
+                      <TouchableOpacity
+                        style={styles.seeMoreButton}
+                        onPress={() => setRulesExpanded(true)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.seeMoreText, { color: actionColor }]}>See More</Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </>
                 ) : (
                   <Text style={[styles.rulesPlaceholder, { color: themeColors.textSecondary }]}>
                     {isHOD
@@ -308,6 +380,24 @@ const styles = StyleSheet.create({
   rulesBody: {
     fontSize: FONTS.base,
     lineHeight: 24,
+  },
+  seeMoreButton: {
+    alignSelf: 'flex-end',
+    minHeight: 40,
+    marginTop: SPACING.sm,
+    paddingHorizontal: SPACING.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  seeLessButton: {
+    minHeight: 36,
+    paddingHorizontal: SPACING.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  seeMoreText: {
+    fontSize: FONTS.sm,
+    fontWeight: '600',
   },
   rulesPlaceholder: {
     fontSize: FONTS.base,

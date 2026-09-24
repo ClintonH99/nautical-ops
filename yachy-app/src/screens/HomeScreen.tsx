@@ -18,7 +18,6 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from 'react-native-calendars';
-import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { useFocusEffect } from '@react-navigation/native';
 import { Button } from '../components';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES, SHADOWS } from '../constants/theme';
@@ -380,21 +379,6 @@ export const HomeScreen = ({ navigation }: any) => {
                   if (bannerImageUrl) setBannerLoadFailed(true);
                 }}
               >
-                <Svg
-                  pointerEvents="none"
-                  style={StyleSheet.absoluteFill}
-                  width="100%"
-                  height="100%"
-                >
-                  <Defs>
-                    <LinearGradient id="vesselBannerGradient" x1="0" y1="0" x2="0" y2="1">
-                      <Stop offset="0%" stopColor="#0F172A" stopOpacity={0.02} />
-                      <Stop offset="38%" stopColor="#0F172A" stopOpacity={0.02} />
-                      <Stop offset="100%" stopColor="#0F172A" stopOpacity={0.82} />
-                    </LinearGradient>
-                  </Defs>
-                  <Rect width="100%" height="100%" fill="url(#vesselBannerGradient)" />
-                </Svg>
                 {vesselName && (
                   <Text style={styles.bannerVesselName} numberOfLines={1}>
                     {vesselName}
