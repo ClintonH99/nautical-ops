@@ -14,6 +14,7 @@ import {
   Alert,
   Modal,
   Pressable,
+  Share,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,6 +31,7 @@ import {
   PreviewActionButtons,
 } from '../components';
 import { DEPARTMENT_OPTIONS as DEPARTMENTS } from '../utils/departmentSelection';
+import { formatContractorContactCard } from '../utils/contractorContactCard';
 
 const allDeptsVisible: Record<Department, boolean> = {
   BRIDGE: true,
@@ -170,6 +172,20 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
     ]);
   };
 
+  const onShare = async (contractor: Contractor) => {
+    try {
+      await Share.share({
+        title: contractor.companyName
+          ? `${contractor.companyName} Contact Card`
+          : 'Contractor Contact Card',
+        message: formatContractorContactCard(contractor),
+      });
+    } catch (error) {
+      console.error('Share contractor contact error:', error);
+      Alert.alert('Could not share contact card', 'Please try again.');
+    }
+  };
+
   if (!vesselId) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
@@ -197,7 +213,7 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
       >
         <View style={styles.actionRow}>
           <Button
-            title="Create Contractor"
+            title="Create Contact"
             onPress={() => navigation.navigate('AddEditContractor', {})}
             variant="primary"
             fullWidth
@@ -309,7 +325,7 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
             </Text>
             <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
               {contractors.length === 0
-                ? 'Tap "Create Contractor" to add your first contractor.'
+                ? 'Tap "Create Contact" to add your first contractor contact.'
                 : 'No contractors match your search or department filter.'}
             </Text>
           </View>
@@ -456,6 +472,17 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
                       </View>
                     ) : null}
 
+                    <TouchableOpacity
+                      style={[styles.shareButton, { backgroundColor: themeColors.controlSelected }]}
+                      onPress={() => onShare(contractor)}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel="Share Contact Card"
+                    >
+                      <Ionicons name="share-social-outline" size={18} color={COLORS.white} />
+                      <Text style={styles.shareButtonText}>Share Contact Card</Text>
+                    </TouchableOpacity>
+
                     <PreviewActionButtons
                       onEdit={() =>
                         navigation.navigate('AddEditContractor', { contractorId: contractor.id })
@@ -591,4 +618,18 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   detailBlock: { gap: 2 },
+  shareButton: {
+    minHeight: SIZES.buttonHeight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.md,
+  },
+  shareButtonText: {
+    color: COLORS.white,
+    fontSize: FONTS.sm,
+    fontWeight: '600',
+  },
 });
