@@ -9,7 +9,7 @@ import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinne
  * review queue.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,9 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -36,6 +39,11 @@ import {
   RestEntryStatus,
 } from '../services/restEntries';
 import { getSignatureForUser } from '../services/signatures';
+import {
+  REST_COMMENT_MAX_LENGTH,
+  updateRestComment,
+  isRestCommentValid,
+} from '../utils/restComment';
 import watchKeepingService, {
   getRestWatchConflicts,
   WatchWorkPeriod,
@@ -81,6 +89,7 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   const [workStart, setWorkStart] = useState<string | null>('08:00');
   const [workEnd, setWorkEnd] = useState<string | null>('17:00');
   const [comment, setComment] = useState('');
+  const [originalComment, setOriginalComment] = useState('');
   const [lunchStart, setLunchStart] = useState<string | null>('12:00');
   const [lunchEnd, setLunchEnd] = useState<string | null>('13:00');
   const [status, setStatus] = useState<RestEntryStatus>('draft');
@@ -89,6 +98,27 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   const [isManager, setIsManager] = useState(false);
   const [hasExistingEntry, setHasExistingEntry] = useState(false);
   const [loadingEntry, setLoadingEntry] = useState(true);
+  const scrollRef = useRef<ScrollView>(null);
+  const commentRef = useRef<TextInput>(null);
+  const commentTop = useRef(0);
+
+  const revealComment = useCallback(() => {
+    requestAnimationFrame(() => {
+      if (commentRef.current?.isFocused()) {
+        scrollRef.current?.scrollTo({
+          y: Math.max(0, commentTop.current - SPACING.md),
+          animated: true,
+        });
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    // Reposition after the keyboard has reduced the scroll viewport, not only
+    // on focus (which fires before the keyboard finishes opening).
+    const subscription = Keyboard.addListener('keyboardDidShow', revealComment);
+    return () => subscription.remove();
+  }, [revealComment]);
 
   const loadExisting = useCallback(async () => {
     if (!effectiveUserId) return;
@@ -111,6 +141,7 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
       setLunchStart(existing.lunch_start);
       setLunchEnd(existing.lunch_end);
       setComment(existing.comment ?? '');
+      setOriginalComment(existing.comment ?? '');
       setStatus(existing.status);
     }
 
@@ -175,8 +206,18 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
     setRestPeriods((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const validateComment = () => {
+    if (isRestCommentValid(comment, originalComment)) return true;
+    Alert.alert(
+      'Comment too long',
+      `Please shorten the comment to ${REST_COMMENT_MAX_LENGTH} characters.`
+    );
+    return false;
+  };
+
   const saveOwnEntry = async () => {
     if (!user?.id || !user?.vesselId) return;
+    if (!validateComment()) return;
     setSaving(true);
     try {
       const entry: RestEntry = {
@@ -202,6 +243,7 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
 
   const handleSave = async () => {
     if (!user?.id || !user?.vesselId) return;
+    if (!validateComment()) return;
     const signature = await getSignatureForUser(user.id);
     if (!signature) {
       Alert.alert(
@@ -232,6 +274,7 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
 
   const confirmManagedEntry = async () => {
     if (!effectiveUserId || !user?.vesselId || !user?.id) return;
+    if (!validateComment()) return;
     setSaving(true);
     try {
       await confirmEntryForUser(
@@ -256,6 +299,7 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
 
   const handleConfirm = async () => {
     if (!effectiveUserId || !user?.vesselId || !user?.id) return;
+    if (!validateComment()) return;
     const signature = await getSignatureForUser(user.id);
     if (!signature) {
       Alert.alert(
@@ -296,12 +340,18 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   );
 
   return (
-    <View style={[styles.pageWrap, { backgroundColor: themeColors.background }]}>
+    <KeyboardAvoidingView
+      style={[styles.pageWrap, { backgroundColor: themeColors.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <PageHeader title={hasExistingEntry ? 'Edit Rest Entry' : 'Create Rest Entry'} />
       <ScrollView
+        ref={scrollRef}
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
       >
         <View style={styles.dateHeading}>
           <Text style={[styles.dateTitle, { color: themeColors.textPrimary }]}>
@@ -496,17 +546,26 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
             styles.formSection,
             { backgroundColor: themeColors.surface, borderColor: themeColors.border },
           ]}
+          onLayout={(event) => {
+            commentTop.current = event.nativeEvent.layout.y;
+          }}
         >
           <Text style={[styles.sectionTitle, { color: themeColors.accent }]}>Comment</Text>
           <Text style={[styles.commentLabel, { color: themeColors.textPrimary }]}>Optional</Text>
           <TextInput
+            ref={commentRef}
+            onFocus={revealComment}
             value={comment}
-            onChangeText={setComment}
+            onChangeText={(value) => setComment((previous) => updateRestComment(value, previous))}
             editable={!isLocked}
-            maxLength={40}
+            maxLength={Math.max(REST_COMMENT_MAX_LENGTH, comment.length)}
+            accessibilityLabel="Hours of Rest comment"
             placeholder="Short note for the PDF"
             placeholderTextColor={themeColors.textMuted}
             multiline
+            returnKeyType="done"
+            submitBehavior="blurAndSubmit"
+            onSubmitEditing={Keyboard.dismiss}
             style={[
               styles.commentInput,
               {
@@ -517,7 +576,7 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
             ]}
           />
           <Text style={[styles.characterCount, { color: themeColors.textSecondary }]}>
-            {comment.length}/40
+            {comment.length}/{REST_COMMENT_MAX_LENGTH}
           </Text>
         </View>
         <View
@@ -571,7 +630,7 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
           )
         )}
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

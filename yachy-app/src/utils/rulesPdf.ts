@@ -3,7 +3,7 @@
  */
 
 import * as FileSystem from 'expo-file-system/legacy';
-import * as Print from 'expo-print';
+import { printStandardPdf } from './standardPdf';
 import * as Sharing from 'expo-sharing';
 
 export interface RulesPdfDocument {
@@ -64,7 +64,7 @@ export async function generateRulesDocumentsPdf(
 ): Promise<void> {
   if (documents.length === 0) throw new Error('Select at least one Rules board to export.');
   const html = buildRulesPdfHtml(documents);
-  const { uri } = await Print.printToFileAsync({ html });
+  const { uri } = await printStandardPdf({ html, title: 'Rules On-Board' });
   const newUri = `${FileSystem.cacheDirectory}${filename}`;
   await FileSystem.moveAsync({ from: uri, to: newUri });
   const canShare = await Sharing.isAvailableAsync();

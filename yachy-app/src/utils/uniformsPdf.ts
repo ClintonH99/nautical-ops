@@ -3,14 +3,19 @@
  * expo-print + share, matching inventoryPdf.ts's visual structure.
  */
 import * as FileSystem from 'expo-file-system/legacy';
-import * as Print from 'expo-print';
+import { printStandardPdf } from './standardPdf';
 import * as Share from 'expo-sharing';
 import { Uniform } from '../services/uniforms';
 
 const deptLabel = (d: string) => (d ?? '').charAt(0) + (d ?? '').slice(1).toLowerCase();
 
 function sanitizeFilename(s: string): string {
-  return s.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_').trim() || 'Uniforms';
+  return (
+    s
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, '_')
+      .trim() || 'Uniforms'
+  );
 }
 
 function getUniformsPdfFilename(items: Uniform[]): string {
@@ -34,11 +39,15 @@ export function buildUniformsHtml(items: Uniform[], title: string = 'Uniforms'):
 
   const cards = items.map((u) => {
     const dept = deptLabel(u.department ?? 'INTERIOR');
-    const rows = (u.entries?.length
-      ? u.entries
-          .map((e) => `<tr><td>${escapeHtml(e.size)}</td><td>${escapeHtml(e.color)}</td><td>${escapeHtml(e.gender)}</td><td>${escapeHtml(e.amount)}</td><td>${escapeHtml(e.dayNight || '-')}</td></tr>`)
-          .join('')
-      : '') || '<tr><td colspan="5" style="color:#999;font-style:italic">-</td></tr>';
+    const rows =
+      (u.entries?.length
+        ? u.entries
+            .map(
+              (e) =>
+                `<tr><td>${escapeHtml(e.size)}</td><td>${escapeHtml(e.color)}</td><td>${escapeHtml(e.gender)}</td><td>${escapeHtml(e.amount)}</td><td>${escapeHtml(e.dayNight || '-')}</td></tr>`
+            )
+            .join('')
+        : '') || '<tr><td colspan="5" style="color:#999;font-style:italic">-</td></tr>';
 
     return `
       <div class="card">
@@ -86,10 +95,14 @@ export function buildUniformsHtml(items: Uniform[], title: string = 'Uniforms'):
 export async function exportUniformsToPdf(items: Uniform[]): Promise<void> {
   if (items.length === 0) throw new Error('Select at least one label to export.');
   const html = buildUniformsHtml(items, 'Uniforms');
-  const { uri } = await Print.printToFileAsync({ html });
+  const { uri } = await printStandardPdf({ html, title: 'Uniforms' });
   const filename = getUniformsPdfFilename(items);
   const newUri = `${FileSystem.cacheDirectory}${filename}`;
   await FileSystem.moveAsync({ from: uri, to: newUri });
   const canShare = await Share.isAvailableAsync();
-  if (canShare) await Share.shareAsync(newUri, { mimeType: 'application/pdf', dialogTitle: 'Save Uniforms PDF' });
+  if (canShare)
+    await Share.shareAsync(newUri, {
+      mimeType: 'application/pdf',
+      dialogTitle: 'Save Uniforms PDF',
+    });
 }

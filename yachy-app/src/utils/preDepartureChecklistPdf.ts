@@ -3,7 +3,7 @@
  */
 
 import * as FileSystem from 'expo-file-system/legacy';
-import * as Print from 'expo-print';
+import { printStandardPdf } from './standardPdf';
 import * as Sharing from 'expo-sharing';
 import { PreDepartureChecklist, Department } from '../types';
 
@@ -63,16 +63,16 @@ export async function generatePreDepartureChecklistPdf(
     '.section{margin-bottom:24px;break-inside:avoid}h2{font-size:14px;font-weight:600;color:#1E3A8A;margin-bottom:4px}.meta{font-size:10px;color:#666;margin-bottom:8px}' +
     'ol.items{margin:0;padding-left:20px}ol.items li{margin-bottom:4px;line-height:1.4}' +
     '</style></head><body>' +
-    '<h1>' +
+    '<h1>Pre-Departure Checklist</h1>' +
+    '<p class="subtitle">' +
     escapeHtml(vesselName || 'Vessel') +
-    ' Pre-Departure Checklist</h1>' +
-    '<p class="subtitle">Generated ' +
+    ' · Generated ' +
     dateStr +
     '</p>' +
     sections +
     '</body></html>';
 
-  const { uri } = await Print.printToFileAsync({ html });
+  const { uri } = await printStandardPdf({ html, title: 'Pre-Departure Checklist' });
   const newUri = FileSystem.cacheDirectory + filename;
   await FileSystem.moveAsync({ from: uri, to: newUri });
   if (await Sharing.isAvailableAsync()) {

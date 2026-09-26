@@ -1,4 +1,5 @@
 import React from 'react';
+import { Keyboard } from 'react-native';
 import { fireEvent, render } from '@testing-library/react-native';
 import { TimePickerField, formatTimePickerValue } from '../../src/components/TimePickerField';
 
@@ -38,6 +39,7 @@ describe('TimePickerField', () => {
   });
 
   it('opens the standard selector and applies the draft only when Done is pressed', () => {
+    const dismiss = jest.spyOn(Keyboard, 'dismiss');
     const onChange = jest.fn();
     const value = createTime(14, 30);
     const screen = render(
@@ -45,6 +47,7 @@ describe('TimePickerField', () => {
     );
 
     fireEvent.press(screen.getByLabelText('Time, 14:30'));
+    expect(dismiss).toHaveBeenCalled();
     expect(screen.getByText('Select Time')).toBeOnTheScreen();
 
     fireEvent.press(screen.getByText('Cancel'));
@@ -55,5 +58,6 @@ describe('TimePickerField', () => {
 
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(formatTimePickerValue(onChange.mock.calls[0][0])).toBe('14:30');
+    dismiss.mockRestore();
   });
 });

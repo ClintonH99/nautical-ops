@@ -6,7 +6,7 @@
  */
 
 import * as FileSystem from 'expo-file-system/legacy';
-import * as Print from 'expo-print';
+import { printStandardPdf } from './standardPdf';
 import * as Sharing from 'expo-sharing';
 import {
   GeneralWasteLog,
@@ -55,8 +55,8 @@ function baseStyles(accentColor = '#1E3A8A'): string {
   `;
 }
 
-async function printAndShare(html: string, filename: string): Promise<void> {
-  const { uri } = await Print.printToFileAsync({ html });
+async function printAndShare(html: string, filename: string, title: string): Promise<void> {
+  const { uri } = await printStandardPdf({ html, title });
   const newUri = `${FileSystem.cacheDirectory}${filename}`;
   await FileSystem.moveAsync({ from: uri, to: newUri });
   const canShare = await Sharing.isAvailableAsync();
@@ -105,7 +105,7 @@ export async function exportGeneralWasteLogPdf(
   </body></html>`;
 
   const safeName = vesselName.replace(/[^\w]/g, '_') || 'Vessel';
-  await printAndShare(html, `${safeName}_${dateStr()}_General_Waste_Log.pdf`);
+  await printAndShare(html, `${safeName}_${dateStr()}_General_Waste_Log.pdf`, 'General Waste Log');
 }
 
 // ─── Fuel Log ─────────────────────────────────────────────────────────────────
@@ -387,7 +387,7 @@ export async function exportFuelLogPdf(
   </body></html>`;
 
   const safeName = vesselName.replace(/[^\w]/g, '_') || 'Vessel';
-  await printAndShare(html, `${safeName}_${dateStr()}_Fuel_Log.pdf`);
+  await printAndShare(html, `${safeName}_${dateStr()}_Fuel_Log.pdf`, 'Fuel Receipts');
 }
 
 // ─── Discharge Log ────────────────────────────────────────────────────────────
@@ -443,5 +443,5 @@ export async function exportPumpOutLogPdf(logs: PumpOutLog[], vesselName: string
   </body></html>`;
 
   const safeName = vesselName.replace(/[^\w]/g, '_') || 'Vessel';
-  await printAndShare(html, `${safeName}_${dateStr()}_Discharge_Log.pdf`);
+  await printAndShare(html, `${safeName}_${dateStr()}_Discharge_Log.pdf`, 'Discharge Log');
 }

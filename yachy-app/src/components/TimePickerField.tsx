@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
   Modal,
+  Keyboard,
   Pressable,
   ScrollView,
   StyleProp,
@@ -262,7 +263,10 @@ export const TimePickerField = ({
       <TimePickerTrigger
         label={label}
         value={value}
-        onPress={() => setVisible(true)}
+        onPress={() => {
+          Keyboard.dismiss();
+          setVisible(true);
+        }}
         disabled={disabled}
         active={visible}
         containerStyle={containerStyle}

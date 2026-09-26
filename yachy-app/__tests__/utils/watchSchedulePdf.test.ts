@@ -1,8 +1,5 @@
 import type { PublishedWatchTimetable } from '../../src/services/watchKeeping';
-import {
-  buildWatchSchedulePdfHtml,
-  WATCH_SCHEDULE_ROWS_PER_PAGE,
-} from '../../src/utils/watchSchedulePdf';
+import { buildWatchSchedulePdfHtml } from '../../src/utils/watchSchedulePdf';
 
 function scheduleWithSlots(slotCount: number): PublishedWatchTimetable {
   return {
@@ -28,14 +25,14 @@ function scheduleWithSlots(slotCount: number): PublishedWatchTimetable {
 }
 
 describe('Watch Schedule PDF HTML', () => {
-  it('builds deterministic pages with repeated headers and safe user content', () => {
-    const html = buildWatchSchedulePdfHtml([scheduleWithSlots(WATCH_SCHEDULE_ROWS_PER_PAGE + 1)]);
+  it('keeps rows in natural flow and escapes user content', () => {
+    const html = buildWatchSchedulePdfHtml([scheduleWithSlots(13)]);
 
-    expect(html.match(/<section class="page">/g)).toHaveLength(2);
-    expect(html.match(/<h1>Watch Schedule<\/h1>/g)).toHaveLength(2);
-    expect(html.match(/<th class="col-position">Position<\/th>/g)).toHaveLength(2);
-    expect(html).toContain('Page 1 of 2');
-    expect(html).toContain('Page 2 of 2');
+    expect(html.match(/<section class="page">/g)).toHaveLength(1);
+    expect(html.match(/<h1>Watch Schedule<\/h1>/g)).toHaveLength(1);
+    expect(html.match(/<th class="col-position">Position<\/th>/g)).toHaveLength(1);
+    expect(html).not.toContain('Page 1 of');
+    expect(html).not.toContain('page-break-after: always');
     expect(html).toContain('table { width: 100%');
     expect(html).toContain('tbody tr { break-inside: avoid; page-break-inside: avoid; }');
 
@@ -51,7 +48,7 @@ describe('Watch Schedule PDF HTML', () => {
     expect(html).not.toContain('<img src=x');
   });
 
-  it('keeps long 33-row schedules within three conservative page chunks', () => {
+  it('preserves all long rows without guessed page counts', () => {
     const schedule = scheduleWithSlots(33);
     schedule.watchTitle =
       'Extended delivery watch between Port Moresby and a deliberately long destination';
@@ -65,8 +62,8 @@ describe('Watch Schedule PDF HTML', () => {
 
     const html = buildWatchSchedulePdfHtml([schedule]);
 
-    expect(html.match(/<section class="page">/g)).toHaveLength(3);
-    expect(html.match(/<h1>Watch Schedule<\/h1>/g)).toHaveLength(3);
-    expect(html).toContain('Page 3 of 3');
+    expect(html.match(/<section class="page">/g)).toHaveLength(1);
+    expect(html).toContain('Crew member 33');
+    expect(html).not.toContain('Page 3 of');
   });
 });

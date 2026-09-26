@@ -3,7 +3,7 @@
  */
 
 import * as FileSystem from 'expo-file-system/legacy';
-import * as Print from 'expo-print';
+import { printStandardPdf } from './standardPdf';
 import * as Share from 'expo-sharing';
 import { InventoryItem } from '../services/inventory';
 
@@ -122,7 +122,7 @@ export function buildInventoryHtml(items: InventoryItem[], title: string = 'Inve
 export async function exportInventoryToPdf(items: InventoryItem[]): Promise<void> {
   if (items.length === 0) throw new Error('Select at least one item to export.');
   const html = buildInventoryHtml(items, 'Inventory');
-  const { uri } = await Print.printToFileAsync({ html });
+  const { uri } = await printStandardPdf({ html, title: 'Inventory' });
   const filename = getInventoryPdfFilename(items);
   const newUri = `${FileSystem.cacheDirectory}${filename}`;
   await FileSystem.moveAsync({ from: uri, to: newUri });

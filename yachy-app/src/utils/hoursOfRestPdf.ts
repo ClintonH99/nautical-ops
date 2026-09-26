@@ -4,7 +4,7 @@
  */
 
 import * as FileSystem from 'expo-file-system/legacy';
-import * as Print from 'expo-print';
+import { getPdfLogoBase64, printStandardPdf } from './standardPdf';
 import * as Sharing from 'expo-sharing';
 import { Asset } from 'expo-asset';
 import { PdfMonthData } from '../services/restEntries';
@@ -45,7 +45,11 @@ function buildSignatureBlock(sig: UserSignature | null | undefined, label: strin
   return '<div class="sigblock">' + content + '<div class="sigline">' + label + '</div></div>';
 }
 
-export function buildHoursOfRestPdfHtml(data: PdfMonthData, fontBase64 = ''): string {
+export function buildHoursOfRestPdfHtml(
+  data: PdfMonthData,
+  fontBase64 = '',
+  logoBase64 = ''
+): string {
   const fontFaceCss =
     "@font-face{font-family:'AlexBrush';src:url(data:font/truetype;charset=utf-8;base64," +
     fontBase64 +
@@ -88,54 +92,58 @@ export function buildHoursOfRestPdfHtml(data: PdfMonthData, fontBase64 = ''): st
     fontFaceCss +
     '@page{size:A4 landscape;margin:12mm}body{font-family:system-ui,sans-serif;font-size:9px;color:#111}' +
     'h1{font-size:16px;font-weight:700;text-align:center;margin-bottom:12px}' +
-    '.info{width:100%;font-size:10px;margin-bottom:10px;border-collapse:collapse}' +
-    '.info td{padding:3px 6px}' +
-    '.infolabel{color:#666;width:70px}' +
-    'table.grid{width:100%;border-collapse:collapse;font-size:8px}' +
+    '.report-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:12px;color:#0e2145;font-weight:400}' +
+    '.header-details{width:27%;text-align:left;font-size:10px;line-height:1.5;color:#111}' +
+    '.header-details.right{width:24%;padding-left:35px}' +
+    '.detail-row{display:flex;gap:8px}.detail-label{color:#666;flex:0 0 48px}.detail-value{min-width:0;overflow-wrap:anywhere}' +
+    '.report-brand{position:absolute;left:28%;right:28%;text-align:center;line-height:normal}' +
+    '.report-header{position:relative;min-height:76px}' +
+    '.brand-line{display:flex;align-items:center;justify-content:center;gap:7pt;font-size:12pt;font-weight:700}' +
+    '.brand-logo{width:26pt;height:26pt;object-fit:contain}' +
+    '.report-title{font-size:12pt;font-weight:700;margin-top:5px}' +
+    'table.grid{width:100%;border-collapse:collapse;font-size:8px;line-height:10px}' +
     'table.grid th,table.grid td{border:1px solid #ccc;padding:2px;text-align:center}' +
     'table.grid thead th{background:#1E3A8A;color:#fff;font-weight:600}' +
+    'table.grid thead .report-header-cell{border:0;background:white;padding:0;text-align:left}' +
     '.datecell{text-align:left;font-weight:600;white-space:nowrap}' +
-    '.hourcell{width:16px}' +
+    'table.grid .date-column{width:8%}table.grid .hour-column{width:2.2%}' +
+    'table.grid .rest-column{width:6%}table.grid .comment-column{width:17.2%}table.grid .office-column{width:8%}' +
     '.numcell{font-weight:600}' +
     '.office{background:#f3f4f6}' +
     '.comment{min-width:60px}' +
     '.missing-record td{background:#f8fafc;color:#64748b}' +
-    '.missing-record .comment{font-weight:700;text-align:left;white-space:nowrap}' +
+    '.missing-record .comment{font-weight:700;text-align:left}' +
     '.missing-record .unknown{font-weight:600}' +
     '.legend{margin-top:8px;font-size:7px;color:#475569}' +
     '.footer{margin-top:14px;font-size:7px;color:#666;line-height:1.4}' +
     '.sigrow{display:flex;justify-content:space-between;margin-top:24px;font-size:9px}' +
-    '.sigblock{width:260px;text-align:center}' +
+    '.sigblock{width:45%;text-align:center;break-inside:avoid}' +
     '.sigimg{max-height:50px;max-width:220px;margin:0 auto 4px;display:block}' +
     ".sigtyped{font-family:'AlexBrush',cursive;font-size:28px;margin-bottom:2px}" +
     '.sigempty{height:24px}' +
-    '.sigline{border-top:1px solid #333;width:260px;padding-top:4px;text-align:center}' +
+    '.sigline{border-top:1px solid #333;width:100%;padding-top:4px;text-align:center}' +
     '</style></head><body>' +
-    '<h1>Hours of Work and Rest</h1>' +
-    '<table class="info"><tr>' +
-    '<td class="infolabel">Seafarer</td><td>' +
+    '<table class="grid"><colgroup><col class="date-column"><col class="hour-column" span="24"><col class="rest-column"><col class="comment-column"><col class="office-column" span="2"></colgroup><thead><tr><th colspan="29" class="report-header-cell">' +
+    '<div class="report-header"><div class="header-details">' +
+    '<div class="detail-row"><span class="detail-label">Seafarer</span><span class="detail-value">' +
     escapeHtml(data.seafarerName) +
-    '</td>' +
-    '<td class="infolabel">IMO</td><td>' +
-    escapeHtml(data.vesselImoNumber || '-') +
-    '</td>' +
-    '</tr><tr>' +
-    '<td class="infolabel">Rank</td><td>' +
+    '</span></div><div class="detail-row"><span class="detail-label">Rank</span><span class="detail-value">' +
     escapeHtml(data.rank) +
-    '</td>' +
-    '<td class="infolabel">Vessel</td><td>' +
-    escapeHtml(data.vesselName) +
-    '</td>' +
-    '</tr><tr>' +
-    '<td class="infolabel">Month</td><td>' +
+    '</span></div><div class="detail-row"><span class="detail-label">Month</span><span class="detail-value">' +
     escapeHtml(data.monthLabel) +
-    '</td>' +
-    '</tr></table>' +
-    '<table class="grid"><thead><tr>' +
+    '</span></div></div><div class="report-brand"><div class="brand-line">' +
+    (logoBase64
+      ? '<img class="brand-logo" src="data:image/png;base64,' + logoBase64 + '" alt="">'
+      : '') +
+    '<span>NAUTICAL OPS</span></div><div class="report-title">HOURS OF WORK AND REST</div></div>' +
+    '<div class="header-details right"><div class="detail-row"><span class="detail-label">IMO</span><span class="detail-value">' +
+    escapeHtml(data.vesselImoNumber || '-') +
+    '</span></div><div class="detail-row"><span class="detail-label">Vessel</span><span class="detail-value">' +
+    escapeHtml(data.vesselName) +
+    '</span></div></div></div></th></tr><tr>' +
     '<th>Date</th>' +
     hourHeaderCells +
-    '<th>Rest (24h)</th><th>Comments</th>' +
-    '<th class="office">Any 24h*</th><th class="office">Any 7-day*</th>' +
+    '<th>Rest (24h)</th><th>Comments</th><th class="office">Any 24h*</th><th class="office">Any 7-day*</th>' +
     '</tr></thead><tbody>' +
     dayRows +
     '</tbody></table>' +
@@ -151,10 +159,18 @@ export function buildHoursOfRestPdfHtml(data: PdfMonthData, fontBase64 = ''): st
 }
 
 export async function generateHoursOfRestPdf(data: PdfMonthData, filename: string): Promise<void> {
-  const fontBase64 = await getAlexBrushFontBase64();
-  const html = buildHoursOfRestPdfHtml(data, fontBase64);
+  const [fontBase64, logoBase64] = await Promise.all([
+    getAlexBrushFontBase64(),
+    getPdfLogoBase64(),
+  ]);
+  const html = buildHoursOfRestPdfHtml(data, fontBase64, logoBase64);
 
-  const { uri } = await Print.printToFileAsync({ html });
+  const { uri } = await printStandardPdf({
+    html,
+    title: 'Hours of Work and Rest',
+    orientation: 'landscape',
+    headerInContent: true,
+  });
   const newUri = FileSystem.cacheDirectory + filename;
   await FileSystem.moveAsync({ from: uri, to: newUri });
   if (await Sharing.isAvailableAsync()) {

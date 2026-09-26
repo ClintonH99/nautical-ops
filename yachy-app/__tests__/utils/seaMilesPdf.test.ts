@@ -56,12 +56,12 @@ describe('buildSeaMilesPdfHtml', () => {
     const html = buildSeaMilesPdfHtml(entries, 'Rachel Morgan');
 
     expect((html.match(/PERSONAL SEA SERVICE RECORD/g) ?? []).length).toBe(1);
-    expect(html).toContain('Page 1');
+    expect(html).not.toContain('Page 1');
     expect(html).not.toContain('Page 2');
-    expect((html.match(/class="page last-page"/g) ?? []).length).toBe(1);
+    expect((html.match(/class="sea-service-record"/g) ?? []).length).toBe(1);
   });
 
-  it('adds a second page only when the records no longer fit', () => {
+  it('lets the print engine measure overflow rather than imposing a row limit', () => {
     const entries = Array.from({ length: 16 }, (_, index) => ({
       ...approvedEntry(index),
       reviewedBy: 'captain-1',
@@ -72,22 +72,18 @@ describe('buildSeaMilesPdfHtml', () => {
       reviewerContactCellNumber: '+1 954 555 0101',
       reviewerContactEmailAddress: 'captain1@example.com',
     }));
-    const html = buildSeaMilesPdfHtml(
-      entries,
-      'Rachel Morgan',
-      new Date('2026-09-10T12:00:00Z')
-    );
+    const html = buildSeaMilesPdfHtml(entries, 'Rachel Morgan', new Date('2026-09-10T12:00:00Z'));
 
-    expect((html.match(/PERSONAL SEA SERVICE RECORD/g) ?? []).length).toBe(2);
-    expect(html).toContain('Page 1');
-    expect(html).toContain('Page 2');
+    expect((html.match(/PERSONAL SEA SERVICE RECORD/g) ?? []).length).toBe(1);
+    expect(html).not.toContain('Page 1');
+    expect(html).not.toContain('Page 2');
     expect(html).not.toContain('CAPTAIN/MOV CERTIFICATION');
-    expect((html.match(/Skipper Name &amp; Signature/g) ?? []).length).toBe(2);
-    expect((html.match(/SEA MILES RECORD/g) ?? []).length).toBe(2);
-    expect((html.match(/CAPTAIN'S CONTACT DETAILS TO VERIFY INFORMATION/g) ?? []).length).toBe(2);
+    expect((html.match(/Skipper Name &amp; Signature/g) ?? []).length).toBe(1);
+    expect((html.match(/SEA MILES RECORD/g) ?? []).length).toBe(1);
+    expect((html.match(/CAPTAIN'S CONTACT DETAILS TO VERIFY INFORMATION/g) ?? []).length).toBe(1);
     expect((html.match(/class="typed-signature"/g) ?? []).length).toBe(16);
-    expect((html.match(/class="page"/g) ?? []).length).toBe(1);
-    expect((html.match(/class="page last-page"/g) ?? []).length).toBe(1);
+    expect(html).not.toContain('height: 210mm');
+    expect(html).not.toContain('overflow: hidden');
   });
 
   it('lists each approving captain once before the sea-mile records table', () => {
@@ -108,23 +104,19 @@ describe('buildSeaMilesPdfHtml', () => {
   it('forces the approved A4 landscape page and preserves navy print backgrounds', () => {
     const html = buildSeaMilesPdfHtml([approvedEntry(1)], 'Rachel Morgan');
 
-    expect(html).toContain('@page { size: 297mm 210mm; margin: 0; }');
+    expect(html).toContain('@page { size: A4 landscape; }');
     expect(html).toContain('-webkit-print-color-adjust: exact !important');
     expect(html).toContain('background-color: #1E3A8A !important');
   });
 
-  it('uses the supplied Nautical Ops logo and readable data-row typography', () => {
-    const logoDataUri = 'data:image/png;base64,exact-logo';
+  it('leaves branding to the shared exporter and preserves readable data-row typography', () => {
     const html = buildSeaMilesPdfHtml(
       [approvedEntry(1)],
       'Rachel Morgan',
-      new Date('2026-09-11T12:00:00Z'),
-      logoDataUri
+      new Date('2026-09-11T12:00:00Z')
     );
 
-    expect(html).toContain(`href="${logoDataUri}"`);
-    expect(html).toContain('filter="url(#nautical-ops-gold)"');
-    expect(html).toContain('clip-path="url(#nautical-ops-logo-crop)"');
+    expect(html).not.toContain('nautical-ops-gold');
     expect(html).toContain(
       '.sea-record-table td { height: 7mm; font-size: 9.2px; font-weight: 600; }'
     );
@@ -158,9 +150,9 @@ describe('buildSeaMilesPdfHtml', () => {
 
   it('uses A4 landscape dimensions for Expo Print on iOS', () => {
     expect(SEA_MILES_PDF_PRINT_OPTIONS).toEqual({
-      width: 842,
-      height: 595,
-      margins: { top: 0, right: 0, bottom: 0, left: 0 },
+      width: 841.89,
+      height: 595.28,
+      margins: { top: 90, right: 36, bottom: 32, left: 36 },
     });
   });
 

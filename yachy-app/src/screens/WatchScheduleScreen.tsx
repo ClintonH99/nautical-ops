@@ -9,7 +9,7 @@ import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
-import * as Print from 'expo-print';
+import { printStandardPdf } from '../utils/standardPdf';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useFocusEffect } from '@react-navigation/native';
@@ -140,7 +140,7 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
     setExportingPdf(true);
     try {
       const html = buildWatchSchedulePdfHtml(schedules);
-      const { uri } = await Print.printToFileAsync({ html });
+      const { uri } = await printStandardPdf({ html, title: 'Watch Schedule' });
       const filename =
         schedules.length === 1
           ? `Watch_Schedule_${getWatchScheduleDate(schedules[0])}.pdf`

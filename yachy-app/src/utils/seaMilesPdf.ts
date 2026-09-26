@@ -1,16 +1,10 @@
 import * as FileSystem from 'expo-file-system/legacy';
-import * as Print from 'expo-print';
+import { printStandardPdf } from './standardPdf';
+import { pdfPrintOptions } from './pdfLayout';
 import * as Sharing from 'expo-sharing';
-import { Asset } from 'expo-asset';
 import type { SeaMileEntry } from '../types';
 
-const ROWS_PER_PAGE = 15;
-const A4_LANDSCAPE_WIDTH = 842;
-const A4_LANDSCAPE_HEIGHT = 595;
 const NAVY = '#1E3A8A';
-// Metro resolves this bundled image module for Asset.downloadAsync.
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const SEA_MILES_LOGO_ASSET = require('../../assets/sea-miles-pdf-logo-source.png');
 
 interface CaptainContactRow {
   key: string;
@@ -20,11 +14,7 @@ interface CaptainContactRow {
   emailAddress: string;
 }
 
-export const SEA_MILES_PDF_PRINT_OPTIONS = {
-  width: A4_LANDSCAPE_WIDTH,
-  height: A4_LANDSCAPE_HEIGHT,
-  margins: { top: 0, right: 0, bottom: 0, left: 0 },
-};
+export const SEA_MILES_PDF_PRINT_OPTIONS = pdfPrintOptions('landscape');
 
 function escapeHtml(value: unknown): string {
   return String(value ?? '')
@@ -70,35 +60,6 @@ function skipperDisplayName(entry: SeaMileEntry): string {
     .join(' ');
 
   return contactName || entry.reviewerName || '';
-}
-
-async function getLogoDataUri(): Promise<string> {
-  const asset = Asset.fromModule(SEA_MILES_LOGO_ASSET);
-  await asset.downloadAsync();
-  if (!asset.localUri) throw new Error('Could not load the Nautical Ops logo for the PDF.');
-  const base64 = await FileSystem.readAsStringAsync(asset.localUri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-  return `data:image/png;base64,${base64}`;
-}
-
-function logoHtml(logoDataUri: string): string {
-  return `
-    <svg class="brand-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 560" aria-hidden="true">
-      <defs>
-        <filter id="nautical-ops-gold" color-interpolation-filters="sRGB">
-          <feColorMatrix type="matrix" values="
-            0 0 0 0 0.784
-            0 0 0 0 0.588
-            0 0 0 0 0.102
-            -0.333 -0.333 -0.333 0 1"/>
-        </filter>
-        <clipPath id="nautical-ops-logo-crop">
-          <rect x="20" y="0" width="520" height="525"/>
-        </clipPath>
-      </defs>
-      <image href="${escapeHtml(logoDataUri)}" width="560" height="560" preserveAspectRatio="xMidYMid meet" filter="url(#nautical-ops-gold)" clip-path="url(#nautical-ops-logo-crop)"/>
-    </svg>`;
 }
 
 function entryRow(entry: SeaMileEntry): string {
@@ -162,39 +123,10 @@ function captainContactRows(entries: SeaMileEntry[]): string {
     .join('');
 }
 
-function paginateEntries(entries: SeaMileEntry[]): SeaMileEntry[][] {
-  const pages: SeaMileEntry[][] = [];
-  let currentPage: SeaMileEntry[] = [];
-
-  entries.forEach((entry) => {
-    const candidate = [...currentPage, entry];
-    const captainCount = uniqueCaptainContacts(candidate).length;
-    const capacity = Math.max(5, ROWS_PER_PAGE - Math.max(0, captainCount - 3));
-
-    if (currentPage.length && candidate.length > capacity) {
-      pages.push(currentPage);
-      currentPage = [entry];
-    } else {
-      currentPage = candidate;
-    }
-  });
-
-  if (currentPage.length) pages.push(currentPage);
-  return pages;
-}
-
-function pageHtml(
-  entries: SeaMileEntry[],
-  crewMemberName: string,
-  issueDate: string,
-  pageNumber: number,
-  isLastPage: boolean,
-  logoDataUri = ''
-): string {
+function pageHtml(entries: SeaMileEntry[], crewMemberName: string, issueDate: string): string {
   return `
-    <section class="page${isLastPage ? ' last-page' : ''}">
+    <section class="sea-service-record">
       <header>
-        <div class="brand">${logoDataUri ? logoHtml(logoDataUri) : ''}<span>NAUTICAL OPS</span></div>
         <h1>PERSONAL SEA SERVICE RECORD</h1>
         <div class="metadata">
           <div><span class="metadata-label">CREW MEMBER</span><strong>${escapeHtml(crewMemberName)}</strong></div>
@@ -226,15 +158,13 @@ function pageHtml(
         </thead>
         <tbody>${entries.map(entryRow).join('')}</tbody>
       </table>
-      <footer><span>Generated securely by Nautical Ops</span><span>Page ${pageNumber}</span></footer>
     </section>`;
 }
 
 export function buildSeaMilesPdfHtml(
   entries: SeaMileEntry[],
   crewMemberName: string,
-  generatedAt = new Date(),
-  logoDataUri = ''
+  generatedAt = new Date()
 ): string {
   if (!entries.length) throw new Error('Select at least one approved sea-mile entry.');
   if (entries.some((entry) => entry.status !== 'APPROVED')) {
@@ -259,7 +189,6 @@ export function buildSeaMilesPdfHtml(
       ? a.createdAt.localeCompare(b.createdAt)
       : a.voyageDate.localeCompare(b.voyageDate)
   );
-  const pages = paginateEntries(sorted);
   const issueDate = generatedAt.toLocaleDateString('en-GB', {
     day: '2-digit',
     month: 'long',
@@ -271,15 +200,10 @@ export function buildSeaMilesPdfHtml(
       <head>
         <meta charset="utf-8">
         <style>
-          @page { size: 297mm 210mm; margin: 0; }
+          @page { size: A4 landscape; }
           * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          html, body { width: 297mm; margin: 0; padding: 0; color: ${NAVY}; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; }
-          .page { width: 297mm; height: 210mm; position: relative; page-break-after: auto; break-after: auto; padding: 6mm 8mm; overflow: hidden; }
-          .page:not(.last-page) { page-break-after: always; break-after: page; }
+          html, body { margin: 0; padding: 0; color: ${NAVY}; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; }
           header { text-align: center; }
-          .brand { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 15px; font-weight: 800; letter-spacing: .2px; }
-          .brand-logo { width: 14mm; height: 14mm; }
-          h1 { margin: 1mm 0 3mm; font-size: 25px; line-height: 1; color: ${NAVY}; letter-spacing: .5px; }
           .metadata { display: grid; grid-template-columns: repeat(3, 1fr); align-items: start; margin: 0 16mm 3mm; }
           .metadata > div { display: flex; flex-direction: column; gap: 1.2mm; }
           .metadata-label { font-size: 8px; font-weight: 700; letter-spacing: 1px; }
@@ -299,14 +223,13 @@ export function buildSeaMilesPdfHtml(
           .date-col { width: 8.5%; } .vessel-col { width: 14.5%; } .route-col { width: 16.5%; }
           .role-col { width: 11%; } .miles-col { width: 8.5%; } .hours-col { width: 6%; }
           .tidal-col { width: 6.5%; } .skipper-col { width: 22.5%; }
-          .skipper-cell { white-space: nowrap; padding-left: 1.2mm; padding-right: 1.2mm; }
-          .skipper-name { display: inline-block; width: 53%; text-align: left; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; }
+          .skipper-cell { padding-left: 1.2mm; padding-right: 1.2mm; }
+          .skipper-name { display: inline-block; width: 53%; text-align: left; vertical-align: middle; overflow-wrap: anywhere; }
           .signature-image { display: inline-block; width: 44%; height: 5.2mm; object-fit: contain; vertical-align: middle; }
           .typed-signature { display: inline-block; width: 44%; text-align: center; vertical-align: middle; font-family: "Brush Script MT", "Segoe Script", cursive; font-size: 12px; font-style: italic; }
-          footer { position: absolute; left: 8mm; right: 8mm; bottom: 3.5mm; display: flex; justify-content: space-between; font-size: 7px; color: ${NAVY}; }
         </style>
       </head>
-      <body>${pages.map((page, index) => pageHtml(page, crewMemberName, issueDate, index + 1, index === pages.length - 1, logoDataUri)).join('')}</body>
+      <body>${pageHtml(sorted, crewMemberName, issueDate)}</body>
     </html>`;
 }
 
@@ -314,11 +237,11 @@ export async function generateSeaMilesPdf(
   entries: SeaMileEntry[],
   crewMemberName: string
 ): Promise<void> {
-  const logoDataUri = await getLogoDataUri();
-  const html = buildSeaMilesPdfHtml(entries, crewMemberName, new Date(), logoDataUri);
-  const { uri } = await Print.printToFileAsync({
+  const html = buildSeaMilesPdfHtml(entries, crewMemberName);
+  const { uri } = await printStandardPdf({
     html,
-    ...SEA_MILES_PDF_PRINT_OPTIONS,
+    title: 'Personal Sea Service Record',
+    orientation: 'landscape',
   });
   const today = new Date().toISOString().slice(0, 10);
   const filename = `Personal_Sea_Service_Record_${today}.pdf`;

@@ -3,7 +3,7 @@
  */
 
 import * as FileSystem from 'expo-file-system/legacy';
-import * as Print from 'expo-print';
+import { printStandardPdf } from './standardPdf';
 import * as Share from 'expo-sharing';
 import { YardPeriodJob } from '../types';
 
@@ -155,7 +155,7 @@ export function buildYardJobsHtml(jobs: YardPeriodJob[], title: string = 'Shipya
 export async function exportYardJobsToPdf(jobs: YardPeriodJob[]): Promise<void> {
   if (jobs.length === 0) throw new Error('Select at least one job to export.');
   const html = buildYardJobsHtml(jobs, 'Shipyard List');
-  const { uri } = await Print.printToFileAsync({ html });
+  const { uri } = await printStandardPdf({ html, title: 'Shipyard List' });
   const filename = getYardJobsPdfFilename(jobs);
   const newUri = `${FileSystem.cacheDirectory}${filename}`;
   await FileSystem.moveAsync({ from: uri, to: newUri });

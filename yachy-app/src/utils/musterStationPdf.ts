@@ -3,7 +3,7 @@
  */
 
 import * as FileSystem from 'expo-file-system/legacy';
-import * as Print from 'expo-print';
+import { printStandardPdf } from './standardPdf';
 import * as Sharing from 'expo-sharing';
 import { getMusterStationLocations, type MusterStationData } from '../services/musterStations';
 
@@ -20,13 +20,13 @@ function loc(arr: string[]): string {
 }
 
 const STYLES =
-  '@page{size:A4 landscape;margin:20mm 16mm}body{font-family:system-ui,sans-serif;font-size:11px;color:#111}' +
+  '@page{size:A4 portrait;margin:20mm 16mm}body{font-family:system-ui,sans-serif;font-size:11px;color:#111}' +
   'h1{font-size:18px;font-weight:700;color:#1E3A8A;margin-bottom:8px}' +
   'h2{font-size:14px;font-weight:700;color:#111;margin:0 0 8px}' +
   '.subtitle{font-size:10px;color:#666;margin-bottom:12px}' +
   'table{width:100%;border-collapse:collapse;font-size:10px}th,td{padding:6px 8px;border:1px solid #e5e7eb;text-align:left}' +
   'thead tr{background:#1E3A8A;color:#fff;font-weight:600}tr:nth-child(even) td{background:#f9fafb}.loc{margin:4px 0}' +
-  '.station{page-break-inside:avoid}.station + .station{page-break-before:always;padding-top:8px}';
+  '.station + .station{margin-top:16px}';
 
 /** The body of one muster station: its locations and its duty table. */
 function buildStation(data: MusterStationData, heading?: string): string {
@@ -88,7 +88,7 @@ function buildStation(data: MusterStationData, heading?: string): string {
 }
 
 async function shareHtmlAsPdf(html: string, filename: string): Promise<void> {
-  const { uri } = await Print.printToFileAsync({ html });
+  const { uri } = await printStandardPdf({ html, title: 'Muster Station & Duties' });
   const newUri = FileSystem.cacheDirectory + filename;
   await FileSystem.moveAsync({ from: uri, to: newUri });
   if (await Sharing.isAvailableAsync()) {
@@ -122,7 +122,7 @@ export async function generateMusterStationPdf(
 
 /**
  * Several muster stations in one document, each under its own heading and
- * starting on a fresh page. Used by the Export control in the page header.
+ * flowing onto another page only when needed. Used by the page Export control.
  */
 export async function generateMusterStationListPdf(
   stations: { title: string; data: MusterStationData }[],

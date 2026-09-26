@@ -3,6 +3,10 @@ const mockMoveAsync = jest.fn();
 const mockIsAvailableAsync = jest.fn();
 const mockShareAsync = jest.fn();
 
+jest.mock('../../src/utils/standardPdf', () => ({
+  printStandardPdf: (...args: unknown[]) => mockPrintToFileAsync(...args),
+}));
+
 jest.mock('expo-print', () => ({
   printToFileAsync: (...args: unknown[]) => mockPrintToFileAsync(...args),
 }));

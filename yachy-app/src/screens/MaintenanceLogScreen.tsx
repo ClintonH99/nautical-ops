@@ -11,7 +11,7 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Print from 'expo-print';
+import { printStandardPdf } from '../utils/standardPdf';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
@@ -193,7 +193,7 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
           <meta charset="utf-8">
           <title>Maintenance Log</title>
           <style>
-            @page { size: A4 landscape; margin: 16mm 14mm; }
+            @page { size: A4 portrait; margin: 16mm 14mm; }
             * { box-sizing: border-box; margin: 0; padding: 0; }
             body { font-family: system-ui, sans-serif; font-size: 11px; color: #111; }
             h1 { font-size: 20px; font-weight: 700; color: #1E3A8A; margin-bottom: 4px; }
@@ -229,7 +229,7 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
         </body>
         </html>`;
 
-      const { uri } = await Print.printToFileAsync({ html });
+      const { uri } = await printStandardPdf({ html, title: 'Maintenance Log' });
 
       // Rename file with vessel name, date, and "Maintenance Log"
       const newUri = `${FileSystem.cacheDirectory}${filename}`;
