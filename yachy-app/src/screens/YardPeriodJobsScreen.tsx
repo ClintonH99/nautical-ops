@@ -1,3 +1,6 @@
+import { optimisticDelete } from '../utils/optimisticDelete';
+import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
+import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 /**
  * Shipyard List
  * Active work stays separate from the permanent, folder-organised Shipyard Records archive.
@@ -11,7 +14,6 @@ import {
   Modal,
   Platform,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -87,10 +89,13 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
   const canManageRecords = isCaptain || user?.role === 'HOD';
 
   const [pageView, setPageView] = useState<PageView>('ACTIVE');
-  const [jobs, setJobs] = useState<YardPeriodJob[]>([]);
-  const [folders, setFolders] = useState<ShipyardRecordFolder[]>([]);
-  const [folderAssignments, setFolderAssignments] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
+  const [jobs, setJobs] = useScreenState<YardPeriodJob[]>('jobs', []);
+  const [folders, setFolders] = useScreenState<ShipyardRecordFolder[]>('folders', []);
+  const [folderAssignments, setFolderAssignments] = useScreenState<Record<string, string>>(
+    'folderAssignments',
+    {}
+  );
+  const [loading, setLoading] = useScreenLoading();
   const [refreshing, setRefreshing] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [visibleDepartments, setVisibleDepartments] =
@@ -143,7 +148,7 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [vesselId]);
+  }, [setFolderAssignments, setFolders, setJobs, setLoading, vesselId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -291,8 +296,7 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await yardJobsService.delete(job.id);
-              await loadData();
+              await optimisticDelete(job, setJobs, () => yardJobsService.delete(job.id));
             } catch (error: any) {
               Alert.alert('Could not delete', error?.message || 'Please try again.');
             }

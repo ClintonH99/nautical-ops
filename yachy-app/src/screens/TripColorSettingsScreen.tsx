@@ -1,3 +1,4 @@
+import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * Trip Color Settings Screen
  * HOD can choose calendar colors for each visible trip type.
@@ -111,11 +112,7 @@ export const TripColorSettingsScreen = () => {
   }
 
   if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <LoadingSpinner />
-      </View>
-    );
+    return <ScreenLoading title="Trip Colors" />;
   }
 
   return (

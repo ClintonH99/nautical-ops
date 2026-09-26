@@ -1,9 +1,10 @@
+import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * Add / Edit Inventory Item Screen
  * Department selector, Title, Location, Description, Amount | Item table
  */
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -15,21 +16,17 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import * as Crypto from 'expo-crypto';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import inventoryService, { InventoryItemRow } from '../services/inventory';
 import { Department } from '../types';
-import {
-  Input,
-  Button,
-  LoadingSpinner,
-  PageHeader,
-  DepartmentSelector,
-  EnterToAddHint,
-} from '../components';
+import { Input, Button, PageHeader, DepartmentSelector, EnterToAddHint } from '../components';
+import { useInventoryAutoSave } from '../hooks/useInventoryAutoSave';
+import { InventoryAutoSaveControl } from '../components/InventoryAutoSaveControl';
+import type { InventoryValues } from '../utils/inventoryAutoSaveQueue';
 
 const defaultRow: InventoryItemRow = { amount: '', item: '' };
 
@@ -37,68 +34,99 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const itemId = route?.params?.itemId as string | undefined;
-  const isEdit = !!itemId;
-
-  const [department, setDepartment] = useState<Department>(user?.department ?? 'INTERIOR');
-  const [title, setTitle] = useState('');
-  const [location, setLocation] = useState('');
-  const [description, setDescription] = useState('');
-  const [rows, setRows] = useState<InventoryItemRow[]>([{ ...defaultRow }]);
+  const { queue, state } = useInventoryAutoSave();
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
   const vesselId = user?.vesselId ?? null;
+  const defaultDepartment = user?.department ?? 'INTERIOR';
+  const entry = editingId ? state.entries[editingId] : undefined;
+  const values: InventoryValues = entry?.values ?? {
+    department: defaultDepartment,
+    title: '',
+    location: '',
+    description: '',
+    items: [{ ...defaultRow }],
+  };
+  const { department, title, location, description } = values;
+  const rows = values.items.length ? values.items : [{ ...defaultRow }];
+  const isEdit = !!itemId || !!entry?.base;
 
-  const loadItem = useCallback(async () => {
-    if (!itemId) {
-      setLoading(false);
-      return;
-    }
-    try {
-      const item = await inventoryService.getById(itemId);
-      if (item) {
-        setDepartment(item.department);
-        setTitle(item.title);
-        setLocation(item.location || '');
-        setDescription(item.description || '');
-        setRows(item.items?.length ? item.items : [{ ...defaultRow }]);
-      } else {
-        Alert.alert('Error', 'Item not found.');
-        navigation.goBack();
+  useEffect(() => {
+    if (!state.ready || !vesselId) return;
+    let active = true;
+    let openedId: string | undefined;
+    setLoading(true);
+    void (async () => {
+      try {
+        const id = itemId ?? queue.getSnapshot().newItemId ?? Crypto.randomUUID();
+        const pending = queue.getSnapshot().entries[id];
+        if (
+          pending &&
+          !pending.deleting &&
+          (pending.version !== pending.savedVersion || pending.attempt || !itemId)
+        ) {
+          openedId = id;
+        } else if (itemId) {
+          const item = await inventoryService.getFreshById(itemId, vesselId);
+          if (!active) return;
+          if (!item) throw new Error('Inventory item not found.');
+          queue.open(
+            id,
+            { ...item, items: item.items.length ? item.items : [{ ...defaultRow }] },
+            item
+          );
+          openedId = id;
+        } else {
+          queue.open(
+            id,
+            {
+              department: defaultDepartment,
+              title: '',
+              location: '',
+              description: '',
+              items: [{ ...defaultRow }],
+            },
+            null,
+            true
+          );
+          openedId = id;
+        }
+        if (active) setEditingId(id);
+      } catch {
+        if (active) {
+          Alert.alert('Error', 'Could not load inventory item.');
+          navigation.goBack();
+        }
+      } finally {
+        if (active) setLoading(false);
       }
-    } catch (e) {
-      console.error('Load inventory item error:', e);
-      Alert.alert('Error', 'Could not load item.');
-      navigation.goBack();
-    } finally {
-      setLoading(false);
-    }
-  }, [itemId, navigation]);
+    })();
+    return () => {
+      active = false;
+      if (openedId) void queue.leave(openedId);
+    };
+  }, [queue, state.ready, itemId, vesselId, defaultDepartment, navigation]);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadItem();
-    }, [loadItem])
-  );
+  const change = (patch: Partial<InventoryValues>) => {
+    if (!editingId) return;
+    queue.change(editingId, { ...queue.getSnapshot().entries[editingId].values, ...patch });
+  };
 
   const amountInputRefs = useRef<Array<TextInput | null>>([]);
   const itemInputRefs = useRef<Array<TextInput | null>>([]);
 
   const addRow = () => {
     const newIndex = rows.length;
-    setRows((prev) => [...prev, { ...defaultRow }]);
+    change({ items: [...rows, { ...defaultRow }] });
     setTimeout(() => amountInputRefs.current[newIndex]?.focus(), 50);
   };
   const removeRow = (index: number) => {
     if (rows.length <= 1) return;
-    setRows((prev) => prev.filter((_, i) => i !== index));
+    change({ items: rows.filter((_, i) => i !== index) });
   };
   const setRowAt = (index: number, field: 'amount' | 'item', value: string) => {
-    setRows((prev) => {
-      const next = [...prev];
-      next[index] = { ...next[index], [field]: value };
-      return next;
-    });
+    change({ items: rows.map((row, i) => (i === index ? { ...row, [field]: value } : row)) });
   };
 
   const handleSave = async () => {
@@ -107,44 +135,60 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
       Alert.alert('Missing title', 'Please enter a title.');
       return;
     }
-    if (!vesselId) {
+    if (!vesselId || !editingId) {
       Alert.alert('Error', 'Join a vessel to create inventory items.');
       return;
     }
     setSaving(true);
     try {
-      const items = rows
-        .filter((row) => row.amount.trim() || row.item.trim())
-        .map((row) => ({ amount: row.amount.trim(), item: row.item.trim() }));
-      const userName = user?.name ?? '';
-      if (isEdit && itemId) {
-        await inventoryService.update(itemId, {
-          title: trimmedTitle,
-          description: description.trim(),
-          location: location.trim(),
-          department,
-          items,
-          lastEditedByName: userName,
-        });
-        Alert.alert('Saved', 'Inventory item updated.');
-      } else {
-        await inventoryService.create({
-          vesselId,
-          department,
-          title: trimmedTitle,
-          description: description.trim(),
-          location: location.trim(),
-          items,
-          lastEditedByName: userName,
-        });
-        Alert.alert('Created', 'Inventory item added.');
-      }
+      await queue.save(editingId, true);
+      const latest = queue.getSnapshot().entries[editingId];
+      if (latest.version !== latest.savedVersion)
+        throw new Error('Your changes have not synced yet.');
       navigation.goBack();
     } catch (e) {
-      console.error('Save inventory item error:', e);
-      Alert.alert('Error', 'Could not save.');
+      Alert.alert(
+        'Could not save',
+        e instanceof Error ? e.message : 'Your changes are kept on this device. Please try again.'
+      );
     } finally {
       setSaving(false);
+    }
+  };
+
+  const reviewOrRetry = async () => {
+    if (!editingId || !vesselId) return;
+    if (!entry?.blocked) {
+      await queue.flush();
+      return;
+    }
+    try {
+      const latest = await inventoryService.getFreshById(editingId, vesselId);
+      if (!latest) {
+        Alert.alert(
+          'Item unavailable',
+          'This item was deleted or you no longer have access. Your unsynced changes remain on this device.'
+        );
+        return;
+      }
+      const resolve = (keepLocal: boolean) => {
+        void queue
+          .resolve(editingId, latest, keepLocal)
+          .catch(() =>
+            Alert.alert('Could not save', 'Your changes remain on this device. Please try again.')
+          );
+      };
+      Alert.alert(
+        'Inventory changed elsewhere',
+        'Another edit was saved while you were working. Choose which version to keep.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Load Latest', onPress: () => resolve(false) },
+          { text: 'Keep My Changes', onPress: () => resolve(true) },
+        ]
+      );
+    } catch {
+      Alert.alert('Could not connect', 'Your changes remain on this device. Please try again.');
     }
   };
 
@@ -158,12 +202,22 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
     );
   }
 
-  if (loading) {
+  if (state.storageError && !state.ready) {
     return (
-      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <LoadingSpinner />
+      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <PageHeader title={isEdit ? 'Edit Inventory Item' : 'Create Inventory Item'} />
+        <Button
+          title="Retry"
+          onPress={() => {
+            void queue.load();
+          }}
+        />
+        <Text style={{ color: themeColors.textPrimary }}>{state.storageError}</Text>
       </View>
     );
+  }
+  if (loading || !state.ready) {
+    return <ScreenLoading title={isEdit ? 'Edit Inventory Item' : 'Create Inventory Item'} />;
   }
 
   return (
@@ -179,6 +233,35 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        <InventoryAutoSaveControl />
+        <TouchableOpacity
+          disabled={!entry?.error && !state.storageError}
+          onPress={() => {
+            void reviewOrRetry();
+          }}
+          accessibilityRole="button"
+        >
+          <Text
+            accessibilityLiveRegion="polite"
+            style={[styles.saveStatus, { color: themeColors.textSecondary }]}
+          >
+            {state.storageError ??
+              entry?.error ??
+              (entry?.saving
+                ? 'Saving…'
+                : !state.enabled
+                  ? 'Auto Save is off. Use Save Changes to save.'
+                  : !entry?.version
+                    ? 'Changes save automatically.'
+                    : !entry.localSaved
+                      ? 'Saving…'
+                      : !title.trim()
+                        ? 'Saved on this device. Enter a title to sync.'
+                        : entry.version !== entry.savedVersion
+                          ? 'Saving…'
+                          : 'Saved')}
+          </Text>
+        </TouchableOpacity>
         <View
           style={[
             styles.formSection,
@@ -195,28 +278,28 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
           </Text>
           <DepartmentSelector
             value={department}
-            onChange={(value) => value && setDepartment(value)}
+            onChange={(value) => value && change({ department: value as Department })}
             layout="stacked"
             tightTop
           />
           <Input
             label="Title"
             value={title}
-            onChangeText={setTitle}
+            onChangeText={(title) => change({ title })}
             placeholder="e.g. Deck Supplies"
             autoCapitalize="words"
           />
           <Input
             label="Location"
             value={location}
-            onChangeText={setLocation}
+            onChangeText={(location) => change({ location })}
             placeholder="e.g. Bosun Locker"
             autoCapitalize="words"
           />
           <Input
             label="Description"
             value={description}
-            onChangeText={setDescription}
+            onChangeText={(description) => change({ description })}
             placeholder="Optional description"
             multiline
             numberOfLines={3}
@@ -341,14 +424,16 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
         </View>
 
         <View style={styles.actions}>
-          <Button
-            title={isEdit ? 'Save Changes' : 'Create Inventory Item'}
-            onPress={handleSave}
-            variant="primary"
-            loading={saving}
-            disabled={saving}
-            fullWidth
-          />
+          {!state.enabled && (
+            <Button
+              title={isEdit ? 'Save Changes' : 'Create Inventory Item'}
+              onPress={handleSave}
+              variant="primary"
+              loading={saving}
+              disabled={saving}
+              fullWidth
+            />
+          )}
           {isEdit && (
             <Button
               title="Delete Inventory Item"
@@ -359,10 +444,12 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
                     text: 'Delete',
                     style: 'destructive',
                     onPress: async () => {
-                      if (!itemId) return;
+                      if (!editingId) return;
                       setSaving(true);
                       try {
-                        await inventoryService.delete(itemId);
+                        await queue.delete(editingId, async (created) => {
+                          if (created) await inventoryService.delete(editingId);
+                        });
                         Alert.alert('Deleted', 'Inventory item deleted.');
                         navigation.goBack();
                       } catch (e) {
@@ -457,5 +544,6 @@ const styles = StyleSheet.create({
   removeBtnText: { fontSize: FONTS.xs, fontWeight: '600' },
   enterHint: { marginTop: 0, marginBottom: 0 },
   actions: { marginTop: SPACING.sm },
+  saveStatus: { fontSize: FONTS.xs, marginBottom: SPACING.md },
   deleteBtn: { marginTop: SPACING.md },
 });

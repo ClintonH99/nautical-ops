@@ -1,18 +1,14 @@
+import { ScreenLoading } from '../components/ScreenLoading';
+import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
+import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
+import { optimisticDelete } from '../utils/optimisticDelete';
 /**
  * Pre-Departure Checklist Screen
  * List of pre-departure checklists; Create button to add new
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
@@ -58,8 +54,8 @@ const DEPARTMENT_OPTIONS: { value: Department | ''; label: string }[] = [
 export const PreDepartureChecklistScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
-  const [checklists, setChecklists] = useState<PreDepartureChecklist[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [checklists, setChecklists] = useScreenState<PreDepartureChecklist[]>('checklists', []);
+  const [loading, setLoading] = useScreenLoading();
   const [refreshing, setRefreshing] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [exportMode, setExportMode] = useState(false);
@@ -130,7 +126,7 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [vesselId]);
+  }, [setChecklists, setLoading, vesselId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -164,8 +160,9 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
         style: 'destructive',
         onPress: async () => {
           try {
-            await preDepartureChecklistsService.delete(checklist.id);
-            loadChecklists();
+            await optimisticDelete(checklist, setChecklists, () =>
+              preDepartureChecklistsService.delete(checklist.id)
+            );
           } catch (e) {
             Alert.alert('Error', 'Could not delete checklist');
           }
@@ -248,11 +245,7 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
   }
 
   if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <LoadingSpinner />
-      </View>
-    );
+    return <ScreenLoading title="Pre-Departure Checklist" />;
   }
 
   const ListHeader = (

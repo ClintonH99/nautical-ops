@@ -1,3 +1,4 @@
+import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * Create Muster Station Screen
  * Fill-in form for muster station plan, Export to PDF, Publish
@@ -357,11 +358,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
   }
 
   if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <LoadingSpinner />
-      </View>
-    );
+    return <ScreenLoading title={isEdit ? 'Edit Muster Station' : 'Create Muster Station'} />;
   }
 
   return (

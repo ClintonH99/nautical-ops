@@ -1,3 +1,4 @@
+import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * Add / Edit Uniform Screen
  * Department (on create), Label name, entry cards: Amount | Size | Color
@@ -168,11 +169,7 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
     );
   }
   if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <LoadingSpinner />
-      </View>
-    );
+    return <ScreenLoading title={isEdit ? 'Edit Uniform Label' : 'Create Uniform Label'} />;
   }
 
   return (

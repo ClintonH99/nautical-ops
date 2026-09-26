@@ -1,17 +1,12 @@
+import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
+import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
+import { optimisticDelete } from '../utils/optimisticDelete';
 /**
  * Notepad Screen
  */
 import React, { useState, useCallback, useRef } from 'react';
 import { PageHeader, PreviewActionButtons } from '../components';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
@@ -33,10 +28,10 @@ const NOTEPAD_INFO = {
 export const NotepadScreen = ({ navigation }: any) => {
   const { user } = useAuthStore();
   const themeColors = useThemeColors();
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [notes, setNotes] = useScreenState<Note[]>('notes', []);
+  const [loading, setLoading] = useScreenLoading();
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
-  const loadedUserIdRef = useRef<string | null>(null);
+  const loadedUserIdRef = useRef<string | null>(user?.id ?? null);
   const vesselId = user?.vesselId ?? null;
 
   const userId = user?.id ?? null;
@@ -59,7 +54,7 @@ export const NotepadScreen = ({ navigation }: any) => {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [setLoading, setNotes, userId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -75,8 +70,7 @@ export const NotepadScreen = ({ navigation }: any) => {
         style: 'destructive',
         onPress: async () => {
           try {
-            await notesService.deleteNote(note.id);
-            setNotes((prev) => prev.filter((n) => n.id !== note.id));
+            await optimisticDelete(note, setNotes, () => notesService.deleteNote(note.id));
           } catch {
             Alert.alert('Error', 'Could not delete note.');
           }

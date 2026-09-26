@@ -1,3 +1,6 @@
+import { ScreenLoading } from '../components/ScreenLoading';
+import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
+import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 /**
  * Rotational Groups Screen
  * MOV/HOD can view, create, rename, link, and unlink named rotation groups.
@@ -10,7 +13,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
-  RefreshControl,
   ScrollView,
   TextInput,
   Modal,
@@ -29,10 +31,10 @@ import { LoadingSpinner, PageHeader } from '../components';
 export const RotationalGroupsScreen = () => {
   const themeColors = useThemeColors();
   const { user: currentUser } = useAuthStore();
-  const [allCrew, setAllCrew] = useState<User[]>([]);
-  const [rotationalCrew, setRotationalCrew] = useState<User[]>([]);
-  const [namedGroups, setNamedGroups] = useState<RotationGroup[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [allCrew, setAllCrew] = useScreenState<User[]>('allCrew', []);
+  const [rotationalCrew, setRotationalCrew] = useScreenState<User[]>('rotationalCrew', []);
+  const [namedGroups, setNamedGroups] = useScreenState<RotationGroup[]>('namedGroups', []);
+  const [isLoading, setIsLoading] = useScreenLoading();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [crewPickerOpen, setCrewPickerOpen] = useState(false);
@@ -64,7 +66,7 @@ export const RotationalGroupsScreen = () => {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [currentUser?.vesselId]);
+  }, [currentUser?.vesselId, setAllCrew, setIsLoading, setNamedGroups, setRotationalCrew]);
 
   useFocusEffect(
     useCallback(() => {
@@ -290,11 +292,7 @@ export const RotationalGroupsScreen = () => {
   };
 
   if (isLoading) {
-    return (
-      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <LoadingSpinner />
-      </View>
-    );
+    return <ScreenLoading title="Rotational Groups" />;
   }
 
   return (

@@ -1,3 +1,4 @@
+import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
 /**
  * Rest Day Entry Screen
  * Lets a crew member enter their rest, work, and lunch periods for a single
@@ -16,7 +17,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  ActivityIndicator,
   TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';

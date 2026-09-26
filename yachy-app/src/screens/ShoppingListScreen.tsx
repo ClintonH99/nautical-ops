@@ -1,3 +1,6 @@
+import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
+import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
+import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 /**
  * Shopping List Screen
  * Shows lists for a single category (General or Trip), with department filter
@@ -5,16 +8,7 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  RefreshControl,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
@@ -52,18 +46,20 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
   const overrides = useDepartmentColorStore((s) => s.overrides);
   const listType = (route?.params?.listType as 'general' | 'trip') ?? 'general';
 
-  const [lists, setLists] = useState<ShoppingList[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [lists, setLists] = useScreenState<ShoppingList[]>('lists', []);
+  const [loading, setLoading] = useScreenLoading();
   const [refreshing, setRefreshing] = useState(false);
   const [visibleDepartments, setVisibleDepartments] =
     useState<Record<Department, boolean>>(allDeptsVisible);
   const [expandedListId, setExpandedListId] = useState<string | null>(null);
-  const listsRef = useRef<ShoppingList[]>([]);
-  const confirmedItemsRef = useRef(new Map<string, ShoppingListItem[]>());
+  const listsRef = useRef<ShoppingList[]>(lists);
+  const confirmedItemsRef = useRef(
+    new Map<string, ShoppingListItem[]>(lists.map((list) => [list.id, list.items]))
+  );
   const pendingItemsRef = useRef(new Map<string, ShoppingListItem[]>());
   const savingListIdsRef = useRef(new Set<string>());
   const mountedRef = useRef(true);
-  const loadedVesselIdRef = useRef<string | null>(null);
+  const loadedVesselIdRef = useRef<string | null>(user?.vesselId ?? null);
 
   const vesselId = user?.vesselId ?? null;
 
@@ -78,10 +74,13 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
     []
   );
 
-  const replaceLists = useCallback((nextLists: ShoppingList[]) => {
-    listsRef.current = nextLists;
-    setLists(nextLists);
-  }, []);
+  const replaceLists = useCallback(
+    (nextLists: ShoppingList[]) => {
+      listsRef.current = nextLists;
+      setLists(nextLists);
+    },
+    [setLists]
+  );
 
   const updateListItemsLocally = useCallback(
     (listId: string, items: ShoppingListItem[]) => {
@@ -110,7 +109,7 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [replaceLists, vesselId]);
+  }, [replaceLists, setLoading, vesselId]);
 
   useFocusEffect(
     useCallback(() => {

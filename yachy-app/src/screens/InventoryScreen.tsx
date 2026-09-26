@@ -1,20 +1,15 @@
+import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
+import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
+import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
+import { optimisticDelete } from '../utils/optimisticDelete';
 /**
  * Inventory Screen
  * Create button, department filter, list of inventory items. Export mode: select items → Export to PDF.
  */
 
-import React, { useState, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-  RefreshControl,
-  Alert,
-  TouchableOpacity,
-} from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
@@ -32,6 +27,8 @@ import {
   DepartmentMultiSelector,
 } from '../components';
 import { DEPARTMENT_OPTIONS as DEPARTMENTS } from '../utils/departmentSelection';
+import { useInventoryAutoSave } from '../hooks/useInventoryAutoSave';
+import { InventoryAutoSaveControl } from '../components/InventoryAutoSaveControl';
 
 const INVENTORY_INFO = {
   title: 'Inventory',
@@ -47,8 +44,10 @@ const INVENTORY_INFO = {
 export const InventoryScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const isFocused = useIsFocused();
+  const { queue, state: autoSave } = useInventoryAutoSave();
+  const [items, setItems] = useScreenState<InventoryItem[]>('items', []);
+  const [loading, setLoading] = useScreenLoading();
   const [refreshing, setRefreshing] = useState(false);
   const [visibleDepartments, setVisibleDepartments] = useState<Record<Department, boolean>>({
     BRIDGE: true,
@@ -62,7 +61,7 @@ export const InventoryScreen = ({ navigation }: any) => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exporting, setExporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const loadedVesselIdRef = useRef<string | null>(null);
+  const loadedVesselIdRef = useRef<string | null>(user?.vesselId ?? null);
 
   const vesselId = user?.vesselId ?? null;
 
@@ -79,7 +78,20 @@ export const InventoryScreen = ({ navigation }: any) => {
     return false;
   };
 
-  const filteredItems = (items ?? [])
+  const displayedItems = new Map(items.map((item) => [item.id, item]));
+  Object.values(autoSave.entries).forEach((entry) => {
+    if (entry.deleting) return;
+    if (entry.version !== entry.savedVersion && entry.values.title.trim()) {
+      displayedItems.set(entry.id, {
+        ...entry.base,
+        ...entry.values,
+        id: entry.id,
+        vesselId: vesselId ?? '',
+        createdAt: entry.base?.createdAt ?? '',
+      });
+    }
+  });
+  const filteredItems = Array.from(displayedItems.values())
     .filter((item) => visibleDepartments[item.department ?? 'INTERIOR'])
     .filter(matchesSearch);
 
@@ -120,8 +132,11 @@ export const InventoryScreen = ({ navigation }: any) => {
         style: 'destructive',
         onPress: async () => {
           try {
-            await inventoryService.delete(item.id);
-            setItems((prev) => prev.filter((i) => i.id !== item.id));
+            await optimisticDelete(item, setItems, () =>
+              queue.delete(item.id, async (created) => {
+                if (created) await inventoryService.delete(item.id);
+              })
+            );
           } catch (e) {
             console.error('Delete inventory item error:', e);
             Alert.alert('Error', 'Could not delete inventory item.');
@@ -147,13 +162,14 @@ export const InventoryScreen = ({ navigation }: any) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [vesselId]);
+  }, [setItems, setLoading, vesselId]);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadItems();
-    }, [loadItems])
-  );
+  const syncRevision = Object.values(autoSave.entries)
+    .map((entry) => `${entry.id}:${entry.savedVersion}`)
+    .join('|');
+  useEffect(() => {
+    if (isFocused) void loadItems();
+  }, [isFocused, loadItems, syncRevision]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -233,6 +249,12 @@ export const InventoryScreen = ({ navigation }: any) => {
             </Text>
           </TouchableOpacity>
         </View>
+        <InventoryAutoSaveControl />
+        {autoSave.storageError ? (
+          <Text style={{ color: themeColors.textSecondary, marginBottom: SPACING.md }}>
+            {autoSave.storageError}
+          </Text>
+        ) : null}
         <View style={styles.searchRow}>
           <Input
             variant="search"
@@ -327,6 +349,13 @@ export const InventoryScreen = ({ navigation }: any) => {
                   </View>
                 }
               >
+                {autoSave.entries[item.id]?.version !== undefined &&
+                autoSave.entries[item.id].version !== autoSave.entries[item.id].savedVersion ? (
+                  <Text style={{ color: themeColors.textSecondary, marginBottom: SPACING.sm }}>
+                    {autoSave.entries[item.id].error ??
+                      (autoSave.enabled ? 'Saving…' : 'Not synced — Auto Save is off.')}
+                  </Text>
+                ) : null}
                 <View
                   style={[styles.inventorySummary, { backgroundColor: themeColors.surfaceAlt }]}
                 >

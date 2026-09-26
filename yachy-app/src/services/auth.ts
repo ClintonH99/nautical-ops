@@ -388,15 +388,16 @@ class AuthService {
           throw new Error('This account is already registered on 2 devices.');
         }
 
+        let joinedProfile: User | null = null;
         if (validatedVessel) {
-          await this.joinVessel(authData.user.id, inviteCode!);
+          joinedProfile = await this.joinVessel(authData.user.id, inviteCode!);
         } else if (role === 'CREW') {
           // New crew without an invite receive a private solo workspace. The
           // server creates it and assigns membership in one transaction.
           await vesselService.createVessel({ name: 'Crew Account', isSolo: true });
         }
 
-        const mappedUser = await this.getUserProfile(authData.user.id);
+        const mappedUser = joinedProfile ?? (await this.getUserProfile(authData.user.id));
         if (!mappedUser) throw new Error('Account profile could not be loaded');
         if (__DEV__)
           console.log(
@@ -464,7 +465,7 @@ class AuthService {
     }
   }
 
-  async getSession() {
+  async getSession(options?: { throwOnTransient?: boolean }) {
     try {
       const { data, error } = await supabase.auth.getSession();
       if (error) throw error;
@@ -484,14 +485,27 @@ class AuthService {
         }
         if (__DEV__)
           console.warn('[Auth] Cleared invalid refresh token; user will need to sign in again.');
-      } else if (__DEV__) {
-        console.error('Get session error:', error);
+      } else {
+        if (options?.throwOnTransient) throw error;
+        if (__DEV__) console.warn('Get session error:', error);
       }
       return null;
     }
   }
 
-  async getUserProfile(userId: string): Promise<User | null> {
+  private profileRequests = new Map<string, Promise<User | null>>();
+
+  getUserProfile(userId: string): Promise<User | null> {
+    const existing = this.profileRequests.get(userId);
+    if (existing) return existing;
+    const request = this.readUserProfile(userId).finally(() => {
+      if (this.profileRequests.get(userId) === request) this.profileRequests.delete(userId);
+    });
+    this.profileRequests.set(userId, request);
+    return request;
+  }
+
+  private async readUserProfile(userId: string): Promise<User | null> {
     try {
       const { data, error } = await supabase
         .from('users')
@@ -528,11 +542,19 @@ class AuthService {
     const ATTEMPT_MS = 2500;
     const BETWEEN_MS = 400;
     const FINAL_RACE_MS = 5000;
-    const race = (ms: number) =>
-      Promise.race([
-        this.getUserProfile(userId),
-        new Promise<User | null>((resolve) => setTimeout(() => resolve(null), ms)),
-      ]);
+    const race = async (ms: number) => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        return await Promise.race([
+          this.getUserProfile(userId),
+          new Promise<null>((resolve) => {
+            timer = setTimeout(() => resolve(null), ms);
+          }),
+        ]);
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+    };
     for (let attempt = 0; attempt < 2; attempt++) {
       const row = await race(ATTEMPT_MS);
       if (row) return row;
@@ -575,37 +597,59 @@ class AuthService {
   }
 
   onAuthStateChange(callback: (user: User | null) => void) {
-    return supabase.auth.onAuthStateChange(async (event, session) => {
-      try {
-        if (event === 'TOKEN_REFRESHED' && !session) {
+    let active = true;
+    let revision = 0;
+    const subscription = supabase.auth.onAuthStateChange((event, session) => {
+      // Bootstrap owns INITIAL_SESSION. Token refresh does not change the profile.
+      if (event === 'INITIAL_SESSION' || (event === 'TOKEN_REFRESHED' && session)) return;
+      const current = ++revision;
+      // Never await Supabase queries inside its auth lock.
+      setTimeout(() => {
+        void (async () => {
+          if (!active || current !== revision) return;
           try {
-            await supabase.auth.signOut({ scope: 'local' });
-          } catch {
-            /* best-effort */
-          }
-          callback(null);
-          return;
-        }
-        if (session?.user) {
-          const userData = await this.getUserProfileWithRetry(session.user.id);
-          if (userData) {
-            callback(userData);
-          } else {
-            if (__DEV__) {
-              console.warn(
-                '[Auth] Profile still unavailable after retries; keeping current session in UI if any.'
-              );
+            if (event === 'TOKEN_REFRESHED' && !session) {
+              try {
+                await supabase.auth.signOut({ scope: 'local' });
+              } catch {
+                /* best-effort */
+              }
+              if (active && current === revision) callback(null);
+              return;
             }
+            if (session?.user) {
+              const userData = await this.getUserProfileWithRetry(session.user.id);
+              if (userData) {
+                if (active && current === revision) callback(userData);
+              } else {
+                if (__DEV__) {
+                  console.warn(
+                    '[Auth] Profile still unavailable after retries; keeping current session in UI if any.'
+                  );
+                }
+              }
+            } else {
+              if (active && current === revision) callback(null);
+            }
+          } catch (error) {
+            if (__DEV__) console.error('Auth state change handler error:', error);
+            if (session?.user) return;
+            if (active && current === revision) callback(null);
           }
-        } else {
-          callback(null);
-        }
-      } catch (error) {
-        if (__DEV__) console.error('Auth state change handler error:', error);
-        if (session?.user) return;
-        callback(null);
-      }
+        })();
+      }, 0);
     });
+    return {
+      data: {
+        subscription: {
+          unsubscribe: () => {
+            active = false;
+            revision += 1;
+            subscription.data.subscription.unsubscribe();
+          },
+        },
+      },
+    };
   }
 }
 

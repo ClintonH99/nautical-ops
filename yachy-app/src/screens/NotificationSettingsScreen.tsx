@@ -1,10 +1,11 @@
+import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
 /**
  * Notification Settings Screen
  * Enable/disable push notifications and choose what to receive
  */
 
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Switch, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Switch, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';

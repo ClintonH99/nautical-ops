@@ -1,3 +1,4 @@
+import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
 /**
  * Hours of Rest Screen
  * Calendar view of a crew member's rest entries, with STCW compliance
@@ -5,8 +6,9 @@
  * are flagged completed (green) or not completed (red).
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useCallback, useRef } from 'react';
+import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
+import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
@@ -45,14 +47,16 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
   const { user } = useAuthStore();
   const isCaptainOrMov = user?.role === 'CAPTAIN_MOV';
 
-  const [entries, setEntries] = useState<Record<string, RestEntry>>({});
-  const [loading, setLoading] = useState(true);
+  const [entries, setEntries] = useScreenState<Record<string, RestEntry>>('entries', {});
+  const [loading, setLoading] = useScreenLoading();
   const [exporting, setExporting] = useState(false);
-  const [viewedMonth, setViewedMonth] = useState(new Date());
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [viewedMonth, setViewedMonth] = useScreenState('viewedMonth', () => new Date());
+  const [hasLoadedOnce, setHasLoadedOnce] = useScreenState('hasLoadedOnce', false);
+  const requestId = useRef(0);
 
   const loadData = useCallback(async () => {
     if (!user?.id) return;
+    const currentRequest = ++requestId.current;
     setLoading(true);
     try {
       // Fetch the currently viewed month, padded 7 days before so the
@@ -64,12 +68,14 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
       paddedStart.setDate(paddedStart.getDate() - 7);
       const since = toYYYYMMDD(paddedStart);
       const until = toYYYYMMDD(lastOfMonth);
-      const { data: rows } = await supabase
+      const { data: rows, error } = await supabase
         .from('rest_entries')
         .select('*')
         .eq('user_id', user.id)
         .gte('date', since)
         .lte('date', until);
+      if (error) throw error;
+      if (currentRequest !== requestId.current) return;
 
       const byDate: Record<string, RestEntry> = {};
       (rows ?? []).forEach((r) => {
@@ -79,19 +85,18 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
     } catch (e) {
       console.error('Load rest entries error:', e);
     } finally {
-      setLoading(false);
-      setHasLoadedOnce(true);
+      if (currentRequest === requestId.current) {
+        setLoading(false);
+        setHasLoadedOnce(true);
+      }
     }
-  }, [user?.id, viewedMonth]);
+  }, [setEntries, setHasLoadedOnce, setLoading, user?.id, viewedMonth]);
 
   useFocusEffect(
     useCallback(() => {
       loadData();
     }, [loadData])
   );
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
 
   // Build calendar bar markers (matching the Home screen's calendar style)
   // for the past 30 days: green bar if completed, red bar if a day in the
@@ -182,7 +187,7 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
               ]}
             >
               <Calendar
-                current={todayStr}
+                current={toYYYYMMDD(viewedMonth)}
                 maxDate={todayStr}
                 markedDates={markedDates}
                 markingType="multi-period"

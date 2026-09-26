@@ -1,3 +1,4 @@
+import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
 /**
  * Add / Edit Note Screen
  */
@@ -11,7 +12,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';

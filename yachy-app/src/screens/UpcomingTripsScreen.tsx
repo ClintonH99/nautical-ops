@@ -1,10 +1,11 @@
+import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
 /**
  * Upcoming Trips Screen
  * Main trips hub: calendar showing Guest, Boss, and Delivery trips.
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from 'react-native-calendars';
 import { useFocusEffect } from '@react-navigation/native';

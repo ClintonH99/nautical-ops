@@ -1,3 +1,4 @@
+import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * Create Rules Screen
  * Fill-in form for rules (title + rule items), Export to PDF, Publish
@@ -133,11 +134,7 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
     );
   }
   if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <LoadingSpinner />
-      </View>
-    );
+    return <ScreenLoading title={isEdit ? 'Edit Rules' : 'Create Rules'} />;
   }
 
   return (

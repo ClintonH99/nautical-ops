@@ -103,6 +103,7 @@ export const RegisterScreen = ({ navigation, route }: any) => {
     if (!validateForm()) return;
 
     setLoading(true);
+    useAuthStore.getState().setDeferUserUpdate(true);
     try {
       const { user, session } = await authService.signUp({
         email: formData.email,
@@ -150,6 +151,7 @@ export const RegisterScreen = ({ navigation, route }: any) => {
           : error.message || 'Failed to create account.'
       );
     } finally {
+      useAuthStore.getState().setDeferUserUpdate(false);
       setLoading(false);
     }
   };

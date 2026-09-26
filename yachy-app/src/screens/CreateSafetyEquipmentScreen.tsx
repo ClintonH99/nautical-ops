@@ -1,3 +1,4 @@
+import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * Create Safety Equipment Screen
  */
@@ -273,11 +274,7 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
       </View>
     );
   if (loading)
-    return (
-      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <LoadingSpinner />
-      </View>
-    );
+    return <ScreenLoading title={isEdit ? 'Edit Safety Equipment' : 'Create Safety Equipment'} />;
 
   return (
     <KeyboardAvoidingView

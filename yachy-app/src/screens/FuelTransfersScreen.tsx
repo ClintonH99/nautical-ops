@@ -1,5 +1,7 @@
+import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
+import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import {
@@ -30,18 +32,21 @@ export const FuelTransfersScreen = ({ navigation }: any) => {
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
   const canManageSetup = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useScreenLoading();
   const [refreshing, setRefreshing] = useState(false);
-  const [loadedVesselId, setLoadedVesselId] = useState<string | null>(null);
-  const [storedTransfers, setStoredTransfers] = useState<FuelTransfer[]>([]);
-  const [storedTanks, setStoredTanks] = useState<FuelTank[]>([]);
+  const [loadedVesselId, setLoadedVesselId] = useScreenState<string | null>('loadedVesselId', null);
+  const [storedTransfers, setStoredTransfers] = useScreenState<FuelTransfer[]>(
+    'storedTransfers',
+    []
+  );
+  const [storedTanks, setStoredTanks] = useScreenState<FuelTank[]>('storedTanks', []);
   const [loadError, setLoadError] = useState<{ vesselId: string; message: string } | null>(null);
-  const [unit, setUnit] = useState<FuelVolumeUnit>('LITRES');
+  const [unit, setUnit] = useScreenState<FuelVolumeUnit>('unit', 'LITRES');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const loadGeneration = useRef(0);
-  const requestedVesselId = useRef<string | null>(null);
+  const requestedVesselId = useRef<string | null>(vesselId);
   const transfers = useMemo(
     () => (loadedVesselId === vesselId ? storedTransfers : []),
     [loadedVesselId, storedTransfers, vesselId]
@@ -101,7 +106,7 @@ export const FuelTransfersScreen = ({ navigation }: any) => {
         setRefreshing(false);
       }
     }
-  }, [vesselId]);
+  }, [setLoadedVesselId, setLoading, setStoredTanks, setStoredTransfers, setUnit, vesselId]);
 
   useFocusEffect(
     useCallback(() => {

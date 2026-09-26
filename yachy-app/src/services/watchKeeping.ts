@@ -299,7 +299,7 @@ class WatchKeepingService {
       return (data || []).map(this.mapRow);
     } catch (e) {
       console.error('Get watch timetables error:', e);
-      return [];
+      throw e;
     }
   }
 

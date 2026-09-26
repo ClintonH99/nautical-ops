@@ -11,6 +11,7 @@ import { Platform } from 'react-native';
 import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import 'react-native-url-polyfill/auto';
+import { createReadTransport } from './readTransport';
 
 export const SUPABASE_URL =
   process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
@@ -30,7 +31,10 @@ if (__DEV__ && isPlaceholder) {
   );
 }
 
+export const readTransport = createReadTransport((input, init) => fetch(input, init), SUPABASE_URL);
+
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  global: { fetch: readTransport.fetch },
   auth: {
     ...(Platform.OS !== 'web' ? { storage: AsyncStorage } : {}),
     // Native refresh is controlled from RootNavigator using AppState. Leaving

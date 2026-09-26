@@ -1,19 +1,12 @@
+import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
+import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 /**
  * Crew Management Screen
  * HOD can view all crew members, their roles, and manage them
  */
 
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  Alert,
-  Image,
-  RefreshControl,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Image } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
@@ -29,8 +22,8 @@ import { canAccessVesselManagement, isMasterOfVessel } from '../utils/access';
 export const CrewManagementScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user: currentUser } = useAuthStore();
-  const [crew, setCrew] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [crew, setCrew] = useScreenState<User[]>('crew', []);
+  const [isLoading, setIsLoading] = useScreenLoading();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [photoLoadFailedIds, setPhotoLoadFailedIds] = useState<Set<string>>(new Set());
   const [contractFilter, setContractFilter] = useState<
@@ -53,7 +46,7 @@ export const CrewManagementScreen = ({ navigation }: any) => {
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser?.vesselId]);
+  }, [currentUser?.vesselId, setCrew, setIsLoading]);
 
   useFocusEffect(
     useCallback(() => {

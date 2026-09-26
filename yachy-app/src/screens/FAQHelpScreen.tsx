@@ -1,3 +1,4 @@
+import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
 /**
  * FAQ Screen
  * Displays FAQs from Supabase and allows users to submit questions
@@ -12,7 +13,6 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES, SHADOWS } from '../constants/theme';

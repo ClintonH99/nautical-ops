@@ -58,13 +58,13 @@ export const Input: React.FC<InputProps> = ({
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {label && (
+      {label ? (
         <Text
           style={[styles.label, { color: forceLight ? COLORS.black : themeColors.textPrimary }]}
         >
           {label}
         </Text>
-      )}
+      ) : null}
       <View
         style={[
           styles.inputContainer,
@@ -77,7 +77,7 @@ export const Input: React.FC<InputProps> = ({
           isSearch && styles.inputContainerSearch,
         ]}
       >
-        {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
+        {leftIcon ? <View style={styles.leftIcon}>{leftIcon}</View> : null}
         <TextInput
           style={[
             styles.input,
@@ -91,10 +91,13 @@ export const Input: React.FC<InputProps> = ({
           secureTextEntry={effectiveSecureTextEntry}
           {...textInputProps}
         />
-        {(passwordToggleIcon && <View style={styles.rightIcon}>{passwordToggleIcon}</View>) ||
-          (rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>)}
+        {passwordToggleIcon ? (
+          <View style={styles.rightIcon}>{passwordToggleIcon}</View>
+        ) : rightIcon ? (
+          <View style={styles.rightIcon}>{rightIcon}</View>
+        ) : null}
       </View>
-      {error && <Text style={styles.error}>{error}</Text>}
+      {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
   );
 };

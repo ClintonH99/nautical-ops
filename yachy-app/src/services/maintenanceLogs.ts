@@ -43,7 +43,7 @@ class MaintenanceLogsService {
       return (data || []).map(this.mapRowToLog);
     } catch (error) {
       console.error('Get maintenance logs error:', error);
-      return [];
+      throw error;
     }
   }
 

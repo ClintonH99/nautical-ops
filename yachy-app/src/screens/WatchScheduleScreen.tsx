@@ -1,18 +1,14 @@
+import { optimisticDelete } from '../utils/optimisticDelete';
+import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
+import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
+import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 /**
  * Watch Schedule Screen
  * Published watch timetables - view and export as PDF
  */
 
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-  RefreshControl,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -47,8 +43,12 @@ function formatDurationLabel(hours: number | null): string {
 export const WatchScheduleScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
-  const [publishedTimetables, setPublishedTimetables] = useState<PublishedWatchTimetable[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [publishedTimetables, setPublishedTimetables] = useScreenState<PublishedWatchTimetable[]>(
+    'publishedTimetables',
+    []
+  );
+  const [loading, setLoading] = useScreenLoading();
+  const [refreshing, setRefreshing] = useState(false);
   const [exportMode, setExportMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -69,8 +69,9 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
       return [];
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, [vesselId]);
+  }, [setLoading, setPublishedTimetables, vesselId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -99,8 +100,9 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await watchKeepingService.delete(timetable.id);
-              loadPublished();
+              await optimisticDelete(timetable, setPublishedTimetables, () =>
+                watchKeepingService.delete(timetable.id)
+              );
               Alert.alert('Deleted', 'Watch Schedule has been deleted.');
             } catch (e) {
               console.error('Delete error:', e);
@@ -198,8 +200,11 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
-            refreshing={loading}
-            onRefresh={loadPublished}
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              void loadPublished();
+            }}
             colors={[themeColors.accent]}
             tintColor={themeColors.accent}
           />

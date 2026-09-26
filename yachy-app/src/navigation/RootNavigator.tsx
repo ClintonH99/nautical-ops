@@ -3,7 +3,7 @@
  * Handles auth flow and main navigation
  */
 
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   NavigationContainer,
   DefaultTheme,
@@ -13,7 +13,16 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { ActivityIndicator, View, StyleSheet, Platform, AppState } from 'react-native';
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+  AppState,
+  AccessibilityInfo,
+} from 'react-native';
 import { PostHogProvider } from 'posthog-react-native';
 import { posthog } from '../config/posthog';
 import {
@@ -126,6 +135,9 @@ import { DEVICE_LIMIT_MESSAGE } from '../services/deviceAccess';
 import { reconcileAppleSubscription } from '../services/iap';
 import { syncPushTokenForCurrentDevice } from '../services/notifications';
 import { COLORS } from '../constants/theme';
+import { readTransport } from '../services/supabase';
+import { getRenewableSessionUserId } from '../utils/cachedSession';
+import { InventoryAutoSaveSync } from '../hooks/useInventoryAutoSave';
 import { isSentryEnabled, sentryNavigationIntegration, setSentryUserContext } from '../lib/sentry';
 
 const Stack = createNativeStackNavigator();
@@ -294,6 +306,10 @@ export const RootNavigator = () => {
   const hasVessel = !!user?.vesselId;
   const navigationRef = useNavigationContainerRef();
   const lastHandledNotificationId = useRef<string | null>(null);
+  const [bootstrapAttempt, setBootstrapAttempt] = useState(0);
+  const [startupError, setStartupError] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const accessRequest = useRef<{ key: string; promise: Promise<boolean> } | null>(null);
   // Welcome: logged-out cold start only. Logged-in users skip Welcome (straight to MainTabs / CaptainWelcome).
   // Per ADMIN rule: Crew members never see CaptainWelcome - go straight to MainTabs
   const initialRoute = !isAuthenticated
@@ -307,6 +323,16 @@ export const RootNavigator = () => {
   const themeColors = BACKGROUND_THEMES[backgroundTheme];
 
   const loadTheme = useThemeStore((s) => s.loadTheme);
+
+  useEffect(() => {
+    void AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const listener = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => listener.remove();
+  }, []);
+
+  useEffect(() => {
+    readTransport.invalidate();
+  }, [user?.id, user?.vesselId, user?.role]);
 
   useEffect(() => {
     if (isSentryEnabled) {
@@ -393,50 +419,67 @@ export const RootNavigator = () => {
 
   const applyAccountAccess = useCallback(
     async (candidate: NonNullable<typeof user>): Promise<boolean> => {
-      const decision = await evaluateAccountAccess(candidate);
+      if (useAuthStore.getState().deferUserUpdate) return false;
+      const key = JSON.stringify(candidate);
+      if (accessRequest.current?.key === key) return accessRequest.current.promise;
+      const startingUserId = useAuthStore.getState().user?.id;
+      const operation = (async () => {
+        const decision = await evaluateAccountAccess(candidate);
+        if (
+          useAuthStore.getState().deferUserUpdate ||
+          useAuthStore.getState().user?.id !== startingUserId
+        )
+          return false;
 
-      if (decision.state === 'unavailable') {
-        // A connectivity/backend failure must not create a new restriction or
-        // clear one that the server already confirmed earlier.
-        setUser(candidate);
-        return !useAuthStore.getState().captainPaymentRequired;
-      }
-
-      if (decision.state === 'device_limit_reached') {
-        setLoginNotice(DEVICE_LIMIT_MESSAGE);
-        setCaptainPaymentRequired(false);
-        try {
-          await supabase.auth.signOut({ scope: 'local' });
-        } catch {
-          /* best-effort local sign-out */
+        if (decision.state === 'unavailable') {
+          // A connectivity/backend failure must not create a new restriction or
+          // clear one that the server already confirmed earlier.
+          setUser(candidate);
+          return !useAuthStore.getState().captainPaymentRequired;
         }
-        setUser(null);
-        return false;
-      }
 
-      if (decision.state === 'crew_payment_required') {
-        setLoginNotice(SUBSCRIPTION_PAYMENT_REQUIRED_MESSAGE);
-        setCaptainPaymentRequired(false);
-        try {
-          await supabase.auth.signOut({ scope: 'local' });
-        } catch {
-          /* best-effort local sign-out */
+        if (decision.state === 'device_limit_reached') {
+          setLoginNotice(DEVICE_LIMIT_MESSAGE);
+          setCaptainPaymentRequired(false);
+          try {
+            await supabase.auth.signOut({ scope: 'local' });
+          } catch {
+            /* best-effort local sign-out */
+          }
+          setUser(null);
+          return false;
         }
-        setUser(null);
-        return false;
-      }
 
-      if (decision.state === 'captain_payment_required') {
+        if (decision.state === 'crew_payment_required') {
+          setLoginNotice(SUBSCRIPTION_PAYMENT_REQUIRED_MESSAGE);
+          setCaptainPaymentRequired(false);
+          try {
+            await supabase.auth.signOut({ scope: 'local' });
+          } catch {
+            /* best-effort local sign-out */
+          }
+          setUser(null);
+          return false;
+        }
+
+        if (decision.state === 'captain_payment_required') {
+          setLoginNotice(null);
+          setCaptainPaymentRequired(true);
+          setUser(candidate);
+          return false;
+        }
+
         setLoginNotice(null);
-        setCaptainPaymentRequired(true);
+        setCaptainPaymentRequired(false);
         setUser(candidate);
-        return false;
+        return true;
+      })();
+      accessRequest.current = { key, promise: operation };
+      try {
+        return await operation;
+      } finally {
+        if (accessRequest.current?.promise === operation) accessRequest.current = null;
       }
-
-      setLoginNotice(null);
-      setCaptainPaymentRequired(false);
-      setUser(candidate);
-      return true;
     },
     [setCaptainPaymentRequired, setLoginNotice, setUser]
   );
@@ -444,6 +487,7 @@ export const RootNavigator = () => {
   useEffect(() => {
     let mounted = true;
     const BOOTSTRAP_MAX_MS = 12000;
+    setStartupError(false);
 
     // Phase 1 - local reads only. Nothing here touches the network, so it
     // finishes in milliseconds and the app is on screen before any request
@@ -464,23 +508,20 @@ export const RootNavigator = () => {
         if (storedPaymentRestriction === 'true') setCaptainPaymentRequired(true);
 
         let hasUsableLocalSession = false;
+        let sessionUserId: string | null = null;
         try {
-          const session = storedAuth ? JSON.parse(storedAuth) : null;
-          hasUsableLocalSession = Boolean(
-            session?.access_token &&
-            session?.refresh_token &&
-            typeof session?.expires_at === 'number' &&
-            session.expires_at * 1000 > Date.now() + 30_000
-          );
+          const rawAuth =
+            Platform.OS === 'web' && typeof localStorage !== 'undefined'
+              ? localStorage.getItem(SUPABASE_AUTH_STORAGE_KEY)
+              : storedAuth;
+          sessionUserId = getRenewableSessionUserId(rawAuth);
+          hasUsableLocalSession = !!sessionUserId;
         } catch {
           /* malformed auth storage is handled as signed out below */
         }
 
         if (!hasUsableLocalSession) {
-          // Do not delete a structurally valid Supabase session merely because
-          // its short-lived access token expired. getSession() below can still
-          // renew it using the refresh token. We only withhold the cached UI so
-          // authenticated screens cannot make requests with the expired token.
+          // No renewable session: show Login immediately.
           await AsyncStorage.removeItem('nautical_ops_cached_user');
           if (mounted) {
             setUser(null);
@@ -491,12 +532,14 @@ export const RootNavigator = () => {
 
         if (cached && mounted) {
           const parsed = JSON.parse(cached);
-          if (parsed?.id) {
+          if (parsed?.id === sessionUserId) {
             setUser(parsed);
             setLoading(false);
             return true;
           }
         }
+        // A renewable session without a matching profile remains on the stable startup view.
+        if (hasUsableLocalSession) return false;
       } catch {
         /* cache is best-effort */
       }
@@ -510,13 +553,20 @@ export const RootNavigator = () => {
     // user is already looking at. If it turns out the session is dead, the
     // user is corrected out of the app from here.
     const runBootstrap = async (renderedFromCache: boolean) => {
+      const startingUser = useAuthStore.getState().user;
       try {
-        const session = await authService.getSession();
+        const session = await authService.getSession({ throwOnTransient: true });
         if (!mounted) return;
+        if (
+          useAuthStore.getState().user !== startingUser ||
+          useAuthStore.getState().deferUserUpdate
+        )
+          return;
 
         if (!session?.user) {
           // Rendered from cache but the session is gone - sign them back out.
-          if (renderedFromCache) setUser(null);
+          setUser(null);
+          setLoading(false);
           return;
         }
 
@@ -524,14 +574,7 @@ export const RootNavigator = () => {
           ? await authService.getUserProfile(session.user.id)
           : await authService.getUserProfileWithRetry(session.user.id);
 
-        if (mounted && !userData && Platform.OS === 'web') {
-          try {
-            await supabase.auth.signOut({ scope: 'local' });
-          } catch {
-            /* best-effort clear of stale web session */
-          }
-          return;
-        }
+        if (!userData) throw new Error('Profile temporarily unavailable');
 
         if (mounted && userData) {
           const isCaptain = userData.role === 'CAPTAIN_MOV';
@@ -539,17 +582,18 @@ export const RootNavigator = () => {
             const refetch = await authService.getUserProfile(session.user.id);
             if (mounted && refetch?.vesselId) userData = refetch;
           }
-          if (mounted) await applyAccountAccess(userData);
-        }
-      } catch (error) {
-        if (__DEV__) console.error('Auth check error:', error);
-        if (Platform.OS === 'web') {
-          try {
-            await supabase.auth.signOut({ scope: 'local' });
-          } catch {
-            /* best-effort clear on error */
+          if (
+            mounted &&
+            useAuthStore.getState().user === startingUser &&
+            !useAuthStore.getState().deferUserUpdate
+          ) {
+            await applyAccountAccess(userData);
+            setLoading(false);
           }
         }
+      } catch (error) {
+        if (__DEV__) console.warn('Auth check unavailable:', error);
+        if (mounted && !renderedFromCache) setStartupError(true);
       }
     };
 
@@ -583,20 +627,18 @@ export const RootNavigator = () => {
       if (!mounted) return;
 
       try {
-        const bootstrap = runBootstrap(renderedFromCache);
-        await Promise.race([
-          bootstrap,
-          new Promise<void>((resolve) => setTimeout(() => resolve(), BOOTSTRAP_MAX_MS)),
-        ]);
-
-        // Finish the session refresh/cleanup before subscribing. Registering
-        // first makes Supabase run a second INITIAL_SESSION refresh and log an
-        // invalid refresh token as a red-screen error in Expo Go.
-        await bootstrap;
-        if (!mounted) return;
-
         const { data: authListener } = authService.onAuthStateChange(handleAuthChange);
         unsubscribeAuth = () => authListener?.subscription?.unsubscribe();
+        const timeout = setTimeout(() => {
+          if (mounted && !renderedFromCache && useAuthStore.getState().isLoading)
+            setStartupError(true);
+        }, BOOTSTRAP_MAX_MS);
+        try {
+          await runBootstrap(renderedFromCache);
+        } finally {
+          clearTimeout(timeout);
+        }
+        if (!mounted) return;
 
         if (
           Platform.OS !== 'web' &&
@@ -608,7 +650,7 @@ export const RootNavigator = () => {
       } finally {
         // Only matters on a first launch with no cache. For a returning user
         // loading was already cleared before the network was touched.
-        if (mounted) setLoading(false);
+        if (mounted && useAuthStore.getState().isAuthenticated) setLoading(false);
       }
     })();
 
@@ -623,6 +665,7 @@ export const RootNavigator = () => {
     setLoading,
     setLoginNotice,
     setUser,
+    bootstrapAttempt,
   ]);
 
   const loadDepartmentColorOverrides = useDepartmentColorStore((s) => s.loadOverrides);
@@ -660,7 +703,7 @@ export const RootNavigator = () => {
   // open. Restricted Captains are refreshed every 15 seconds so a successful
   // payment unlocks promptly without exposing provider records via Realtime.
   useEffect(() => {
-    if (!isAuthenticated || !user) return;
+    if (!isAuthenticated || !user?.id) return;
     let active = true;
     let checking = false;
 
@@ -676,16 +719,12 @@ export const RootNavigator = () => {
     };
 
     const interval = setInterval(checkAccess, captainPaymentRequired ? 15_000 : 300_000);
-    const appStateSubscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void checkAccess();
-    });
 
     return () => {
       active = false;
       clearInterval(interval);
-      appStateSubscription.remove();
     };
-  }, [applyAccountAccess, captainPaymentRequired, isAuthenticated, user]);
+  }, [applyAccountAccess, captainPaymentRequired, isAuthenticated, user?.id]);
 
   // Existing Apple subscriptions created before server notifications need one
   // verified refresh to link their transaction chain to the vessel. Run it in
@@ -721,28 +760,70 @@ export const RootNavigator = () => {
 
   // Resume: restart token auto-refresh and refresh profile after backgrounding (Supabase RN guidance)
   useEffect(() => {
+    let active = true;
+    let refreshing = false;
+    let previousState = AppState.currentState;
     const onAppStateChange = (state: string) => {
+      const wasBackgrounded = previousState !== 'active';
+      previousState = state as typeof AppState.currentState;
       if (state === 'active') {
         supabase.auth.startAutoRefresh();
-        void authService.getSession().then((session) => {
-          if (!session?.user?.id) return;
-          void authService.getUserProfileWithRetry(session.user.id).then((fresh) => {
-            if (fresh) void applyAccountAccess(fresh);
-          });
-        });
+        if (!wasBackgrounded || refreshing || useAuthStore.getState().deferUserUpdate) return;
+        readTransport.invalidate();
+        refreshing = true;
+        void (async () => {
+          try {
+            const session = await authService.getSession({ throwOnTransient: true });
+            if (!active) return;
+            if (!session?.user?.id) {
+              setUser(null);
+              return;
+            }
+            const fresh = await authService.getUserProfile(session.user.id);
+            if (active && fresh && useAuthStore.getState().user?.id === fresh.id)
+              await applyAccountAccess(fresh);
+          } catch (error) {
+            if (__DEV__) console.warn('Resume refresh unavailable:', error);
+          } finally {
+            refreshing = false;
+          }
+        })();
       } else {
         supabase.auth.stopAutoRefresh();
       }
     };
 
     const sub = AppState.addEventListener('change', onAppStateChange);
-    return () => sub.remove();
-  }, [applyAccountAccess]);
+    return () => {
+      active = false;
+      sub.remove();
+    };
+  }, [applyAccountAccess, setUser]);
 
   if (isLoading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: themeColors.background }]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Image
+          source={require('../../assets/nautical-ops-vessel-logo.png')}
+          style={{ width: 72, height: 72 }}
+          resizeMode="contain"
+        />
+        <Text
+          style={{ color: themeColors.textPrimary, fontSize: 24, fontWeight: '700', marginTop: 16 }}
+        >
+          Nautical Ops
+        </Text>
+        {startupError && (
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => setBootstrapAttempt((attempt) => attempt + 1)}
+            style={{ padding: 20 }}
+          >
+            <Text style={{ color: themeColors.textSecondary }}>
+              Unable to reconnect. Tap to retry.
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   }
@@ -773,7 +854,11 @@ export const RootNavigator = () => {
       linking={webLinking}
       fallback={
         <View style={[styles.loadingContainer, { backgroundColor: themeColors.background }]}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Image
+            source={require('../../assets/nautical-ops-vessel-logo.png')}
+            style={{ width: 72, height: 72 }}
+            resizeMode="contain"
+          />
         </View>
       }
     >
@@ -785,10 +870,13 @@ export const RootNavigator = () => {
           propsToCapture: ['testID'],
         }}
       >
+        <InventoryAutoSaveSync />
         <Stack.Navigator
           key={isAuthenticated ? `main-${initialRoute}` : 'auth'}
           initialRouteName={initialRoute}
           screenOptions={{
+            animation: reduceMotion ? 'none' : 'fade',
+            animationDuration: 180,
             headerStyle: {
               backgroundColor: themeColors.surface,
             },

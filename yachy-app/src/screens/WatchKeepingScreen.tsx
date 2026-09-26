@@ -1,3 +1,4 @@
+import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
 /**
  * Watch Keeping Screen
  * Watch Keeping Rules (view / HOD edit), then Watch Schedule and Create buttons
@@ -14,7 +15,6 @@ import {
   Modal,
   TextInput,
   Pressable,
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,

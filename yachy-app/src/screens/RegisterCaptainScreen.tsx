@@ -89,6 +89,7 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
     if (!validateForm()) return;
 
     setLoading(true);
+    useAuthStore.getState().setDeferUserUpdate(true);
     try {
       const { user } = await authService.signUp({
         email: formData.email,
@@ -107,6 +108,7 @@ export const RegisterCaptainScreen = ({ navigation }: any) => {
       console.error('Captain registration error:', error);
       Alert.alert('Error', error.message || 'Failed to create account');
     } finally {
+      useAuthStore.getState().setDeferUserUpdate(false);
       setLoading(false);
     }
   };

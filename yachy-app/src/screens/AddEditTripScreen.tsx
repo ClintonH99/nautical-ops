@@ -1,3 +1,4 @@
+import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * Add / Edit Trip Screen
  * Calendar to choose start and end dates; title and notes. HOD only.
@@ -236,11 +237,7 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
   }
 
   if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <LoadingSpinner />
-      </View>
-    );
+    return <ScreenLoading title={isEdit ? `Edit ${typeLabel}` : `Create ${typeLabel}`} />;
   }
 
   const selectedDateLabel =

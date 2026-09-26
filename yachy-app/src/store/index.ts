@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '../constants/theme';
 import { User } from '../types';
 import { posthog } from '../config/posthog';
+import { setScreenCacheScope } from '../utils/screenCache';
 
 const DEPARTMENT_COLOR_STORAGE_KEY = 'nautical_ops_department_color_overrides';
 const BACKGROUND_THEME_STORAGE_KEY = 'nautical_ops_background_theme';
@@ -33,7 +34,7 @@ const CACHED_USER_STORAGE_KEY = 'nautical_ops_cached_user';
 export const LOGIN_NOTICE_STORAGE_KEY = 'nautical_ops_login_notice';
 export const PAYMENT_RESTRICTION_STORAGE_KEY = 'nautical_ops_payment_restriction';
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
@@ -41,6 +42,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   loginNotice: null,
   captainPaymentRequired: false,
   setUser: (user) => {
+    setScreenCacheScope(
+      user
+        ? JSON.stringify([user.id, user.vesselId, user.role, user.department, user.department2])
+        : ''
+    );
+    if (JSON.stringify(get().user) === JSON.stringify(user)) return;
     // Cache the profile so a returning user can be rendered instantly on the
     // next cold start, without waiting on a network round-trip.
     if (user) {
@@ -67,6 +74,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ captainPaymentRequired });
   },
   logout: () => {
+    setScreenCacheScope('');
     AsyncStorage.removeItem(CACHED_USER_STORAGE_KEY).catch(() => {});
     AsyncStorage.removeItem(LOGIN_NOTICE_STORAGE_KEY).catch(() => {});
     AsyncStorage.removeItem(PAYMENT_RESTRICTION_STORAGE_KEY).catch(() => {});

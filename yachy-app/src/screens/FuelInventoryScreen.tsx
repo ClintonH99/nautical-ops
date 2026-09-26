@@ -1,9 +1,9 @@
+import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Modal,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,

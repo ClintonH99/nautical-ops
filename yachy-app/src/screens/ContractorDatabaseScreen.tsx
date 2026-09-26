@@ -1,3 +1,7 @@
+import { optimisticDelete } from '../utils/optimisticDelete';
+import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
+import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
+import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 /**
  * Contractor Database Screen
  */
@@ -9,8 +13,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
-  RefreshControl,
   Alert,
   Modal,
   Pressable,
@@ -76,8 +78,8 @@ const CONTRACTOR_DATABASE_INFO = {
 export const ContractorDatabaseScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
-  const [contractors, setContractors] = useState<Contractor[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [contractors, setContractors] = useScreenState<Contractor[]>('contractors', []);
+  const [loading, setLoading] = useScreenLoading();
   const [refreshing, setRefreshing] = useState(false);
   const [visibleDepartments, setVisibleDepartments] =
     useState<Record<Department, boolean>>(allDeptsVisible);
@@ -85,7 +87,7 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
   const [searchFilter, setSearchFilter] = useState<SearchFilter>('all');
   const [searchFilterOpen, setSearchFilterOpen] = useState(false);
   const [expandedContractorId, setExpandedContractorId] = useState<string | null>(null);
-  const loadedVesselIdRef = useRef<string | null>(null);
+  const loadedVesselIdRef = useRef<string | null>(user?.vesselId ?? null);
 
   const vesselId = user?.vesselId ?? null;
 
@@ -141,7 +143,7 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [vesselId]);
+  }, [setContractors, setLoading, vesselId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -162,8 +164,9 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
         style: 'destructive',
         onPress: async () => {
           try {
-            await contractorsService.delete(contractor.id);
-            loadContractors();
+            await optimisticDelete(contractor, setContractors, () =>
+              contractorsService.delete(contractor.id)
+            );
           } catch {
             Alert.alert('Error', 'Could not delete contractor.');
           }

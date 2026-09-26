@@ -1,18 +1,13 @@
+import { optimisticDelete } from '../utils/optimisticDelete';
+import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
+import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 /**
  * Overdue Tasks Screen
  * Tasks with Done by Date that have passed and are not completed
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
@@ -30,8 +25,8 @@ const CATEGORY_LABELS: Record<TaskCategory, string> = {
 export const OverdueTasksScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
-  const [tasks, setTasks] = useState<VesselTask[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [tasks, setTasks] = useScreenState<VesselTask[]>('tasks', []);
+  const [loading, setLoading] = useScreenLoading();
   const [refreshing, setRefreshing] = useState(false);
   const [departmentFilter, setDepartmentFilter] = useState<Department | ''>('');
 
@@ -53,7 +48,7 @@ export const OverdueTasksScreen = ({ navigation }: any) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [vesselId]);
+  }, [setLoading, setTasks, vesselId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -81,8 +76,7 @@ export const OverdueTasksScreen = ({ navigation }: any) => {
         style: 'destructive',
         onPress: async () => {
           try {
-            await vesselTasksService.delete(task.id);
-            loadTasks();
+            await optimisticDelete(task, setTasks, () => vesselTasksService.delete(task.id));
           } catch (e) {
             Alert.alert('Error', 'Could not delete task');
           }

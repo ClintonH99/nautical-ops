@@ -1,3 +1,6 @@
+import { optimisticDelete } from '../utils/optimisticDelete';
+import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
+import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 /**
  * Maintenance Log Screen
  * Expandable maintenance records with create, edit, delete, and PDF export actions.
@@ -5,15 +8,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
@@ -57,8 +52,8 @@ const MAINTENANCE_LOG_INFO = {
 export const MaintenanceLogScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
-  const [logs, setLogs] = useState<MaintenanceLog[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [logs, setLogs] = useScreenState<MaintenanceLog[]>('logs', []);
+  const [loading, setLoading] = useScreenLoading();
   const [refreshing, setRefreshing] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -102,7 +97,7 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [vesselId]);
+  }, [setLoading, setLogs, vesselId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -133,8 +128,7 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
         style: 'destructive',
         onPress: async () => {
           try {
-            await maintenanceLogsService.delete(log.id);
-            loadLogs();
+            await optimisticDelete(log, setLogs, () => maintenanceLogsService.delete(log.id));
           } catch (e) {
             Alert.alert('Error', 'Could not delete log');
           }

@@ -1,3 +1,4 @@
+import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * View Pre-Departure Checklist Screen
  * Published checklist view with manager-controlled item completion.
@@ -145,11 +146,7 @@ export const ViewPreDepartureChecklistScreen = ({ route }: any) => {
   }
 
   if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <LoadingSpinner />
-      </View>
-    );
+    return <ScreenLoading title="Pre-Departure Checklist" />;
   }
 
   if (!checklist) {

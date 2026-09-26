@@ -2,11 +2,12 @@
  * Hook to load vessel trip colors (custom or defaults) for calendar and list screens
  */
 
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useScreenState } from './useScreenState';
 import tripColorsService, { VesselTripColors } from '../services/tripColors';
 
 export function useVesselTripColors(vesselId: string | null) {
-  const [colors, setColors] = useState<VesselTripColors | null>(null);
+  const [colors, setColors] = useScreenState<VesselTripColors | null>('tripColors', null);
 
   const load = useCallback(async () => {
     if (!vesselId) {
@@ -16,10 +17,10 @@ export function useVesselTripColors(vesselId: string | null) {
     try {
       const c = await tripColorsService.getColors(vesselId);
       setColors(c);
-    } catch (e) {
-      setColors(null);
+    } catch {
+      // Preserve the colours already on screen during a temporary connection failure.
     }
-  }, [vesselId]);
+  }, [vesselId, setColors]);
 
   return { colors, load };
 }

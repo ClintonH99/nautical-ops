@@ -58,7 +58,7 @@ class PumpOutLogsService {
       return (data || []).map(this.mapRow);
     } catch (error) {
       console.error('Get pump out logs error:', error);
-      return [];
+      throw error;
     }
   }
 

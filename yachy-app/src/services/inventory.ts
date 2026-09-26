@@ -3,7 +3,7 @@
  * Per vessel: title, description, location, department, amount/item rows
  */
 
-import { supabase } from './supabase';
+import { supabase, readTransport } from './supabase';
 import { requireAffectedRows } from './mutationResult';
 import { Department } from '../types';
 
@@ -21,6 +21,7 @@ export interface InventoryItem {
   location: string;
   items: InventoryItemRow[];
   createdAt: string;
+  lastEditedAt?: string | null;
 }
 
 export interface CreateInventoryItemInput {
@@ -32,6 +33,13 @@ export interface CreateInventoryItemInput {
   items: InventoryItemRow[];
   /** Sent as last_edited_by_name for DB NOT NULL (legacy schema). */
   lastEditedByName?: string;
+}
+
+export class InventoryConflictError extends Error {
+  constructor() {
+    super('This inventory item changed elsewhere or is no longer available.');
+    this.name = 'InventoryConflictError';
+  }
 }
 
 const ALLOWED_DEPARTMENTS: Department[] = [
@@ -60,6 +68,82 @@ function normalizeRows(raw: unknown): InventoryItemRow[] {
 }
 
 class InventoryService {
+  /** Retriable auto-save: stable create IDs and conditional updates avoid duplicates/overwrites. */
+  async autoSave(
+    id: string,
+    input: CreateInventoryItemInput,
+    base: InventoryItem | null
+  ): Promise<InventoryItem> {
+    const payload = {
+      vessel_id: input.vesselId,
+      department: normalizeDepartment(input.department),
+      title: input.title.trim(),
+      name: input.title.trim(),
+      location: input.location.trim(),
+      description: input.description.trim(),
+      items: input.items
+        .filter((row) => row.amount.trim() || row.item.trim())
+        .map((row) => ({ amount: row.amount.trim(), item: row.item.trim() })),
+      last_edited_by_name: input.lastEditedByName?.trim() || 'Unknown',
+      last_edited_at: new Date(
+        Math.max(Date.now(), (Date.parse(base?.lastEditedAt ?? '') || 0) + 1)
+      ).toISOString(),
+    };
+    if (!payload.title) throw new Error('Please enter a title.');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
+    try {
+      if (!base) {
+        const { data, error } = await supabase
+          .from('inventory_items')
+          .insert({ id, ...payload })
+          .select()
+          .abortSignal(controller.signal)
+          .single();
+        if (!error) return this.mapRow(data);
+        if (error.code !== '23505') throw error;
+      } else {
+        let query = supabase
+          .from('inventory_items')
+          .update(payload)
+          .eq('id', id)
+          .eq('vessel_id', input.vesselId);
+        query = base.lastEditedAt
+          ? query.eq('last_edited_at', base.lastEditedAt)
+          : query.is('last_edited_at', null);
+        const { data, error } = await query.select().abortSignal(controller.signal).maybeSingle();
+        if (error) throw error;
+        if (data) return this.mapRow(data);
+      }
+      // A lost response is successful only if the exact intended contents already exist.
+      const current = await this.getFreshById(id, input.vesselId);
+      if (
+        current &&
+        current.title === payload.title &&
+        current.department === payload.department &&
+        current.location === payload.location &&
+        current.description === payload.description &&
+        JSON.stringify(current.items) === JSON.stringify(payload.items)
+      )
+        return current;
+      throw new InventoryConflictError();
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  async getFreshById(id: string, vesselId: string): Promise<InventoryItem | null> {
+    // Explicit no-cache query also avoids the short-lived presentation read cache.
+    readTransport.invalidate();
+    const { data, error } = await supabase
+      .from('inventory_items')
+      .select('*')
+      .eq('id', id)
+      .eq('vessel_id', vesselId)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? this.mapRow(data) : null;
+  }
   async getByVessel(vesselId: string): Promise<InventoryItem[]> {
     try {
       const { data, error } = await supabase
@@ -72,7 +156,7 @@ class InventoryService {
       return (data || []).map(this.mapRow);
     } catch (e) {
       console.error('Get inventory items error:', e);
-      return [];
+      throw e;
     }
   }
 
@@ -144,6 +228,7 @@ class InventoryService {
         .map((row) => ({ amount: row.amount.trim(), item: row.item.trim() }));
     }
     payload.last_edited_by_name = (updates.lastEditedByName ?? '').trim() || 'Unknown';
+    payload.last_edited_at = new Date().toISOString();
     const { data, error } = await supabase
       .from('inventory_items')
       .update(payload)
@@ -173,6 +258,7 @@ class InventoryService {
       location: (row.location as string) || '',
       items: normalizeRows(row.items),
       createdAt: row.created_at as string,
+      lastEditedAt: (row.last_edited_at as string | null) ?? null,
     };
   }
 }

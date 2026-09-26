@@ -1,3 +1,5 @@
+import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
+import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 /**
  * Tasks Calendar Screen
  * Calendar view of tasks by date, with department filters and urgency/priority dropdown
@@ -11,7 +13,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  RefreshControl,
   Modal,
   Pressable,
   Alert,
@@ -101,9 +102,9 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
     (dept: string) => getDepartmentColor(dept, overrides),
     [overrides]
   );
-  const [tasks, setTasks] = useState<VesselTask[]>([]);
-  const [yardJobs, setYardJobs] = useState<YardPeriodJob[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [tasks, setTasks] = useScreenState<VesselTask[]>('tasks', []);
+  const [yardJobs, setYardJobs] = useScreenState<YardPeriodJob[]>('yardJobs', []);
+  const [loading, setLoading] = useScreenLoading();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [urgencyFilter, setUrgencyFilter] = useState<UrgencyLevel | 'ALL'>('ALL');
@@ -145,7 +146,7 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [vesselId]);
+  }, [setLoading, setTasks, setYardJobs, vesselId]);
 
   useFocusEffect(
     useCallback(() => {

@@ -1,3 +1,4 @@
+import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * Add / Edit General Waste Log Screen
  * Fields: Date, Time, Position / Location, Description of Garbage
@@ -164,11 +165,7 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
   }
 
   if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <LoadingSpinner />
-      </View>
-    );
+    return <ScreenLoading title={isEdit ? 'Edit Waste Log Entry' : 'Create Waste Log Entry'} />;
   }
 
   return (

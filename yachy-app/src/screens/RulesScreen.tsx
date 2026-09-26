@@ -1,9 +1,13 @@
+import { ScreenLoading } from '../components/ScreenLoading';
+import { optimisticDelete } from '../utils/optimisticDelete';
+import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
+import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 /**
  * Rules On-Board Screen
  */
 
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -66,8 +70,8 @@ export const RulesScreen = ({ navigation }: any) => {
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
   const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
-  const [items, setItems] = useState<Rule[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useScreenState<Rule[]>('items', []);
+  const [loading, setLoading] = useScreenLoading();
   const [refreshing, setRefreshing] = useState(false);
   const [exportMode, setExportMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -84,7 +88,7 @@ export const RulesScreen = ({ navigation }: any) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [vesselId]);
+  }, [setItems, setLoading, vesselId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -141,8 +145,7 @@ export const RulesScreen = ({ navigation }: any) => {
         style: 'destructive',
         onPress: async () => {
           try {
-            await rulesService.delete(item.id);
-            load();
+            await optimisticDelete(item, setItems, () => rulesService.delete(item.id));
           } catch (e) {
             Alert.alert('Error', 'Could not delete');
           }
@@ -159,12 +162,7 @@ export const RulesScreen = ({ navigation }: any) => {
         </Text>
       </View>
     );
-  if (loading)
-    return (
-      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <LoadingSpinner />
-      </View>
-    );
+  if (loading) return <ScreenLoading title="Rules On-Board" />;
 
   return (
     <View style={styles.pageWrap}>

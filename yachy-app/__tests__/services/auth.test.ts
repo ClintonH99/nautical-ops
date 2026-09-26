@@ -66,6 +66,59 @@ describe('AuthService', () => {
     jest.clearAllMocks();
   });
 
+  describe('auth events', () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+      jest.useRealTimers();
+    });
+
+    it('leaves initial sessions and successful token refreshes to bootstrap', async () => {
+      jest.useFakeTimers();
+      const unsubscribe = jest.fn();
+      mockAuthOnAuthStateChange.mockReturnValue({ data: { subscription: { unsubscribe } } });
+      const profile = jest.spyOn(authService, 'getUserProfileWithRetry');
+      const callback = jest.fn();
+      const subscription = authService.onAuthStateChange(callback);
+      const event = mockAuthOnAuthStateChange.mock.calls[0][0];
+      event('INITIAL_SESSION', { user: { id: 'one' } });
+      event('TOKEN_REFRESHED', { user: { id: 'one' } });
+      await jest.runAllTimersAsync();
+      expect(profile).not.toHaveBeenCalled();
+      expect(callback).not.toHaveBeenCalled();
+      subscription.data.subscription.unsubscribe();
+      expect(unsubscribe).toHaveBeenCalledTimes(1);
+    });
+
+    it('releases the auth lock before querying and ignores a profile arriving after sign-out', async () => {
+      jest.useFakeTimers();
+      mockAuthOnAuthStateChange.mockReturnValue({
+        data: { subscription: { unsubscribe: jest.fn() } },
+      });
+      let finish!: (value: Awaited<ReturnType<typeof authService.getUserProfileWithRetry>>) => void;
+      const profile = jest.spyOn(authService, 'getUserProfileWithRetry').mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve;
+          })
+      );
+      const callback = jest.fn();
+      const subscription = authService.onAuthStateChange(callback);
+      const event = mockAuthOnAuthStateChange.mock.calls[0][0];
+      expect(event('SIGNED_IN', { user: { id: 'one' } })).toBeUndefined();
+      expect(profile).not.toHaveBeenCalled();
+      await jest.advanceTimersByTimeAsync(0);
+      expect(profile).toHaveBeenCalledWith('one');
+      event('SIGNED_OUT', null);
+      await jest.runAllTimersAsync();
+      finish({ id: 'one' } as NonNullable<
+        Awaited<ReturnType<typeof authService.getUserProfileWithRetry>>
+      >);
+      await Promise.resolve();
+      expect(callback.mock.calls).toEqual([[null]]);
+      subscription.data.subscription.unsubscribe();
+    });
+  });
+
   describe('validateInviteCode', () => {
     it('returns vessel when invite code is valid and not expired', async () => {
       const vessel = {
@@ -239,6 +292,22 @@ describe('AuthService', () => {
   });
 
   describe('getSession', () => {
+    it('distinguishes a temporary outage from a confirmed signed-out session during bootstrap', async () => {
+      const error = new Error('Network request failed');
+      mockGetSession.mockResolvedValue({ data: { session: null }, error });
+      await expect(authService.getSession({ throwOnTransient: true })).rejects.toBe(error);
+      expect(mockSignOut).not.toHaveBeenCalled();
+    });
+
+    it('still clears an explicitly revoked refresh token', async () => {
+      mockGetSession.mockResolvedValue({
+        data: { session: null },
+        error: new Error('Refresh token revoked'),
+      });
+      mockSignOut.mockResolvedValue({ error: null });
+      await expect(authService.getSession({ throwOnTransient: true })).resolves.toBeNull();
+      expect(mockSignOut).toHaveBeenCalledWith({ scope: 'local' });
+    });
     it('returns session when present', async () => {
       const session = { access_token: 'tok' };
       mockGetSession.mockResolvedValue({ data: { session }, error: null });

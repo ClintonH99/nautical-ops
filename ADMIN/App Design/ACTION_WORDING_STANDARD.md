@@ -57,6 +57,7 @@ Keep a different label only when it represents a genuinely different operation, 
 - `Save Correction`, `Save Receipt Correction`, and other audit-preserving correction actions
 - Fuel inventory initialization, transfer, sounding, consumption, and adjustment actions whose wording distinguishes separate ledger operations
 - Authentication and onboarding actions required by their dedicated flows
+- Inventory auto-save: enabled by default, with `Disable Auto Save` / `Enable Auto Save` controls. While enabled, create/edit forms save in place without a draft or publish action. While disabled, retain the standard `Create Inventory Item` / `Save Changes` action. Show `Saved` only after server confirmation; incomplete or offline changes are retained locally and clearly distinguished from synced records.
 
 When adding a new exception, document why the action has different behaviour from Create, Publish, Save Changes, Continue, Done, Add, Remove, or Delete.
 

@@ -3,14 +3,7 @@
  */
 
 import React from 'react';
-import {
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  ViewStyle,
-  TextStyle,
-} from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, View, ViewStyle, TextStyle } from 'react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 
@@ -95,25 +88,34 @@ export const Button: React.FC<ButtonProps> = ({
       style={buttonStyles}
       onPress={onPress}
       disabled={disabled || loading}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
       activeOpacity={0.7}
     >
-      {loading ? (
-        <ActivityIndicator
-          color={
-            variant === 'outlineLight' ||
-            (themeColors.isDark && (variant === 'outline' || variant === 'text'))
-              ? COLORS.white
-              : variant === 'outline' || variant === 'text'
-                ? COLORS.primary
-                : COLORS.white
-          }
-        />
-      ) : (
-        <Text style={textStyles}>{title}</Text>
+      <Text style={[textStyles, loading && { opacity: 0 }]}>{title}</Text>
+      {loading && (
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={textStyles} accessibilityLiveRegion="polite">
+              {getBusyLabel(title)}
+            </Text>
+          </View>
+        </View>
       )}
     </TouchableOpacity>
   );
 };
+
+function getBusyLabel(title: string) {
+  if (/…|\.\.\.$/.test(title)) return title;
+  if (/^(create|add)/i.test(title)) return 'Creating…';
+  if (/^publish/i.test(title)) return 'Publishing…';
+  if (/^(save|update)/i.test(title)) return 'Saving…';
+  if (/^(delete|remove)/i.test(title)) return 'Deleting…';
+  if (/^(export|download)/i.test(title)) return 'Exporting…';
+  if (/^(sign in|log in)/i.test(title)) return 'Signing In…';
+  return `${title}…`;
+}
 
 const styles = StyleSheet.create({
   button: {

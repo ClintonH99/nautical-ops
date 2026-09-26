@@ -1,3 +1,5 @@
+import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
+import { useScreenState } from '../hooks/useScreenState';
 /**
  * Home/Dashboard Screen
  * Fresh, minimalist design — image-centric, maritime-focused
@@ -9,7 +11,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  ActivityIndicator,
   TouchableOpacity,
   ImageBackground,
   Dimensions,
@@ -181,21 +182,24 @@ const TRIP_TYPE_LABELS: Record<string, string> = {
 export const HomeScreen = ({ navigation }: any) => {
   const { user } = useAuthStore();
   const themeColors = useThemeColors();
-  const [vesselName, setVesselName] = useState<string | null>(null);
+  const [vesselName, setVesselName] = useScreenState<string | null>('vesselName', null);
   const [bannerCacheBust, setBannerCacheBust] = useState<number | null>(null);
   const [loadingVessel, setLoadingVessel] = useState(false);
   const [bannerLoadFailed, setBannerLoadFailed] = useState(false);
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [yardJobs, setYardJobs] = useState<YardPeriodJob[]>([]);
+  const [trips, setTrips] = useScreenState<Trip[]>('trips', []);
+  const [yardJobs, setYardJobs] = useScreenState<YardPeriodJob[]>('yardJobs', []);
   const initialCrewLeaveWindow = getCrewLeaveMonthRange(
     new Date().getFullYear(),
     new Date().getMonth() + 1
   );
-  const [crewLeave, setCrewLeave] = useState<CrewLeaveCalendarEntry[]>([]);
-  const [crewLeaveWindow, setCrewLeaveWindow] = useState(initialCrewLeaveWindow);
-  const crewLeaveWindowRef = useRef(initialCrewLeaveWindow);
+  const [crewLeave, setCrewLeave] = useScreenState<CrewLeaveCalendarEntry[]>('crewLeave', []);
+  const [crewLeaveWindow, setCrewLeaveWindow] = useScreenState(
+    'crewLeaveWindow',
+    initialCrewLeaveWindow
+  );
+  const crewLeaveWindowRef = useRef(crewLeaveWindow);
   const crewLeaveRequestIdRef = useRef(0);
-  const [tripsLoading, setTripsLoading] = useState(true);
+  const [tripsLoading, setTripsLoading] = useScreenState('tripsLoading', true);
   const [calendarMode, setCalendarMode] = useState<'trips' | 'yardPeriod' | 'crewLeave'>('trips');
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
@@ -244,7 +248,7 @@ export const HomeScreen = ({ navigation }: any) => {
         console.error('Load crew leave calendar error:', error);
       }
     },
-    [vesselId]
+    [setCrewLeave, setCrewLeaveWindow, vesselId]
   );
 
   const loadTrips = useCallback(async () => {
@@ -263,7 +267,7 @@ export const HomeScreen = ({ navigation }: any) => {
     } finally {
       setTripsLoading(false);
     }
-  }, [vesselId, loadColors, loadCrewLeaveWindow]);
+  }, [vesselId, loadColors, loadCrewLeaveWindow, setTrips, setYardJobs, setTripsLoading]);
 
   useFocusEffect(
     useCallback(() => {
@@ -274,7 +278,7 @@ export const HomeScreen = ({ navigation }: any) => {
   useFocusEffect(
     useCallback(() => {
       if (!user?.vesselId) return;
-      setBannerCacheBust(Date.now());
+      setBannerCacheBust(vesselService.getBannerVersion(user.vesselId));
     }, [user?.vesselId])
   );
 
@@ -323,7 +327,7 @@ export const HomeScreen = ({ navigation }: any) => {
       }
     };
     fetchVessel();
-  }, [user?.vesselId]);
+  }, [setVesselName, user?.vesselId]);
 
   const bannerImageUrl = vesselId
     ? vesselService.getBannerPublicUrl(vesselId, bannerCacheBust ?? undefined)

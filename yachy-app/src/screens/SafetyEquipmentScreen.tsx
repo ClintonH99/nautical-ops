@@ -1,9 +1,13 @@
+import { ScreenLoading } from '../components/ScreenLoading';
+import { optimisticDelete } from '../utils/optimisticDelete';
+import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
+import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 /**
  * Safety Equipment Screen
  */
 
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -102,8 +106,8 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
   const isHOD = user?.role === 'HOD';
   const isMOV = user?.role === 'CAPTAIN_MOV';
   const canManage = isHOD || isMOV;
-  const [items, setItems] = useState<SafetyEquipment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useScreenState<SafetyEquipment[]>('items', []);
+  const [loading, setLoading] = useScreenLoading();
   const [refreshing, setRefreshing] = useState(false);
   const [exportMode, setExportMode] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -120,7 +124,7 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [vesselId]);
+  }, [setItems, setLoading, vesselId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -173,8 +177,7 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
         style: 'destructive',
         onPress: async () => {
           try {
-            await safetyEquipmentService.delete(item.id);
-            load();
+            await optimisticDelete(item, setItems, () => safetyEquipmentService.delete(item.id));
           } catch (e) {
             Alert.alert('Error', 'Could not delete');
           }
@@ -191,12 +194,7 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
         </Text>
       </View>
     );
-  if (loading)
-    return (
-      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <LoadingSpinner />
-      </View>
-    );
+  if (loading) return <ScreenLoading title="Safety Equipment" />;
 
   return (
     <View style={styles.pageWrap}>

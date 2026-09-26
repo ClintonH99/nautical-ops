@@ -1,3 +1,4 @@
+import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
 /**
  * Rest to be Confirmed Screen
  * Captain-only review queue: shows every day this month grouped into
@@ -15,7 +16,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   Modal,
   Pressable,
   Alert,

@@ -1,3 +1,4 @@
+import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * Add / Edit Discharge Log Screen
  * Fields: Discharge Type (Direct Discharge / Treatment Plant / Pump-out Service),
@@ -165,11 +166,7 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
   }
 
   if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <LoadingSpinner />
-      </View>
-    );
+    return <ScreenLoading title={isEdit ? 'Edit Discharge Entry' : 'Create Discharge Entry'} />;
   }
 
   return (

@@ -1,18 +1,13 @@
+import { optimisticDelete } from '../utils/optimisticDelete';
+import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
+import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 /**
  * Guest Trips Screen
  * List of guest (charter) trips; HOD can add/edit; calendar to choose dates when adding
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
@@ -37,8 +32,8 @@ const TRIP_TYPE = 'GUEST' as const;
 export const GuestTripsScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [trips, setTrips] = useScreenState<Trip[]>('trips', []);
+  const [loading, setLoading] = useScreenLoading();
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
@@ -65,7 +60,7 @@ export const GuestTripsScreen = ({ navigation }: any) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [vesselId, loadColors]);
+  }, [vesselId, loadColors, setTrips, setLoading]);
 
   useFocusEffect(
     useCallback(() => {
@@ -98,8 +93,7 @@ export const GuestTripsScreen = ({ navigation }: any) => {
         style: 'destructive',
         onPress: async () => {
           try {
-            await tripsService.deleteTrip(trip.id);
-            loadTrips();
+            await optimisticDelete(trip, setTrips, () => tripsService.deleteTrip(trip.id));
           } catch (e) {
             Alert.alert('Error', 'Could not delete trip');
           }

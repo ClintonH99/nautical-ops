@@ -1,18 +1,13 @@
+import { optimisticDelete } from '../utils/optimisticDelete';
+import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
+import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 /**
  * Discharge Log Screen
  * List of discharge entries with Add, Edit, Delete, and selective PDF export.
  */
 
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
@@ -29,6 +24,7 @@ import {
   PageHeader,
   ExportButton,
   ExportBar,
+  LoadingSpinner,
 } from '../components';
 import { exportPumpOutLogPdf } from '../utils/vesselLogsPdf';
 
@@ -47,8 +43,8 @@ const DISCHARGE_COLORS: Record<DischargeType, string> = {
 export const PumpOutLogScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
-  const [logs, setLogs] = useState<PumpOutLog[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [logs, setLogs] = useScreenState<PumpOutLog[]>('logs', []);
+  const [loading, setLoading] = useScreenLoading();
   const [refreshing, setRefreshing] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -84,7 +80,7 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [vesselId]);
+  }, [setLoading, setLogs, vesselId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -121,8 +117,7 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
         style: 'destructive',
         onPress: async () => {
           try {
-            await pumpOutLogsService.delete(log.id);
-            loadLogs();
+            await optimisticDelete(log, setLogs, () => pumpOutLogsService.delete(log.id));
           } catch {
             Alert.alert('Error', 'Could not delete entry.');
           }
@@ -216,7 +211,9 @@ export const PumpOutLogScreen = ({ navigation }: any) => {
         </>
       )}
 
-      {loading ? null : (
+      {loading ? (
+        <LoadingSpinner />
+      ) : (
         <ScrollView
           contentContainerStyle={[
             styles.listContent,

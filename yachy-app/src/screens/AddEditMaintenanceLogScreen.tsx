@@ -1,3 +1,4 @@
+import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * Add / Edit Maintenance Log Screen
  * Equipment, Serial number, Hours of service, Hours at next service,
@@ -405,11 +406,7 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
   }
 
   if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <LoadingSpinner />
-      </View>
-    );
+    return <ScreenLoading title={isEdit ? 'Edit Maintenance Log' : 'Create Maintenance Log'} />;
   }
 
   return (

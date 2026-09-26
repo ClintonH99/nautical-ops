@@ -64,7 +64,7 @@ class ContractorsService {
       return (data || []).map(this.mapRow);
     } catch (e) {
       console.error('Get contractors error:', e);
-      return [];
+      throw e;
     }
   }
 

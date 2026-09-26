@@ -65,7 +65,7 @@ class ShoppingListsService {
       return (data || []).map(this.mapRow);
     } catch (e) {
       console.error('Get shopping lists error:', e);
-      return [];
+      throw e;
     }
   }
 

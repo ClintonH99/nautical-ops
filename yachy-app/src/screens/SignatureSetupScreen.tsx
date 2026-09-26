@@ -1,3 +1,5 @@
+import { ScreenLoading } from '../components/ScreenLoading';
+
 /**
  * Signature Setup
  * One signature per user (drawn or typed), saved once and reused
@@ -15,7 +17,6 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -128,16 +129,7 @@ export const SignatureSetupScreen = () => {
   };
 
   if (loading) {
-    return (
-      <View
-        style={[
-          styles.container,
-          { backgroundColor: themeColors.background, justifyContent: 'center' },
-        ]}
-      >
-        <ActivityIndicator color={themeColors.accent} />
-      </View>
-    );
+    return <ScreenLoading title="View E-Signature" />;
   }
 
   if (mode === 'view' && saved) {

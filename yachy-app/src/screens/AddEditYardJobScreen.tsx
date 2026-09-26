@@ -1,3 +1,4 @@
+import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * Add / Edit Yard Period Job Screen
  * Job details, contractor information, and an individual start/end date range.
@@ -219,11 +220,7 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
   }
 
   if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <LoadingSpinner />
-      </View>
-    );
+    return <ScreenLoading title={isEdit ? 'Edit Job' : 'Create Job'} />;
   }
 
   return (

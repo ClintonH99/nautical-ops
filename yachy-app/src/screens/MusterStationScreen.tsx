@@ -1,10 +1,14 @@
+import { ScreenLoading } from '../components/ScreenLoading';
+import { optimisticDelete } from '../utils/optimisticDelete';
+import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
+import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 /**
  * Muster Station & Duties Screen
  * List of published muster stations, Create button, Download PDF per item
  */
 
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
@@ -96,8 +100,8 @@ export const MusterStationScreen = ({ navigation }: any) => {
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
   const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
-  const [items, setItems] = useState<MusterStation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useScreenState<MusterStation[]>('items', []);
+  const [loading, setLoading] = useScreenLoading();
   const [refreshing, setRefreshing] = useState(false);
   const [exportMode, setExportMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -115,7 +119,7 @@ export const MusterStationScreen = ({ navigation }: any) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [vesselId]);
+  }, [setItems, setLoading, vesselId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -173,8 +177,7 @@ export const MusterStationScreen = ({ navigation }: any) => {
         style: 'destructive',
         onPress: async () => {
           try {
-            await musterStationsService.delete(item.id);
-            load();
+            await optimisticDelete(item, setItems, () => musterStationsService.delete(item.id));
           } catch {
             Alert.alert('Error', 'Could not delete muster station');
           }
@@ -194,11 +197,7 @@ export const MusterStationScreen = ({ navigation }: any) => {
   }
 
   if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <LoadingSpinner />
-      </View>
-    );
+    return <ScreenLoading title="Muster Station & Duties" />;
   }
 
   return (

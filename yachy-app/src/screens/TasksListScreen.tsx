@@ -1,18 +1,13 @@
+import { optimisticDelete } from '../utils/optimisticDelete';
+import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
+import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 /**
  * Tasks List Screen - List tasks for a category (Daily, Weekly, Monthly)
  * Crew and HODs can add/edit/delete tasks.
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
@@ -34,8 +29,8 @@ export const TasksListScreen = ({ navigation, route }: any) => {
   const category = (route.params?.category ?? 'DAILY') as TaskCategory;
   const categoryLabel = CATEGORY_LABELS[category];
 
-  const [tasks, setTasks] = useState<VesselTask[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [tasks, setTasks] = useScreenState<VesselTask[]>('tasks', []);
+  const [loading, setLoading] = useScreenLoading();
   const [refreshing, setRefreshing] = useState(false);
   const [departmentFilter, setDepartmentFilter] = useState<Department | ''>('');
 
@@ -61,7 +56,7 @@ export const TasksListScreen = ({ navigation, route }: any) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [vesselId, category]);
+  }, [vesselId, category, setTasks, setLoading]);
 
   useFocusEffect(
     useCallback(() => {
@@ -89,8 +84,7 @@ export const TasksListScreen = ({ navigation, route }: any) => {
         style: 'destructive',
         onPress: async () => {
           try {
-            await vesselTasksService.delete(task.id);
-            loadTasks();
+            await optimisticDelete(task, setTasks, () => vesselTasksService.delete(task.id));
           } catch (e) {
             Alert.alert('Error', 'Could not delete task');
           }

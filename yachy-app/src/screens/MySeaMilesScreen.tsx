@@ -1,3 +1,7 @@
+import { ScreenLoading } from '../components/ScreenLoading';
+import { optimisticDelete } from '../utils/optimisticDelete';
+import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
+import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
@@ -5,7 +9,6 @@ import {
   Modal,
   Platform,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -93,15 +96,18 @@ function sortFolders(folders: SeaMileFolder[]): SeaMileFolder[] {
 export const MySeaMilesScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
-  const [entries, setEntries] = useState<SeaMileEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [entries, setEntries] = useScreenState<SeaMileEntry[]>('entries', []);
+  const [loading, setLoading] = useScreenLoading();
   const [refreshing, setRefreshing] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [exportMode, setExportMode] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [folders, setFolders] = useState<SeaMileFolder[]>([]);
-  const [folderAssignments, setFolderAssignments] = useState<Record<string, string>>({});
+  const [folders, setFolders] = useScreenState<SeaMileFolder[]>('folders', []);
+  const [folderAssignments, setFolderAssignments] = useScreenState<Record<string, string>>(
+    'folderAssignments',
+    {}
+  );
   const [selectedFolderId, setSelectedFolderId] = useState<SeaMileFolderFilter>(ALL_SEA_MILES);
   const [searchQuery, setSearchQuery] = useState('');
   const [folderPickerOpen, setFolderPickerOpen] = useState(false);
@@ -140,7 +146,7 @@ export const MySeaMilesScreen = ({ navigation }: any) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user?.id]);
+  }, [setEntries, setFolderAssignments, setFolders, setLoading, user?.id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -316,8 +322,9 @@ export const MySeaMilesScreen = ({ navigation }: any) => {
         style: 'destructive',
         onPress: async () => {
           try {
-            await seaMilesService.deleteEditable(entry.id);
-            await loadEntries();
+            await optimisticDelete(entry, setEntries, () =>
+              seaMilesService.deleteEditable(entry.id)
+            );
           } catch (error: any) {
             Alert.alert('Could not delete', error?.message || 'Please try again.');
           }
@@ -345,11 +352,7 @@ export const MySeaMilesScreen = ({ navigation }: any) => {
   };
 
   if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <LoadingSpinner />
-      </View>
-    );
+    return <ScreenLoading title="My Sea Miles" />;
   }
 
   return (

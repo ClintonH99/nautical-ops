@@ -1,3 +1,4 @@
+import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * Add / Edit Pre-Departure Checklist Screen
  * Title, optional trip link, checklist items (read-and-do, not tickable)
@@ -237,9 +238,9 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
 
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <LoadingSpinner />
-      </View>
+      <ScreenLoading
+        title={isEdit ? 'Edit Pre-Departure Checklist' : 'Create Pre-Departure Checklist'}
+      />
     );
   }
 

@@ -55,7 +55,7 @@ class GeneralWasteLogsService {
       return (data || []).map(this.mapRow);
     } catch (error) {
       console.error('Get general waste logs error:', error);
-      return [];
+      throw error;
     }
   }
 

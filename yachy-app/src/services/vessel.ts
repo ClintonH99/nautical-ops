@@ -122,13 +122,25 @@ class VesselService {
 
     if (error) throw error;
 
-    return `${this.getBannerPublicUrl(vesselId)}?t=${Date.now()}`;
+    this.bannerVersions.set(vesselId, Date.now());
+    return this.getBannerPublicUrl(vesselId, this.getBannerVersion(vesselId));
   }
 
   /**
    * Return the public URL for a vessel's banner image.
    * Optional cacheBust param appends ?t= for cache busting (use after upload or on refetch).
    */
+  private bannerVersions = new Map<string, number>();
+
+  getBannerVersion(vesselId: string): number {
+    let version = this.bannerVersions.get(vesselId);
+    if (!version || Date.now() - version > 5 * 60_000) {
+      version = Date.now();
+      this.bannerVersions.set(vesselId, version);
+    }
+    return version;
+  }
+
   getBannerPublicUrl(vesselId: string, cacheBust?: number): string {
     const { data } = supabase.storage.from('vessel-banners').getPublicUrl(`${vesselId}/banner.jpg`);
     const base = data.publicUrl;

@@ -1,3 +1,5 @@
+import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
+import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 /**
  * Crew Leave
  * Vessel-wide leave calendar/list. Everyone onboard may view it; only an HOD
@@ -11,7 +13,6 @@ import {
   Modal,
   Platform,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -84,20 +85,29 @@ export const CrewLeaveScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const departmentOverrides = useDepartmentColorStore((state) => state.overrides);
-  const [leave, setLeave] = useState<CrewLeave[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [leave, setLeave] = useScreenState<CrewLeave[]>('leave', []);
+  const [loading, setLoading] = useScreenLoading();
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(false);
+  const [hasMore, setHasMore] = useScreenState('hasMore', false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<CrewLeaveStatusFilter>('ACTIVE');
-  const [leaveTypeFilter, setLeaveTypeFilter] = useState<LeaveTypeFilter>('ALL');
-  const [departmentFilter, setDepartmentFilter] = useState<Department | null>(null);
+  const [statusFilter, setStatusFilter] = useScreenState<CrewLeaveStatusFilter>(
+    'statusFilter',
+    'ACTIVE'
+  );
+  const [leaveTypeFilter, setLeaveTypeFilter] = useScreenState<LeaveTypeFilter>(
+    'leaveTypeFilter',
+    'ALL'
+  );
+  const [departmentFilter, setDepartmentFilter] = useScreenState<Department | null>(
+    'departmentFilter',
+    null
+  );
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
   const requestIdRef = useRef(0);
-  const offsetRef = useRef(0);
+  const offsetRef = useRef(leave.length);
   const loadingMoreRef = useRef(false);
-  const loadedVesselIdRef = useRef<string | null>(null);
+  const loadedVesselIdRef = useRef<string | null>(user?.vesselId ?? null);
 
   const vesselId = user?.vesselId ?? null;
   const canManage = user?.role === 'CAPTAIN_MOV' || user?.role === 'HOD';
@@ -169,7 +179,16 @@ export const CrewLeaveScreen = ({ navigation }: any) => {
         }
       }
     },
-    [departmentFilter, leaveTypeFilter, statusFilter, today, vesselId]
+    [
+      departmentFilter,
+      leaveTypeFilter,
+      setHasMore,
+      setLeave,
+      setLoading,
+      statusFilter,
+      today,
+      vesselId,
+    ]
   );
 
   useFocusEffect(

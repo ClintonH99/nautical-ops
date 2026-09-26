@@ -1,3 +1,4 @@
+import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
 /**
  * Vessel Plans Screen
  * Subscription plan selection via Apple In-App Purchase, in compliance
@@ -17,7 +18,6 @@ import {
   TouchableOpacity,
   Alert,
   Platform,
-  ActivityIndicator,
   Linking,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';

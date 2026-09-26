@@ -1,3 +1,6 @@
+import { ScreenLoading } from '../components/ScreenLoading';
+import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
+import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 import React, { useCallback, useRef, useState } from 'react';
 import {
   Alert,
@@ -5,7 +8,6 @@ import {
   Modal,
   Platform,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -50,14 +52,17 @@ function amount(value: number): string {
 export const SeaMilesReviewScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
-  const [entries, setEntries] = useState<SeaMileEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [entries, setEntries] = useScreenState<SeaMileEntry[]>('entries', []);
+  const [loading, setLoading] = useScreenLoading();
   const [refreshing, setRefreshing] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [workingId, setWorkingId] = useState<string | null>(null);
   const [decliningEntry, setDecliningEntry] = useState<SeaMileEntry | null>(null);
   const [declineComment, setDeclineComment] = useState('');
-  const [captainContact, setCaptainContact] = useState<CaptainSeaMileContact | null>(null);
+  const [captainContact, setCaptainContact] = useScreenState<CaptainSeaMileContact | null>(
+    'captainContact',
+    null
+  );
   const [editingContact, setEditingContact] = useState(false);
   const [savingContact, setSavingContact] = useState(false);
   const [firstName, setFirstName] = useState('');
@@ -98,7 +103,7 @@ export const SeaMilesReviewScreen = ({ navigation }: any) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [applyContactToForm, user]);
+  }, [applyContactToForm, setCaptainContact, setEntries, setLoading, user]);
 
   useFocusEffect(
     useCallback(() => {
@@ -223,11 +228,7 @@ export const SeaMilesReviewScreen = ({ navigation }: any) => {
   if (!isMasterOfVessel(user)) return null;
 
   if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: themeColors.background }]}>
-        <LoadingSpinner />
-      </View>
-    );
+    return <ScreenLoading title="Sign Off Sea Miles" />;
   }
 
   return (
