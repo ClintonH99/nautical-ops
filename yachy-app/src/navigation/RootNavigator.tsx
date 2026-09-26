@@ -89,6 +89,7 @@ import {
   RefundPolicyScreen,
   VesselLogsScreen,
   GeneralWasteLogScreen,
+  VesselLogHistoryScreen,
   AddEditGeneralWasteLogScreen,
   FuelLogScreen,
   AddEditFuelLogScreen,
@@ -230,6 +231,7 @@ const APP_SCREEN_PATHS = {
   NotificationSettings: 'notifications',
   VesselLogs: 'logs',
   GeneralWasteLog: 'logs/general-waste',
+  VesselLogHistory: 'logs/history',
   AddEditGeneralWasteLog: 'logs/general-waste/edit',
   FuelLog: 'logs/fuel',
   AddEditFuelLog: 'logs/fuel/edit',
@@ -1342,6 +1344,11 @@ export const RootNavigator = () => {
               <Stack.Screen
                 name="VesselLogs"
                 component={VesselLogsScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="VesselLogHistory"
+                component={VesselLogHistoryScreen}
                 options={{ headerShown: false }}
               />
               <Stack.Screen

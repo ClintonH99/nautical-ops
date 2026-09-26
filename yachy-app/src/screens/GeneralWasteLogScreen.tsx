@@ -1,14 +1,15 @@
 import { optimisticDelete } from '../utils/optimisticDelete';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
-import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
+import { useMonthlyVesselLogs } from '../hooks/useMonthlyVesselLogs';
+import { useVesselLogPeriod } from '../hooks/useVesselLogPeriod';
+import { VesselLogPeriodBar } from '../components/VesselLogPeriodBar';
 /**
  * General Waste Log Screen
  * List of general waste log entries with Add, Edit, Delete, and selective PDF export.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -28,12 +29,12 @@ import {
 } from '../components';
 import { exportGeneralWasteLogPdf } from '../utils/vesselLogsPdf';
 
-export const GeneralWasteLogScreen = ({ navigation }: any) => {
+const fetchMonth = (vesselId: string, month: string) =>
+  generalWasteLogsService.getByVesselMonth(vesselId, month);
+
+export const GeneralWasteLogScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
-  const [logs, setLogs] = useScreenState<GeneralWasteLog[]>('logs', []);
-  const [loading, setLoading] = useScreenLoading();
-  const [refreshing, setRefreshing] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exportMode, setExportMode] = useState(false);
@@ -41,6 +42,19 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const vesselId = user?.vesselId ?? null;
+  const { month, isHistory } = useVesselLogPeriod(vesselId, route?.params);
+  const { logs, setLogs, loading, refreshing, error, onRefresh, loadLogs } = useMonthlyVesselLogs(
+    vesselId,
+    month,
+    fetchMonth
+  );
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setExpandedId(null);
+    setSearchQuery('');
+    setExportMode(false);
+  }, [month, vesselId]);
 
   const filteredLogs = searchQuery.trim()
     ? logs.filter((log) => {
@@ -58,26 +72,6 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
       })
     : logs;
 
-  const loadLogs = useCallback(async () => {
-    if (!vesselId) return;
-    try {
-      const data = await generalWasteLogsService.getByVessel(vesselId);
-      setLogs(data);
-      setSelectedIds(new Set());
-    } catch (e) {
-      console.error('Load general waste logs error:', e);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [setLoading, setLogs, vesselId]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadLogs();
-    }, [loadLogs])
-  );
-
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -92,10 +86,6 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
     setSelectedIds(allSelected ? new Set() : new Set(filteredLogs.map((l) => l.id)));
   };
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadLogs();
-  };
   const onAdd = () => navigation.navigate('AddEditGeneralWasteLog', {});
   const onEdit = (log: GeneralWasteLog) =>
     navigation.navigate('AddEditGeneralWasteLog', { logId: log.id });
@@ -118,7 +108,7 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
   };
 
   const onExportPdf = async () => {
-    const toExport = logs.filter((l) => selectedIds.has(l.id));
+    const toExport = filteredLogs.filter((l) => selectedIds.has(l.id));
     if (toExport.length === 0) {
       Alert.alert('Nothing selected', 'Select at least one entry to export.');
       return;
@@ -165,20 +155,38 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
       />
       {exportMode && (
         <ExportBar
-          count={selectedIds.size}
+          count={filteredLogs.filter((log) => selectedIds.has(log.id)).length}
           onConfirm={onExportPdf}
           exporting={exportingPdf}
           hint="Tap logs to select"
         />
       )}
-      <View style={styles.actionBar}>
-        <Button
-          title="Create Waste Log Entry"
-          onPress={onAdd}
-          variant="primary"
-          style={styles.actionBtn}
-        />
-      </View>
+      <VesselLogPeriodBar
+        month={month}
+        onHistory={
+          isHistory
+            ? undefined
+            : () => navigation.push('VesselLogHistory', { kind: 'waste', vesselId })
+        }
+      />
+      {error ? (
+        <View style={styles.actionBar}>
+          <Text style={{ color: themeColors.textSecondary }}>
+            Could not refresh this month. Your saved entries have not been changed.
+          </Text>
+          <Button title="Retry" variant="outline" onPress={loadLogs} />
+        </View>
+      ) : null}
+      {!isHistory && (
+        <View style={styles.actionBar}>
+          <Button
+            title="Create Waste Log Entry"
+            onPress={onAdd}
+            variant="primary"
+            style={styles.actionBtn}
+          />
+        </View>
+      )}
 
       {logs.length > 0 && !loading && (
         <>
@@ -233,12 +241,20 @@ export const GeneralWasteLogScreen = ({ navigation }: any) => {
                 <Ionicons name="trash-outline" size={26} color={themeColors.accent} />
               </View>
               <Text style={[styles.emptyTitle, { color: themeColors.textPrimary }]}>
-                {logs.length === 0 ? 'No entries yet' : 'No matching entries'}
+                {error && logs.length === 0
+                  ? 'Entries unavailable'
+                  : logs.length === 0
+                    ? 'No entries this month'
+                    : 'No matching entries'}
               </Text>
               <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
-                {logs.length === 0
-                  ? 'Tap "Create Waste Log Entry" to create your first general waste entry.'
-                  : 'Try a different search term.'}
+                {error
+                  ? 'Retry when your connection is available.'
+                  : isHistory && logs.length === 0
+                    ? 'No entries were created in this month.'
+                    : logs.length === 0
+                      ? 'Tap "Create Waste Log Entry" to create your first general waste entry.'
+                      : 'Try a different search term.'}
               </Text>
             </View>
           ) : (

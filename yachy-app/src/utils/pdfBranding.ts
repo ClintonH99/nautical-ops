@@ -17,7 +17,7 @@ export async function brandPdf(
   const pages = document.getPages();
   const navy = rgb(0.055, 0.13, 0.27);
   const grey = rgb(0.65, 0.67, 0.71);
-  const { brandSize, titleSize, logoSize, pageNumberSize, margins } = PDF_LAYOUT;
+  const { brandSize, titleSize, logoSize, logoWordmarkGap, pageNumberSize, margins } = PDF_LAYOUT;
   const wordmark = 'NAUTICAL OPS';
   const heading = title.toUpperCase();
   const wordmarkWidth = bold.widthOfTextAtSize(wordmark, brandSize);
@@ -25,17 +25,17 @@ export async function brandPdf(
   pages.forEach((page, index) => {
     const { width, height } = page.getSize();
     if (!headerInContent) {
-      // Each header element has its own centre on the page's vertical axis.
-      // Keep the stack within the existing 90pt header reservation.
+      // Centre the logo and wordmark together; the title has the same page centre.
+      const brandLeft = (width - logoSize - logoWordmarkGap - wordmarkWidth) / 2;
       page.drawImage(image, {
-        x: (width - logoSize) / 2,
+        x: brandLeft,
         y: height - 40,
         width: logoSize,
         height: logoSize,
       });
       page.drawText(wordmark, {
-        x: (width - wordmarkWidth) / 2,
-        y: height - 56,
+        x: brandLeft + logoSize + logoWordmarkGap,
+        y: height - 31,
         size: brandSize,
         font: bold,
         color: navy,
@@ -47,7 +47,7 @@ export async function brandPdf(
       );
       page.drawText(heading, {
         x: (width - bold.widthOfTextAtSize(heading, size)) / 2,
-        y: height - 74,
+        y: height - 58,
         size,
         font: bold,
         color: navy,

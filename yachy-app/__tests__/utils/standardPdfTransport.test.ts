@@ -41,7 +41,7 @@ describe('native shared PDF export', () => {
         width: 595.28,
         height: 841.89,
         base64: true,
-        margins: { top: 90, left: 36, right: 36, bottom: 32 },
+        margins: { top: 72, left: 36, right: 36, bottom: 32 },
       })
     );
     expect(mockBrand).toHaveBeenCalledWith('source-base64', 'Inventory', 'logo-base64');
@@ -58,7 +58,7 @@ describe('native shared PDF export', () => {
       expect(mockPrint.mock.calls[0][0].html).toContain('margin: 0;');
       Platform.OS = 'android';
       await printStandardPdf({ html, title: 'Inventory' });
-      expect(mockPrint.mock.calls[1][0].html).toContain('margin: 90pt 36pt 32pt 36pt;');
+      expect(mockPrint.mock.calls[1][0].html).toContain('margin: 72pt 36pt 32pt 36pt;');
     } finally {
       Platform.OS = original;
     }

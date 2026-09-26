@@ -7,8 +7,17 @@ import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
  * Logs persist until manually deleted.
  */
 
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useCallback, useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  Modal,
+  Pressable,
+} from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { printStandardPdf } from '../utils/standardPdf';
@@ -28,7 +37,10 @@ import {
   ExportBar,
   ButtonTagCard,
   ButtonTagRow,
+  LabeledDropdown,
 } from '../components';
+
+const equipmentKey = (name: string) => name.trim().toLowerCase();
 
 function escapeHtml(s: string): string {
   return String(s)
@@ -58,13 +70,40 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
   const [exportingPdf, setExportingPdf] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exportMode, setExportMode] = useState(false);
+  const [equipmentFilter, setEquipmentFilter] = useState<string | null>(null);
+  const [equipmentPickerOpen, setEquipmentPickerOpen] = useState(false);
 
   const vesselId = user?.vesselId ?? null;
 
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' });
 
-  const filteredLogs = logs;
+  const equipmentOptions = useMemo(() => {
+    const names = new Map<string, string>();
+    for (const log of logs) {
+      const name = log.equipment.trim();
+      if (name && !names.has(equipmentKey(name))) names.set(equipmentKey(name), name);
+    }
+    return [...names.values()].sort((a, b) => a.localeCompare(b));
+  }, [logs]);
+  const filteredLogs = useMemo(
+    () =>
+      equipmentFilter === null
+        ? logs
+        : logs.filter((log) => equipmentKey(log.equipment) === equipmentKey(equipmentFilter)),
+    [logs, equipmentFilter]
+  );
+  // Always intersect selection with the visible records, including after refresh/delete.
+  const logsToExport = filteredLogs.filter((log) => selectedIds.has(log.id));
+
+  const selectEquipment = (equipment: string | null) => {
+    if (equipment !== equipmentFilter) {
+      setEquipmentFilter(equipment);
+      setSelectedIds(new Set());
+      setExpandedId(null);
+    }
+    setEquipmentPickerOpen(false);
+  };
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -138,7 +177,6 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
   };
 
   const exportPdf = async () => {
-    const logsToExport = logs.filter((l) => selectedIds.has(l.id));
     if (logsToExport.length === 0) {
       Alert.alert('No logs selected', 'Please select at least one log to include in the PDF.');
       return;
@@ -281,7 +319,7 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
       />
       {exportMode && (
         <ExportBar
-          count={selectedIds.size}
+          count={logsToExport.length}
           onConfirm={exportPdf}
           exporting={exportingPdf}
           hint="Tap logs to select"
@@ -295,7 +333,7 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
             variant="primary"
             style={styles.addButton}
           />
-          {exportMode && logs.length > 0 && (
+          {exportMode && filteredLogs.length > 0 && (
             <TouchableOpacity
               onPress={toggleSelectAll}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -310,10 +348,84 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
           )}
         </View>
       </View>
+      <View style={styles.filterRow}>
+        <LabeledDropdown
+          label="Equipment"
+          value={equipmentFilter ?? 'All Equipment'}
+          open={equipmentPickerOpen}
+          onPress={() => setEquipmentPickerOpen(true)}
+          tightTop
+          valueColor={themeColors.isDark ? COLORS.white : COLORS.primary}
+        />
+      </View>
+      {equipmentPickerOpen && (
+        <Modal
+          transparent
+          animationType="fade"
+          onRequestClose={() => setEquipmentPickerOpen(false)}
+        >
+          <View style={styles.pickerRoot}>
+            <Pressable
+              style={styles.pickerBackdrop}
+              onPress={() => setEquipmentPickerOpen(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss equipment filter"
+            />
+            <View
+              style={[
+                styles.pickerCard,
+                { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+              ]}
+              accessibilityViewIsModal
+              accessibilityRole="menu"
+            >
+              <View style={[styles.pickerHeader, { borderBottomColor: themeColors.border }]}>
+                <Text style={[styles.pickerTitle, { color: themeColors.textPrimary }]}>
+                  Filter Equipment
+                </Text>
+                <TouchableOpacity
+                  style={styles.pickerClose}
+                  onPress={() => setEquipmentPickerOpen(false)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close equipment filter"
+                >
+                  <Ionicons name="close" size={22} color={themeColors.textPrimary} />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.pickerList} keyboardShouldPersistTaps="handled">
+                {[null, ...equipmentOptions].map((equipment) => {
+                  const selected = equipment === equipmentFilter;
+                  const label = equipment ?? 'All Equipment';
+                  return (
+                    <TouchableOpacity
+                      key={equipment === null ? 'all' : `equipment:${equipment}`}
+                      onPress={() => selectEquipment(equipment)}
+                      style={[styles.pickerOption, selected && { backgroundColor: COLORS.primary }]}
+                      accessibilityRole="menuitem"
+                      accessibilityLabel={label}
+                      accessibilityState={{ selected }}
+                    >
+                      <Text
+                        style={[
+                          styles.pickerOptionText,
+                          { color: selected ? COLORS.white : themeColors.textPrimary },
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                      {selected && <Ionicons name="checkmark" size={20} color={COLORS.white} />}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
 
       {loading ? (
         <LoadingSpinner />
-      ) : logs.length === 0 ? (
+      ) : filteredLogs.length === 0 ? (
         <ScrollView
           contentContainerStyle={styles.emptyScroll}
           refreshControl={
@@ -333,7 +445,9 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
               style={styles.emptyIcon}
             />
             <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
-              No maintenance logs yet
+              {equipmentFilter === null
+                ? 'No maintenance logs yet'
+                : `No maintenance logs for ${equipmentFilter}`}
             </Text>
             <Button
               title="Create Maintenance Log"
@@ -455,6 +569,47 @@ const styles = StyleSheet.create({
   addButton: {
     alignSelf: 'stretch',
   },
+  filterRow: { paddingHorizontal: SPACING.lg },
+  pickerRoot: { flex: 1, justifyContent: 'center', padding: SPACING.lg },
+  pickerBackdrop: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.46)',
+  },
+  pickerCard: {
+    width: '100%',
+    maxWidth: 460,
+    maxHeight: '80%',
+    alignSelf: 'center',
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    overflow: 'hidden',
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingLeft: SPACING.md,
+    paddingRight: SPACING.xs,
+    borderBottomWidth: 1,
+    minHeight: 56,
+  },
+  pickerTitle: { fontSize: FONTS.base, fontWeight: '700', flexShrink: 1 },
+  pickerClose: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  pickerList: { flexGrow: 0, flexShrink: 1 },
+  pickerOption: {
+    minHeight: 52,
+    padding: SPACING.md,
+    margin: SPACING.xs,
+    borderRadius: BORDER_RADIUS.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  pickerOptionText: { flex: 1, fontSize: FONTS.base, fontWeight: '600' },
   selectAllWrap: {
     alignSelf: 'flex-start',
     marginTop: SPACING.md,

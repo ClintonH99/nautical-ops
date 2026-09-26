@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabase';
+import { getVesselLogMonthRows } from './vesselLogMonthQuery';
 import { requireAffectedRows } from './mutationResult';
 import { PumpOutLog, DischargeType } from '../types';
 
@@ -30,6 +31,10 @@ export interface UpdatePumpOutLogData {
 }
 
 class PumpOutLogsService {
+  async getByVesselMonth(vesselId: string, month: string): Promise<PumpOutLog[]> {
+    return (await getVesselLogMonthRows('pump_out_logs', vesselId, month)).map(this.mapRow);
+  }
+
   private mapRow(row: any): PumpOutLog {
     return {
       id: row.id,

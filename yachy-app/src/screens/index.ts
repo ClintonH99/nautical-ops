@@ -62,6 +62,7 @@ export { PrivacyPolicyScreen } from './PrivacyPolicyScreen';
 export { RefundPolicyScreen } from './RefundPolicyScreen';
 export { VesselLogsScreen } from './VesselLogsScreen';
 export { GeneralWasteLogScreen } from './GeneralWasteLogScreen';
+export { VesselLogHistoryScreen } from './VesselLogHistoryScreen';
 export { AddEditGeneralWasteLogScreen } from './AddEditGeneralWasteLogScreen';
 export { FuelLogScreen } from './FuelLogScreen';
 export { AddEditFuelLogScreen } from './AddEditFuelLogScreen';

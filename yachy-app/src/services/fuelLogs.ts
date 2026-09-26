@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabase';
+import { getVesselLogMonthRows } from './vesselLogMonthQuery';
 import { requireAffectedRows } from './mutationResult';
 import { FuelLog, FuelVolumeUnit } from '../types';
 
@@ -47,6 +48,10 @@ function normalizeCurrencyCode(value: string | undefined): string {
 }
 
 class FuelLogsService {
+  async getByVesselMonth(vesselId: string, month: string): Promise<FuelLog[]> {
+    return (await getVesselLogMonthRows('fuel_logs', vesselId, month)).map(this.mapRow);
+  }
+
   private mapRow(row: any): FuelLog {
     return {
       id: row.id,

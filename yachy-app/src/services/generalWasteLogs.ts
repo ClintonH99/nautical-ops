@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabase';
+import { getVesselLogMonthRows } from './vesselLogMonthQuery';
 import { requireAffectedRows } from './mutationResult';
 import { GeneralWasteLog, WeightUnit } from '../types';
 
@@ -28,6 +29,10 @@ export interface UpdateGeneralWasteLogData {
 }
 
 class GeneralWasteLogsService {
+  async getByVesselMonth(vesselId: string, month: string): Promise<GeneralWasteLog[]> {
+    return (await getVesselLogMonthRows('general_waste_logs', vesselId, month)).map(this.mapRow);
+  }
+
   private mapRow(row: any): GeneralWasteLog {
     return {
       id: row.id,

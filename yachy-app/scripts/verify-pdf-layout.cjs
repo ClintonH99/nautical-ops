@@ -381,6 +381,52 @@ async function fixtures() {
     html: load('inventoryPdf').buildInventoryHtml([]),
     title: 'Inventory',
   });
+  const fuelReceipt = {
+    ...base,
+    amountOfFuel: 3558,
+    pricePerGallon: 8.08,
+    pricePerVolumeUnit: 8.08,
+    totalPrice: 28748.64,
+    volumeUnit: 'US_GALLONS',
+    priceVolumeUnit: 'US_GALLONS',
+    currencyCode: 'USD',
+    locationOfRefueling: 'LMC',
+    logDate: '2026-09-21',
+    logTime: '13:59',
+    comment: 'Refuelled before departure.',
+  };
+  await capture('fuel-approved-short', () =>
+    load('vesselLogsPdf').exportFuelLogPdf(
+      [
+        fuelReceipt,
+        {
+          ...fuelReceipt,
+          id: 'litres',
+          locationOfRefueling: 'Port Louis Marina',
+          logDate: '2026-09-24',
+          logTime: '09:30',
+          amountOfFuel: 6200,
+          pricePerVolumeUnit: 1.42,
+          totalPrice: 8804,
+          volumeUnit: 'LITRES',
+          priceVolumeUnit: 'LITRES',
+          comment: 'Fuel delivery completed.',
+        },
+      ],
+      'Test Vessel'
+    )
+  );
+  await capture('fuel-oversized-comment', () =>
+    load('vesselLogsPdf').exportFuelLogPdf(
+      [
+        {
+          ...fuelReceipt,
+          comment: 'Complete fuel delivery comment. '.repeat(800) + 'END-FUEL-COMMENT',
+        },
+      ],
+      'Test Vessel'
+    )
+  );
   await capture('rules-two-short-boards', () =>
     load('rulesPdf').generateRulesDocumentsPdf(
       [

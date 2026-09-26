@@ -26,7 +26,7 @@ describe('shared PDF standard', () => {
     }
   });
   it.each(['portrait', 'landscape'] as const)(
-    'centres the logo, brand and title independently on every %s page',
+    'centres the inline logo/wordmark group with the title below on every %s page',
     async (orientation) => {
       const { width, height } = PDF_LAYOUT[orientation];
       const source = await PDFDocument.create();
@@ -40,16 +40,31 @@ describe('shared PDF standard', () => {
           'Shipyard List',
           readFileSync(resolve(__dirname, '../../assets/sea-miles-pdf-logo-source.png'))
         );
-        for (const [, options] of drawImage.mock.calls) {
-          expect(options!.x! + options!.width! / 2).toBeCloseTo(width / 2, 5);
-          expect(options!.y).toBe(height - 40);
-        }
+        const brands = drawText.mock.calls.filter(([text]) => text === 'NAUTICAL OPS');
+        expect(brands).toHaveLength(2);
+        drawImage.mock.calls.forEach(([, imageOptions], index) => {
+          const [text, options] = brands[index];
+          const textWidth = options!.font!.widthOfTextAtSize(text, options!.size!);
+          expect((imageOptions!.x! + options!.x! + textWidth) / 2).toBeCloseTo(width / 2, 5);
+          expect(options!.x! - imageOptions!.x! - imageOptions!.width!).toBe(
+            PDF_LAYOUT.logoWordmarkGap
+          );
+          expect(imageOptions!.y).toBe(height - 40);
+          expect(options!.y).toBe(height - 31);
+          expect(options!.y!).toBeGreaterThan(imageOptions!.y!);
+          expect(options!.y! + options!.size!).toBeLessThan(
+            imageOptions!.y! + imageOptions!.height!
+          );
+        });
         const headings = drawText.mock.calls.filter(([text]) => !text.startsWith('Page '));
         expect(headings).toHaveLength(4);
         for (const [text, options] of headings) {
           const textWidth = options!.font!.widthOfTextAtSize(text, options!.size!);
-          expect(options!.x! + textWidth / 2).toBeCloseTo(width / 2, 5);
-          expect(options!.y).toBe(height - (text === 'NAUTICAL OPS' ? 56 : 74));
+          if (text !== 'NAUTICAL OPS') {
+            expect(options!.x! + textWidth / 2).toBeCloseTo(width / 2, 5);
+            expect(options!.y).toBe(height - 58);
+            expect(options!.y!).toBeGreaterThan(height - PDF_LAYOUT.margins.top);
+          }
         }
       } finally {
         drawText.mockRestore();
@@ -64,7 +79,7 @@ describe('shared PDF standard', () => {
     const native = preparePdfHtml(html, 'Inventory', 'portrait', true);
     const android = preparePdfHtml(html, 'Inventory');
     expect(native).toContain('margin: 0;');
-    expect(android).toContain('margin: 90pt 36pt 32pt 36pt;');
+    expect(android).toContain('margin: 72pt 36pt 32pt 36pt;');
     expect(native).not.toContain('<h1>');
     expect(native).toContain('One item');
     expect(native).toContain('height: auto !important');

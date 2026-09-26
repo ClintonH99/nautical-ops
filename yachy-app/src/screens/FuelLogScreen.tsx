@@ -1,11 +1,14 @@
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
 import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
+import { useVesselLogPeriod } from '../hooks/useVesselLogPeriod';
+import { VesselLogPeriodBar } from '../components/VesselLogPeriodBar';
+import { createdInLogMonth } from '../utils/vesselLogHistory';
 /**
  * Fuel Log Screen
  * List of fuel log entries with Add, Edit, Delete, and selective PDF export.
  */
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
@@ -59,11 +62,16 @@ function formatVolume(value: number): string {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 3 }).format(value);
 }
 
-export const FuelLogScreen = ({ navigation }: any) => {
+export const FuelLogScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
-  const [storedLogs, setStoredLogs] = useScreenState<FuelLog[]>('storedLogs', []);
-  const [loadedVesselId, setLoadedVesselId] = useScreenState<string | null>('loadedVesselId', null);
+  const vesselId = user?.vesselId ?? null;
+  const { month, isHistory } = useVesselLogPeriod(vesselId, route?.params);
+  const [storedLogs, setStoredLogs] = useScreenState<FuelLog[]>(`storedLogs:${month}`, []);
+  const [loadedVesselId, setLoadedVesselId] = useScreenState<string | null>(
+    `loadedVesselId:${month}`,
+    null
+  );
   const [loading, setLoading] = useScreenLoading();
   const [refreshing, setRefreshing] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -71,23 +79,39 @@ export const FuelLogScreen = ({ navigation }: any) => {
   const [exportMode, setExportMode] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [loadError, setLoadError] = useState<{ vesselId: string; message: string } | null>(null);
+  const [loadError, setLoadError] = useState<{
+    vesselId: string;
+    month: string;
+    message: string;
+  } | null>(null);
   const [storedAllocationSnapshot, setStoredAllocationSnapshot] =
     useScreenState<FuelLogAllocationSnapshot>(
-      'storedAllocationSnapshot',
+      `storedAllocationSnapshot:${month}`,
       EMPTY_ALLOCATION_SNAPSHOT
     );
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const loadGeneration = useRef(0);
   const requestedVesselId = useRef<string | null>(user?.vesselId ?? null);
 
-  const vesselId = user?.vesselId ?? null;
   const canManageSetup = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
-  const logs = loadedVesselId === vesselId ? storedLogs : [];
+  const logs =
+    loadedVesselId === vesselId
+      ? storedLogs.filter(
+          (log) => log.vesselId === vesselId && createdInLogMonth(log.createdAt, month)
+        )
+      : [];
   const allocationSnapshot =
     loadedVesselId === vesselId ? storedAllocationSnapshot : EMPTY_ALLOCATION_SNAPSHOT;
-  const currentLoadError = loadError?.vesselId === vesselId ? loadError.message : null;
+  const currentLoadError =
+    loadError?.vesselId === vesselId && loadError.month === month ? loadError.message : null;
   const waitingForCurrentVessel = loadedVesselId !== vesselId && !currentLoadError;
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setExpandedId(null);
+    setSearchQuery('');
+    setExportMode(false);
+  }, [vesselId, month]);
 
   const receiptSummary = (() => {
     const costs = new Map<string, number>();
@@ -145,7 +169,7 @@ export const FuelLogScreen = ({ navigation }: any) => {
       setLoading(true);
     }
     try {
-      const data = await fuelLogsService.getByVessel(vesselId);
+      const data = await fuelLogsService.getByVesselMonth(vesselId, month);
       const nextAllocationSnapshot = await fuelManagementService.getFuelLogAllocationSnapshot(
         vesselId,
         data.map((log) => log.id)
@@ -161,6 +185,7 @@ export const FuelLogScreen = ({ navigation }: any) => {
       console.error('Load fuel logs error:', e);
       setLoadError({
         vesselId,
+        month,
         message:
           'Fuel receipts could not be refreshed. Existing data is retained, but new entries and changes are paused until refresh succeeds.',
       });
@@ -170,7 +195,7 @@ export const FuelLogScreen = ({ navigation }: any) => {
         setRefreshing(false);
       }
     }
-  }, [setLoadedVesselId, setLoading, setStoredAllocationSnapshot, setStoredLogs, vesselId]);
+  }, [setLoadedVesselId, setLoading, setStoredAllocationSnapshot, setStoredLogs, vesselId, month]);
 
   useFocusEffect(
     useCallback(() => {
@@ -245,7 +270,7 @@ export const FuelLogScreen = ({ navigation }: any) => {
   };
 
   const onExportPdf = async () => {
-    const toExport = logs.filter((l) => selectedIds.has(l.id));
+    const toExport = filteredLogs.filter((l) => selectedIds.has(l.id));
     if (toExport.length === 0) {
       Alert.alert('Nothing selected', 'Select at least one entry to export.');
       return;
@@ -257,7 +282,7 @@ export const FuelLogScreen = ({ navigation }: any) => {
         const vessel = await vesselService.getVessel(vesselId);
         if (vessel?.name) vesselName = vessel.name;
       }
-      await exportFuelLogPdf(toExport, vesselName, allocationSnapshot);
+      await exportFuelLogPdf(toExport, vesselName);
     } catch (e) {
       console.error('Export PDF error:', e);
       Alert.alert('Export failed', 'Could not generate PDF.');
@@ -300,12 +325,20 @@ export const FuelLogScreen = ({ navigation }: any) => {
       >
         {exportMode && (
           <ExportBar
-            count={selectedIds.size}
+            count={filteredLogs.filter((log) => selectedIds.has(log.id)).length}
             onConfirm={onExportPdf}
             exporting={exportingPdf}
             hint="Tap logs to select"
           />
         )}
+        <VesselLogPeriodBar
+          month={month}
+          onHistory={
+            isHistory
+              ? undefined
+              : () => navigation.push('VesselLogHistory', { kind: 'fuel', vesselId })
+          }
+        />
         {logs.length > 0 && !loading && !waitingForCurrentVessel ? (
           <View
             style={[
@@ -353,15 +386,17 @@ export const FuelLogScreen = ({ navigation }: any) => {
             </View>
           </View>
         ) : null}
-        <View style={styles.actionBar}>
-          <Button
-            title="Add Receipt"
-            onPress={onAdd}
-            variant="primary"
-            style={styles.actionBtn}
-            disabled={!!currentLoadError}
-          />
-        </View>
+        {!isHistory && (
+          <View style={styles.actionBar}>
+            <Button
+              title="Add Receipt"
+              onPress={onAdd}
+              variant="primary"
+              style={styles.actionBtn}
+              disabled={!!currentLoadError}
+            />
+          </View>
+        )}
 
         {currentLoadError ? (
           <View
@@ -414,15 +449,17 @@ export const FuelLogScreen = ({ navigation }: any) => {
                   {currentLoadError && logs.length === 0
                     ? 'Could not load receipts'
                     : logs.length === 0
-                      ? 'No entries yet'
+                      ? 'No entries this month'
                       : 'No matching entries'}
                 </Text>
                 <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
                   {currentLoadError && logs.length === 0
                     ? 'Retry when your connection is available. Nautical Ops will not treat a load failure as an empty audit log.'
-                    : logs.length === 0
-                      ? 'Tap "Add Receipt" to record your first bunkering entry.'
-                      : 'Try a different search term.'}
+                    : isHistory && logs.length === 0
+                      ? 'No entries were created in this month.'
+                      : logs.length === 0
+                        ? 'Tap "Add Receipt" to record your first bunkering entry.'
+                        : 'Try a different search term.'}
                 </Text>
               </View>
             ) : (

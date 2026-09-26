@@ -152,7 +152,7 @@ describe('buildSeaMilesPdfHtml', () => {
     expect(SEA_MILES_PDF_PRINT_OPTIONS).toEqual({
       width: 841.89,
       height: 595.28,
-      margins: { top: 90, right: 36, bottom: 32, left: 36 },
+      margins: { top: 72, right: 36, bottom: 32, left: 36 },
     });
   });
 

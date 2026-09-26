@@ -20,7 +20,7 @@ jest.mock('expo-sharing', () => ({
 }));
 
 import { exportFuelLogPdf } from '../../src/utils/vesselLogsPdf';
-import type { FuelLog, FuelLogAllocationSnapshot } from '../../src/types';
+import type { FuelLog } from '../../src/types';
 
 describe('fuel log PDF metadata', () => {
   beforeEach(() => {
@@ -75,16 +75,18 @@ describe('fuel log PDF metadata', () => {
     expect(html).toContain('Price / US gal');
     expect(html).toContain('€1.20');
     expect(html).toContain('$4.00');
-    expect(html).toContain('100 L + 50 US gal');
-    expect(html).toContain('€120.00 + $200.00');
+    expect(html).toContain('€120.00');
+    expect(html).toContain('$200.00');
+    expect(html).not.toContain('100 L + 50 US gal');
+    expect(html).not.toContain('€120.00 + $200.00');
     expect(html).not.toContain('150.00 gal');
     expect(html).toContain('<h1>Fuel Receipts</h1>');
-    expect(html).toContain('class="summary-grid"');
+    expect(html).not.toContain('summary-grid');
     expect(html).not.toContain('Generated');
     expect(html).not.toContain('<p class="subtitle">Test Vessel');
   });
 
-  it('stacks tank allocations in each receipt unit and identifies legacy unallocated rows', async () => {
+  it('shows only essential fields, preserving historical units and local dates/times', async () => {
     const base = {
       vesselId: 'vessel-1',
       locationOfRefueling: 'Port Hercules',
@@ -95,7 +97,7 @@ describe('fuel log PDF metadata', () => {
       pricePerVolumeUnit: 1,
       totalPrice: 100,
       currencyCode: 'USD',
-      comment: '',
+      comment: 'Refuelled before departure.',
       createdBy: 'user-1',
       createdByName: 'Captain',
       createdAt: '2026-09-18T10:30:00Z',
@@ -104,28 +106,91 @@ describe('fuel log PDF metadata', () => {
       { ...base, id: 'allocated', volumeUnit: 'LITRES', priceVolumeUnit: 'LITRES' },
       { ...base, id: 'legacy', volumeUnit: null, priceVolumeUnit: 'US_GALLONS' },
     ];
-    const allocationSnapshot: FuelLogAllocationSnapshot = {
-      displayUnit: 'US_GALLONS',
-      allocationsByLogId: {
-        allocated: [
-          {
-            fuelLogId: 'allocated',
-            fuelTankId: 'tank-1',
-            tankName: 'Port & Day Tank',
-            amountLitres: 378.5411784,
-          },
-        ],
-      },
-    };
-
-    await exportFuelLogPdf(logs, 'Test Vessel', allocationSnapshot);
+    await exportFuelLogPdf(logs, 'Test Vessel');
 
     const html = mockPrintToFileAsync.mock.calls[0][0].html as string;
-    expect(html).toContain('class="receipt-card"');
-    expect(html).toContain('class="allocation-panel"');
-    expect(html).toContain('Port &amp; Day Tank');
-    expect(html).toContain('class="allocation-amount">378.541 L</span>');
-    expect(html).toContain('No tank allocation recorded.');
+    expect(html).toContain('class="fuel-receipt"');
+    for (const label of [
+      'Location',
+      'Date',
+      'Time',
+      'Fuel received',
+      'Price / Litre',
+      'Total purchase',
+      'Comment',
+    ]) {
+      expect(html).toContain(`>${label}<`);
+    }
+    expect(html).toContain('Port Hercules');
+    expect(html).toContain('18 Sep 2026');
+    expect(html).toContain('10:30');
+    expect(html).toContain('100 L');
+    expect(html).toContain('100 US gal');
+    expect(html).toContain('Refuelled before departure.');
+    for (const removed of [
+      'Tank allocation',
+      'allocation-panel',
+      'Logged by',
+      'Captain',
+      'Test Vessel',
+      'Total fuel',
+      'Total cost',
+      'border-left',
+    ]) {
+      expect(html).not.toContain(removed);
+    }
     expect(html).toContain('page-break-inside: avoid');
+  });
+
+  it('keeps quantity and price units separate and escapes long comments without truncating them', async () => {
+    const comment =
+      '<script>alert("x")</script> & fuel\n' + 'Full comment. '.repeat(300) + 'END-COMMENT';
+    const log: FuelLog = {
+      id: 'mixed',
+      vesselId: 'vessel',
+      locationOfRefueling: 'Port <A> & B',
+      logDate: '2026-01-01',
+      logTime: '00:05',
+      amountOfFuel: 100,
+      volumeUnit: 'LITRES',
+      priceVolumeUnit: 'US_GALLONS',
+      pricePerGallon: 4,
+      pricePerVolumeUnit: 4,
+      totalPrice: 105.67,
+      currencyCode: 'USD',
+      comment,
+      createdBy: 'crew',
+      createdByName: 'Captain',
+      createdAt: '2025-12-31T14:05:00Z',
+    };
+    await exportFuelLogPdf([log], 'Test Vessel');
+    const html = mockPrintToFileAsync.mock.calls[0][0].html as string;
+    expect(html).toContain('Port &lt;A&gt; &amp; B');
+    expect(html).toContain('1 Jan 2026');
+    expect(html).toContain('00:05');
+    expect(html).toContain('100 L');
+    expect(html).toContain('Price / US gal');
+    expect(html).toContain('$105.67');
+    expect(html).toContain('&lt;script&gt;');
+    expect(html).not.toContain('<script>');
+    expect(html).toContain('END-COMMENT');
+    expect(html).toContain('white-space: pre-wrap');
+  });
+
+  it('uses the shared branded export and preserves the file sharing workflow', async () => {
+    mockIsAvailableAsync.mockResolvedValue(true);
+    await exportFuelLogPdf([], 'Test Vessel');
+    expect(mockPrintToFileAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Fuel Receipts' })
+    );
+    expect(mockPrintToFileAsync.mock.calls[0][0].html).toContain('No fuel receipts');
+    expect(mockMoveAsync).toHaveBeenCalledWith({
+      from: 'file:///tmp/print.pdf',
+      to: expect.stringMatching(/Test_Vessel_.*_Fuel_Log\.pdf$/),
+    });
+    expect(mockShareAsync).toHaveBeenCalledWith(
+      expect.stringContaining('Test_Vessel_'),
+      expect.objectContaining({ mimeType: 'application/pdf' })
+    );
   });
 });

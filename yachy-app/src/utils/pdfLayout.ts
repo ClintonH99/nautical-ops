@@ -4,10 +4,11 @@ export type PdfOrientation = 'portrait' | 'landscape';
 export const PDF_LAYOUT = {
   portrait: { width: 595.28, height: 841.89 },
   landscape: { width: 841.89, height: 595.28 },
-  margins: { top: 90, right: 36, bottom: 32, left: 36 },
+  margins: { top: 72, right: 36, bottom: 32, left: 36 },
   brandSize: 12,
   titleSize: 12,
   logoSize: 26,
+  logoWordmarkGap: 7,
   pageNumberSize: 8,
 } as const;
 
