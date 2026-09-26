@@ -78,6 +78,7 @@ export const CrewManagementScreen = ({ navigation }: any) => {
   };
 
   const handleRemoveCrew = (crewMember: User) => {
+    if (!isMOV || crewMember.id === currentUser?.id) return;
     Alert.alert(
       'Remove Crew Member',
       `Are you sure you want to remove ${crewMember.name} from the vessel? They can rejoin using the invite code.`,
@@ -89,11 +90,18 @@ export const CrewManagementScreen = ({ navigation }: any) => {
           onPress: async () => {
             try {
               await userService.removeCrewMember(crewMember.id);
+              setCrew((previous) => previous.filter((member) => member.id !== crewMember.id));
               Alert.alert('Success', `${crewMember.name} has been removed from the vessel`);
               loadCrew(); // Refresh list
             } catch (error) {
-              console.error('Remove crew error:', error);
-              Alert.alert('Error', 'Failed to remove crew member');
+              if (__DEV__) console.warn('Remove crew warning:', error);
+              const message =
+                error instanceof Error
+                  ? error.message
+                  : typeof (error as { message?: unknown })?.message === 'string'
+                    ? (error as { message: string }).message
+                    : 'Could not remove crew member. Please try again.';
+              Alert.alert('Could not remove crew member', message);
             }
           },
         },
@@ -273,16 +281,13 @@ export const CrewManagementScreen = ({ navigation }: any) => {
               {isCurrentUser && (
                 <Text
                   style={[
-                    styles.youBadge,
+                    styles.youLabel,
                     {
-                      color: themeColors.isDark ? themeColors.accent : COLORS.primary,
-                      backgroundColor: themeColors.isDark
-                        ? themeColors.accentSoft
-                        : COLORS.primaryLight,
+                      color: themeColors.isDark ? COLORS.white : COLORS.primary,
                     },
                   ]}
                 >
-                  YOU
+                  You
                 </Text>
               )}
             </View>
@@ -718,14 +723,10 @@ const styles = StyleSheet.create({
     marginRight: SPACING.xs,
     flex: 1,
   },
-  youBadge: {
+  youLabel: {
     fontSize: FONTS.xs,
     fontWeight: 'bold',
-    color: COLORS.primary,
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.sm,
+    flexShrink: 0,
   },
   crewPosition: {
     fontSize: FONTS.sm,

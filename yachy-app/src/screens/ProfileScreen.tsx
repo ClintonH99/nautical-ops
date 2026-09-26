@@ -25,6 +25,7 @@ import userService from '../services/user';
 import { Department } from '../types';
 import { formatDepartmentLabel } from '../utils/departmentSelection';
 import Constants from 'expo-constants';
+import { canCreateNewVessel } from '../utils/access';
 
 // Read from app.json at build time, so it can never drift from the
 // version actually shipped.
@@ -33,6 +34,7 @@ const APP_VERSION = Constants.expoConfig?.version ?? '';
 export const ProfileScreen = ({ navigation }: any) => {
   const { user, setUser } = useAuthStore();
   const isCaptain = user?.role === 'CAPTAIN_MOV';
+  const showCreateVessel = canCreateNewVessel(user);
   const displaysAsCaptain = isCaptain || user?.position?.toLowerCase().includes('captain') === true;
 
   const refreshUser = async () => {
@@ -611,10 +613,12 @@ export const ProfileScreen = ({ navigation }: any) => {
               <TouchableOpacity
                 style={[
                   styles.settingsItem,
-                  isCaptain ? undefined : styles.settingsItemLast,
+                  !showCreateVessel && !user?.vesselId && !isCaptain && styles.settingsItemLast,
                   { borderBottomColor: themeColors.border },
                 ]}
                 onPress={() => navigation.navigate('JoinVessel')}
+                accessibilityRole="button"
+                accessibilityLabel="Join a Different Vessel"
                 activeOpacity={0.7}
               >
                 <View style={styles.settingsItemLeft}>
@@ -643,10 +647,50 @@ export const ProfileScreen = ({ navigation }: any) => {
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
               </TouchableOpacity>
+              {showCreateVessel && (
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Create a New Vessel"
+                  style={[
+                    styles.settingsItem,
+                    !user?.vesselId && !isCaptain && styles.settingsItemLast,
+                    { borderBottomColor: themeColors.border },
+                  ]}
+                  onPress={() => navigation.navigate('CreateVessel')}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.settingsItemLeft}>
+                    <View
+                      style={[
+                        styles.settingsIconContainer,
+                        { backgroundColor: themeColors.accentSoft },
+                      ]}
+                    >
+                      <Ionicons
+                        name="add-outline"
+                        size={20}
+                        color={themeColors.isDark ? COLORS.white : COLORS.primary}
+                      />
+                    </View>
+                    <View style={styles.settingsTextContainer}>
+                      <Text style={[styles.settingsLabel, { color: themeColors.textPrimary }]}>
+                        Create a New Vessel
+                      </Text>
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
+                </TouchableOpacity>
+              )}
               {!!user?.vesselId && (
                 <TouchableOpacity
-                  style={[styles.settingsItem, { borderBottomColor: themeColors.border }]}
+                  style={[
+                    styles.settingsItem,
+                    !isCaptain && styles.settingsItemLast,
+                    { borderBottomColor: themeColors.border },
+                  ]}
                   onPress={handleLeaveVessel}
+                  accessibilityRole="button"
+                  accessibilityLabel="Leave Vessel"
                   activeOpacity={0.7}
                 >
                   <View style={styles.settingsItemLeft}>

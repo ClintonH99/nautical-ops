@@ -22,6 +22,8 @@ import { Button, Input } from '../components';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import vesselService from '../services/vessel';
+import { canCreateNewVessel } from '../utils/access';
+import { vesselNavigationState } from '../utils/vesselNavigation';
 import authService from '../services/auth';
 import { useAuthStore } from '../store';
 import { usePostHog } from 'posthog-react-native';
@@ -31,6 +33,7 @@ const ACCENT_GOLD = '#c9a227';
 export const CreateVesselScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const isAuthenticated = useAuthStore((s) => !!s.user);
+  const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((state) => state.setUser);
   const setDeferUserUpdate = useAuthStore((state) => state.setDeferUserUpdate);
   const posthog = usePostHog();
@@ -44,6 +47,13 @@ export const CreateVesselScreen = ({ navigation }: any) => {
   const [pendingUpdatedUser, setPendingUpdatedUser] = useState<any>(null);
 
   const handleCreateVessel = async () => {
+    if (!canCreateNewVessel(user)) {
+      Alert.alert(
+        'Cannot create vessel',
+        'You must leave your shared vessel before creating a new vessel. New Crew accounts cannot create a vessel.'
+      );
+      return;
+    }
     if (!vesselName.trim()) {
       setError('Vessel name is required');
       return;
@@ -98,7 +108,7 @@ export const CreateVesselScreen = ({ navigation }: any) => {
       if (pendingUpdatedUser) {
         setUser(pendingUpdatedUser);
       }
-      navigation.navigate('MainTabs');
+      navigation.reset(vesselNavigationState('VesselSettings'));
     }
   };
 
@@ -148,7 +158,7 @@ export const CreateVesselScreen = ({ navigation }: any) => {
 
           <View style={styles.actions}>
             <Button
-              title="Continue to Dashboard"
+              title="Go to Vessel Settings"
               onPress={handleContinue}
               fullWidth
               variant="primary"
@@ -195,7 +205,7 @@ export const CreateVesselScreen = ({ navigation }: any) => {
               Create your vessel
             </Text>
             <Text style={[styles.heroSubtitle, { color: themeColors.textSecondary }]}>
-              Set up your yacht and get an invite code for your crew
+              Set up your vessel, then select a plan to invite your crew
             </Text>
             <View style={styles.heroAccent} />
           </View>
@@ -239,15 +249,15 @@ export const CreateVesselScreen = ({ navigation }: any) => {
               ]}
             >
               <Text style={[styles.infoText, { color: themeColors.textSecondary }]}>
-                ✓ Unique 8-character invite code
+                Invite code unlocked after subscription payment
               </Text>
               <Text style={[styles.infoText, { color: themeColors.textSecondary }]}>
-                ✓ Share with unlimited crew
+                Crew capacity depends on your selected plan
               </Text>
             </View>
 
             <Button
-              title="Create Vessel & Get Invite Code"
+              title="Create Vessel"
               onPress={handleCreateVessel}
               loading={loading}
               fullWidth

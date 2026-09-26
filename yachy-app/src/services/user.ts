@@ -47,6 +47,7 @@ class UserService {
         department: userData.department,
         role: userData.role,
         vesselId: userData.vessel_id,
+        vesselCreationUnlocked: userData.vessel_creation_unlocked === true,
         profilePhoto: userData.profile_photo,
         createdAt: userData.created_at,
         updatedAt: userData.updated_at,
@@ -103,6 +104,7 @@ class UserService {
         rotationGroupId: user.rotation_group_id ?? null,
         role: user.role,
         vesselId: user.vessel_id,
+        vesselCreationUnlocked: user.vessel_creation_unlocked === true,
         profilePhoto: user.profile_photo,
         createdAt: user.created_at,
         updatedAt: user.updated_at,
@@ -117,23 +119,16 @@ class UserService {
   }
 
   /**
-   * Remove crew member from vessel (HOD only)
+   * Remove another crew member from the current vessel (Captain/MOV only).
+   * The server validates membership and returns confirmation, not a detached profile.
    */
   async removeCrewMember(userId: string): Promise<void> {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .update({
-          vessel_id: null,
-          vessel_joined_at: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', userId)
-        .select('id');
-      requireAffectedRows(data, error, 'Removing the crew member');
-    } catch (error) {
-      console.error('Remove crew member error:', error);
-      throw error;
+    const { data, error } = await supabase.rpc('remove_current_vessel_crew_member', {
+      p_user_id: userId,
+    });
+    if (error) throw error;
+    if (data !== true) {
+      throw new Error('Could not confirm crew removal. Refresh the crew list and try again.');
     }
   }
 
@@ -219,6 +214,7 @@ class UserService {
         rotationGroupId: user.rotation_group_id ?? null,
         role: user.role,
         vesselId: user.vessel_id,
+        vesselCreationUnlocked: user.vessel_creation_unlocked === true,
         profilePhoto: user.profile_photo,
         createdAt: user.created_at,
         updatedAt: user.updated_at,

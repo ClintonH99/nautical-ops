@@ -19,6 +19,7 @@ import authService from '../services/auth';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { usePostHog } from 'posthog-react-native';
+import { canCreateNewVessel } from '../utils/access';
 
 export const JoinVesselScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -54,7 +55,7 @@ export const JoinVesselScreen = ({ navigation }: any) => {
         Alert.alert('Success!', 'You have successfully joined the vessel.', [
           {
             text: 'OK',
-            onPress: () => navigation.goBack(),
+            onPress: () => navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] }),
           },
         ]);
       }
@@ -112,10 +113,16 @@ export const JoinVesselScreen = ({ navigation }: any) => {
             <View
               style={[
                 styles.infoCard,
-                { backgroundColor: 'rgba(220,38,38,0.08)', borderColor: 'rgba(220,38,38,0.3)', borderWidth: 1 },
+                {
+                  backgroundColor: 'rgba(220,38,38,0.08)',
+                  borderColor: 'rgba(220,38,38,0.3)',
+                  borderWidth: 1,
+                },
               ]}
             >
-              <Text style={[styles.infoText, { color: themeColors.textPrimary, fontWeight: '600' }]}>
+              <Text
+                style={[styles.infoText, { color: themeColors.textPrimary, fontWeight: '600' }]}
+              >
                 Joining a new vessel will remove you from your current vessel immediately.
               </Text>
             </View>
@@ -159,18 +166,20 @@ export const JoinVesselScreen = ({ navigation }: any) => {
           </View>
 
           {/* Alternative Option */}
-          <View style={styles.alternative}>
-            <Text style={[styles.alternativeText, { color: themeColors.textSecondary }]}>
-              Don't have a vessel yet?
-            </Text>
-            <Button
-              title="Create Your Own Vessel"
-              onPress={() => navigation.navigate('CreateVessel')}
-              variant="outline"
-              fullWidth
-              style={styles.createButton}
-            />
-          </View>
+          {canCreateNewVessel(user) && (
+            <View style={styles.alternative}>
+              <Text style={[styles.alternativeText, { color: themeColors.textSecondary }]}>
+                Don't have a vessel yet?
+              </Text>
+              <Button
+                title="Create a New Vessel"
+                onPress={() => navigation.navigate('CreateVessel')}
+                variant="outline"
+                fullWidth
+                style={styles.createButton}
+              />
+            </View>
+          )}
 
           {/* Back Button */}
           <Button

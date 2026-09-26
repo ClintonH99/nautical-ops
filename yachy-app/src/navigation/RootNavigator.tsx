@@ -137,6 +137,8 @@ import { reconcileAppleSubscription } from '../services/iap';
 import { syncPushTokenForCurrentDevice } from '../services/notifications';
 import { COLORS } from '../constants/theme';
 import { readTransport } from '../services/supabase';
+import { vesselTransitionRoute } from '../utils/access';
+import { vesselNavigationState } from '../utils/vesselNavigation';
 import { getRenewableSessionUserId } from '../utils/cachedSession';
 import { InventoryAutoSaveSync } from '../hooks/useInventoryAutoSave';
 import { isSentryEnabled, sentryNavigationIntegration, setSentryUserContext } from '../lib/sentry';
@@ -307,6 +309,14 @@ export const RootNavigator = () => {
   const isCaptain = user?.role === 'CAPTAIN_MOV';
   const hasVessel = !!user?.vesselId;
   const navigationRef = useNavigationContainerRef();
+  const previousVesselProfile = useRef(user);
+  useEffect(() => {
+    const destination = vesselTransitionRoute(previousVesselProfile.current, user);
+    previousVesselProfile.current = user;
+    if (destination && navigationRef.isReady()) {
+      navigationRef.resetRoot(vesselNavigationState(destination));
+    }
+  }, [user, navigationRef]);
   const lastHandledNotificationId = useRef<string | null>(null);
   const [bootstrapAttempt, setBootstrapAttempt] = useState(0);
   const [startupError, setStartupError] = useState(false);

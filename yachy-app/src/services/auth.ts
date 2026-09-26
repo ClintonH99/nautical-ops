@@ -528,6 +528,7 @@ class AuthService {
         rotationGroupId: data.rotation_group_id ?? null,
         role: data.role,
         vesselId: data.vessel_id,
+        vesselCreationUnlocked: data.vessel_creation_unlocked === true,
         profilePhoto: data.profile_photo,
         createdAt: data.created_at,
         updatedAt: data.updated_at,

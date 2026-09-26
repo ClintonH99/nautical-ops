@@ -57,6 +57,8 @@ export interface User {
   contractType?: ContractType;
   rotationGroupId?: string | null;
   vesselId?: string; // Optional - user can join vessel later
+  /** Server-issued permission after leaving/removal from a shared vessel. */
+  vesselCreationUnlocked?: boolean;
   profilePhoto?: string;
   createdAt: string;
   updatedAt: string;

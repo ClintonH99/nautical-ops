@@ -24,6 +24,7 @@ import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus';
 import { Button, LoadingSpinner, PageHeader } from '../components';
+import { backFromVesselSettings } from '../utils/vesselNavigation';
 import vesselService from '../services/vessel';
 import userService from '../services/user';
 import { Vessel } from '../types';
@@ -90,7 +91,7 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
   useEffect(() => {
     if (!isCaptain) {
       Alert.alert('Access Denied', 'Only the Captain can access vessel settings', [
-        { text: 'OK', onPress: () => navigation.goBack() },
+        { text: 'OK', onPress: () => backFromVesselSettings(navigation) },
       ]);
       return;
     }
@@ -100,7 +101,7 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
   useFocusEffect(
     useCallback(() => {
       if (!canAccessVesselManagement(user)) {
-        navigation.goBack();
+        backFromVesselSettings(navigation);
         return;
       }
       refetchSubscription();
@@ -278,14 +279,18 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
     return (
       <View style={[styles.errorContainer, { backgroundColor: themeColors.background }]}>
         <Text style={[styles.errorText, { color: themeColors.textPrimary }]}>Vessel not found</Text>
-        <Button title="Go Back" onPress={() => navigation.goBack()} variant="primary" />
+        <Button
+          title="Go Back"
+          onPress={() => backFromVesselSettings(navigation)}
+          variant="primary"
+        />
       </View>
     );
   }
 
   return (
     <View style={[styles.pageWrap, { backgroundColor: themeColors.background }]}>
-      <PageHeader title="Vessel Settings" />
+      <PageHeader title="Vessel Settings" onBack={() => backFromVesselSettings(navigation)} />
       <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]}>
         <View style={styles.content}>
           {/* Subscription / Vessel Plans Link */}

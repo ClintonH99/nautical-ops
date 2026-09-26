@@ -215,6 +215,28 @@ describe('AuthService', () => {
   });
 
   describe('signUp', () => {
+    it('loads server-issued departure eligibility on profile refresh', async () => {
+      mockFrom.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        maybeSingle: jest.fn().mockResolvedValue({
+          data: {
+            id: 'departed-user',
+            role: 'CREW',
+            vessel_id: 'fresh-private',
+            vessel_creation_unlocked: true,
+          },
+          error: null,
+        }),
+      });
+      expect(await authService.getUserProfile('departed-user')).toEqual(
+        expect.objectContaining({
+          role: 'CREW',
+          vesselId: 'fresh-private',
+          vesselCreationUnlocked: true,
+        })
+      );
+    });
     it('creates a private Crew workspace when no invite code is provided', async () => {
       const mockedVesselService = jest.requireMock('../../src/services/vessel').default;
       mockSignUp.mockResolvedValue({
