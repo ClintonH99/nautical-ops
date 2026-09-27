@@ -254,14 +254,15 @@ export const HomeScreen = ({ navigation }: any) => {
   const loadTrips = useCallback(async () => {
     if (!vesselId) return;
     try {
-      const [data, jobs] = await Promise.all([
-        tripsService.getTripsByVessel(vesselId),
-        yardJobsService.getByVessel(vesselId),
+      await Promise.all([
+        tripsService
+          .getTripsByVessel(vesselId)
+          .then(setTrips)
+          .finally(() => setTripsLoading(false)),
+        yardJobsService.getByVessel(vesselId).then(setYardJobs),
         loadColors(),
         loadCrewLeaveWindow(crewLeaveWindowRef.current),
       ]);
-      setTrips(data);
-      setYardJobs(jobs);
     } catch (e) {
       console.error('Load trips error:', e);
     } finally {

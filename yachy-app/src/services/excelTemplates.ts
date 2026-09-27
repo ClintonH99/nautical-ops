@@ -6,7 +6,7 @@
 import * as XLSX from 'xlsx';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { Department, TaskCategory, TaskRecurring } from '../types';
 import { isTaskRecurrenceAllowed } from '../utils/taskRecurrence';
 
@@ -255,8 +255,27 @@ export async function downloadTemplate(type: TemplateType): Promise<void> {
   }
 
   const arr = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
-  const base64 = bytesToBase64(new Uint8Array(arr));
   const filename = `Nautical_Ops_${fileLabel}_Template.xlsx`;
+  if (Platform.OS === 'web') {
+    const blob = new Blob([arr], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    try {
+      link.href = url;
+      link.download = filename;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+    } finally {
+      link.remove();
+      // Keep the URL alive until the browser has picked up the download.
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    }
+    return;
+  }
+  const base64 = bytesToBase64(new Uint8Array(arr));
   const uri = `${FileSystem.cacheDirectory}${filename}`;
   await FileSystem.writeAsStringAsync(uri, base64, {
     encoding: 'base64',

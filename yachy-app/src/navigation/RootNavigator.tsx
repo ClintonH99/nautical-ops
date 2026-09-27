@@ -505,15 +505,15 @@ export const RootNavigator = () => {
     // finishes in milliseconds and the app is on screen before any request
     // is made. This is what makes a cold start feel instant.
     const renderFromCache = async (): Promise<boolean> => {
-      await loadTheme().catch(() => {
-        /* theme load is non-critical */
-      });
       try {
         const [cached, storedAuth, storedNotice, storedPaymentRestriction] = await Promise.all([
           AsyncStorage.getItem('nautical_ops_cached_user'),
           AsyncStorage.getItem(SUPABASE_AUTH_STORAGE_KEY),
           AsyncStorage.getItem(LOGIN_NOTICE_STORAGE_KEY),
           AsyncStorage.getItem(PAYMENT_RESTRICTION_STORAGE_KEY),
+          loadTheme().catch(() => {
+            /* theme load is non-critical */
+          }),
         ]);
 
         if (storedNotice) setLoginNotice(storedNotice);

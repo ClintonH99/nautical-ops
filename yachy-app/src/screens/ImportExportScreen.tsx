@@ -5,7 +5,15 @@ import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinne
  */
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  TouchableOpacity,
+  Platform,
+} from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
@@ -51,7 +59,8 @@ export const ImportExportScreen = ({ navigation }: any) => {
       await downloadTemplate(type);
     } catch (e) {
       console.error('Download template error:', e);
-      Alert.alert('Error', 'Could not create template.');
+      if (Platform.OS === 'web') window.alert('Could not download the template. Please try again.');
+      else Alert.alert('Error', 'Could not create template.');
     } finally {
       setDownloading(null);
     }

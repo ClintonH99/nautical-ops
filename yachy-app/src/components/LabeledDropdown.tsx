@@ -29,6 +29,8 @@ interface LabeledDropdownProps {
   iconColor?: string;
   /** Use a full-width control below the label inside stacked forms. */
   layout?: 'row' | 'stacked';
+  /** Align controls in a group without changing other callers. */
+  labelWidth?: number;
 }
 
 export const LabeledDropdown: React.FC<LabeledDropdownProps> = ({
@@ -40,6 +42,7 @@ export const LabeledDropdown: React.FC<LabeledDropdownProps> = ({
   valueColor,
   iconColor,
   layout = 'row',
+  labelWidth,
 }) => {
   const themeColors = useThemeColors();
   const resolvedValueColor = valueColor ?? themeColors.accent;
@@ -52,6 +55,7 @@ export const LabeledDropdown: React.FC<LabeledDropdownProps> = ({
       <Text
         style={[
           styles.label,
+          layout === 'row' && labelWidth !== undefined && { width: labelWidth },
           layout === 'stacked' && styles.labelStacked,
           { color: themeColors.textPrimary },
         ]}

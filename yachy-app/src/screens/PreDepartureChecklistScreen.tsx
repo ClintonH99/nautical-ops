@@ -65,6 +65,7 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
   const vesselId = user?.vesselId ?? null;
   const isHOD = user?.role === 'HOD';
   const isCaptain = user?.role === 'CAPTAIN_MOV';
+  const checklistActionLabel = user?.role === 'CREW' ? 'Enter' : 'Edit';
 
   const canEditChecklist = (_checklist: PreDepartureChecklist) => isCaptain || isHOD;
 
@@ -219,6 +220,7 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
         onToggleSelect={() => toggleSelection(item.id)}
         selected={isSelected}
         onEdit={() => onEdit(item)}
+        editLabel={checklistActionLabel}
         onDelete={canEditChecklist(item) ? () => onDelete(item) : undefined}
       >
         <ButtonTagRow label="Date" value={formatDate(item.createdAt)} />
@@ -322,6 +324,7 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
           onToggleSelect={() => toggleSelection(captainBoard.id)}
           selected={selectedIds.has(captainBoard.id)}
           onEdit={() => onEdit(captainBoard)}
+          editLabel={checklistActionLabel}
           onDelete={canEditChecklist(captainBoard) ? () => onDelete(captainBoard) : undefined}
         >
           <View style={styles.captainMeta}>

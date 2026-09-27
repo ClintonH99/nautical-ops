@@ -13,6 +13,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   Alert,
   Modal,
@@ -458,10 +459,11 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
           </View>
         </ScrollView>
       ) : (
-        <ScrollView
+        <FlatList
           style={styles.verticalScroll}
           contentContainerStyle={[
             styles.verticalScrollContent,
+            styles.recordList,
             { paddingBottom: SIZES.bottomScrollPadding },
           ]}
           refreshControl={
@@ -473,70 +475,74 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
             />
           }
           showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.recordList}>
-            {filteredLogs.map((log) => {
-              const selected = selectedIds.has(log.id);
-              const summary = [formatDate(log.createdAt), log.portStarboardNa]
-                .filter(Boolean)
-                .join(' · ');
-              return (
-                <ButtonTagCard
-                  key={log.id}
-                  headerTitle={log.equipment}
-                  minimal
-                  collapsible
-                  expanded={expandedId === log.id}
-                  onToggleExpand={() =>
-                    setExpandedId((current) => (current === log.id ? null : log.id))
-                  }
-                  summary={
-                    <Text style={[styles.recordSummary, { color: themeColors.textSecondary }]}>
-                      {summary}
+          data={filteredLogs}
+          keyExtractor={(log) => log.id}
+          extraData={{ selectedIds, expandedId, exportMode, themeColors }}
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          windowSize={7}
+          removeClippedSubviews={false}
+          renderItem={({ item: log }) => {
+            const selected = selectedIds.has(log.id);
+            const summary = [formatDate(log.createdAt), log.portStarboardNa]
+              .filter(Boolean)
+              .join(' · ');
+            return (
+              <ButtonTagCard
+                key={log.id}
+                headerTitle={log.equipment}
+                minimal
+                collapsible
+                expanded={expandedId === log.id}
+                onToggleExpand={() =>
+                  setExpandedId((current) => (current === log.id ? null : log.id))
+                }
+                summary={
+                  <Text style={[styles.recordSummary, { color: themeColors.textSecondary }]}>
+                    {summary}
+                  </Text>
+                }
+                showCheckbox={exportMode}
+                checked={selected}
+                selected={selected}
+                onToggleSelect={() => toggleSelect(log.id)}
+                onEdit={() => onEdit(log)}
+                onDelete={() => onDelete(log)}
+              >
+                <View style={[styles.serviceSummary, { borderColor: themeColors.border }]}>
+                  <View style={styles.serviceSummaryCell}>
+                    <Text style={[styles.detailLabel, { color: themeColors.textSecondary }]}>
+                      Hours of service
                     </Text>
-                  }
-                  showCheckbox={exportMode}
-                  checked={selected}
-                  selected={selected}
-                  onToggleSelect={() => toggleSelect(log.id)}
-                  onEdit={() => onEdit(log)}
-                  onDelete={() => onDelete(log)}
-                >
-                  <View style={[styles.serviceSummary, { borderColor: themeColors.border }]}>
-                    <View style={styles.serviceSummaryCell}>
-                      <Text style={[styles.detailLabel, { color: themeColors.textSecondary }]}>
-                        Hours of service
-                      </Text>
-                      <Text style={[styles.detailValue, { color: themeColors.textPrimary }]}>
-                        {log.hoursOfService || '—'}
-                      </Text>
-                    </View>
-                    <View
-                      style={[
-                        styles.serviceSummaryCell,
-                        styles.serviceSummaryDivider,
-                        { borderColor: themeColors.border },
-                      ]}
-                    >
-                      <Text style={[styles.detailLabel, { color: themeColors.textSecondary }]}>
-                        Next service
-                      </Text>
-                      <Text style={[styles.detailValue, { color: themeColors.textPrimary }]}>
-                        {log.hoursAtNextService || '—'}
-                      </Text>
-                    </View>
+                    <Text style={[styles.detailValue, { color: themeColors.textPrimary }]}>
+                      {log.hoursOfService || '—'}
+                    </Text>
                   </View>
-                  <View style={styles.recordDetails}>
-                    <ButtonTagRow label="Serial number" value={log.serialNumber || '—'} />
-                    <ButtonTagRow label="Service completed" value={log.whatServiceDone || '—'} />
-                    <ButtonTagRow label="Notes" value={log.notes || '—'} />
-                    <ButtonTagRow label="Service done by" value={log.serviceDoneBy || '—'} />
+                  <View
+                    style={[
+                      styles.serviceSummaryCell,
+                      styles.serviceSummaryDivider,
+                      { borderColor: themeColors.border },
+                    ]}
+                  >
+                    <Text style={[styles.detailLabel, { color: themeColors.textSecondary }]}>
+                      Next service
+                    </Text>
+                    <Text style={[styles.detailValue, { color: themeColors.textPrimary }]}>
+                      {log.hoursAtNextService || '—'}
+                    </Text>
                   </View>
-                </ButtonTagCard>
-              );
-            })}
-          </View>
-        </ScrollView>
+                </View>
+                <View style={styles.recordDetails}>
+                  <ButtonTagRow label="Serial number" value={log.serialNumber || '—'} />
+                  <ButtonTagRow label="Service completed" value={log.whatServiceDone || '—'} />
+                  <ButtonTagRow label="Notes" value={log.notes || '—'} />
+                  <ButtonTagRow label="Service done by" value={log.serviceDoneBy || '—'} />
+                </View>
+              </ButtonTagCard>
+            );
+          }}
+        />
       )}
     </View>
   );

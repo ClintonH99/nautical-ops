@@ -27,6 +27,7 @@ import type { SafetyEquipmentData, SafetyItem } from '../services/safetyEquipmen
 import vesselService from '../services/vessel';
 import { Button, DateOnlyPicker, LoadingSpinner, PageHeader, ExportButton } from '../components';
 import { generateSafetyEquipmentPdf } from '../utils/safetyEquipmentPdf';
+import { canEditSafetyEquipment } from '../utils/access';
 
 const DEFAULT_CATEGORIES = [
   'fireExtinguishers',
@@ -79,9 +80,7 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
   const actionColor = themeColors.isDark ? COLORS.white : COLORS.primary;
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
-  const isHOD = user?.role === 'HOD';
-  const isMOV = user?.role === 'CAPTAIN_MOV';
-  const canManage = isHOD || isMOV;
+  const canManage = canEditSafetyEquipment(user);
   const equipmentId = route.params?.equipmentId as string | undefined;
   const isEdit = !!equipmentId;
   const [loading, setLoading] = useState(true);
@@ -269,7 +268,7 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
         <Text style={[styles.message, { color: themeColors.textSecondary }]}>
-          Only HODs and Captain have access. Crew can export to PDF.
+          You can view safety equipment and export to PDF.
         </Text>
       </View>
     );

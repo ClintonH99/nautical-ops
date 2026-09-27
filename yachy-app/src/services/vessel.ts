@@ -15,6 +15,7 @@ export interface CreateVesselData {
 
 export interface Vessel {
   id: string;
+  isSolo?: boolean;
   name: string;
   imoNumber?: string;
   managementCompanyId?: string;
@@ -73,6 +74,7 @@ class VesselService {
 
       return {
         id: data.id,
+        isSolo: data.is_solo === true,
         name: data.name,
         imoNumber: data.imo_number,
         managementCompanyId: data.management_company_id,

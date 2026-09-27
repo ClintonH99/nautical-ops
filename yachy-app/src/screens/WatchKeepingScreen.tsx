@@ -26,6 +26,7 @@ import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { PageHeader, PreviewActionButtons } from '../components';
 import watchKeepingService, { WatchKeepingRules } from '../services/watchKeeping';
+import { useWatchScheduleCreationAccess } from '../hooks/useWatchScheduleCreationAccess';
 
 const WATCH_KEEPING_INFO = {
   title: 'Watch Keeping',
@@ -46,6 +47,7 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
   const { user } = useAuthStore();
   const vesselId = user?.vesselId ?? null;
   const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
+  const { canCreate } = useWatchScheduleCreationAccess();
   const actionColor = themeColors.isDark ? COLORS.white : COLORS.primary;
   const hasCachedRules = vesselId ? watchKeepingRulesCache.has(vesselId) : false;
   const cachedRules = vesselId ? watchKeepingRulesCache.get(vesselId) : undefined;
@@ -93,8 +95,8 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
         watchKeepingRulesCache.set(vesselId, data);
         setRules(data);
         setEditContent(data?.content ?? '');
-        setRulesExpanded(false);
-        setRulesHasOverflow(false);
+        // Refresh the content without collapsing a board the user is reading.
+        if (data?.content !== immediateRules?.content) setRulesHasOverflow(false);
         await AsyncStorage.setItem(rulesStorageKey(vesselId), JSON.stringify(data));
       }
     } catch (e) {
@@ -237,32 +239,34 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
           <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[
-            styles.navigationCard,
-            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
-          ]}
-          onPress={() => navigation.navigate('CreateWatchTimetable')}
-          activeOpacity={0.8}
-        >
-          <View
+        {canCreate && (
+          <TouchableOpacity
             style={[
-              styles.navigationIcon,
-              { backgroundColor: themeColors.control, borderColor: themeColors.border },
+              styles.navigationCard,
+              { backgroundColor: themeColors.surface, borderColor: themeColors.border },
             ]}
+            onPress={() => navigation.navigate('CreateWatchTimetable')}
+            activeOpacity={0.8}
           >
-            <Ionicons name="add" size={24} color={actionColor} />
-          </View>
-          <View style={styles.navigationCopy}>
-            <Text style={[styles.navigationTitle, { color: actionColor }]}>
-              Create Watch Schedule
-            </Text>
-            <Text style={[styles.navigationHint, { color: themeColors.textSecondary }]}>
-              Create and publish a new schedule
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
-        </TouchableOpacity>
+            <View
+              style={[
+                styles.navigationIcon,
+                { backgroundColor: themeColors.control, borderColor: themeColors.border },
+              ]}
+            >
+              <Ionicons name="add" size={24} color={actionColor} />
+            </View>
+            <View style={styles.navigationCopy}>
+              <Text style={[styles.navigationTitle, { color: actionColor }]}>
+                Create Watch Schedule
+              </Text>
+              <Text style={[styles.navigationHint, { color: themeColors.textSecondary }]}>
+                Create and publish a new schedule
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} />
+          </TouchableOpacity>
+        )}
 
         {/* Edit Rules Modal (HOD only) */}
         {editModalOpen && (

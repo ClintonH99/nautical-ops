@@ -28,6 +28,7 @@ interface DepartmentSelectorProps {
   tightTop?: boolean;
   presentation?: 'modal' | 'inline';
   layout?: 'row' | 'stacked';
+  labelWidth?: number;
 }
 
 /**
@@ -49,6 +50,7 @@ export const DepartmentSelector: React.FC<DepartmentSelectorProps> = ({
   tightTop = false,
   presentation = 'modal',
   layout = 'row',
+  labelWidth,
 }) => {
   const [open, setOpen] = useState(false);
   const themeColors = useThemeColors();
@@ -142,6 +144,7 @@ export const DepartmentSelector: React.FC<DepartmentSelectorProps> = ({
         onPress={toggle}
         tightTop={tightTop}
         layout={layout}
+        labelWidth={labelWidth}
         valueColor={triggerColor}
         iconColor={triggerColor}
       />

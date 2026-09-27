@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { useWatchScheduleCreationAccess } from '../hooks/useWatchScheduleCreationAccess';
 import userService from '../services/user';
 import watchKeepingService, { getWatchDateTime, TimetableSlot } from '../services/watchKeeping';
 import { User } from '../types';
@@ -144,6 +145,9 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
   const publishingRef = useRef(false);
   const vesselId = user?.vesselId ?? null;
   const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
+  const { canCreate, checking: checkingAccess } = useWatchScheduleCreationAccess();
+  // The personal-account exception is for creation, not shared-plan management.
+  const canUseForm = route?.params?.timetableId ? isHOD : canCreate;
   const sectionTitleColor = themeColors.isDark ? COLORS.white : COLORS.primary;
 
   const loadCrew = useCallback(async (): Promise<User[]> => {
@@ -252,7 +256,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
 
   useFocusEffect(
     useCallback(() => {
-      if (!isHOD) {
+      if (!canUseForm) {
         setLoading(false);
         return;
       }
@@ -268,7 +272,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
       } else {
         loadCrew();
       }
-    }, [isHOD, loadCrew, route?.params?.timetableId, loadExistingTimetable])
+    }, [canUseForm, loadCrew, route?.params?.timetableId, loadExistingTimetable])
   );
 
   const toggleCrewMember = (member: User) => {
@@ -356,7 +360,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
     if (!scheduleHours) return;
     const rotationPlan = getValidatedRotationPlan(scheduleHours);
     if (!rotationPlan) return;
-    if (!isHOD) {
+    if (!canUseForm) {
       Alert.alert('Access denied', 'Only HODs and Captain have access.');
       return;
     }
@@ -388,7 +392,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
 
   const handlePublish = async (slotsOverride?: NonNullable<typeof timetableSlots>) => {
     const slotsToSave = slotsOverride ?? timetableSlots;
-    if (!vesselId || !slotsToSave || publishingRef.current) return;
+    if (!vesselId || !slotsToSave || publishingRef.current || !canUseForm) return;
     publishingRef.current = true;
     const wasEditing = Boolean(editingTimetableId);
     setPublishing(true);
@@ -451,7 +455,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
       Alert.alert('Select a date', 'Please select the date and time when the voyage begins.');
       return;
     }
-    if (!isHOD) {
+    if (!canUseForm) {
       Alert.alert('Access denied', 'Only HODs and Captain have access.');
       return;
     }
@@ -481,7 +485,15 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
     );
   }
 
-  if (!isHOD) {
+  if (checkingAccess) {
+    return (
+      <View style={{ flex: 1, backgroundColor: themeColors.background }}>
+        <PageHeader title="Create Watch Schedule" />
+      </View>
+    );
+  }
+
+  if (!canUseForm) {
     return (
       <View style={[styles.center, { backgroundColor: themeColors.background }]}>
         <Text style={[styles.message, { color: themeColors.textSecondary }]}>

@@ -1,5 +1,6 @@
 import { ScreenLoading } from '../components/ScreenLoading';
 import { optimisticDelete } from '../utils/optimisticDelete';
+import { canEditSafetyEquipment } from '../utils/access';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
 import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 /**
@@ -106,6 +107,7 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
   const isHOD = user?.role === 'HOD';
   const isMOV = user?.role === 'CAPTAIN_MOV';
   const canManage = isHOD || isMOV;
+  const canEdit = canEditSafetyEquipment(user);
   const [items, setItems] = useScreenState<SafetyEquipment[]>('items', []);
   const [loading, setLoading] = useScreenLoading();
   const [refreshing, setRefreshing] = useState(false);
@@ -164,7 +166,7 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
   };
 
   const onEdit = (item: SafetyEquipment) => {
-    if (!canManage) return;
+    if (!canEdit) return;
     navigation.navigate('CreateSafetyEquipment', { equipmentId: item.id });
   };
 
@@ -234,7 +236,7 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
           />
         }
       >
-        {canManage && (
+        {canEdit && (
           <View style={styles.createSection}>
             <Button
               title="Create Safety Equipment"
@@ -287,7 +289,7 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
               onToggleExpand={() =>
                 setExpandedId((current) => (current === item.id ? null : item.id))
               }
-              onEdit={canManage && !exportMode ? () => onEdit(item) : undefined}
+              onEdit={canEdit && !exportMode ? () => onEdit(item) : undefined}
               onDelete={canManage && !exportMode ? () => onDelete(item) : undefined}
               summary={
                 <Text style={[styles.cardSummary, { color: themeColors.textSecondary }]}>
@@ -303,12 +305,12 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
         })}
         {items.length === 0 && (
           <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
-            No published plans yet.{canManage ? ' Tap Create Safety Equipment to add one.' : ''}
+            No published plans yet.{canEdit ? ' Tap Create Safety Equipment to add one.' : ''}
           </Text>
         )}
-        {!canManage && (
+        {!canEdit && (
           <Text style={[styles.crewNote, { color: themeColors.textSecondary }]}>
-            Only HODs and Captain have access. Crew can export to PDF.
+            You can view safety equipment and export to PDF.
           </Text>
         )}
       </ScrollView>

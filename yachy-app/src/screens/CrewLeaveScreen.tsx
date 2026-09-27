@@ -18,6 +18,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -82,6 +83,9 @@ function formatDateRange(startDate: string, endDate: string): string {
 }
 
 export const CrewLeaveScreen = ({ navigation }: any) => {
+  const { width, fontScale } = useWindowDimensions();
+  const filterLayout = width / fontScale < 480 ? 'stacked' : 'row';
+  const filterLabelWidth = 110 * fontScale;
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const departmentOverrides = useDepartmentColorStore((state) => state.overrides);
@@ -309,6 +313,8 @@ export const CrewLeaveScreen = ({ navigation }: any) => {
         </View>
         <LabeledDropdown
           label="Status"
+          layout={filterLayout}
+          labelWidth={filterLabelWidth}
           value={statusLabel}
           open={pickerMode === 'status'}
           onPress={() => setPickerMode('status')}
@@ -318,6 +324,8 @@ export const CrewLeaveScreen = ({ navigation }: any) => {
         />
         <LabeledDropdown
           label="Leave Type"
+          layout={filterLayout}
+          labelWidth={filterLabelWidth}
           value={leaveTypeLabel}
           open={pickerMode === 'type'}
           onPress={() => setPickerMode('type')}
@@ -326,6 +334,8 @@ export const CrewLeaveScreen = ({ navigation }: any) => {
           iconColor={filterTriggerColor}
         />
         <DepartmentSelector
+          layout={filterLayout}
+          labelWidth={filterLabelWidth}
           value={departmentFilter}
           onChange={setDepartmentFilter}
           includeAll

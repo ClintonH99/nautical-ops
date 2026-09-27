@@ -17,6 +17,7 @@ export interface ButtonTagCardProps {
   headerTitle?: string;
   headerLeft?: React.ReactNode;
   onEdit?: () => void;
+  editLabel?: string;
   onDelete?: () => void;
   onPress?: () => void;
   selected?: boolean;
@@ -70,6 +71,7 @@ export function ButtonTagCard({
   headerTitle,
   headerLeft,
   onEdit,
+  editLabel,
   onDelete,
   onPress,
   selected,
@@ -159,7 +161,9 @@ export function ButtonTagCard({
         <Text style={[styles.cardCreatedBy, { color: themeColors.textSecondary }]}>{footer}</Text>
       )}
 
-      {showPreviewActions ? <PreviewActionButtons onEdit={onEdit} onDelete={onDelete} /> : null}
+      {showPreviewActions ? (
+        <PreviewActionButtons onEdit={onEdit} editLabel={editLabel} onDelete={onDelete} />
+      ) : null}
     </TouchableOpacity>
   );
 }

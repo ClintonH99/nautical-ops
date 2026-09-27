@@ -4,6 +4,11 @@
 
 import { User } from '../types';
 
+/** Safety Equipment create/edit; deleting published plans remains HOD/MOV-only. */
+export function canEditSafetyEquipment(user: User | null | undefined): boolean {
+  return user?.role === 'CREW' || user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
+}
+
 export function isMasterOfVessel(user: User | null | undefined): boolean {
   return user?.role === 'CAPTAIN_MOV';
 }

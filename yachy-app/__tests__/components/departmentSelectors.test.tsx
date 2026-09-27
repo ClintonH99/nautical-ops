@@ -49,6 +49,26 @@ describe('department selectors', () => {
     expect(screen.queryByText('Select department')).toBeNull();
   });
 
+  it.each(['row', 'stacked'] as const)(
+    'keeps department selection working with the %s filter layout',
+    (layout) => {
+      const onChange = jest.fn();
+      const screen = render(
+        <DepartmentSelector value="BRIDGE" onChange={onChange} layout={layout} labelWidth={110} />
+      );
+
+      if (layout === 'row') {
+        expect(screen.getByText('Department')).toHaveStyle({ width: 110 });
+      } else {
+        expect(screen.getByText('Department')).not.toHaveStyle({ width: 110 });
+      }
+      fireEvent.press(screen.getByLabelText('Department: Bridge'));
+      fireEvent.press(screen.getByLabelText('Engineering'));
+      expect(onChange).toHaveBeenCalledWith('ENGINEERING');
+      expect(screen.queryByText('Select department')).toBeNull();
+    }
+  );
+
   it('uses navy for the Day trigger and the selected row', () => {
     const screen = render(<DepartmentSelector value="BRIDGE" onChange={jest.fn()} />);
 
