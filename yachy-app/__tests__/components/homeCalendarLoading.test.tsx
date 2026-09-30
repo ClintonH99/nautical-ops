@@ -5,8 +5,13 @@ import { HomeScreen } from '../../src/screens/HomeScreen';
 import tripsService from '../../src/services/trips';
 import yardJobsService from '../../src/services/yardJobs';
 import crewLeaveService from '../../src/services/crewLeave';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+let mockUser = { id: 'crew', role: 'CREW', vesselId: 'vessel' };
 const mockColorsLoad = jest.fn();
 const mockCalendarProps = jest.fn();
+beforeEach(() => {
+  mockUser = { id: 'crew', role: 'CREW', vesselId: 'vessel' };
+});
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
@@ -22,12 +27,12 @@ jest.mock('../../src/hooks/useScreenState', () => ({
     jest.requireActual('react').useState(initial),
 }));
 jest.mock('../../src/store', () => ({
-  useAuthStore: () => ({ user: { id: 'crew', role: 'CREW', vesselId: 'vessel' } }),
+  useAuthStore: () => ({ user: mockUser }),
   useDepartmentColorStore: (select: any) => select({ overrides: {} }),
   getDepartmentColor: () => '#123456',
 }));
 jest.mock('../../src/hooks/useThemeColors', () => ({ useThemeColors: () => ({ isDark: false }) }));
-jest.mock('../../src/components', () => ({ Button: () => null }));
+jest.mock('../../src/components', () => ({ Button: jest.requireActual('../../src/components/Button').Button }));
 jest.mock('react-native-calendars', () => ({
   Calendar: (props: CalendarProps) => {
     mockCalendarProps(props);
@@ -61,6 +66,7 @@ jest.mock('../../src/hooks/useVesselTripColors', () => ({
   getTripTypeColorMap: () => ({ GUEST: '#123456' }),
 }));
 it('shows trips without waiting for yard jobs, leave or colors', async () => {
+  mockUser = { id: 'crew', role: 'CREW', vesselId: 'vessel' };
   let finishYard!: (value: any[]) => void;
   let finishLeave!: (value: any[]) => void;
   let finishColors!: () => void;
@@ -103,4 +109,23 @@ it('shows trips without waiting for yard jobs, leave or colors', async () => {
     expect(props.markingType).toBe('multi-period');
     expect(props.onMonthChange).toEqual(expect.any(Function));
   }
+});
+
+it('shows the welcome board per captain/vessel and See Plans opens Vessel Plans', async () => {
+  mockUser = { id: 'new-captain', role: 'CAPTAIN_MOV', vesselId: 'new-vessel' };
+  jest.mocked(tripsService.getTripsByVessel).mockResolvedValue([]);
+  jest.mocked(yardJobsService.getByVessel).mockResolvedValue([]);
+  jest.mocked(crewLeaveService.getCalendarInRange).mockResolvedValue([]);
+  mockColorsLoad.mockResolvedValue(undefined);
+  // An earlier account on this phone must not suppress the new account's board.
+  await AsyncStorage.setItem('has_seen_welcome_popup', 'true');
+  const navigation = { navigate: jest.fn() };
+  const ui = render(<HomeScreen navigation={navigation} />);
+  await act(async () => {});
+  expect(ui.getByText('Welcome to Nautical Ops!')).toBeTruthy();
+  expect(ui.getByRole('button', { name: 'Continue' })).toBeTruthy();
+  await act(async () => { fireEvent.press(ui.getByRole('button', { name: 'See Plans' })); });
+  expect(navigation.navigate).toHaveBeenCalledWith('VesselPlans');
+  expect(await AsyncStorage.getItem('has_seen_welcome_popup:new-captain:new-vessel')).toBe('true');
+  expect(ui.queryByText('Welcome to Nautical Ops!')).toBeNull();
 });

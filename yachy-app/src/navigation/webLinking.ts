@@ -104,6 +104,7 @@ const APP_SCREEN_PATHS = {
   FuelInventory: 'logs/fuel/inventory',
   FuelHistory: 'logs/fuel/history',
   FuelSetup: 'logs/fuel/setup',
+  FuelOpeningBalances: 'logs/fuel/starting-levels',
   FuelTransfers: 'logs/fuel/transfers',
   FuelTransfer: 'logs/fuel/transfers/edit',
   PumpOutLog: 'logs/pump-out',

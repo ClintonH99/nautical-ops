@@ -9,7 +9,7 @@ import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinne
 import React, { useState, useCallback, useRef } from 'react';
 import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
-import { AppCalendar as Calendar } from '../components/AppCalendar';
+import { Calendar } from 'react-native-calendars';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
@@ -184,6 +184,7 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
               ]}
             >
               <Calendar
+                key={themeColors.isDark ? 'night' : 'day'}
                 current={toYYYYMMDD(viewedMonth)}
                 maxDate={todayStr}
                 markedDates={markedDates}
@@ -197,8 +198,9 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
                   calendarBackground: 'transparent',
                   todayTextColor: COLORS.white,
                   todayBackgroundColor: COLORS.primary,
-                  arrowColor: themeColors.textSecondary,
-                  monthTextColor: themeColors.isDark ? COLORS.white : COLORS.primary,
+                  arrowColor: themeColors.textPrimary,
+                  monthTextColor: themeColors.textPrimary,
+                  textSectionTitleColor: themeColors.textPrimary,
                   dayTextColor: themeColors.textPrimary,
                   textDisabledColor: themeColors.textMuted,
                   textMonthFontWeight: '700',

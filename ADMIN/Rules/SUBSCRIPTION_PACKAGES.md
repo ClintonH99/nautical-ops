@@ -31,7 +31,7 @@
    - **Nautical Ops web app:** Reflect the vessel subscription purchased through Apple or Google, but do not process subscription payments on the web.
    - **Fleet HQ website only:** Paddle is reserved exclusively for Fleet HQ. Nautical Ops must not call Paddle checkout or Paddle webhooks.
 
-7. **Create Vessel flow:** After vessel creation, do NOT show invite code. Direct Captain to Vessel Settings to choose a plan and pay. Primary CTA: "Go to Vessel Settings."
+7. **Create Vessel flow (approved 30 September 2026):** After vessel creation, do NOT show invite code. Primary CTA: "Go to Home." Home shows a welcome board with Continue and See Plans; See Plans opens Vessel Plans. Active subscribers can view all plan choices, choose a different crew tier/billing period and confirm through Apple. Only a server-verified purchase changes entitlement. Use live StoreKit prices and disable unavailable products; do not infer immediate activation of a deferred plan change.
 
 8. **Failed renewal and grace period:** This applies only to a vessel that previously had a paid subscription and whose renewal payment was not received.
    - Continue normal access during a **16-day renewal grace period**.

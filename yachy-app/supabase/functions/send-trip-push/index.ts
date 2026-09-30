@@ -9,6 +9,7 @@
  */
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { isTrustedNotificationRequest } from './internal-auth.ts';
 import {
   buildChecklistNotification,
   buildCrewLeaveNotification,
@@ -36,8 +37,11 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 function isTrustedInternalRequest(req: Request): boolean {
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  return !!serviceRoleKey && req.headers.get('Authorization') === `Bearer ${serviceRoleKey}`;
+  return isTrustedNotificationRequest(
+    req.headers,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
+    Deno.env.get('TRIP_WEBHOOK_SECRET')
+  );
 }
 
 interface WebhookPayload<RecordType = Record<string, unknown>> {

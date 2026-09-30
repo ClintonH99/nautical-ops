@@ -108,7 +108,7 @@ export const CreateVesselScreen = ({ navigation }: any) => {
       if (pendingUpdatedUser) {
         setUser(pendingUpdatedUser);
       }
-      navigation.reset(vesselNavigationState('VesselSettings'));
+      navigation.reset(vesselNavigationState('MainTabs'));
     }
   };
 
@@ -158,7 +158,7 @@ export const CreateVesselScreen = ({ navigation }: any) => {
 
           <View style={styles.actions}>
             <Button
-              title="Go to Vessel Settings"
+              title="Go to Home"
               onPress={handleContinue}
               fullWidth
               variant="primary"

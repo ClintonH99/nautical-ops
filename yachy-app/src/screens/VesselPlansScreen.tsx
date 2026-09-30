@@ -19,6 +19,7 @@ import {
   Alert,
   Platform,
   Linking,
+  AppState,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { usePostHog } from 'posthog-react-native';
@@ -49,7 +50,7 @@ import {
   verifyAndActivateIAPPurchase,
   type IAPProduct,
 } from '../services/iap';
-import type { Purchase } from 'expo-iap';
+import { showManageSubscriptionsIOS, type Purchase } from 'expo-iap';
 
 export const VesselPlansScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
@@ -75,6 +76,27 @@ export const VesselPlansScreen = ({ navigation }: any) => {
 
   const currentPlan = subscription ? getPlanTier(subscription.planTier) : null;
   const planAvailableViaIAP = isAvailableViaIAP(selectedPlanTier, selectedBillingPeriod);
+  const selectionInitialized = useRef<string | null>(null);
+  const selectedProductId = getAppleProductId(selectedPlanTier, selectedBillingPeriod);
+  const selectedStoreProduct = iapProducts.find((product) => product.id === selectedProductId);
+  const isCurrentPlan =
+    hasActiveSubscription &&
+    subscription?.planTier === selectedPlanTier &&
+    subscription?.billingPeriod === selectedBillingPeriod;
+
+  useEffect(() => {
+    if (!subscription || selectionInitialized.current === user?.vesselId) return;
+    selectionInitialized.current = user?.vesselId ?? null;
+    setSelectedPlanTier(subscription.planTier);
+    setSelectedBillingPeriod(subscription.billingPeriod);
+  }, [subscription, user?.vesselId]);
+
+  useEffect(() => {
+    const listener = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void refetchSubscription();
+    });
+    return () => listener.remove();
+  }, [refetchSubscription]);
 
   const getStorePrice = useCallback(
     (planTierId: PlanTierId, billingPeriodId: BillingPeriodId) => {
@@ -116,7 +138,10 @@ export const VesselPlansScreen = ({ navigation }: any) => {
         if (result.success) {
           verifiedTransactionIds.current.add(transactionId);
           await refetchSubscription();
-          Alert.alert('Success', 'Your subscription is now active. Welcome to Nautical Ops!');
+          Alert.alert(
+            'Subscription confirmed',
+            'Your verified subscription has been refreshed. Apple determines when a plan change takes effect.'
+          );
           return true;
         }
 
@@ -171,7 +196,7 @@ export const VesselPlansScreen = ({ navigation }: any) => {
           (purchase) => void handleDeliveredPurchase(purchase),
           (error) => {
             if (processingTimeout.current) clearTimeout(processingTimeout.current);
-            if ((error as any).code !== 'E_USER_CANCELLED') {
+            if (!['E_USER_CANCELLED', 'user-cancelled'].includes((error as any).code)) {
               Alert.alert('Purchase Failed', 'Something went wrong. Please try again.');
             }
             setIsProcessing(false);
@@ -180,13 +205,14 @@ export const VesselPlansScreen = ({ navigation }: any) => {
         if (mounted) setIapReady(true);
       } catch (e) {
         console.warn('[IAP] setup error:', e);
-        if (mounted) setIapReady(true);
+        if (mounted) setIapReady(false);
       }
     };
     setup();
 
     return () => {
       mounted = false;
+      if (processingTimeout.current) clearTimeout(processingTimeout.current);
       cleanupListeners.current?.();
       endIAP();
     };
@@ -203,6 +229,14 @@ export const VesselPlansScreen = ({ navigation }: any) => {
   );
 
   const handleApplePurchase = async () => {
+    if (isProcessing || isRestoring || isCurrentPlan) return;
+    if (Platform.OS !== 'ios' || !selectedStoreProduct) {
+      Alert.alert(
+        'Plan unavailable',
+        'This plan could not be loaded from the App Store. Please try again later.'
+      );
+      return;
+    }
     if (!iapReady) {
       Alert.alert('Store Unavailable', 'Please try again in a moment.');
       return;
@@ -230,9 +264,29 @@ export const VesselPlansScreen = ({ navigation }: any) => {
       }
       // If no usable purchase in the result, fall through to let the
       // purchase listener (set up in useEffect) or the timeout handle it.
-    } catch (err) {
+    } catch (err: any) {
       if (processingTimeout.current) clearTimeout(processingTimeout.current);
       setIsProcessing(false);
+      if (!['E_USER_CANCELLED', 'user-cancelled'].includes(err?.code)) {
+        Alert.alert(
+          'Purchase not completed',
+          'We could not complete the request. Please check your connection and try again.'
+        );
+      }
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    if (Platform.OS !== 'ios') return;
+    try {
+      const purchases = await showManageSubscriptionsIOS();
+      for (const purchase of purchases ?? []) await handleDeliveredPurchase(purchase);
+      await refetchSubscription();
+    } catch {
+      Alert.alert(
+        'Could not open subscriptions',
+        'Please try again, or manage your subscription in your Apple account settings.'
+      );
     }
   };
 
@@ -266,7 +320,7 @@ export const VesselPlansScreen = ({ navigation }: any) => {
         style={[
           styles.billingRow,
           {
-            backgroundColor: themeColors.surface,
+            backgroundColor: isSelected ? themeColors.controlSelected : themeColors.surface,
             borderColor: isSelected ? themeColors.accent : themeColors.border,
             borderWidth: isSelected ? 2 : 1,
           },
@@ -274,28 +328,22 @@ export const VesselPlansScreen = ({ navigation }: any) => {
         onPress={() => setSelectedBillingPeriod(bp.id)}
         activeOpacity={0.7}
       >
-        <Text style={[styles.billingRowLabel, { color: themeColors.textPrimary }]}>{bp.label}</Text>
+        <Text
+          style={[
+            styles.billingRowLabel,
+            {
+              color: isSelected ? themeColors.textOnAccent : themeColors.accent,
+              textAlign: 'center',
+            },
+          ]}
+        >
+          {bp.label}
+        </Text>
         {bp.discountPercent > 0 && (
           <View style={styles.discountPill}>
             <Text style={styles.discountPillText}>{bp.discountPercent}% OFF</Text>
           </View>
         )}
-        <View
-          style={[
-            styles.radioOuter,
-            {
-              borderColor: isSelected
-                ? themeColors.accent
-                : themeColors.isDark
-                  ? themeColors.borderStrong
-                  : themeColors.textSecondary,
-            },
-          ]}
-        >
-          {isSelected && (
-            <View style={[styles.radioInner, { backgroundColor: themeColors.controlSelected }]} />
-          )}
-        </View>
       </TouchableOpacity>
     );
   };
@@ -334,26 +382,30 @@ export const VesselPlansScreen = ({ navigation }: any) => {
         }}
         activeOpacity={0.7}
       >
-        <Text style={[styles.planCrewRange, { color: themeColors.textPrimary }]}>{plan.label}</Text>
-        <View style={styles.planPriceColumn}>
-          {available ? (
-            <>
-              <Text style={[styles.planPrice, { color: themeColors.textPrimary }]}>
-                {price.displayMonthly}
-              </Text>
-              {price.savingsPercent > 0 && (
-                <Text style={[styles.planTotal, { color: themeColors.textSecondary }]}>
-                  {price.displayTotal} total
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.planCrewRange, { color: themeColors.textPrimary }]}>
+            {plan.label}
+          </Text>
+          <View style={styles.planPriceColumn}>
+            {available ? (
+              <>
+                <Text style={[styles.planPrice, { color: themeColors.textPrimary }]}>
+                  {price.displayMonthly}
                 </Text>
-              )}
-            </>
-          ) : (
-            <Text
-              style={[styles.planPrice, { color: themeColors.textSecondary, fontSize: FONTS.sm }]}
-            >
-              Not available for this period
-            </Text>
-          )}
+                {price.savingsPercent > 0 && (
+                  <Text style={[styles.planTotal, { color: themeColors.textSecondary }]}>
+                    {price.displayTotal} total
+                  </Text>
+                )}
+              </>
+            ) : (
+              <Text
+                style={[styles.planPrice, { color: themeColors.textSecondary, fontSize: FONTS.sm }]}
+              >
+                Not available for this period
+              </Text>
+            )}
+          </View>
         </View>
         <View
           style={[
@@ -417,87 +469,140 @@ export const VesselPlansScreen = ({ navigation }: any) => {
                 })}
               </Text>
             )}
-            <Button
-              title="Manage Subscription"
-              onPress={() => Linking.openURL('https://apps.apple.com/account/subscriptions')}
-              variant="outline"
-              fullWidth
-              style={styles.manageButton}
-            />
-          </View>
-        ) : (
-          <>
-            <Text style={[styles.sectionLabel, { color: themeColors.textSecondary }]}>
-              BILLING PERIOD
-            </Text>
-            <View style={styles.billingList}>{BILLING_PERIODS.map(renderBillingRow)}</View>
-
-            <Text style={[styles.sectionLabel, { color: themeColors.textSecondary }]}>
-              CREW SIZE
-            </Text>
-            <View style={styles.planCardList}>
-              {PLAN_TIERS.map((plan) => renderPlanCard(plan.id))}
-            </View>
-
-            <View style={styles.actions}>
-              <Button
-                title={
-                  isProcessing ? 'Processing...' : !iapReady ? 'Loading Plans...' : 'Subscribe Now'
-                }
-                onPress={handleApplePurchase}
-                disabled={isProcessing || !iapReady || !planAvailableViaIAP}
-                loading={isProcessing}
-                variant="primary"
-                fullWidth
-              />
-            </View>
-
-            <TouchableOpacity
-              onPress={handleRestorePurchases}
-              disabled={isRestoring}
-              style={styles.restoreButton}
-            >
-              {isRestoring ? (
-                <ActivityIndicator size="small" color={themeColors.accent} />
-              ) : (
-                <Text style={[styles.restoreText, { color: themeColors.accent }]}>
-                  Restore Purchases
-                </Text>
-              )}
-            </TouchableOpacity>
-
-            <Text style={[styles.cancellationText, { color: themeColors.textSecondary }]}>
-              Payment will be charged to your Apple ID account at confirmation of purchase. Your
-              subscription automatically renews unless auto-renew is turned off at least 24 hours
-              before the end of the current period. Your account will be charged for renewal within
-              24 hours prior to the end of the current period, at the price of the selected plan.
-              You can manage your subscription and turn off auto-renewal at any time in your Apple
-              ID Account Settings.
-            </Text>
-            <View style={styles.legalLinksRow}>
-              <TouchableOpacity onPress={() => navigation.navigate('PrivacyPolicy')}>
-                <Text style={[styles.legalLinkText, { color: themeColors.accent }]}>
-                  Privacy Policy
-                </Text>
-              </TouchableOpacity>
-              <Text style={[styles.legalLinkDivider, { color: themeColors.textSecondary }]}>
-                {' '}
-                ·{' '}
+            {subscription && (
+              <Text style={{ color: themeColors.textSecondary }}>
+                {getStorePrice(subscription.planTier, subscription.billingPeriod).displayMonthly}
               </Text>
-              <TouchableOpacity
-                onPress={() =>
-                  Linking.openURL(
-                    'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/'
-                  )
-                }
+            )}
+          </View>
+        ) : null}
+        <>
+          <Text style={[styles.currentPlanValue, { color: themeColors.textPrimary }]}>
+            {hasActiveSubscription ? 'Change your plan' : 'Choose your vessel plan'}
+          </Text>
+          <Text style={[styles.renewalText, { color: themeColors.textSecondary }]}>
+            Choose your billing period and crew size.
+          </Text>
+          <Text style={[styles.sectionLabel, { color: themeColors.textSecondary }]}>
+            BILLING PERIOD
+          </Text>
+          <View style={styles.billingList}>{BILLING_PERIODS.map(renderBillingRow)}</View>
+
+          <Text style={[styles.sectionLabel, { color: themeColors.textSecondary }]}>CREW SIZE</Text>
+          <View style={styles.planCardList}>
+            {PLAN_TIERS.map((plan) => renderPlanCard(plan.id))}
+          </View>
+
+          <View
+            style={[
+              styles.activeCard,
+              { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+            ]}
+          >
+            <Text style={[styles.sectionLabel, { color: themeColors.textSecondary }]}>
+              SELECTED PLAN
+            </Text>
+            <Text style={[styles.currentPlanValue, { color: themeColors.textPrimary }]}>
+              {getPlanTier(selectedPlanTier)?.label} ·{' '}
+              {getBillingPeriod(selectedBillingPeriod)?.label}
+            </Text>
+            <Text style={[styles.currentPlanValue, { color: themeColors.accent }]}>
+              {planAvailableViaIAP
+                ? getStorePrice(selectedPlanTier, selectedBillingPeriod).displayMonthly
+                : 'Not available for this period'}
+            </Text>
+            <Text style={[styles.renewalText, { color: themeColors.textSecondary }]}>
+              Auto-renews until cancelled. Review the price and effective date with Apple before
+              confirming.
+            </Text>
+            <Button
+              title={
+                isProcessing
+                  ? 'Processing...'
+                  : isCurrentPlan
+                    ? 'Current Plan'
+                    : hasActiveSubscription
+                      ? 'Change Plan'
+                      : 'Subscribe Now'
+              }
+              onPress={handleApplePurchase}
+              disabled={
+                isProcessing ||
+                isRestoring ||
+                subscriptionLoading ||
+                !iapReady ||
+                !planAvailableViaIAP ||
+                !selectedStoreProduct ||
+                isCurrentPlan
+              }
+              loading={isProcessing}
+              variant="primary"
+              fullWidth
+            />
+            {!selectedStoreProduct && (
+              <Text
+                style={[
+                  styles.renewalText,
+                  { color: themeColors.textSecondary, marginTop: SPACING.sm },
+                ]}
               >
-                <Text style={[styles.legalLinkText, { color: themeColors.accent }]}>
-                  Terms of Use (EULA)
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
+                {Platform.OS === 'ios'
+                  ? 'App Store pricing is not available for this selection. Please try again later.'
+                  : 'Open Nautical Ops on your iPhone to purchase or change an Apple subscription.'}
+              </Text>
+            )}
+            {hasActiveSubscription && Platform.OS === 'ios' && (
+              <Button
+                title="Manage Apple Subscription"
+                onPress={handleManageSubscription}
+                variant="outline"
+                fullWidth
+                style={styles.manageButton}
+                disabled={isProcessing || isRestoring}
+              />
+            )}
+          </View>
+
+          <TouchableOpacity
+            onPress={handleRestorePurchases}
+            disabled={isRestoring || isProcessing || Platform.OS !== 'ios'}
+            style={styles.restoreButton}
+          >
+            {isRestoring ? (
+              <ActivityIndicator size="small" color={themeColors.accent} />
+            ) : (
+              <Text style={[styles.restoreText, { color: themeColors.accent }]}>
+                Restore Purchases
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          <Text style={[styles.cancellationText, { color: themeColors.textSecondary }]}>
+            Payment will be charged to your Apple ID account at confirmation of purchase. Your
+            subscription automatically renews unless auto-renew is turned off at least 24 hours
+            before the end of the current period. Your account will be charged for renewal within 24
+            hours prior to the end of the current period, at the price of the selected plan. You can
+            manage your subscription and turn off auto-renewal at any time in your Apple ID Account
+            Settings.
+          </Text>
+          <View style={styles.legalLinksRow}>
+            <TouchableOpacity onPress={() => navigation.navigate('PrivacyPolicy')}>
+              <Text style={[styles.legalLinkText, { color: themeColors.accent }]}>
+                Privacy Policy
+              </Text>
+            </TouchableOpacity>
+            <Text style={[styles.legalLinkDivider, { color: themeColors.textSecondary }]}> · </Text>
+            <TouchableOpacity
+              onPress={() =>
+                Linking.openURL('https://www.apple.com/legal/internet-services/itunes/dev/stdeula/')
+              }
+            >
+              <Text style={[styles.legalLinkText, { color: themeColors.accent }]}>
+                Terms of Use (EULA)
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </>
       </ScrollView>
     </View>
   );
@@ -628,12 +733,11 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
   },
   planCrewRange: {
-    flex: 1,
     fontSize: FONTS.sm,
     fontWeight: '600',
     marginRight: SPACING.sm,
   },
-  planPriceColumn: { alignItems: 'flex-end', marginRight: SPACING.md },
+  planPriceColumn: { alignItems: 'flex-start', marginRight: SPACING.md, marginTop: 4 },
   planPrice: {
     fontSize: FONTS.sm,
     fontWeight: '600',

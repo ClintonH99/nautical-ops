@@ -289,7 +289,9 @@ export const HomeScreen = ({ navigation }: any) => {
       (async () => {
         if (!hasVessel || !isCaptainLike) return;
         try {
-          const seen = await AsyncStorage.getItem(WELCOME_POPUP_STORAGE_KEY);
+          const seen = await AsyncStorage.getItem(
+            `${WELCOME_POPUP_STORAGE_KEY}:${user?.id}:${vesselId}`
+          );
           if (!cancelled && seen !== 'true') {
             setShowWelcomeModal(true);
           }
@@ -300,17 +302,17 @@ export const HomeScreen = ({ navigation }: any) => {
       return () => {
         cancelled = true;
       };
-    }, [hasVessel, isCaptainLike])
+    }, [hasVessel, isCaptainLike, user?.id, vesselId])
   );
 
   const dismissWelcomeModal = useCallback(async () => {
     try {
-      await AsyncStorage.setItem(WELCOME_POPUP_STORAGE_KEY, 'true');
+      await AsyncStorage.setItem(`${WELCOME_POPUP_STORAGE_KEY}:${user?.id}:${vesselId}`, 'true');
     } catch {
       /* still close */
     }
     setShowWelcomeModal(false);
-  }, []);
+  }, [user?.id, vesselId]);
 
   useEffect(() => {
     const fetchVessel = async () => {
@@ -349,10 +351,20 @@ export const HomeScreen = ({ navigation }: any) => {
             </Text>
             <Text style={[styles.welcomeModalMessage, { color: themeColors.textSecondary }]}>
               {
-                "To invite crew members you'll need to activate your vessel plan first. Go to Settings → Vessel Plans and tap 'Activate Vessel Plan' to get started. Once active you can invite crew using your vessel's unique invite code."
+                'Your vessel is ready. Continue to explore Nautical Ops, or see the vessel plans to activate your subscription and invite your crew.'
               }
             </Text>
-            <Button title="Got it!" onPress={dismissWelcomeModal} variant="primary" fullWidth />
+            <Button title="Continue" onPress={dismissWelcomeModal} variant="outline" fullWidth />
+            <Button
+              title="See Plans"
+              onPress={async () => {
+                await dismissWelcomeModal();
+                navigation.navigate('VesselPlans');
+              }}
+              variant="primary"
+              fullWidth
+              style={{ marginTop: SPACING.sm }}
+            />
           </View>
         </View>
       </Modal>

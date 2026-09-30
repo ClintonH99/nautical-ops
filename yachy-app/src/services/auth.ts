@@ -13,6 +13,7 @@ import { supabase } from './supabase';
 import vesselService from './vessel';
 import { registerCurrentDevice, releaseCurrentDevice } from './deviceAccess';
 import { User } from '../types';
+import { registrationErrorMessage } from '../utils/registrationError';
 
 export interface LoginCredentials {
   email: string;
@@ -418,7 +419,7 @@ class AuthService {
         msg.includes('expired') ||
         msg.includes('crew limit');
       if (!isInviteCodeError && __DEV__) console.error('❌ Sign up error:', error.message || error);
-      throw error;
+      throw new Error(registrationErrorMessage(error));
     }
   }
 

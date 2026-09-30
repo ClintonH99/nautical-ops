@@ -4,12 +4,12 @@
 
 1. **Mandatory vessel creation:** On the "Account Created! / Create a Vessel" screen (CaptainWelcomeScreen), the only action must be "Create a Vessel." There must be no alternative to skip or proceed to Home without creating a vessel. The user must create a vessel before moving on.
 
-2. **Post-vessel creation:** The success screen directs the Captain to Vessel Settings to select/pay for a plan before inviting crew, as specified in SUBSCRIPTION_PACKAGES.md.
+2. **Post-vessel creation (approved 30 September 2026):** The success screen directs the Captain to Home. A welcome board offers Continue (explore the app) and See Plans (Vessel Plans). A paid plan is still required before inviting crew.
 
 ## Implementation
 
 - CaptainWelcomeScreen: Remove any "Go to Home instead" or "Proceed to homepage" link. Only the "Create a Vessel" button.
-- CreateVesselScreen: After successful vessel creation, the continuation action opens VesselSettings.
+- CreateVesselScreen: After successful vessel creation, the continuation action opens Home. Remember welcome dismissal per account and vessel, not per device globally.
 
 ## Scope
 
@@ -23,4 +23,4 @@ Applies to CaptainWelcomeScreen and CreateVesselScreen.
 - An eligible independent user may create a new vessel. Creation assigns Captain/MOV on the new vessel and consumes the independent-account creation permission. Joining an existing shared vessel also consumes it.
 - New Captain signups without a vessel retain their existing creation access. Signup-type restoration is not used.
 - No historical eligibility is guessed for accounts that departed before this feature was recorded.
-- As specified in SUBSCRIPTION_PACKAGES.md, the creation success action is Go to Vessel Settings. The Captain selects/pays for the new vessel's plan before crew can join; old vessel subscriptions are not transferred.
+- The creation success action is Go to Home. The Captain selects/pays for the new vessel's plan before crew can join; old vessel subscriptions are not transferred.

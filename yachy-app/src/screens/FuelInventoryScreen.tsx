@@ -640,7 +640,7 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
             <Text style={[styles.totalCapacity, { color: themeColors.textSecondary }]}>
               {inventoryReady
                 ? `of ${formatVolume(fromLitres(snapshot.totalCapacityLitres, unit))} ${unitLabel(unit)} capacity`
-                : 'Initialize every tank to calculate a vessel total.'}
+                : 'Set the starting fuel quantity in every tank to calculate a vessel total.'}
             </Text>
             <View style={[styles.progressTrack, { backgroundColor: themeColors.surfaceAlt }]}>
               <View
@@ -652,6 +652,21 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
             </View>
           </View>
 
+          {!inventoryReady &&
+            snapshot.tanks.length > 0 &&
+            (canManage ? (
+              <Button
+                title="Set Starting Fuel Levels"
+                onPress={() => navigation.navigate('FuelOpeningBalances')}
+                disabled={!!currentLoadError}
+                fullWidth
+                style={{ marginBottom: SPACING.lg }}
+              />
+            ) : (
+              <Text style={{ color: themeColors.textSecondary, marginBottom: SPACING.md }}>
+                Ask your Captain/MOV or HOD to set the starting fuel levels.
+              </Text>
+            ))}
           <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Tank levels</Text>
           <View style={styles.tankList}>
             {snapshot.tanks.map((item) => {

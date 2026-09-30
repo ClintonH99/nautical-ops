@@ -17,6 +17,9 @@ const trip = {
 };
 
 describe('trip notification content', () => {
+  it.each(['2026-09-30', '2026-10-01', '2026-10-30'])('announces a new trip regardless of start date: %s', (start_date) => {
+    expect(buildTripNotification({ ...trip, start_date }, 'created').data.kind).toBe('trip_created');
+  });
   it('creates distinct immediate notifications for new and updated trips', () => {
     expect(buildTripNotification(trip, 'created')).toMatchObject({
       title: 'New trip: Fort Lauderdale to Sag Harbor',

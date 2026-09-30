@@ -398,7 +398,7 @@ export const FuelOpeningBalancesScreen = ({ navigation, route }: any) => {
             <Text style={[styles.noticeText, { color: themeColors.textPrimary }]}>
               {correctionMode
                 ? 'Enter the quantities that were actually present on the displayed historical opening date. The original time is retained automatically.'
-                : 'Enter the physical quantity currently in every uninitialized tank. Use 0 only when a tank is known to be empty. Historic fuel receipts are not used to guess these values.'}
+                : 'Enter the physical quantity currently in every uninitialized tank, including fuel already received. Use 0 only for an empty tank. Earlier receipts remain in history and are not added again. Receipts entered after initialization update these balances.'}
             </Text>
           </View>
 

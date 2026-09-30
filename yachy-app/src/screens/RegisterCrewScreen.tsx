@@ -100,6 +100,7 @@ export const RegisterCrewScreen = ({ navigation }: any) => {
   };
 
   const handleRegister = async () => {
+    if (loading) return;
     if (!validateForm()) return;
 
     setLoading(true);

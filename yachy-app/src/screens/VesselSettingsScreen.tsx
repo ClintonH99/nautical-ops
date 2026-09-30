@@ -554,17 +554,30 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                   ]}
                 >
                   <View style={styles.codeContainer}>
+                    <Text style={[styles.currentPlanValue, { color: themeColors.textPrimary }]}>
+                      Invite Code
+                    </Text>
+                    <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>
+                      Share this code with your crew member.
+                    </Text>
                     <Text style={[styles.codeLabel, { color: themeColors.textSecondary }]}>
-                      Current Code
+                      Your crew invite code
                     </Text>
                     <View
-                      style={[styles.codeBox, { backgroundColor: themeColors.controlSelected }]}
+                      style={[
+                        styles.codeBox,
+                        { backgroundColor: themeColors.isDark ? '#213652' : '#EDF3FC' },
+                      ]}
                     >
                       <Text
+                        selectable
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.6}
                         style={[
                           styles.codeText,
                           {
-                            color: themeColors.isDark ? themeColors.textOnAccent : COLORS.primary,
+                            color: themeColors.isDark ? COLORS.white : COLORS.primary,
                           },
                         ]}
                       >
@@ -572,22 +585,20 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
                       </Text>
                     </View>
                     <Text style={[styles.expiryText, { color: themeColors.textSecondary }]}>
-                      {formatExpiry(vessel.inviteExpiry)}
+                      Valid until {formatExpiry(vessel.inviteExpiry)}
                     </Text>
                   </View>
                   <View style={styles.codeActions}>
                     <Button
                       title="Copy"
                       onPress={handleCopyCode}
-                      variant="outline"
-                      fullWidth
+                      variant="primary"
                       style={styles.codeButton}
                     />
                     <Button
                       title="Share"
                       onPress={handleShareCode}
                       variant="outline"
-                      fullWidth
                       style={styles.codeButton}
                     />
                   </View>
@@ -812,13 +823,21 @@ const styles = StyleSheet.create({
   codeContainer: { alignItems: 'center', marginBottom: SPACING.lg },
   codeLabel: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.sm },
   codeBox: {
+    width: '100%',
+    alignItems: 'center',
     backgroundColor: COLORS.primaryLight,
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
     marginBottom: SPACING.xs,
   },
-  codeText: { fontSize: FONTS['2xl'], fontWeight: 'bold', color: COLORS.primary, letterSpacing: 4 },
+  codeText: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+    letterSpacing: 4,
+    textAlign: 'center',
+  },
   expiryText: { fontSize: FONTS.sm },
   codeActions: { flexDirection: 'row', gap: SPACING.md, marginBottom: SPACING.lg },
   codeButton: { flex: 1 },
