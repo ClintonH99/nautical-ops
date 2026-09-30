@@ -1,0 +1,40 @@
+# Native EAS builds only need the app. Keep Git history, historical snapshots,
+# root mockups and unrelated projects out of the upload. Git/Vercel are unchanged.
+/*
+!/yachy-app
+!/.easignore
+
+# Preserve the app's existing ignored dependency, generated and secret files.
+node_modules/
+.expo/
+dist/
+web-build/
+output/
+expo-env.d.ts
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+.metro-health-check*
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.DS_Store
+*.pem
+/yachy-app/supabase/.temp/
+.env*.local
+.env
+CREDENTIALS.md
+google-service-account.json
+*.tsbuildinfo
+/yachy-app/ios/
+/yachy-app/android/
+.vercel/
+add-trials.mjs
+
+# Marketing videos/pages and the separate admin project are not native assets.
+/yachy-app/public/
+/yachy-app/nautical-ops-admin/
