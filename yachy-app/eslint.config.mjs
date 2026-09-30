@@ -8,6 +8,13 @@ import prettierConfig from 'eslint-config-prettier';
 export default [
   js.configs.recommended,
   {
+    files: ['supabase/tests/**/*.cjs'],
+    languageOptions: {
+      sourceType: 'commonjs',
+      globals: { process: 'readonly', __dirname: 'readonly', console: 'readonly' },
+    },
+  },
+  {
     files: ['**/*.{ts,tsx,js,jsx,mjs}'],
     languageOptions: {
       parser: tsparser,
@@ -59,7 +66,10 @@ export default [
       'react-hooks/preserve-manual-memoization': 'off',
       'react-hooks/exhaustive-deps': 'warn',
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
       '@typescript-eslint/no-unused-expressions': 'warn',
       '@typescript-eslint/no-require-imports': 'warn',
       'react/no-unescaped-entities': 'off',

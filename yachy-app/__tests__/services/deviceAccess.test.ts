@@ -87,10 +87,29 @@ describe('device access', () => {
   });
 
   it('releases only the current registered session', async () => {
-    mockRpc.mockResolvedValue({ data: true, error: null });
+    const abortSignal = jest.fn().mockResolvedValue({ data: true, error: null });
+    mockRpc.mockReturnValue({ abortSignal });
 
     await releaseCurrentDevice();
 
     expect(mockRpc).toHaveBeenCalledWith('revoke_current_device');
+    expect(abortSignal).toHaveBeenCalledWith(expect.any(AbortSignal));
+  });
+
+  it('cancels a stalled release so it cannot hold sign-out indefinitely', async () => {
+    jest.useFakeTimers();
+    mockRpc.mockReturnValue({
+      abortSignal: (signal: AbortSignal) =>
+        new Promise((resolve) => {
+          signal.addEventListener('abort', () =>
+            resolve({ error: { message: 'Network request failed' } })
+          );
+        }),
+    });
+    const release = releaseCurrentDevice();
+    await jest.advanceTimersByTimeAsync(3_001);
+    await expect(release).resolves.toBeUndefined();
+    expect(mockRpc).toHaveBeenCalledTimes(1);
+    jest.useRealTimers();
   });
 });

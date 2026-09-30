@@ -4,6 +4,8 @@ import { WatchKeepingScreen } from '../../src/screens/WatchKeepingScreen';
 import { CreateWatchTimetableScreen } from '../../src/screens/CreateWatchTimetableScreen';
 import vesselService from '../../src/services/vessel';
 import watchService from '../../src/services/watchKeeping';
+import { Alert } from 'react-native';
+jest.mock('expo-crypto', () => ({ randomUUID: jest.fn(() => 'publish-request-uuid') }));
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
@@ -152,10 +154,49 @@ describe.each([false, true])('watch schedule access (night=%s)', (dark) => {
         vesselId: 'workspace',
         createdBy: 'crew',
         watchTitle: 'Personal watch',
-      })
+      }),
+      'publish-request-uuid'
     );
     expect(navigation.replace).toHaveBeenCalledWith('WatchSchedule', {
       timetableId: 'new-schedule',
     });
+  });
+  it('retains the form and the same request ID when a publish fails and is retried', async () => {
+    jest
+      .mocked(vesselService.getVessel)
+      .mockResolvedValue({ id: 'workspace', isSolo: true } as NonNullable<
+        Awaited<ReturnType<typeof vesselService.getVessel>>
+      >);
+    jest
+      .mocked(watchService.publish)
+      .mockRejectedValueOnce(new Error('Network request failed'))
+      .mockResolvedValueOnce({ id: 'saved-once' } as Awaited<
+        ReturnType<typeof watchService.publish>
+      >);
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const log = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const navigation = { replace: jest.fn() };
+    const ui = render(<CreateWatchTimetableScreen navigation={navigation} route={{}} />);
+    await act(async () => {});
+    fireEvent.changeText(ui.getByLabelText('Watch Title'), 'Retry watch');
+    fireEvent.changeText(ui.getByLabelText('Total Running Time'), '4');
+    fireEvent.press(ui.getByText('Select crew...'));
+    fireEvent.press(ui.getByText('Test Crew'));
+    fireEvent.press(ui.getByText('Continue'));
+    await act(async () => {
+      fireEvent.press(ui.getByText('Publish Watch Schedule'));
+    });
+    expect(navigation.replace).not.toHaveBeenCalled();
+    expect(alert).toHaveBeenCalledWith('Error', 'Network request failed');
+    await act(async () => {
+      fireEvent.press(ui.getByText('Publish Watch Schedule'));
+    });
+    const calls = jest.mocked(watchService.publish).mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls[1]).toEqual(calls[0]);
+    expect(calls[1][1]).toBe('publish-request-uuid');
+    expect(navigation.replace).toHaveBeenCalledWith('WatchSchedule', { timetableId: 'saved-once' });
+    alert.mockRestore();
+    log.mockRestore();
   });
 });

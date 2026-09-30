@@ -189,23 +189,6 @@ export function getRestWatchConflicts(
   });
 }
 
-function affectedCrewDates(timetables: PublishedWatchTimetable[]): Map<string, Set<string>> {
-  const result = new Map<string, Set<string>>();
-  for (const timetable of timetables) {
-    for (const slot of normalizeSlotDates(timetable)) {
-      const periods = getWatchPeriodsFromTimetables(
-        [{ ...timetable, slots: [slot] }],
-        slot.crewId,
-        slot.startDate,
-        slot.endDate
-      );
-      if (!result.has(slot.crewId)) result.set(slot.crewId, new Set());
-      periods.forEach((period) => result.get(slot.crewId)!.add(period.date));
-    }
-  }
-  return result;
-}
-
 export interface WatchKeepingRules {
   id: string;
   vesselId: string;
@@ -215,29 +198,6 @@ export interface WatchKeepingRules {
 }
 
 class WatchKeepingService {
-  private async requireReconfirmation(timetables: PublishedWatchTimetable[]): Promise<void> {
-    if (timetables.length === 0) return;
-    const affected = affectedCrewDates(timetables);
-    const vesselId = timetables[0].vesselId;
-
-    for (const [userId, dates] of affected) {
-      if (dates.size === 0) continue;
-      const { error } = await supabase
-        .from('rest_entries')
-        .update({
-          status: 'needs_reconfirmation',
-          confirmed_by: null,
-          confirmed_at: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('vessel_id', vesselId)
-        .eq('user_id', userId)
-        .eq('status', 'confirmed')
-        .in('date', [...dates]);
-      if (error) throw error;
-    }
-  }
-
   async getRules(vesselId: string): Promise<WatchKeepingRules | null> {
     try {
       const { data, error } = await supabase
@@ -325,33 +285,26 @@ class WatchKeepingService {
     }
   }
 
-  async publish(input: PublishTimetableData): Promise<PublishedWatchTimetable> {
-    const { data, error } = await supabase
-      .from('watch_keeping_timetables')
-      .insert([
-        {
-          vessel_id: input.vesselId,
-          watch_title: input.watchTitle.trim(),
-          start_time: input.startTime,
-          start_location: input.startLocation?.trim() || null,
-          destination: input.destination?.trim() || null,
-          notes: input.notes?.trim() || null,
-          for_date: input.forDate,
-          slots: input.slots,
-          created_by: input.createdBy || null,
-        },
-      ])
-      .select()
-      .single();
+  async publish(input: PublishTimetableData, requestId: string): Promise<PublishedWatchTimetable> {
+    const { data, error } = await supabase.rpc('publish_watch_schedule', {
+      p_request_id: requestId,
+      p_data: {
+        vessel_id: input.vesselId,
+        watch_title: input.watchTitle.trim(),
+        start_time: input.startTime,
+        start_location: input.startLocation?.trim() || null,
+        destination: input.destination?.trim() || null,
+        notes: input.notes?.trim() || null,
+        for_date: input.forDate,
+        slots: input.slots,
+      },
+    });
 
     if (error) throw error;
-    const published = this.mapRow(data);
-    await this.requireReconfirmation([published]);
-    return published;
+    return this.mapRow(data);
   }
 
   async update(id: string, input: PublishTimetableData): Promise<PublishedWatchTimetable> {
-    const previous = await this.getById(id);
     const { data, error } = await supabase
       .from('watch_keeping_timetables')
       .update({
@@ -368,14 +321,11 @@ class WatchKeepingService {
       .single();
 
     if (error) throw error;
-    const updated = this.mapRow(data);
-    await this.requireReconfirmation(previous ? [previous, updated] : [updated]);
-    return updated;
+    // Database trigger updates affected rest records in the same transaction.
+    return this.mapRow(data);
   }
 
   async delete(id: string): Promise<void> {
-    const previous = await this.getById(id);
-    if (previous) await this.requireReconfirmation([previous]);
     const { data, error } = await supabase
       .from('watch_keeping_timetables')
       .delete()

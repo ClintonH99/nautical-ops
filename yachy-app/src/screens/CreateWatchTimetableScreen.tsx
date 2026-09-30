@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Crypto from 'expo-crypto';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -143,6 +144,8 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
   const [restConflict, setRestConflict] = useState<RestConflict | null>(null);
   const [publishing, setPublishing] = useState(false);
   const publishingRef = useRef(false);
+  // Preserve the identity after an uncertain response; never duplicate a retry.
+  const publishRequestId = useRef<string | null>(null);
   const vesselId = user?.vesselId ?? null;
   const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
   const { canCreate, checking: checkingAccess } = useWatchScheduleCreationAccess();
@@ -423,7 +426,8 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
         savedTimetable = await watchKeepingService.update(editingTimetableId, timetableData);
         Alert.alert('Updated', 'Watch Schedule has been updated.');
       } else {
-        savedTimetable = await watchKeepingService.publish(timetableData);
+        publishRequestId.current ??= Crypto.randomUUID();
+        savedTimetable = await watchKeepingService.publish(timetableData, publishRequestId.current);
         Alert.alert('Published', 'Timetable is now available in Watch Schedule.');
       }
 
@@ -431,6 +435,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
       setTimetablePreviewOpen(false);
       setCalculatedWatchHours(null);
       setEditingTimetableId(null);
+      publishRequestId.current = null;
       if (wasEditing) {
         navigation.goBack();
       } else {
@@ -440,9 +445,9 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
       console.error('Publish watch timetable error:', e);
       Alert.alert(
         'Error',
-        editingTimetableId
-          ? 'Could not update timetable.'
-          : 'Could not publish timetable to Watch Schedule.'
+        e && typeof e === 'object' && 'message' in e
+          ? String(e.message)
+          : 'Could not save the timetable. Your entries are still here. Please try again.'
       );
     } finally {
       publishingRef.current = false;

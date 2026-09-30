@@ -4,7 +4,7 @@ export function createReadTransport(
   baseUrl: string,
   ttl = 10_000,
   timeout = 15_000,
-  operationTimeout = 0
+  operationTimeout = 30_000
 ) {
   const cache = new Map<string, { response: Response; at: number }>();
   const pending = new Map<string, Promise<Response>>();
@@ -75,7 +75,7 @@ export function createReadTransport(
       if (pending.get(key) === operation) pending.delete(key);
     }
   };
-  // Web writes/auth/RPCs need a bounded wait too. Never retry a write here:
+  // Writes/auth/RPCs on every platform need a bounded wait. Never retry a write here:
   // a timeout cannot establish whether the server committed the operation.
   const fetchUncached: typeof fetch = async (input, init) => {
     if (!operationTimeout) return fetcher(input, init);

@@ -36,7 +36,7 @@ export const readTransport = createReadTransport(
   SUPABASE_URL,
   10_000,
   15_000,
-  Platform.OS === 'web' ? 30_000 : 0
+  30_000
 );
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {

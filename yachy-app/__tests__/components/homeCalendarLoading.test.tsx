@@ -1,10 +1,12 @@
 import React from 'react';
-import { act, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
+import type { CalendarProps } from 'react-native-calendars';
 import { HomeScreen } from '../../src/screens/HomeScreen';
 import tripsService from '../../src/services/trips';
 import yardJobsService from '../../src/services/yardJobs';
 import crewLeaveService from '../../src/services/crewLeave';
 const mockColorsLoad = jest.fn();
+const mockCalendarProps = jest.fn();
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
@@ -27,9 +29,10 @@ jest.mock('../../src/store', () => ({
 jest.mock('../../src/hooks/useThemeColors', () => ({ useThemeColors: () => ({ isDark: false }) }));
 jest.mock('../../src/components', () => ({ Button: () => null }));
 jest.mock('react-native-calendars', () => ({
-  Calendar: ({ markedDates }: any) => {
+  Calendar: (props: CalendarProps) => {
+    mockCalendarProps(props);
     const { Text } = jest.requireActual('react-native');
-    return <Text testID="calendar">{Object.keys(markedDates).join(',')}</Text>;
+    return <Text testID="calendar">{Object.keys(props.markedDates ?? {}).join(',')}</Text>;
   },
 }));
 jest.mock('../../src/services/vessel', () => ({
@@ -90,4 +93,14 @@ it('shows trips without waiting for yard jobs, leave or colors', async () => {
     finishColors();
   });
   expect(ui.getByTestId('calendar')).toHaveTextContent('2026-09-27');
+  // Home deliberately retains the original heading/arrows for all three modes.
+  for (const mode of ['Trips', 'Yard Period', 'Crew Leave']) {
+    fireEvent.press(ui.getByText(mode, { exact: true }));
+    const props = mockCalendarProps.mock.calls.at(-1)![0] as CalendarProps;
+    expect(props.hideArrows).toBe(false);
+    expect(props.customHeader).toBeUndefined();
+    expect(props.renderHeader).toBeUndefined();
+    expect(props.markingType).toBe('multi-period');
+    expect(props.onMonthChange).toEqual(expect.any(Function));
+  }
 });

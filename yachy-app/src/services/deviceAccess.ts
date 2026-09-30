@@ -87,10 +87,7 @@ export async function registerCurrentDevice(): Promise<DeviceAccessResult> {
       return { state: 'unavailable', activeDeviceCount: null };
     }
 
-    const result = data as
-      | { allowed?: boolean; active_device_count?: number }
-      | null
-      | undefined;
+    const result = data as { allowed?: boolean; active_device_count?: number } | null | undefined;
     const activeDeviceCount = Number(result?.active_device_count ?? 0);
     return result?.allowed
       ? { state: 'allowed', activeDeviceCount }
@@ -105,8 +102,10 @@ export async function registerCurrentDevice(): Promise<DeviceAccessResult> {
 
 /** Release this installation's slot during an intentional user sign-out. */
 export async function releaseCurrentDevice(): Promise<void> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 3_000);
   try {
-    const { error } = await supabase.rpc('revoke_current_device');
+    const { error } = await supabase.rpc('revoke_current_device').abortSignal(controller.signal);
     if (error && __DEV__ && !isConnectivityError(error)) {
       console.warn('[Device access] Could not release device slot:', error.message);
     }
@@ -114,5 +113,7 @@ export async function releaseCurrentDevice(): Promise<void> {
     if (__DEV__ && !isConnectivityError(error)) {
       console.warn('[Device access] Could not release device slot:', error);
     }
+  } finally {
+    clearTimeout(timer);
   }
 }

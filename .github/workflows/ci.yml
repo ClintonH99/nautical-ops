@@ -19,8 +19,9 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: yachy-app/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -34,6 +35,13 @@ jobs:
       - name: Run tests (QC Gate 2b)
         run: npm run test
 
+      - name: Database transaction and permission regressions (disposable PostgreSQL)
+        run: |
+          npm install --prefix "$RUNNER_TEMP/nautical-db-tests" --no-package-lock --ignore-scripts @electric-sql/pglite@0.5.8
+          export PGLITE_MODULE_PATH="$RUNNER_TEMP/nautical-db-tests/node_modules/@electric-sql/pglite"
+          node supabase/tests/run_watch_publication_test.cjs
+          node supabase/tests/run_vessel_departure_test.cjs
+
       - name: Expo dependency check (QC Gate 3)
         run: npx expo install --check
 
@@ -41,4 +49,4 @@ jobs:
         run: npx expo export --platform ios
 
       - name: Dependency audit (QC Gate 5)
-        run: npm audit --audit-level=critical
+        run: npm audit --audit-level=high

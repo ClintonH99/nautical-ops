@@ -37,7 +37,7 @@ type SettingsItem = {
   icon: string;
   label: string;
   description: string;
-  onPress: () => void;
+  onPress?: () => void;
   disabled: boolean;
   destructive?: boolean;
 };
@@ -212,12 +212,8 @@ export const SettingsScreen = ({ navigation }: any) => {
               {
                 icon: 'open-outline',
                 label: 'Link website',
-                description: 'Open website in your browser to sign in',
-                onPress: () =>
-                  Linking.openURL('https://www.nautical-ops.com').catch(() =>
-                    Alert.alert('Error', 'Could not open website')
-                  ),
-                disabled: false,
+                description: 'Coming Soon',
+                disabled: true,
               },
             ]
           : []),
@@ -376,6 +372,9 @@ export const SettingsScreen = ({ navigation }: any) => {
                   ]}
                   onPress={item.onPress}
                   disabled={item.disabled}
+                  accessibilityRole="button"
+                  accessibilityLabel={item.label}
+                  accessibilityState={{ disabled: item.disabled }}
                   activeOpacity={0.7}
                 >
                   <View style={styles.settingsItemLeft}>
