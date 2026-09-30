@@ -11,6 +11,19 @@ export interface PublishedWatchDurations {
   restDurationHours: number | null;
 }
 
+/** Safety limit on generated output, not on the agreed rotation calculation. */
+export const MAX_WATCH_SLOTS = 10_000;
+
+function boundedSlotCount(totalHours: number, watchHours: number): number {
+  const count = Math.max(0, Math.ceil((totalHours - 1e-9) / watchHours));
+  if (!Number.isFinite(count) || count > MAX_WATCH_SLOTS) {
+    throw new Error(
+      'This would create too many watches. Check the running time and watch duration, or create a shorter schedule.'
+    );
+  }
+  return count;
+}
+
 /**
  * Plan a round-robin rotation for one continuously staffed watch.
  *
@@ -52,7 +65,7 @@ export function calculateWatchRotationPlan(
     restHours === null ? 1 : Math.ceil(restHours / watchDurationHours - 1e-9) + 1;
   const hasEnoughCrew = restHours === null || (crewCount > 1 && crewCount >= requiredCrewCount);
 
-  const slotCount = getWatchSlotDurations(totalRunningHours, watchDurationHours).length;
+  const slotCount = boundedSlotCount(totalRunningHours, watchDurationHours);
 
   return {
     slotCount,
@@ -75,9 +88,12 @@ export function getWatchSlotDurations(
   }
 
   const durations: number[] = [];
+  boundedSlotCount(totalRunningHours, watchDurationHours);
   let scheduledHours = 0;
 
   while (scheduledHours < totalRunningHours - 1e-9) {
+    if (durations.length >= MAX_WATCH_SLOTS)
+      throw new Error('This schedule contains too many watches.');
     const remainingHours = totalRunningHours - scheduledHours;
     const duration = Math.min(watchDurationHours, remainingHours);
     durations.push(duration);
@@ -103,7 +119,10 @@ export function getPublishedWatchDurations(
     return { watchDurationHours: null, restDurationHours: null };
   }
 
-  const watchDurationHours = Math.max(...validSlots.map((slot) => slot.durationHours));
+  const watchDurationHours = validSlots.reduce(
+    (longest, slot) => Math.max(longest, slot.durationHours),
+    0
+  );
   const crewCount = new Set(validSlots.map((slot) => slot.crewId)).size;
   const restDurationHours = watchDurationHours * Math.max(crewCount - 1, 0);
 

@@ -31,7 +31,13 @@ if (__DEV__ && isPlaceholder) {
   );
 }
 
-export const readTransport = createReadTransport((input, init) => fetch(input, init), SUPABASE_URL);
+export const readTransport = createReadTransport(
+  (input, init) => fetch(input, init),
+  SUPABASE_URL,
+  10_000,
+  15_000,
+  Platform.OS === 'web' ? 30_000 : 0
+);
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   global: { fetch: readTransport.fetch },

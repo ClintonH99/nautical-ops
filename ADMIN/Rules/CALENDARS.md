@@ -13,14 +13,20 @@ All calendars in the app (current and newly added) **must** use:
 - When `themeColors.isDark` is **true**: use `COLORS.white` for text colors (`dayTextColor`, `textDisabledColor`, `textSectionTitleColor`, `monthTextColor`, `arrowColor`, `todayTextColor`)
 - When `themeColors.isDark` is **false**: use `COLORS.black` or `themeColors.textPrimary` for text colors
 
-## Month Navigation Arrows
+## Month Navigation
 
-Calendar month navigation arrows **must** always remain visible.
-
-- Do not use `overflow: 'hidden'` on calendar wrapper containers if it clips the header or arrows
-- Explicitly set `hideArrows={false}` on Calendar components
-- Ensure `arrowColor` provides contrast against the calendar background (already in theme)
+The approved September 2026 design replaces arrow-only month navigation with separate Month and Year dropdowns, on both embedded calendars and date-field popovers. Keep both controls fully visible and do not clip their menus. This supersedes the previous requirement to show month arrows.
 
 ## Scope
 
 Applies to: HomeScreen, UpcomingTripsScreen, YardPeriodJobsScreen, AddEditYardJobScreen, TasksCalendarScreen, AddEditTaskScreen, AddEditTripScreen, CreateWatchTimetableScreen, and any future screens that add calendar components.
+
+## Approved shared selector design
+
+- Use `AppCalendar` for every embedded calendar and `DateOnlyPicker` for date-entry fields.
+- Display separate Month and Year dropdowns above the day grid, with full month names and a check beside the displayed selection.
+- Month/year choices only navigate the calendar. For a single date field, tapping a day commits the date and dismisses the popover; there is no Set Date / Done step. Dismissing without a day selection preserves the previous value.
+- Dropdowns are scrollable, open near the current choice, fit inside the viewport, and use the current day/night theme. Do not stack native Modals.
+- The selected single date is navy with white text in day mode and light blue with dark text in night mode. Today has a separate subtle highlight. Disabled dates have muted text.
+- Keep existing range-selection workflows, event/department colours, date bounds, callbacks and permissions unchanged. Display calendars are not converted into single-date forms.
+- Keep all date-only values in local YYYY-MM-DD form; never shift the selected day through UTC conversion.

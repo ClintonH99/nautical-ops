@@ -13,6 +13,23 @@ const deferred = <T>() => {
 };
 
 describe('read transport', () => {
+  it.each(['POST', 'PATCH', 'DELETE'])('bounds a web %s without retrying it', async (method) => {
+    jest.useFakeTimers();
+    const fetcher = jest.fn().mockImplementation(
+      (_input, init) =>
+        new Promise((_resolve, reject) => {
+          init.signal.addEventListener('abort', () => reject(new Error('aborted')));
+        })
+    );
+    const transport = createReadTransport(fetcher, base, 10000, 15000, 200);
+    const result = expect(
+      transport.fetch(`${base}/rest/v1/rpc/example`, { method })
+    ).rejects.toThrow('aborted');
+    await jest.advanceTimersByTimeAsync(201);
+    await result;
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    jest.useRealTimers();
+  });
   it('respects cancellation even when a recent response is cached', async () => {
     const fetcher = jest.fn().mockResolvedValue(reply([]));
     const transport = createReadTransport(fetcher, base);

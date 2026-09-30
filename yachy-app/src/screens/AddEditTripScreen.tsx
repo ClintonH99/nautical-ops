@@ -15,7 +15,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { Calendar } from 'react-native-calendars';
+import { AppCalendar as Calendar } from '../components/AppCalendar';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';

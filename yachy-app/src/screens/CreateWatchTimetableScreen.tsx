@@ -324,12 +324,21 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
   const getValidatedRotationPlan = (
     scheduleHours: NonNullable<ReturnType<typeof getValidatedScheduleHours>>
   ) => {
-    const rotationPlan = calculateWatchRotationPlan(
-      scheduleHours.totalRunningHours,
-      scheduleHours.restHours,
-      selectedCrew.length,
-      scheduleHours.maximumWatchHours
-    );
+    let rotationPlan;
+    try {
+      rotationPlan = calculateWatchRotationPlan(
+        scheduleHours.totalRunningHours,
+        scheduleHours.restHours,
+        selectedCrew.length,
+        scheduleHours.maximumWatchHours
+      );
+    } catch (error) {
+      Alert.alert(
+        'Check schedule duration',
+        error instanceof Error ? error.message : 'Please check the schedule hours.'
+      );
+      return null;
+    }
 
     if (!rotationPlan.hasEnoughCrew && scheduleHours.restHours !== null) {
       setRestConflict({

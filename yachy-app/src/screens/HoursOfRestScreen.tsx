@@ -9,7 +9,7 @@ import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinne
 import React, { useState, useCallback, useRef } from 'react';
 import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
-import { Calendar } from 'react-native-calendars';
+import { AppCalendar as Calendar } from '../components/AppCalendar';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
@@ -18,10 +18,7 @@ import { Button, PageHeader, ExportButton } from '../components';
 import { RestEntry, getMonthDataForPdf } from '../services/restEntries';
 import { generateHoursOfRestPdf } from '../utils/hoursOfRestPdf';
 import { supabase } from '../services/supabase';
-
-function toYYYYMMDD(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
+import { toYYYYMMDD } from '../utils';
 
 function daysAgo(n: number): Date {
   const d = new Date();

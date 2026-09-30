@@ -67,6 +67,7 @@ export const ImportExportScreen = ({ navigation }: any) => {
   };
 
   const handleImport = async (type: TemplateType) => {
+    let selectedUri: string | undefined;
     if (!vesselId) {
       Alert.alert('No vessel', 'Join a vessel to import data.');
       return;
@@ -86,6 +87,7 @@ export const ImportExportScreen = ({ navigation }: any) => {
       }
 
       const uri = selectedFile.uri;
+      selectedUri = uri;
       setImporting(type);
 
       if (type === 'tasks') {
@@ -240,6 +242,9 @@ export const ImportExportScreen = ({ navigation }: any) => {
       Alert.alert('Error', 'Could not import file.');
     } finally {
       setImporting(null);
+      if (Platform.OS === 'web' && selectedUri?.startsWith('blob:')) {
+        URL.revokeObjectURL(selectedUri);
+      }
     }
   };
 

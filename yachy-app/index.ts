@@ -4,6 +4,9 @@ import './polyfillLocation';
 import { registerRootComponent } from 'expo';
 
 import App from './App';
+import { installWebAlerts } from './src/utils/installWebAlerts';
+
+installWebAlerts();
 
 // registerRootComponent calls AppRegistry.registerComponent('main', () => App);
 // It also ensures that whether you load the app in Expo Go or in a native build,

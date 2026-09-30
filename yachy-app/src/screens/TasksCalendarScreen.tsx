@@ -17,7 +17,7 @@ import {
   Pressable,
   Alert,
 } from 'react-native';
-import { Calendar } from 'react-native-calendars';
+import { AppCalendar as Calendar } from '../components/AppCalendar';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
@@ -368,7 +368,7 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
           ) : (
             <>
               <Calendar
-                current={new Date().toISOString().slice(0, 10)}
+                current={toYYYYMMDD(new Date())}
                 dayComponent={PieDayComponent as React.ComponentType<any>}
                 markedDates={
                   {

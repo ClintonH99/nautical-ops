@@ -518,9 +518,19 @@ async function parseFile<T>(
   const errors: { row: number; message: string }[] = [];
 
   try {
-    const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: 'base64',
-    });
+    let base64: string;
+    if (Platform?.OS === 'web') {
+      // DocumentPicker supplies a browser object URL, not a native file path.
+      const response = await fetch(uri);
+      if (!response.ok) throw new Error('Could not read the selected spreadsheet.');
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      if (bytes.byteLength > MAX_IMPORT_FILE_BYTES) {
+        throw new Error('The spreadsheet is larger than the 10 MB import limit.');
+      }
+      base64 = bytesToBase64(bytes);
+    } else {
+      base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
+    }
     const maximumBase64Length = Math.ceil(MAX_IMPORT_FILE_BYTES / 3) * 4 + 4;
     if (base64.length > maximumBase64Length) {
       return {

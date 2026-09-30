@@ -3,7 +3,8 @@ export function createReadTransport(
   fetcher: typeof fetch,
   baseUrl: string,
   ttl = 10_000,
-  timeout = 15_000
+  timeout = 15_000,
+  operationTimeout = 0
 ) {
   const cache = new Map<string, { response: Response; at: number }>();
   const pending = new Map<string, Promise<Response>>();
@@ -24,13 +25,13 @@ export function createReadTransport(
       invalidate();
       writes += 1;
       try {
-        return await fetcher(input, init);
+        return await fetchUncached(input, init);
       } finally {
         writes -= 1;
         invalidate();
       }
     }
-    if (!isRest) return fetcher(input, init);
+    if (!isRest) return fetchUncached(input, init);
     const headers = new Headers(
       typeof input === 'object' && 'headers' in input ? input.headers : undefined
     );
@@ -72,6 +73,24 @@ export function createReadTransport(
       return (await operation).clone();
     } finally {
       if (pending.get(key) === operation) pending.delete(key);
+    }
+  };
+  // Web writes/auth/RPCs need a bounded wait too. Never retry a write here:
+  // a timeout cannot establish whether the server committed the operation.
+  const fetchUncached: typeof fetch = async (input, init) => {
+    if (!operationTimeout) return fetcher(input, init);
+    const source =
+      init?.signal ?? (typeof input === 'object' && 'signal' in input ? input.signal : undefined);
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    if (source?.aborted) abort();
+    source?.addEventListener('abort', abort, { once: true });
+    const timer = setTimeout(abort, operationTimeout);
+    try {
+      return await fetcher(input, { ...init, signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+      source?.removeEventListener('abort', abort);
     }
   };
   return { fetch: request, invalidate };

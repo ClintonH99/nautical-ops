@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Calendar } from 'react-native-calendars';
+import { AppCalendar as Calendar } from '../components/AppCalendar';
 import { Button, Input, LabeledDropdown, LoadingSpinner, PageHeader } from '../components';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { CREW_LEAVE_COLORS, CREW_LEAVE_LABELS, CREW_LEAVE_TYPES } from '../constants/crewLeave';

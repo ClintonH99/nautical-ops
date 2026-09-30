@@ -24,6 +24,7 @@ export { PreviewActionButtons } from './PreviewActionButtons';
 export { TaskPreviewCard } from './TaskPreviewCard';
 export { TripLoadErrorBanner } from './TripLoadErrorBanner';
 export { DateOnlyPicker } from './DateOnlyPicker';
+export { AppCalendar } from './AppCalendar';
 export { FuelVoidReasonModal } from './FuelVoidReasonModal';
 export {
   TimePickerField,

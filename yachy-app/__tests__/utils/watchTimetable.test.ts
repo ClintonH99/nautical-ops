@@ -6,6 +6,10 @@ import {
 } from '../../src/utils/watchTimetable';
 
 describe('watch timetable rotation planning', () => {
+  it('rejects excessive output before allocating millions of watch slots', () => {
+    expect(() => calculateWatchRotationPlan(24, null, 2, 0.000001)).toThrow('too many watches');
+    expect(() => getWatchSlotDurations(24, 0.000001)).toThrow('too many watches');
+  });
   it('calculates the watch duration from rest when no maximum is entered', () => {
     expect(calculateWatchRotationPlan(36, 8, 2)).toEqual({
       slotCount: 5,
