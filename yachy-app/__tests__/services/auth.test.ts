@@ -72,6 +72,24 @@ describe('AuthService', () => {
       jest.useRealTimers();
     });
 
+    it('does not schedule temporary recovery sign-in profiles even if deferral ends before the timer runs', async () => {
+      jest.useFakeTimers();
+      mockAuthOnAuthStateChange.mockReturnValue({
+        data: { subscription: { unsubscribe: jest.fn() } },
+      });
+      const profile = jest.spyOn(authService, 'getUserProfileWithRetry');
+      const callback = jest.fn();
+      let deferred = true;
+      const subscription = authService.onAuthStateChange(callback, () => deferred);
+      const event = mockAuthOnAuthStateChange.mock.calls[0][0];
+      event('SIGNED_IN', { user: { id: 'one' } });
+      deferred = false;
+      await jest.runAllTimersAsync();
+      expect(profile).not.toHaveBeenCalled();
+      expect(callback).not.toHaveBeenCalled();
+      subscription.data.subscription.unsubscribe();
+    });
+
     it('leaves initial sessions and successful token refreshes to bootstrap', async () => {
       jest.useFakeTimers();
       const unsubscribe = jest.fn();

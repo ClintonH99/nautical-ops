@@ -289,12 +289,12 @@ export const RootNavigator = () => {
       if (useAuthStore.getState().deferUserUpdate) return false;
       const key = JSON.stringify(candidate);
       if (accessRequest.current?.key === key) return accessRequest.current.promise;
-      const startingUserId = useAuthStore.getState().user?.id;
+      const startingUser = useAuthStore.getState().user;
       const operation = (async () => {
         const decision = await evaluateAccountAccess(candidate);
         if (
           useAuthStore.getState().deferUserUpdate ||
-          useAuthStore.getState().user?.id !== startingUserId
+          useAuthStore.getState().user !== startingUser
         )
           return false;
 
@@ -494,7 +494,10 @@ export const RootNavigator = () => {
       if (!mounted) return;
 
       try {
-        const { data: authListener } = authService.onAuthStateChange(handleAuthChange);
+        const { data: authListener } = authService.onAuthStateChange(
+          handleAuthChange,
+          () => useAuthStore.getState().deferUserUpdate
+        );
         unsubscribeAuth = () => authListener?.subscription?.unsubscribe();
         const timeout = setTimeout(() => {
           if (mounted && !renderedFromCache && useAuthStore.getState().isLoading)

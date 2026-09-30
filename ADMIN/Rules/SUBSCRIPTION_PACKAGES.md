@@ -40,6 +40,7 @@
    - Captain/MOV remains signed in but can access only Vessel Plans until payment is confirmed.
    - Once payment is confirmed, Captain/MOV returns to Home automatically and Crew/HOD can sign in normally.
    - Do not delete vessel data or remove vessel members because of non-payment.
+   - Explicit departure recovery (approved 30 September 2026): Login offers Leave Vessel with credential verification and confirmation for Crew/HOD. They may voluntarily leave an unpaid vessel using the existing server-verified departure flow, retaining My Sea Miles and moving to a private Crew account. All payment-restricted Captain/MOV users go to See Plans, with payment/reactivation and Apple subscription management/cancellation options, not Leave Vessel. Captain/MOV credentials entered into login departure recovery must follow the same payment routing without invoking departure. Cancellation alone does not restore access or remove members. The last Captain/MOV safeguard remains unchanged for normal in-app departures. Recovery does not unlock unpaid vessel records or bypass the device limit.
    - Provider webhooks must update subscription state in the background for existing and future subscribers.
 
 9. **Account device limit:** Every account may be registered on a maximum of **two active devices total**, across iOS, Android, and web. This is an account limit, not two devices per platform.

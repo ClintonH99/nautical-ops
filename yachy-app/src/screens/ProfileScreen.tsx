@@ -44,28 +44,50 @@ export const ProfileScreen = ({ navigation }: any) => {
   };
 
   const callVesselFunction = async (fnName: string) => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData?.session?.access_token;
-    if (!accessToken) {
-      Alert.alert('Error', 'Could not verify your session. Please try again.');
-      return null;
-    }
-    const { data, error } = await supabase.functions.invoke(fnName, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    if (error || data?.error) {
-      const msg = data?.error || 'Something went wrong. Please contact support@nautical-ops.com';
-      if (msg.includes('only Captain/MOV')) {
-        Alert.alert("You're the only Captain", msg, [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Go to Crew Management', onPress: () => navigation.navigate('CrewManagement') },
-        ]);
-      } else {
-        Alert.alert('Error', msg);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      if (!accessToken) {
+        Alert.alert('Error', 'Could not verify your session. Please try again.');
+        return null;
       }
+      const { data, error } = await supabase.functions.invoke(fnName, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (error || data?.error) {
+        // Non-2xx Edge Function responses have data=null. Supabase keeps the
+        // response body on FunctionsHttpError.context, including expected guards.
+        let errorBody = data;
+        if (error && typeof error.context?.json === 'function') {
+          const response = error.context.clone?.() ?? error.context;
+          errorBody = await response.json().catch(() => null);
+        }
+        const msg =
+          typeof errorBody?.error === 'string' && errorBody.error.trim()
+            ? errorBody.error
+            : 'Something went wrong. Please contact support@nautical-ops.com';
+        if (msg.toLowerCase().includes('only captain/mov')) {
+          Alert.alert(
+            'Appoint Another Captain/MOV',
+            'You are the only Captain/MOV on this vessel. Before you can leave, promote another crew member to Captain/MOV in Crew Management. The vessel must have at least one Captain/MOV remaining.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Go to Crew Management',
+                onPress: () => navigation.navigate('CrewManagement'),
+              },
+            ]
+          );
+        } else {
+          Alert.alert('Error', msg);
+        }
+        return null;
+      }
+      return data;
+    } catch {
+      Alert.alert('Unable to Complete Request', 'Please check your connection and try again.');
       return null;
     }
-    return data;
   };
 
   const handleLeaveVessel = () => {

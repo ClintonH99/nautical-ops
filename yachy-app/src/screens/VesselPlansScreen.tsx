@@ -429,14 +429,19 @@ export const VesselPlansScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <PageHeader title="Vessel Plans" showBack={!captainPaymentRequired} />
+      <PageHeader
+        title={captainPaymentRequired ? 'See Plans' : 'Vessel Plans'}
+        showBack={!captainPaymentRequired}
+      />
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {captainPaymentRequired ? (
           <View style={styles.paymentNotice}>
             <Ionicons name="alert-circle-outline" size={22} color={COLORS.danger} />
             <Text style={styles.paymentNoticeText}>
-              Your vessel subscription payment is overdue. Access to the rest of the app will be
-              restored automatically after payment is confirmed.
+              Your vessel subscription is inactive. Choose a plan to restore access, or manage and
+              cancel renewal through Apple. Cancelling does not restore vessel access or remove
+              anyone from the vessel. Only the Apple Account that purchased the subscription can
+              cancel it.
             </Text>
           </View>
         ) : null}
@@ -551,9 +556,13 @@ export const VesselPlansScreen = ({ navigation }: any) => {
                   : 'Open Nautical Ops on your iPhone to purchase or change an Apple subscription.'}
               </Text>
             )}
-            {hasActiveSubscription && Platform.OS === 'ios' && (
+            {(hasActiveSubscription || captainPaymentRequired) && Platform.OS === 'ios' && (
               <Button
-                title="Manage Apple Subscription"
+                title={
+                  captainPaymentRequired
+                    ? 'Manage / Cancel Subscription'
+                    : 'Manage Apple Subscription'
+                }
                 onPress={handleManageSubscription}
                 variant="outline"
                 fullWidth

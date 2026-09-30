@@ -598,17 +598,20 @@ class AuthService {
     }
   }
 
-  onAuthStateChange(callback: (user: User | null) => void) {
+  onAuthStateChange(callback: (user: User | null) => void, shouldDefer = () => false) {
     let active = true;
     let revision = 0;
     const subscription = supabase.auth.onAuthStateChange((event, session) => {
       // Bootstrap owns INITIAL_SESSION. Token refresh does not change the profile.
       if (event === 'INITIAL_SESSION' || (event === 'TOKEN_REFRESHED' && session)) return;
       const current = ++revision;
+      // Recovery/password flows own their temporary session. Do not schedule
+      // an old-vessel profile that could arrive after the flow has completed.
+      if (shouldDefer()) return;
       // Never await Supabase queries inside its auth lock.
       setTimeout(() => {
         void (async () => {
-          if (!active || current !== revision) return;
+          if (!active || current !== revision || shouldDefer()) return;
           try {
             if (event === 'TOKEN_REFRESHED' && !session) {
               try {

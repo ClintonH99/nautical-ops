@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { Button, Input } from '../components';
+import { LeaveVesselRecovery } from '../components/LeaveVesselRecovery';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import authService from '../services/auth';
@@ -66,6 +67,7 @@ export const LoginScreen = ({ navigation }: any) => {
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
 
   const [loading, setLoading] = useState(false);
+  const [leavingVessel, setLeavingVessel] = useState(false);
   const [errors, setErrors] = useState({ email: '', password: '' });
 
   const { setUser, loginNotice, setLoginNotice, setCaptainPaymentRequired } = useAuthStore();
@@ -133,7 +135,7 @@ export const LoginScreen = ({ navigation }: any) => {
   };
 
   const handleSocialSignIn = async (provider: 'google' | 'apple') => {
-    if (socialLoading) return;
+    if (socialLoading || useAuthStore.getState().deferUserUpdate) return;
     setSocialLoading(provider);
     setLoginError('');
     setLoginNotice(null);
@@ -160,6 +162,7 @@ export const LoginScreen = ({ navigation }: any) => {
   };
 
   const handleLogin = async () => {
+    if (useAuthStore.getState().deferUserUpdate) return;
     setLoginError('');
     setLoginNotice(null);
     if (!validateForm()) return;
@@ -273,6 +276,7 @@ export const LoginScreen = ({ navigation }: any) => {
               title="Sign in"
               onPress={handleLogin}
               loading={loading}
+              disabled={leavingVessel}
               fullWidth
               variant="primary"
               style={styles.signInButton}
@@ -281,12 +285,17 @@ export const LoginScreen = ({ navigation }: any) => {
             {loginError ? <Text style={styles.loginError}>{loginError}</Text> : null}
             <TouchableOpacity
               onPress={() => navigation.navigate('ForgotPassword')}
+              disabled={leavingVessel}
               style={styles.forgotBtn}
             >
               <Text style={[styles.forgotText, { color: themeColors.accent }]}>
                 Forgot password?
               </Text>
             </TouchableOpacity>
+            <LeaveVesselRecovery
+              disabled={loading || !!socialLoading}
+              onBusyChange={setLeavingVessel}
+            />
           </View>
 
           {/* Create account */}
@@ -314,6 +323,7 @@ export const LoginScreen = ({ navigation }: any) => {
             </View>
             <Button
               title="Create New Account"
+              disabled={leavingVessel}
               onPress={() => navigation.navigate('CreateAccountChoice')}
               variant="outline"
               fullWidth
