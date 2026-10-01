@@ -29,7 +29,7 @@
    - **Approved pivot, 1 October 2026:** Nautical Ops is moving to a mobile-first web app. Paddle is the sole intended payment provider for Nautical Ops and the future yacht-management interface. Do not create further iOS/Android builds or add StoreKit/Google purchase flows.
    - The owner confirmed all Apple subscriptions are sandbox tests. Preserve accounts, vessels, records and Sea Miles; archive test billing metadata recoverably at cutover, not by deleting user data.
    - The 24 prices above are approved. Apply the period calculations internally but **never display percentage-discount labels**. Show the full billing-period amount.
-   - Enable checkout only after Paddle price IDs, USD amounts, intervals, tax treatment, checkout domain and signed webhook delivery have been verified. The local implementation is not yet deployed or enabled.
+   - Enable checkout only after Paddle price IDs, USD amounts, intervals, tax treatment, checkout domain and signed webhook delivery have been verified. The server foundation is deployed but checkout is explicitly disabled pending those checks.
 
 7. **Create Vessel flow:** After vessel creation, do NOT show invite code. Primary CTA: "Go to Home." Home shows a welcome board with Continue and See Plans; See Plans opens Vessel Plans. Only a server-verified Paddle subscription changes entitlement. Keep checkout disabled for unverified products; do not infer activation from a browser success callback. Upgrade/downgrade timing must be confirmed before enabling plan changes.
 

@@ -6,7 +6,9 @@ Nautical Ops is moving to a mobile-first web application with **Paddle as its on
 
 The source of truth remains `vessel_subscriptions`. Neither checkout redirection nor a client success callback grants access. Crew limits, Captain/MOV billing responsibility, two-device security, the 16-day failed-renewal grace period and personal Sea Miles preservation remain unchanged.
 
-## Local implementation — not deployed or enabled
+## Implementation — server foundation deployed, payments disabled
+
+On 1 October 2026 the additive migration and billing functions were deployed to `grtrcjgsvfsknpnlarxv`. `PADDLE_CHECKOUT_ENABLED` is explicitly false and the web payment button is disabled. The catalogue is not configured/verified, so deployment does not mean payments are operational. Existing subscription rows were not retired or modified.
 
 - `create-paddle-checkout` verifies the authenticated account and reserves checkout through a registered-device/Captain-only database function. Existing paid plans must be managed, not purchased again. Concurrent requests share one pending checkout per vessel.
 - Every selected Paddle price is checked against the approved USD amount and recurring interval before purchase. Trials, regional price overrides and quantities other than one are rejected until deliberately supported. Internal duration calculations are never shown as percentage-discount labels.
@@ -35,7 +37,7 @@ Paddle needs an approved default payment page that loads Paddle.js. A returned c
 2. Finish subscription management, plan-change timing, secure payer/portal access and ambiguous-checkout reconciliation. Do not give one vessel's Captain access to another vessel's billing account via an overly broad customer portal session.
 3. Complete provider reconciliation/expiry enforcement without treating a network outage as proof of non-payment. Existing expired-active fail-open behavior has not been silently changed by this additive migration.
 4. Archive Apple sandbox billing metadata recoverably, switch active billing handlers and verify access from real browser sessions. Do not delete users, vessels or operational records.
-5. Apply the migration and deploy functions with rollback preparation. Nothing in this document implies deployment has already happened.
+5. The foundation migration and functions are deployed. Keep payments disabled until the remaining checks pass, and prepare rollback/reconciliation before enabling them.
 
 ## Tests and provider references
 
