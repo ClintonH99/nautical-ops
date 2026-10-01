@@ -1,9 +1,8 @@
 /**
  * PDF export for Safety Equipment
  */
-import * as FileSystem from 'expo-file-system/legacy';
+import { sharePdfFile } from './sharePdfFile';
 import { printStandardPdf } from './standardPdf';
-import * as Sharing from 'expo-sharing';
 import {
   SafetyEquipmentData,
   SafetyItem,
@@ -84,15 +83,7 @@ const PDF_STYLES = `
 
 async function shareHtmlAsPdf(html: string, filename: string): Promise<void> {
   const { uri } = await printStandardPdf({ html, title: 'Safety Equipment' });
-  const newUri = `${FileSystem.cacheDirectory}${filename}`;
-  await FileSystem.moveAsync({ from: uri, to: newUri });
-  const canShare = await Sharing.isAvailableAsync();
-  if (canShare) {
-    await Sharing.shareAsync(newUri, {
-      mimeType: 'application/pdf',
-      dialogTitle: `Save ${filename}`,
-    });
-  }
+  await sharePdfFile(uri, filename);
 }
 
 /** One published plan per document. */

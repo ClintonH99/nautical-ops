@@ -2,9 +2,8 @@
  * PDF export for Pre-Departure Checklists
  */
 
-import * as FileSystem from 'expo-file-system/legacy';
+import { sharePdfFile } from './sharePdfFile';
 import { printStandardPdf } from './standardPdf';
-import * as Sharing from 'expo-sharing';
 import { PreDepartureChecklist, Department } from '../types';
 
 const DEPARTMENT_LABELS: Record<Department | string, string> = {
@@ -73,12 +72,5 @@ export async function generatePreDepartureChecklistPdf(
     '</body></html>';
 
   const { uri } = await printStandardPdf({ html, title: 'Pre-Departure Checklist' });
-  const newUri = FileSystem.cacheDirectory + filename;
-  await FileSystem.moveAsync({ from: uri, to: newUri });
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(newUri, {
-      mimeType: 'application/pdf',
-      dialogTitle: 'Save ' + filename,
-    });
-  }
+  await sharePdfFile(uri, filename);
 }

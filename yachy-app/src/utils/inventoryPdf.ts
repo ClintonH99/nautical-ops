@@ -2,9 +2,8 @@
  * Build HTML for selected inventory items and export to PDF via expo-print + share.
  */
 
-import * as FileSystem from 'expo-file-system/legacy';
+import { sharePdfFile } from './sharePdfFile';
 import { printStandardPdf } from './standardPdf';
-import * as Share from 'expo-sharing';
 import { InventoryItem } from '../services/inventory';
 
 const deptLabel = (d: string) => (d ?? '').charAt(0) + (d ?? '').slice(1).toLowerCase();
@@ -124,12 +123,5 @@ export async function exportInventoryToPdf(items: InventoryItem[]): Promise<void
   const html = buildInventoryHtml(items, 'Inventory');
   const { uri } = await printStandardPdf({ html, title: 'Inventory' });
   const filename = getInventoryPdfFilename(items);
-  const newUri = `${FileSystem.cacheDirectory}${filename}`;
-  await FileSystem.moveAsync({ from: uri, to: newUri });
-  const canShare = await Share.isAvailableAsync();
-  if (canShare)
-    await Share.shareAsync(newUri, {
-      mimeType: 'application/pdf',
-      dialogTitle: 'Save Inventory PDF',
-    });
+  await sharePdfFile(uri, filename, 'Save Inventory PDF');
 }

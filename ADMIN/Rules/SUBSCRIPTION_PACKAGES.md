@@ -26,12 +26,12 @@
 5. **Upgrade warning:** When crew count reaches the plan's max (e.g. 5 crew on 1-5 plan), show a warning to upgrade. Display in Vessel Settings (Vessel Plans) and Crew Management.
 
 6. **Payment options:**
-   - **Apple devices:** Subscriptions must use Apple In-App Purchase and Apple's App Store Server API. Do not route Apple-device subscription purchases through Paddle.
-   - **Android devices:** Subscriptions must use Google Play Billing and the Google Play Developer API. Do not route Android subscription purchases through Paddle.
-   - **Nautical Ops web app:** Reflect the vessel subscription purchased through Apple or Google, but do not process subscription payments on the web.
-   - **Fleet HQ website only:** Paddle is reserved exclusively for Fleet HQ. Nautical Ops must not call Paddle checkout or Paddle webhooks.
+   - **Approved pivot, 1 October 2026:** Nautical Ops is moving to a mobile-first web app. Paddle is the sole intended payment provider for Nautical Ops and the future yacht-management interface. Do not create further iOS/Android builds or add StoreKit/Google purchase flows.
+   - The owner confirmed all Apple subscriptions are sandbox tests. Preserve accounts, vessels, records and Sea Miles; archive test billing metadata recoverably at cutover, not by deleting user data.
+   - The 24 prices above are approved. Apply the period calculations internally but **never display percentage-discount labels**. Show the full billing-period amount.
+   - Enable checkout only after Paddle price IDs, USD amounts, intervals, tax treatment, checkout domain and signed webhook delivery have been verified. The local implementation is not yet deployed or enabled.
 
-7. **Create Vessel flow (approved 30 September 2026):** After vessel creation, do NOT show invite code. Primary CTA: "Go to Home." Home shows a welcome board with Continue and See Plans; See Plans opens Vessel Plans. Active subscribers can view all plan choices, choose a different crew tier/billing period and confirm through Apple. Only a server-verified purchase changes entitlement. Use live StoreKit prices and disable unavailable products; do not infer immediate activation of a deferred plan change.
+7. **Create Vessel flow:** After vessel creation, do NOT show invite code. Primary CTA: "Go to Home." Home shows a welcome board with Continue and See Plans; See Plans opens Vessel Plans. Only a server-verified Paddle subscription changes entitlement. Keep checkout disabled for unverified products; do not infer activation from a browser success callback. Upgrade/downgrade timing must be confirmed before enabling plan changes.
 
 8. **Failed renewal and grace period:** This applies only to a vessel that previously had a paid subscription and whose renewal payment was not received.
    - Continue normal access during a **16-day renewal grace period**.
@@ -40,11 +40,11 @@
    - Captain/MOV remains signed in but can access only Vessel Plans until payment is confirmed.
    - Once payment is confirmed, Captain/MOV returns to Home automatically and Crew/HOD can sign in normally.
    - Do not delete vessel data or remove vessel members because of non-payment.
-   - Explicit departure recovery (approved 30 September 2026): Login offers Leave Vessel with credential verification and confirmation for Crew/HOD. They may voluntarily leave an unpaid vessel using the existing server-verified departure flow, retaining My Sea Miles and moving to a private Crew account. All payment-restricted Captain/MOV users go to See Plans, with payment/reactivation and Apple subscription management/cancellation options, not Leave Vessel. Captain/MOV credentials entered into login departure recovery must follow the same payment routing without invoking departure. Cancellation alone does not restore access or remove members. The last Captain/MOV safeguard remains unchanged for normal in-app departures. Recovery does not unlock unpaid vessel records or bypass the device limit.
+   - Explicit departure recovery: Leave Vessel belongs on the payment-lockout screen, **not the ordinary login screen**, per the subsequent approved correction. Crew/HOD may voluntarily leave an unpaid vessel through the existing server-verified departure flow, retaining My Sea Miles and moving to a private Crew account. Payment-restricted Captain/MOV users go to See Plans with payment/reactivation and subscription management options, not Leave Vessel. Cancellation alone does not restore access or remove members. The last Captain/MOV safeguard remains unchanged for normal in-app departures. Recovery does not unlock unpaid vessel records or bypass the device limit.
    - Provider webhooks must update subscription state in the background for existing and future subscribers.
 
 9. **Account device limit:** Every account may be registered on a maximum of **two active devices total**, across iOS, Android, and web. This is an account limit, not two devices per platform.
 
 ## Scope
 
-Applies to: VesselSettingsScreen, CreateVesselScreen, CrewManagementScreen, subscription service, Apple IAP/App Store Server functions, Google Play Billing/Developer API functions, and Nautical Ops web access checks. Paddle is outside this app's scope.
+Applies to Vessel Settings, vessel creation, Crew Management, the subscription service, Paddle billing functions and web access checks. Native billing code remains legacy until the web replacement and recoverable cutover are verified; retaining old migrations does not authorize new native purchases.

@@ -5,9 +5,8 @@
  *   - Discharge Log
  */
 
-import * as FileSystem from 'expo-file-system/legacy';
+import { sharePdfFile } from './sharePdfFile';
 import { printStandardPdf } from './standardPdf';
-import * as Sharing from 'expo-sharing';
 import { GeneralWasteLog, FuelLog, PumpOutLog, DischargeType } from '../types';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -49,15 +48,7 @@ function baseStyles(accentColor = '#1E3A8A'): string {
 
 async function printAndShare(html: string, filename: string, title: string): Promise<void> {
   const { uri } = await printStandardPdf({ html, title });
-  const newUri = `${FileSystem.cacheDirectory}${filename}`;
-  await FileSystem.moveAsync({ from: uri, to: newUri });
-  const canShare = await Sharing.isAvailableAsync();
-  if (canShare) {
-    await Sharing.shareAsync(newUri, {
-      mimeType: 'application/pdf',
-      dialogTitle: `Save ${filename}`,
-    });
-  }
+  await sharePdfFile(uri, filename);
 }
 
 // ─── General Waste Log ────────────────────────────────────────────────────────

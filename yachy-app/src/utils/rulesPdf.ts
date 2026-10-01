@@ -2,9 +2,8 @@
  * PDF export for Rules On-Board.
  */
 
-import * as FileSystem from 'expo-file-system/legacy';
+import { sharePdfFile } from './sharePdfFile';
 import { printStandardPdf } from './standardPdf';
-import * as Sharing from 'expo-sharing';
 
 export interface RulesPdfDocument {
   title: string;
@@ -65,15 +64,7 @@ export async function generateRulesDocumentsPdf(
   if (documents.length === 0) throw new Error('Select at least one Rules board to export.');
   const html = buildRulesPdfHtml(documents);
   const { uri } = await printStandardPdf({ html, title: 'Rules On-Board' });
-  const newUri = `${FileSystem.cacheDirectory}${filename}`;
-  await FileSystem.moveAsync({ from: uri, to: newUri });
-  const canShare = await Sharing.isAvailableAsync();
-  if (canShare) {
-    await Sharing.shareAsync(newUri, {
-      mimeType: 'application/pdf',
-      dialogTitle: `Save ${filename}`,
-    });
-  }
+  await sharePdfFile(uri, filename);
 }
 
 export async function generateRulesPdf(

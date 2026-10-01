@@ -2,9 +2,8 @@
  * Build HTML for selected shipyard jobs and export to PDF via expo-print + share.
  */
 
-import * as FileSystem from 'expo-file-system/legacy';
+import { sharePdfFile } from './sharePdfFile';
 import { printStandardPdf } from './standardPdf';
-import * as Share from 'expo-sharing';
 import { YardPeriodJob } from '../types';
 
 const deptLabel = (d: string) => (d ?? '').charAt(0) + (d ?? '').slice(1).toLowerCase();
@@ -157,13 +156,5 @@ export async function exportYardJobsToPdf(jobs: YardPeriodJob[]): Promise<void> 
   const html = buildYardJobsHtml(jobs, 'Shipyard List');
   const { uri } = await printStandardPdf({ html, title: 'Shipyard List' });
   const filename = getYardJobsPdfFilename(jobs);
-  const newUri = `${FileSystem.cacheDirectory}${filename}`;
-  await FileSystem.moveAsync({ from: uri, to: newUri });
-  const canShare = await Share.isAvailableAsync();
-  if (canShare) {
-    await Share.shareAsync(newUri, {
-      mimeType: 'application/pdf',
-      dialogTitle: 'Save Shipyard List PDF',
-    });
-  }
+  await sharePdfFile(uri, filename, 'Save Shipyard List PDF');
 }

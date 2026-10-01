@@ -2,9 +2,8 @@
  * Build HTML for selected uniform labels and export to PDF via
  * expo-print + share, matching inventoryPdf.ts's visual structure.
  */
-import * as FileSystem from 'expo-file-system/legacy';
+import { sharePdfFile } from './sharePdfFile';
 import { printStandardPdf } from './standardPdf';
-import * as Share from 'expo-sharing';
 import { Uniform } from '../services/uniforms';
 
 const deptLabel = (d: string) => (d ?? '').charAt(0) + (d ?? '').slice(1).toLowerCase();
@@ -97,12 +96,5 @@ export async function exportUniformsToPdf(items: Uniform[]): Promise<void> {
   const html = buildUniformsHtml(items, 'Uniforms');
   const { uri } = await printStandardPdf({ html, title: 'Uniforms' });
   const filename = getUniformsPdfFilename(items);
-  const newUri = `${FileSystem.cacheDirectory}${filename}`;
-  await FileSystem.moveAsync({ from: uri, to: newUri });
-  const canShare = await Share.isAvailableAsync();
-  if (canShare)
-    await Share.shareAsync(newUri, {
-      mimeType: 'application/pdf',
-      dialogTitle: 'Save Uniforms PDF',
-    });
+  await sharePdfFile(uri, filename, 'Save Uniforms PDF');
 }

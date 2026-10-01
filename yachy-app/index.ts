@@ -5,7 +5,9 @@ import { registerRootComponent } from 'expo';
 
 import App from './App';
 import { installWebAlerts } from './src/utils/installWebAlerts';
+import { completeWebAuthSession } from './src/utils/completeWebAuthSession';
 
+completeWebAuthSession();
 installWebAlerts();
 
 // registerRootComponent calls AppRegistry.registerComponent('main', () => App);

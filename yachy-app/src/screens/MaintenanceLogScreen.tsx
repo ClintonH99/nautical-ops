@@ -22,8 +22,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { printStandardPdf } from '../utils/standardPdf';
-import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system/legacy';
+import { sharePdfFile } from '../utils/sharePdfFile';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -272,22 +271,12 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
 
       const { uri } = await printStandardPdf({ html, title: 'Maintenance Log' });
 
-      // Rename file with vessel name, date, and "Maintenance Log"
-      const newUri = `${FileSystem.cacheDirectory}${filename}`;
-      await FileSystem.moveAsync({
-        from: uri,
-        to: newUri,
-      });
-
-      await Sharing.shareAsync(newUri, {
-        mimeType: 'application/pdf',
-        dialogTitle: 'Save Maintenance Log PDF',
-      });
+      await sharePdfFile(uri, filename, 'Save Maintenance Log PDF');
     } catch (e) {
       console.error('Export PDF error:', e);
       Alert.alert(
         'Export failed',
-        'Could not generate PDF. If you added expo-print or expo-sharing recently, try: npx expo start --clear and rebuild the app (e.g. re-open in Expo Go or create a new development build).'
+        'Could not generate PDF. Please check your connection and try again.'
       );
     } finally {
       setExportingPdf(false);

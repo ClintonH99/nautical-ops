@@ -3,10 +3,9 @@
  * "Hours of Work and Rest" form layout.
  */
 
-import * as FileSystem from 'expo-file-system/legacy';
+import { sharePdfFile } from './sharePdfFile';
 import { getPdfLogoBase64, printStandardPdf } from './standardPdf';
-import * as Sharing from 'expo-sharing';
-import { Asset } from 'expo-asset';
+import { readPdfAsset } from './pdfAsset';
 import { PdfMonthData } from '../services/restEntries';
 import { UserSignature } from '../services/signatures';
 
@@ -28,11 +27,7 @@ function formatDateDisplay(dateStr: string): string {
 async function getAlexBrushFontBase64(): Promise<string> {
   // Expo Asset resolves bundled font modules through Metro's numeric require ID.
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const asset = Asset.fromModule(require('../../assets/fonts/AlexBrush-Regular.ttf'));
-  await asset.downloadAsync();
-  return FileSystem.readAsStringAsync(asset.localUri!, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
+  return readPdfAsset(require('../../assets/fonts/AlexBrush-Regular.ttf'));
 }
 
 function buildSignatureBlock(sig: UserSignature | null | undefined, label: string): string {
@@ -171,12 +166,5 @@ export async function generateHoursOfRestPdf(data: PdfMonthData, filename: strin
     orientation: 'landscape',
     headerInContent: true,
   });
-  const newUri = FileSystem.cacheDirectory + filename;
-  await FileSystem.moveAsync({ from: uri, to: newUri });
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(newUri, {
-      mimeType: 'application/pdf',
-      dialogTitle: 'Save ' + filename,
-    });
-  }
+  await sharePdfFile(uri, filename);
 }

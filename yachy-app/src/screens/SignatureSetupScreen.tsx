@@ -22,7 +22,7 @@ import {
   Platform,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import SignatureCanvas, { SignatureViewRef } from 'react-native-signature-canvas';
+import SignatureCanvas, { SignatureViewRef } from '../components/SignaturePad';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';

@@ -19,12 +19,16 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
           cache-dependency-path: yachy-app/package-lock.json
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Web server dependency and security checks
+        working-directory: .
+        run: npm ci && npm test && npm audit --audit-level=high
 
       - name: Lint (QC Gate 1)
         run: npm run lint
@@ -41,12 +45,13 @@ jobs:
           export PGLITE_MODULE_PATH="$RUNNER_TEMP/nautical-db-tests/node_modules/@electric-sql/pglite"
           node supabase/tests/run_watch_publication_test.cjs
           node supabase/tests/run_vessel_departure_test.cjs
+          node supabase/tests/run_paddle_billing_test.cjs
 
       - name: Expo dependency check (QC Gate 3)
         run: npx expo install --check
 
-      - name: Expo export / build validation (QC Gate 4)
-        run: npx expo export --platform ios
+      - name: Web production build validation (QC Gate 4)
+        run: npm run web:build
 
       - name: Dependency audit (QC Gate 5)
         run: npm audit --audit-level=high

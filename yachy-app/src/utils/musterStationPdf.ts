@@ -2,9 +2,8 @@
  * PDF export for Muster Station & Duties
  */
 
-import * as FileSystem from 'expo-file-system/legacy';
+import { sharePdfFile } from './sharePdfFile';
 import { printStandardPdf } from './standardPdf';
-import * as Sharing from 'expo-sharing';
 import { getMusterStationLocations, type MusterStationData } from '../services/musterStations';
 
 function escapeHtml(s: string): string {
@@ -89,14 +88,7 @@ function buildStation(data: MusterStationData, heading?: string): string {
 
 async function shareHtmlAsPdf(html: string, filename: string): Promise<void> {
   const { uri } = await printStandardPdf({ html, title: 'Muster Station & Duties' });
-  const newUri = FileSystem.cacheDirectory + filename;
-  await FileSystem.moveAsync({ from: uri, to: newUri });
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(newUri, {
-      mimeType: 'application/pdf',
-      dialogTitle: 'Save ' + filename,
-    });
-  }
+  await sharePdfFile(uri, filename);
 }
 
 /** One muster station per document. */

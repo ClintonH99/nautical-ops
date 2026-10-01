@@ -54,7 +54,7 @@ jest.mock('../../src/services/vessel', () => ({
 jest.mock('../../src/utils/standardPdf', () => ({
   printStandardPdf: jest.fn(async () => ({ uri: 'file:///report.pdf' })),
 }));
-jest.mock('expo-sharing', () => ({ shareAsync: jest.fn(async () => {}) }));
+jest.mock('expo-sharing', () => ({ shareAsync: jest.fn(async () => {}), isAvailableAsync: jest.fn().mockResolvedValue(true) }));
 jest.mock('expo-file-system/legacy', () => ({
   cacheDirectory: 'file:///cache/',
   moveAsync: jest.fn(async () => {}),

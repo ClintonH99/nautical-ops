@@ -10,8 +10,7 @@ import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { printStandardPdf } from '../utils/standardPdf';
-import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system/legacy';
+import { sharePdfFile } from '../utils/sharePdfFile';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -145,12 +144,7 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
         schedules.length === 1
           ? `Watch_Schedule_${getWatchScheduleDate(schedules[0])}.pdf`
           : 'Watch_Schedules.pdf';
-      const newUri = `${FileSystem.cacheDirectory}${filename}`;
-      await FileSystem.moveAsync({ from: uri, to: newUri });
-      await Sharing.shareAsync(newUri, {
-        mimeType: 'application/pdf',
-        dialogTitle: 'Export Watch Schedules as PDF',
-      });
+      await sharePdfFile(uri, filename, 'Export Watch Schedules as PDF');
       setExportMode(false);
       setSelectedIds(new Set());
     } catch (e) {

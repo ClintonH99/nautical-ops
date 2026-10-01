@@ -67,7 +67,7 @@ a{color:inherit;text-decoration:none;}
 .included-text strong{display:block;font-size:14px;font-weight:600;color:var(--navy);margin-bottom:2px;}
 .included-text span{font-size:13px;color:var(--muted);}
 
-/* Apple disclosure */
+/* Billing disclosure */
 .disclosure-wrap{max-width:720px;margin:0 auto;padding:48px 80px;text-align:center;}
 .disclosure-text{font-size:13px;color:var(--muted);line-height:1.75;}
 .disclosure-text strong{color:var(--text);}
@@ -148,7 +148,7 @@ footer{background:var(--navy);border-top:1px solid rgba(255,255,255,.08);padding
       </div>
       <div class="price-card" id="card-11-15">
         <span class="crew-label">11–15 Crew Members</span>
-        <div class="price-amount" id="price-11-15">$119.00</div>
+        <div class="price-amount" id="price-11-15">$119.99</div>
         <div class="price-period" id="period-11-15">per month</div>
       </div>
     </div>
@@ -222,19 +222,18 @@ footer{background:var(--navy);border-top:1px solid rgba(255,255,255,.08);padding
 
 <div class="disclosure-wrap">
   <p class="disclosure-text">
-    <strong>Subscription information:</strong> Subscriptions are purchased and managed through the Apple App Store. Payment is charged to your Apple ID account at confirmation of purchase. Subscriptions automatically renew unless cancelled at least 24 hours before the end of the current period. You can manage and cancel subscriptions in your App Store account settings at any time. Free trial periods, if offered, are provided by Apple and governed by Apple's terms. Any unused portion of a free trial will be forfeited when you purchase a subscription. Prices shown are in USD and may vary by region. For refunds, please contact Apple directly via <a href="https://reportaproblem.apple.com" target="_blank" rel="noopener">reportaproblem.apple.com</a>.
+    <strong>Subscription information:</strong> Prices shown are in USD for the full selected billing period. Web payments through Paddle are being configured and are not yet available. The final amount, any applicable tax and renewal terms will be shown at checkout before you confirm a purchase.
   </p>
 </div>
 
 
 <section class="cta-wrap">
-  <h2 class="cta-title">Start your <em>free</em> 30-day trial.</h2>
-  <p class="cta-sub">Download Nautical Ops on iOS and get your whole crew on board. No credit card required.</p>
-  <a href="https://apps.apple.com/app/nautical-ops/id6760950524" class="btn-white">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-    Download on the App Store
+  <h2 class="cta-title">Your vessel. One <em>workspace.</em></h2>
+  <p class="cta-sub">Open Nautical Ops in your browser.</p>
+  <a href="/login" class="btn-white">
+    Open Nautical Ops
   </a>
-  <p class="cta-note">iOS 16+ required · Android coming soon</p>
+  <p class="cta-note">Mobile, tablet and desktop</p>
 </section>
 
 <footer>
@@ -251,10 +250,10 @@ footer{background:var(--navy);border-top:1px solid rgba(255,255,255,.08);padding
 
 <script>
 const data = {
-  monthly:  {a:'$79.99',b:'$89.99',c:'$119.00',d:'$149.99',e:'$199.99',f:'$249.99',period:'per month'},
-  '3months':{a:'$229.00',b:'$249.00',c:'$339.00',d:'$424.99',e:'$569.99',f:'$709.99',period:'per 3 months'},
-  '6months':{a:'$439.00',b:'$494.99',c:'$659.00',d:'$829.00',e:null,f:null,period:'per 6 months'},
-  yearly:   {a:'$859.00',b:'$969.00',c:null,d:null,e:null,f:null,period:'per year'}
+  monthly:  {a:'$79.99',b:'$89.99',c:'$119.99',d:'$149.99',e:'$199.99',f:'$249.99',period:'per month'},
+  '3months':{a:'$227.97',b:'$256.47',c:'$341.97',d:'$427.47',e:'$569.97',f:'$712.47',period:'per 3 months'},
+  '6months':{a:'$441.54',b:'$496.74',c:'$662.34',d:'$827.94',e:'$1103.94',f:'$1379.94',period:'per 6 months'},
+  yearly:   {a:'$863.89',b:'$971.89',c:'$1295.89',d:'$1619.89',e:'$2159.89',f:'$2699.89',period:'per year'}
 };
 const ids=[['1-5','a'],['6-10','b'],['11-15','c'],['16-25','d'],['26-40','e'],['40plus','f']];
 

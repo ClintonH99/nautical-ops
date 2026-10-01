@@ -1,7 +1,6 @@
-import * as FileSystem from 'expo-file-system/legacy';
+import { sharePdfFile } from './sharePdfFile';
 import { printStandardPdf } from './standardPdf';
 import { pdfPrintOptions } from './pdfLayout';
-import * as Sharing from 'expo-sharing';
 import type { SeaMileEntry } from '../types';
 
 const NAVY = '#1E3A8A';
@@ -245,17 +244,5 @@ export async function generateSeaMilesPdf(
   });
   const today = new Date().toISOString().slice(0, 10);
   const filename = `Personal_Sea_Service_Record_${today}.pdf`;
-  const destination = `${FileSystem.cacheDirectory}${filename}`;
-  const existingFile = await FileSystem.getInfoAsync(destination);
-  if (existingFile.exists) {
-    await FileSystem.deleteAsync(destination, { idempotent: true });
-  }
-  await FileSystem.moveAsync({ from: uri, to: destination });
-  if (!(await Sharing.isAvailableAsync())) {
-    throw new Error('PDF sharing is not available on this device.');
-  }
-  await Sharing.shareAsync(destination, {
-    mimeType: 'application/pdf',
-    dialogTitle: `Save ${filename}`,
-  });
+  await sharePdfFile(uri, filename);
 }

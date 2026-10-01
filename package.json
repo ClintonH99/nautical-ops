@@ -1,0 +1,14 @@
+{
+  "name": "nautical-ops-web-server",
+  "private": true,
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "test": "node --test server/*.test.mjs"
+  },
+  "dependencies": {
+    "@sparticuz/chromium": "153.0.0",
+    "puppeteer-core": "25.12.0"
+  }
+}

@@ -10,13 +10,14 @@
  * same reasoning as the sole-Captain block on switching vessels.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { withBrowserCors } from '../_shared/browserCors.ts';
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 );
 
-Deno.serve(async (req) => {
+Deno.serve(withBrowserCors(async (req) => {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
@@ -87,4 +88,4 @@ Deno.serve(async (req) => {
       headers: { 'Content-Type': 'application/json' },
     });
   }
-});
+}));

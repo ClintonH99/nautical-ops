@@ -1,5 +1,12 @@
 {
-  "installCommand": "cd yachy-app && npm install",
+  "installCommand": "npm ci && cd yachy-app && npm ci",
+  "functions": {
+    "api/export-pdf.mjs": {
+      "maxDuration": 60,
+      "memory": 2048,
+      "includeFiles": "node_modules/@sparticuz/chromium/bin/**"
+    }
+  },
   "buildCommand": "cd yachy-app && npm run vercel-build",
   "outputDirectory": "yachy-app/dist",
   "routes": [

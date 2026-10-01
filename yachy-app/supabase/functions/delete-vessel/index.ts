@@ -13,6 +13,7 @@
  * invite code.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { withBrowserCors } from '../_shared/browserCors.ts';
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -27,7 +28,7 @@ async function cleanupStorage(bucket: string, vesselId: string) {
   }
 }
 
-Deno.serve(async (req) => {
+Deno.serve(withBrowserCors(async (req) => {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
@@ -95,4 +96,4 @@ Deno.serve(async (req) => {
       headers: { 'Content-Type': 'application/json' },
     });
   }
-});
+}));
