@@ -28,6 +28,8 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import maintenanceLogsService from '../services/maintenanceLogs';
+import { canManageMaintenanceNotifications } from '../services/maintenanceNotifications';
+import { MaintenanceNotificationRecipients } from '../components/MaintenanceNotificationRecipients';
 import vesselService from '../services/vessel';
 import { MaintenanceLog } from '../types';
 import {
@@ -349,6 +351,9 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
           )}
         </View>
       </View>
+      {canManageMaintenanceNotifications(user?.role) && (
+        <MaintenanceNotificationRecipients key={vesselId} vesselId={vesselId} />
+      )}
       <View style={styles.filterRow}>
         <LabeledDropdown
           label="Equipment"

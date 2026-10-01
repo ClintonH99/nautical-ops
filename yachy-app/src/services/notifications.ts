@@ -101,7 +101,7 @@ async function saveLegacyPushToken(userId: string, token: string): Promise<void>
 
 export async function savePushToken(userId: string, token: string): Promise<void> {
   const fingerprint = await getCurrentDeviceFingerprint();
-  const { error } = await supabase.rpc('set_current_device_push_token', {
+  const { data: saved, error } = await supabase.rpc('set_current_device_push_token', {
     p_device_fingerprint: fingerprint,
     p_expo_push_token: token,
   });
@@ -116,20 +116,30 @@ export async function savePushToken(userId: string, token: string): Promise<void
     throw error;
   }
 
-  // Transitional fallback for the currently deployed notification function.
-  // The per-device row is authoritative once the new function is active.
-  try {
-    await saveLegacyPushToken(userId, token);
-  } catch (error) {
-    if (__DEV__) console.warn('[Notifications] Legacy token sync failed:', error);
-  }
+  // A refresh must never undo an explicit device opt-out, including when
+  // the switch is turned off while token registration is in flight.
+  if (saved === false) return;
+
+  // The RPC also maintains the legacy token inside the same device lock.
+  // A separate write here would race with the user's OFF action.
+}
+
+/** Only the user's explicit ON action may clear a persisted device opt-out. */
+export async function enablePushForCurrentDevice(userId: string, token: string): Promise<void> {
+  const fingerprint = await getCurrentDeviceFingerprint();
+  const { error } = await supabase.rpc('enable_current_device_push', {
+    p_device_fingerprint: fingerprint,
+    p_expo_push_token: token,
+  });
+  if (error) throw error;
+  // Both the preference and token are committed atomically by the RPC.
 }
 
 export async function clearPushToken(userId: string): Promise<void> {
   const fingerprint = await getCurrentDeviceFingerprint();
   const { data: currentDevice, error: lookupError } = await supabase
     .from('user_devices')
-    .select('expo_push_token')
+    .select('expo_push_token, push_enabled')
     .eq('user_id', userId)
     .eq('device_fingerprint', fingerprint)
     .is('revoked_at', null)
@@ -166,13 +176,13 @@ export async function isPushEnabledForCurrentDevice(userId: string): Promise<boo
   const fingerprint = await getCurrentDeviceFingerprint();
   const { data, error } = await supabase
     .from('user_devices')
-    .select('expo_push_token')
+    .select('expo_push_token, push_enabled')
     .eq('user_id', userId)
     .eq('device_fingerprint', fingerprint)
     .is('revoked_at', null)
     .maybeSingle();
 
-  if (!error) return !!data?.expo_push_token;
+  if (!error) return data?.push_enabled !== false && !!data?.expo_push_token;
   if (!isMissingDevicePushStorage(error)) throw error;
 
   const { data: legacy, error: legacyError } = await supabase
@@ -187,6 +197,16 @@ export async function isPushEnabledForCurrentDevice(userId: string): Promise<boo
 /** Refresh an already-approved token without showing an OS permission prompt. */
 export async function syncPushTokenForCurrentDevice(userId: string): Promise<void> {
   if (Platform.OS === 'web' || !Device.isDevice) return;
+  const fingerprint = await getCurrentDeviceFingerprint();
+  const { data: device, error } = await supabase
+    .from('user_devices')
+    .select('push_enabled')
+    .eq('user_id', userId)
+    .eq('device_fingerprint', fingerprint)
+    .is('revoked_at', null)
+    .maybeSingle();
+  // Fail closed if the saved preference cannot be read.
+  if (error || !device || device.push_enabled === false) return;
   const { status } = await Notifications.getPermissionsAsync();
   if (status !== 'granted') return;
   const token = await getExpoPushToken();
@@ -219,11 +239,13 @@ export async function saveNotificationPreference(
   key: string,
   enabled: boolean
 ): Promise<void> {
-  const { data: current } = await supabase
+  const { data: current, error: readError } = await supabase
     .from('users')
     .select('notification_preferences')
     .eq('id', userId)
     .single();
+
+  if (readError) throw readError;
 
   const prefs = (current?.notification_preferences ?? {}) as Record<string, boolean>;
   const updated = { ...prefs, [key]: enabled };

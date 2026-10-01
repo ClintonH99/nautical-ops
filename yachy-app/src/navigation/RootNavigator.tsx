@@ -25,6 +25,7 @@ import {
 import { PostHogProvider } from 'posthog-react-native';
 import { posthog } from '../config/posthog';
 import { createWebLinkingConfig } from './webLinking';
+import { VesselAccessScreen } from '../screens/VesselAccessScreen';
 import {
   WelcomeScreen,
   LoginScreen,
@@ -125,17 +126,16 @@ import {
   BACKGROUND_THEMES,
   LOGIN_NOTICE_STORAGE_KEY,
   PAYMENT_RESTRICTION_STORAGE_KEY,
+  CREW_RESTRICTION_STORAGE_KEY,
 } from '../store';
 import authService from '../services/auth';
 import { supabase, SUPABASE_AUTH_STORAGE_KEY } from '../services/supabase';
 import { startRealtimeSync, stopRealtimeSync } from '../services/realtimeSync';
-import {
-  evaluateAccountAccess,
-  SUBSCRIPTION_PAYMENT_REQUIRED_MESSAGE,
-} from '../services/accountAccess';
+import { evaluateAccountAccess } from '../services/accountAccess';
 import { DEVICE_LIMIT_MESSAGE } from '../services/deviceAccess';
 import { reconcileAppleSubscription } from '../services/iap';
 import { syncPushTokenForCurrentDevice } from '../services/notifications';
+import { notificationDestination } from '../utils/notificationDestination';
 import { COLORS } from '../constants/theme';
 import { readTransport } from '../services/supabase';
 import { vesselTransitionRoute } from '../utils/access';
@@ -158,6 +158,8 @@ export const RootNavigator = () => {
     setLoading,
     user,
     captainPaymentRequired,
+    crewPaymentRequired,
+    setCrewPaymentRequired,
     setCaptainPaymentRequired,
     setLoginNotice,
   } = useAuthStore();
@@ -168,10 +170,10 @@ export const RootNavigator = () => {
   useEffect(() => {
     const destination = vesselTransitionRoute(previousVesselProfile.current, user);
     previousVesselProfile.current = user;
-    if (destination && navigationRef.isReady()) {
+    if (destination && !captainPaymentRequired && !crewPaymentRequired && navigationRef.isReady()) {
       navigationRef.resetRoot(vesselNavigationState(destination));
     }
-  }, [user, navigationRef]);
+  }, [user, navigationRef, captainPaymentRequired, crewPaymentRequired]);
   const lastHandledNotificationId = useRef<string | null>(null);
   const [bootstrapAttempt, setBootstrapAttempt] = useState(0);
   const [startupError, setStartupError] = useState(false);
@@ -181,11 +183,13 @@ export const RootNavigator = () => {
   // Per ADMIN rule: Crew members never see CaptainWelcome - go straight to MainTabs
   const initialRoute = !isAuthenticated
     ? 'Login'
-    : captainPaymentRequired
-      ? 'VesselPlans'
-      : isCaptain && !hasVessel
-        ? 'CaptainWelcome'
-        : 'MainTabs';
+    : crewPaymentRequired
+      ? 'VesselAccess'
+      : captainPaymentRequired
+        ? 'VesselPlans'
+        : isCaptain && !hasVessel
+          ? 'CaptainWelcome'
+          : 'MainTabs';
   const backgroundTheme = useThemeStore((s) => s.backgroundTheme);
   const themeColors = BACKGROUND_THEMES[backgroundTheme];
 
@@ -222,7 +226,14 @@ export const RootNavigator = () => {
   // Keep this installation's token fresh after login and app resume. This
   // never displays the permission prompt; users still opt in from Settings.
   useEffect(() => {
-    if (!isAuthenticated || !user?.id || captainPaymentRequired || Platform.OS === 'web') return;
+    if (
+      !isAuthenticated ||
+      !user?.id ||
+      captainPaymentRequired ||
+      crewPaymentRequired ||
+      Platform.OS === 'web'
+    )
+      return;
 
     let active = true;
     const syncToken = () => {
@@ -242,39 +253,35 @@ export const RootNavigator = () => {
       clearTimeout(timer);
       appStateSubscription.remove();
     };
-  }, [captainPaymentRequired, isAuthenticated, user?.id]);
+  }, [captainPaymentRequired, crewPaymentRequired, isAuthenticated, user?.id]);
 
   // Notification taps open their related record screen when possible.
   useEffect(() => {
     if (Platform.OS === 'web') return;
 
     const openNotification = (response: Notifications.NotificationResponse | null) => {
-      if (!response || !isAuthenticated || captainPaymentRequired || !navigationRef.isReady()) {
+      if (
+        !response ||
+        !isAuthenticated ||
+        captainPaymentRequired ||
+        crewPaymentRequired ||
+        !navigationRef.isReady()
+      ) {
         return;
       }
 
       const identifier = response.notification.request.identifier;
       if (lastHandledNotificationId.current === identifier) return;
 
-      const data = response.notification.request.content.data as {
-        checklistId?: unknown;
-        crewLeaveId?: unknown;
-      };
-      const checklistId = typeof data?.checklistId === 'string' ? data.checklistId : null;
-      const crewLeaveId = typeof data?.crewLeaveId === 'string' ? data.crewLeaveId : null;
+      const data = response.notification.request.content.data as Record<string, unknown>;
+      const destination = notificationDestination(data || {}, user?.vesselId);
       const navigateFromPush = navigationRef.navigate as unknown as (
         screen: string,
         params?: Record<string, string>
       ) => void;
 
       lastHandledNotificationId.current = identifier;
-      if (crewLeaveId) {
-        navigateFromPush('CrewLeave');
-      } else if (checklistId) {
-        navigateFromPush('ViewPreDepartureChecklist', { checklistId });
-      } else {
-        navigateFromPush('UpcomingTrips');
-      }
+      if (destination) navigateFromPush(destination.screen, destination.params);
       void Notifications.clearLastNotificationResponseAsync();
     };
 
@@ -282,7 +289,7 @@ export const RootNavigator = () => {
     void Notifications.getLastNotificationResponseAsync().then(openNotification);
 
     return () => subscription.remove();
-  }, [captainPaymentRequired, isAuthenticated, navigationRef]);
+  }, [captainPaymentRequired, crewPaymentRequired, isAuthenticated, navigationRef, user?.vesselId]);
 
   const applyAccountAccess = useCallback(
     async (candidate: NonNullable<typeof user>): Promise<boolean> => {
@@ -302,7 +309,10 @@ export const RootNavigator = () => {
           // A connectivity/backend failure must not create a new restriction or
           // clear one that the server already confirmed earlier.
           setUser(candidate);
-          return !useAuthStore.getState().captainPaymentRequired;
+          return (
+            !useAuthStore.getState().captainPaymentRequired &&
+            !useAuthStore.getState().crewPaymentRequired
+          );
         }
 
         if (decision.state === 'device_limit_reached') {
@@ -318,18 +328,15 @@ export const RootNavigator = () => {
         }
 
         if (decision.state === 'crew_payment_required') {
-          setLoginNotice(SUBSCRIPTION_PAYMENT_REQUIRED_MESSAGE);
+          setLoginNotice(null);
           setCaptainPaymentRequired(false);
-          try {
-            await supabase.auth.signOut({ scope: 'local' });
-          } catch {
-            /* best-effort local sign-out */
-          }
-          setUser(null);
+          setUser(candidate);
+          setCrewPaymentRequired(true);
           return false;
         }
 
         if (decision.state === 'captain_payment_required') {
+          setCrewPaymentRequired(false);
           setLoginNotice(null);
           setCaptainPaymentRequired(true);
           setUser(candidate);
@@ -338,6 +345,7 @@ export const RootNavigator = () => {
 
         setLoginNotice(null);
         setCaptainPaymentRequired(false);
+        setCrewPaymentRequired(false);
         setUser(candidate);
         return true;
       })();
@@ -348,7 +356,7 @@ export const RootNavigator = () => {
         if (accessRequest.current?.promise === operation) accessRequest.current = null;
       }
     },
-    [setCaptainPaymentRequired, setLoginNotice, setUser]
+    [setCaptainPaymentRequired, setCrewPaymentRequired, setLoginNotice, setUser]
   );
 
   useEffect(() => {
@@ -361,18 +369,21 @@ export const RootNavigator = () => {
     // is made. This is what makes a cold start feel instant.
     const renderFromCache = async (): Promise<boolean> => {
       try {
-        const [cached, storedAuth, storedNotice, storedPaymentRestriction] = await Promise.all([
-          AsyncStorage.getItem('nautical_ops_cached_user'),
-          AsyncStorage.getItem(SUPABASE_AUTH_STORAGE_KEY),
-          AsyncStorage.getItem(LOGIN_NOTICE_STORAGE_KEY),
-          AsyncStorage.getItem(PAYMENT_RESTRICTION_STORAGE_KEY),
-          loadTheme().catch(() => {
-            /* theme load is non-critical */
-          }),
-        ]);
+        const [cached, storedAuth, storedNotice, storedPaymentRestriction, storedCrewRestriction] =
+          await Promise.all([
+            AsyncStorage.getItem('nautical_ops_cached_user'),
+            AsyncStorage.getItem(SUPABASE_AUTH_STORAGE_KEY),
+            AsyncStorage.getItem(LOGIN_NOTICE_STORAGE_KEY),
+            AsyncStorage.getItem(PAYMENT_RESTRICTION_STORAGE_KEY),
+            AsyncStorage.getItem(CREW_RESTRICTION_STORAGE_KEY),
+            loadTheme().catch(() => {
+              /* theme load is non-critical */
+            }),
+          ]);
 
         if (storedNotice) setLoginNotice(storedNotice);
         if (storedPaymentRestriction === 'true') setCaptainPaymentRequired(true);
+        if (storedCrewRestriction === 'true') setCrewPaymentRequired(true);
 
         let hasUsableLocalSession = false;
         let sessionUserId: string | null = null;
@@ -588,13 +599,16 @@ export const RootNavigator = () => {
       }
     };
 
-    const interval = setInterval(checkAccess, captainPaymentRequired ? 15_000 : 300_000);
+    const interval = setInterval(
+      checkAccess,
+      captainPaymentRequired || crewPaymentRequired ? 15_000 : 300_000
+    );
 
     return () => {
       active = false;
       clearInterval(interval);
     };
-  }, [applyAccountAccess, captainPaymentRequired, isAuthenticated, user?.id]);
+  }, [applyAccountAccess, captainPaymentRequired, crewPaymentRequired, isAuthenticated, user?.id]);
 
   // Existing Apple subscriptions created before server notifications need one
   // verified refresh to link their transaction chain to the vessel. Run it in
@@ -714,7 +728,7 @@ export const RootNavigator = () => {
 
   const webLinking =
     Platform.OS === 'web'
-      ? createWebLinkingConfig(isAuthenticated, captainPaymentRequired)
+      ? createWebLinkingConfig(isAuthenticated, captainPaymentRequired, crewPaymentRequired)
       : undefined;
 
   return (
@@ -740,7 +754,7 @@ export const RootNavigator = () => {
           propsToCapture: ['testID'],
         }}
       >
-        <InventoryAutoSaveSync />
+        {!captainPaymentRequired && !crewPaymentRequired && <InventoryAutoSaveSync />}
         <Stack.Navigator
           key={isAuthenticated ? `main-${initialRoute}` : 'auth'}
           initialRouteName={initialRoute}
@@ -814,6 +828,12 @@ export const RootNavigator = () => {
                 options={{ headerShown: false }}
               />
             </>
+          ) : crewPaymentRequired ? (
+            <Stack.Screen
+              name="VesselAccess"
+              component={VesselAccessScreen}
+              options={{ headerShown: false }}
+            />
           ) : captainPaymentRequired ? (
             <>
               <Stack.Screen

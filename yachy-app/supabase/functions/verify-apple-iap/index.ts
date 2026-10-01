@@ -18,6 +18,8 @@
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { SignJWT, importPKCS8, decodeJwt } from 'npm:jose@5';
+import { fetchCurrentAppleStatus } from '../_shared/appleStatus.ts';
+import { appleRenewalStatus } from '../_shared/appleRenewal.ts';
 
 const BUNDLE_ID = 'com.nauticalops.app';
 
@@ -116,8 +118,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { transactionId, vesselId } = await req.json();
-    if (!transactionId || !vesselId) {
+    const {
+      transactionId: requestedTransactionId,
+      vesselId,
+      refreshOnly = false,
+    } = await req.json();
+    if ((!requestedTransactionId && !refreshOnly) || !vesselId) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
@@ -142,6 +148,27 @@ Deno.serve(async (req) => {
       );
     }
 
+    let transactionId = requestedTransactionId;
+    let existingSubscription: any = null;
+    if (refreshOnly) {
+      // Never accept a transaction ID from the refresh caller. Only refresh the
+      // chain already bound to their vessel, after checking Captain/MOV above.
+      const { data, error } = await supabase
+        .from('vessel_subscriptions')
+        .select(
+          'apple_latest_transaction_id, apple_original_transaction_id, grace_period_end, billing_retry_started_at'
+        )
+        .eq('vessel_id', vesselId)
+        .eq('payment_provider', 'apple')
+        .maybeSingle();
+      if (error) throw error;
+      existingSubscription = data;
+      transactionId = data?.apple_latest_transaction_id ?? data?.apple_original_transaction_id;
+      if (!transactionId)
+        return new Response(JSON.stringify({ success: true, refreshed: false }), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+    }
     const jwt = await generateAppleJWT();
     const appleResult = await fetchAppleTransaction(transactionId, jwt);
     if (!appleResult) {
@@ -154,7 +181,21 @@ Deno.serve(async (req) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
-    const payload = decodeJwt(appleResult.signedTransactionInfo) as Record<string, unknown>;
+    const purchasedPayload = decodeJwt(appleResult.signedTransactionInfo) as Record<
+      string,
+      unknown
+    >;
+    if (purchasedPayload.bundleId !== BUNDLE_ID || !purchasedPayload.originalTransactionId) {
+      throw new Error('Invalid Apple subscription identity');
+    }
+    const current = await fetchCurrentAppleStatus(
+      transactionId,
+      purchasedPayload.originalTransactionId as string,
+      jwt,
+      BUNDLE_ID
+    );
+    const payload = current.transaction;
+    const confirmedStatus = appleRenewalStatus(current.status, current.renewal?.autoRenewStatus);
     if (payload.bundleId !== BUNDLE_ID) {
       console.error('verify-apple-iap: bundle ID mismatch', payload.bundleId);
       return new Response(JSON.stringify({ error: 'Transaction belongs to a different app' }), {
@@ -189,7 +230,7 @@ Deno.serve(async (req) => {
     // Restore can surface historical transactions in the same subscription
     // chain. Never let an older expired transaction overwrite a newer active
     // period; background App Store notifications own expiration updates.
-    if (!isCurrent) {
+    if (!isCurrent && !refreshOnly) {
       return new Response(
         JSON.stringify({ error: 'This Apple subscription is no longer active' }),
         { status: 409, headers: { 'Content-Type': 'application/json' } }
@@ -215,7 +256,7 @@ Deno.serve(async (req) => {
     // used by already-released app versions.
     let pendingPurchaseId: string | null = null;
     if (!existingTransaction) {
-      const appAccountToken = payload.appAccountToken as string | undefined;
+      const appAccountToken = purchasedPayload.appAccountToken as string | undefined;
       if (!appAccountToken) {
         return new Response(
           JSON.stringify({ error: 'Purchase is missing its secure account link' }),
@@ -251,13 +292,22 @@ Deno.serve(async (req) => {
       p_vessel_id: vesselId,
       p_plan_tier: plan.planTierId,
       p_billing_period: plan.billingPeriodId,
-      p_status: 'active',
+      p_status: confirmedStatus,
       p_original_transaction_id: originalTransactionId,
       p_latest_transaction_id: latestTransactionId,
       p_current_period_start: periodStart,
       p_current_period_end: periodEnd,
-      p_grace_period_end: null,
-      p_billing_retry_started_at: null,
+      p_grace_period_end:
+        confirmedStatus === 'past_due'
+          ? Number(current.renewal?.gracePeriodExpiresDate) > 0
+            ? new Date(Number(current.renewal?.gracePeriodExpiresDate)).toISOString()
+            : (existingSubscription?.grace_period_end ??
+              new Date(Date.now() + 16 * 86400000).toISOString())
+          : null,
+      p_billing_retry_started_at:
+        confirmedStatus === 'past_due'
+          ? (existingSubscription?.billing_retry_started_at ?? new Date().toISOString())
+          : null,
       p_verified_at: new Date().toISOString(),
       p_pending_purchase_id: pendingPurchaseId,
       p_pending_user_id: pendingPurchaseId ? user.id : null,

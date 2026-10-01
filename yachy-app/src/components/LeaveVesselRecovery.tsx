@@ -61,10 +61,6 @@ export function LeaveVesselRecovery({
     <View style={styles.panel}>
       {!expanded ? (
         <>
-          <Text style={[styles.body, { color: colors.textSecondary }]}>
-            Crew/HOD with an inactive vessel subscription can leave and continue with their own
-            account. Captain/MOV accounts must sign in to manage the subscription.
-          </Text>
           <Button
             title="Leave Vessel"
             variant="outline"
@@ -72,6 +68,14 @@ export function LeaveVesselRecovery({
             disabled={disabled}
             onPress={() => setExpanded(true)}
           />
+          <Text
+            style={[
+              styles.body,
+              { color: colors.textSecondary, textAlign: 'center', marginTop: SPACING.sm },
+            ]}
+          >
+            You’ll be asked to confirm before leaving.
+          </Text>
         </>
       ) : (
         <>

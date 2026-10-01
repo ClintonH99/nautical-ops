@@ -33,6 +33,18 @@ export interface VesselSubscriptionAccess {
 
 export const SUBSCRIPTION_GRACE_DAYS = 16;
 
+/** Captain-only server refresh; does not purchase, restore or finish transactions. */
+export async function refreshAppleSubscriptionStatus(vesselId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.functions.invoke('verify-apple-iap', {
+      body: { vesselId, refreshOnly: true },
+    });
+    return !error && data?.success === true;
+  } catch {
+    return false;
+  }
+}
+
 const mapSubscription = (data: any): VesselSubscription => ({
   id: data.id,
   vesselId: data.vessel_id,

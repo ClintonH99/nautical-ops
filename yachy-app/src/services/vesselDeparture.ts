@@ -89,6 +89,7 @@ export async function leaveVesselForAccount(credentials?: LoginCredentials) {
     store.setLoginNotice(null);
     store.setCaptainPaymentRequired(false);
     store.setUser(fresh);
+    store.setCrewPaymentRequired(false);
     completed = true;
     return fresh;
   } finally {

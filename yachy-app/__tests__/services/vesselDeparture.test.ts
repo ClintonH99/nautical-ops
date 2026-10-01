@@ -17,6 +17,7 @@ const mockStore = {
   setUser: jest.fn(),
   setLoginNotice: jest.fn(),
   setCaptainPaymentRequired: jest.fn(),
+  setCrewPaymentRequired: jest.fn(),
 };
 jest.mock('../../src/store', () => ({ useAuthStore: { getState: () => mockStore } }));
 jest.mock('../../src/services/auth', () => ({

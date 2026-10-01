@@ -4,8 +4,10 @@ import { act, fireEvent, render } from '@testing-library/react-native';
 import { MaintenanceLogScreen } from '../../src/screens/MaintenanceLogScreen';
 import service from '../../src/services/maintenanceLogs';
 let mockDark = false;
+let mockRole = 'CREW';
+jest.mock('../../src/services/supabase', () => ({ supabase: { rpc: jest.fn() } }));
 jest.mock('../../src/store', () => ({
-  useAuthStore: () => ({ user: { id: 'crew', vesselId: 'vessel', role: 'CREW' } }),
+  useAuthStore: () => ({ user: { id: 'crew', vesselId: 'vessel', role: mockRole } }),
 }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
 jest.mock('@react-navigation/native', () => ({
@@ -50,6 +52,20 @@ jest.mock('../../src/components', () => {
     LoadingSpinner: () => null,
   };
 });
+it.each(['CREW', 'CAPTAIN_MOV', 'HOD', 'MANAGEMENT'])(
+  'shows recipient management only for Captain MOV and HOD (%s)',
+  async (role) => {
+    mockRole = role;
+    (service.getByVessel as jest.Mock).mockResolvedValue([]);
+    const ui = render(<MaintenanceLogScreen navigation={{ navigate: jest.fn() }} />);
+    await act(async () => {});
+    expect(!!ui.queryByLabelText('Maintenance Notifications')).toBe(
+      role === 'CAPTAIN_MOV' || role === 'HOD'
+    );
+    ui.unmount();
+    mockRole = 'CREW';
+  }
+);
 it.each([false, true])(
   'preserves list buttons and selection with batched rendering (night=%s)',
   async (dark) => {

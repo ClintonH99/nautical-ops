@@ -20,15 +20,11 @@ import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { Button, Input } from '../components';
-import { LeaveVesselRecovery } from '../components/LeaveVesselRecovery';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import authService from '../services/auth';
 import { supabase } from '../services/supabase';
-import {
-  evaluateAccountAccess,
-  SUBSCRIPTION_PAYMENT_REQUIRED_MESSAGE,
-} from '../services/accountAccess';
+import { evaluateAccountAccess } from '../services/accountAccess';
 import { DEVICE_LIMIT_MESSAGE } from '../services/deviceAccess';
 import type { User } from '../types';
 import { useAuthStore } from '../store';
@@ -67,21 +63,23 @@ export const LoginScreen = ({ navigation }: any) => {
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
 
   const [loading, setLoading] = useState(false);
-  const [leavingVessel, setLeavingVessel] = useState(false);
   const [errors, setErrors] = useState({ email: '', password: '' });
 
-  const { setUser, loginNotice, setLoginNotice, setCaptainPaymentRequired } = useAuthStore();
+  const {
+    setUser,
+    loginNotice,
+    setLoginNotice,
+    setCaptainPaymentRequired,
+    setCrewPaymentRequired,
+  } = useAuthStore();
   const [loginError, setLoginError] = useState('');
   const posthog = usePostHog();
 
   const completeLogin = async (user: User, method: 'email' | 'google' | 'apple') => {
     const decision = await evaluateAccountAccess(user);
 
-    if (decision.state === 'device_limit_reached' || decision.state === 'crew_payment_required') {
-      const message =
-        decision.state === 'device_limit_reached'
-          ? DEVICE_LIMIT_MESSAGE
-          : SUBSCRIPTION_PAYMENT_REQUIRED_MESSAGE;
+    if (decision.state === 'device_limit_reached') {
+      const message = DEVICE_LIMIT_MESSAGE;
       setLoginNotice(message);
       setLoginError('');
       setCaptainPaymentRequired(false);
@@ -108,6 +106,7 @@ export const LoginScreen = ({ navigation }: any) => {
       payment_restricted: decision.state === 'captain_payment_required',
     });
     setUser(user);
+    setCrewPaymentRequired(decision.state === 'crew_payment_required');
   };
 
   const validateForm = () => {
@@ -276,7 +275,6 @@ export const LoginScreen = ({ navigation }: any) => {
               title="Sign in"
               onPress={handleLogin}
               loading={loading}
-              disabled={leavingVessel}
               fullWidth
               variant="primary"
               style={styles.signInButton}
@@ -285,17 +283,12 @@ export const LoginScreen = ({ navigation }: any) => {
             {loginError ? <Text style={styles.loginError}>{loginError}</Text> : null}
             <TouchableOpacity
               onPress={() => navigation.navigate('ForgotPassword')}
-              disabled={leavingVessel}
               style={styles.forgotBtn}
             >
               <Text style={[styles.forgotText, { color: themeColors.accent }]}>
                 Forgot password?
               </Text>
             </TouchableOpacity>
-            <LeaveVesselRecovery
-              disabled={loading || !!socialLoading}
-              onBusyChange={setLeavingVessel}
-            />
           </View>
 
           {/* Create account */}
@@ -323,7 +316,6 @@ export const LoginScreen = ({ navigation }: any) => {
             </View>
             <Button
               title="Create New Account"
-              disabled={leavingVessel}
               onPress={() => navigation.navigate('CreateAccountChoice')}
               variant="outline"
               fullWidth

@@ -6,6 +6,7 @@ import maintenanceLogsService from '../../src/services/maintenanceLogs';
 import { printStandardPdf } from '../../src/utils/standardPdf';
 import { MaintenanceLog } from '../../src/types';
 import { COLORS } from '../../src/constants/theme';
+jest.mock('../../src/services/supabase', () => ({ supabase: { rpc: jest.fn() } }));
 
 let mockDark = false;
 const mockUser = { id: 'crew', vesselId: 'vessel' };

@@ -12,6 +12,7 @@
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { SignJWT, importPKCS8, decodeJwt } from 'npm:jose@5';
+import { appleRenewalStatus } from '../_shared/appleRenewal.ts';
 
 const BUNDLE_ID = 'com.nauticalops.app';
 const GRACE_PERIOD_MS = 16 * 24 * 60 * 60 * 1000;
@@ -254,7 +255,7 @@ Deno.serve(async (req) => {
     let gracePeriodEnd: string | null = null;
 
     if (appleStatus === 1) {
-      status = 'active';
+      status = appleRenewalStatus(appleStatus, renewal?.autoRenewStatus);
     } else if (appleStatus === 4) {
       status = 'past_due';
       retryStartedAt = existing?.billing_retry_started_at ?? new Date().toISOString();

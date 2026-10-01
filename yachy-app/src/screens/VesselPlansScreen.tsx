@@ -20,6 +20,7 @@ import {
   Platform,
   Linking,
   AppState,
+  Image,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { usePostHog } from 'posthog-react-native';
@@ -28,6 +29,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus';
+import { refreshAppleSubscriptionStatus } from '../services/subscription';
 import { Button, PageHeader } from '../components';
 import {
   PLAN_TIERS,
@@ -66,15 +68,44 @@ export const VesselPlansScreen = ({ navigation }: any) => {
   const processingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const purchaseVerificationInFlight = useRef(new Map<string, Promise<boolean>>());
   const verifiedTransactionIds = useRef(new Set<string>());
+  const scrollRef = useRef<ScrollView>(null);
+  const plansOffset = useRef(0);
+  const refreshInFlight = useRef<Promise<void> | null>(null);
+  const [refreshNotice, setRefreshNotice] = useState('');
 
   const {
     hasActiveSubscription,
     subscription,
+    accessState,
     isLoading: subscriptionLoading,
     refetch: refetchSubscription,
   } = useSubscriptionStatus(user?.vesselId ?? null);
 
   const currentPlan = subscription ? getPlanTier(subscription.planTier) : null;
+  const renewalCancelled = hasActiveSubscription && subscription?.status === 'canceled';
+  const refreshFromApple = useCallback(async () => {
+    if (!user?.vesselId || user.role !== 'CAPTAIN_MOV' || Platform.OS !== 'ios') return;
+    if (refreshInFlight.current) return refreshInFlight.current;
+    const vesselId = user.vesselId;
+    const request = (async () => {
+      const refreshed = await refreshAppleSubscriptionStatus(vesselId);
+      setRefreshNotice(
+        refreshed
+          ? ''
+          : 'Unable to refresh Apple’s latest status. Showing the last confirmed details.'
+      );
+      await refetchSubscription();
+    })().finally(() => {
+      refreshInFlight.current = null;
+    });
+    refreshInFlight.current = request;
+    return request;
+  }, [user?.vesselId, user?.role, refetchSubscription]);
+  useFocusEffect(
+    useCallback(() => {
+      void refreshFromApple();
+    }, [refreshFromApple])
+  );
   const planAvailableViaIAP = isAvailableViaIAP(selectedPlanTier, selectedBillingPeriod);
   const selectionInitialized = useRef<string | null>(null);
   const selectedProductId = getAppleProductId(selectedPlanTier, selectedBillingPeriod);
@@ -93,10 +124,10 @@ export const VesselPlansScreen = ({ navigation }: any) => {
 
   useEffect(() => {
     const listener = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void refetchSubscription();
+      if (state === 'active') void refreshFromApple();
     });
     return () => listener.remove();
-  }, [refetchSubscription]);
+  }, [refreshFromApple]);
 
   const getStorePrice = useCallback(
     (planTierId: PlanTierId, billingPeriodId: BillingPeriodId) => {
@@ -165,8 +196,10 @@ export const VesselPlansScreen = ({ navigation }: any) => {
   useEffect(() => {
     if (captainPaymentRequired && hasActiveSubscription) {
       setCaptainPaymentRequired(false);
+    } else if (accessState === 'payment_required') {
+      setCaptainPaymentRequired(true);
     }
-  }, [captainPaymentRequired, hasActiveSubscription, setCaptainPaymentRequired]);
+  }, [captainPaymentRequired, hasActiveSubscription, accessState, setCaptainPaymentRequired]);
 
   useEffect(() => {
     if (subscriptionLoading) return;
@@ -224,7 +257,7 @@ export const VesselPlansScreen = ({ navigation }: any) => {
         navigation.goBack();
         return;
       }
-      refetchSubscription();
+      if (Platform.OS !== 'ios') void refetchSubscription();
     }, [user, navigation, refetchSubscription])
   );
 
@@ -281,7 +314,10 @@ export const VesselPlansScreen = ({ navigation }: any) => {
     try {
       const purchases = await showManageSubscriptionsIOS();
       for (const purchase of purchases ?? []) await handleDeliveredPurchase(purchase);
-      await refetchSubscription();
+      // A refresh started before the Apple sheet closed may predate cancellation.
+      // Let it finish, then ask Apple again rather than skipping this refresh.
+      await refreshInFlight.current;
+      await refreshFromApple();
     } catch {
       Alert.alert(
         'Could not open subscriptions',
@@ -433,7 +469,30 @@ export const VesselPlansScreen = ({ navigation }: any) => {
         title={captainPaymentRequired ? 'See Plans' : 'Vessel Plans'}
         showBack={!captainPaymentRequired}
       />
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {renewalCancelled && (
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: 12,
+              marginBottom: 24,
+            }}
+          >
+            <Image
+              source={require('../../assets/nautical-ops-vessel-logo.png')}
+              style={{ width: 48, height: 48, borderRadius: 12 }}
+            />
+            <Text style={{ color: themeColors.textPrimary, fontSize: 23, fontWeight: '700' }}>
+              Nautical Ops
+            </Text>
+          </View>
+        )}
         {captainPaymentRequired ? (
           <View style={styles.paymentNotice}>
             <Ionicons name="alert-circle-outline" size={22} color={COLORS.danger} />
@@ -466,11 +525,14 @@ export const VesselPlansScreen = ({ navigation }: any) => {
             </Text>
             {subscription && (
               <Text style={[styles.renewalText, { color: themeColors.textSecondary }]}>
-                Renews{' '}
+                {renewalCancelled ? 'Access available until ' : 'Renews '}
                 {new Date(subscription.currentPeriodEnd).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric',
+                  ...(renewalCancelled
+                    ? { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' as const }
+                    : {}),
                 })}
               </Text>
             )}
@@ -479,8 +541,89 @@ export const VesselPlansScreen = ({ navigation }: any) => {
                 {getStorePrice(subscription.planTier, subscription.billingPeriod).displayMonthly}
               </Text>
             )}
+            {renewalCancelled && (
+              <>
+                <View
+                  style={{
+                    alignSelf: 'flex-start',
+                    backgroundColor: themeColors.isDark ? '#513C19' : '#FFF0D4',
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                    borderRadius: 18,
+                    marginTop: 16,
+                  }}
+                >
+                  <Text
+                    style={{ color: themeColors.isDark ? '#FFDA94' : '#8A4B00', fontWeight: '700' }}
+                  >
+                    Renewal cancelled
+                  </Text>
+                </View>
+                <Text
+                  style={[styles.renewalText, { color: themeColors.textSecondary, marginTop: 16 }]}
+                >
+                  Your plan will not renew. You and your crew can keep using the vessel until this
+                  time.
+                </Text>
+              </>
+            )}
           </View>
         ) : null}
+        {!!refreshNotice && (
+          <Text
+            accessibilityRole="alert"
+            style={[styles.renewalText, { color: themeColors.textSecondary, marginBottom: 16 }]}
+          >
+            {refreshNotice}
+          </Text>
+        )}
+        {renewalCancelled && (
+          <View style={{ gap: 12, marginBottom: 28 }}>
+            <View
+              style={{ backgroundColor: themeColors.accentSoft, padding: 18, borderRadius: 16 }}
+            >
+              <Text
+                style={{
+                  color: themeColors.textPrimary,
+                  fontSize: 17,
+                  fontWeight: '700',
+                  marginBottom: 8,
+                }}
+              >
+                After expiry
+              </Text>
+              <Text style={[styles.renewalText, { color: themeColors.textSecondary }]}>
+                Vessel access will be restricted unless a subscription is active.
+              </Text>
+            </View>
+            <Button
+              title="See Plans"
+              fullWidth
+              onPress={() =>
+                scrollRef.current?.scrollTo({ y: plansOffset.current, animated: true })
+              }
+            />
+            {Platform.OS === 'ios' && (
+              <Button
+                title="Manage Apple Subscription"
+                variant="outline"
+                fullWidth
+                onPress={handleManageSubscription}
+              />
+            )}
+            <Button
+              title="Continue to App"
+              variant="text"
+              fullWidth
+              onPress={() => navigation.navigate('MainTabs')}
+            />
+          </View>
+        )}
+        <View
+          onLayout={(event) => {
+            plansOffset.current = event.nativeEvent.layout.y;
+          }}
+        />
         <>
           <Text style={[styles.currentPlanValue, { color: themeColors.textPrimary }]}>
             {hasActiveSubscription ? 'Change your plan' : 'Choose your vessel plan'}
@@ -556,20 +699,22 @@ export const VesselPlansScreen = ({ navigation }: any) => {
                   : 'Open Nautical Ops on your iPhone to purchase or change an Apple subscription.'}
               </Text>
             )}
-            {(hasActiveSubscription || captainPaymentRequired) && Platform.OS === 'ios' && (
-              <Button
-                title={
-                  captainPaymentRequired
-                    ? 'Manage / Cancel Subscription'
-                    : 'Manage Apple Subscription'
-                }
-                onPress={handleManageSubscription}
-                variant="outline"
-                fullWidth
-                style={styles.manageButton}
-                disabled={isProcessing || isRestoring}
-              />
-            )}
+            {!renewalCancelled &&
+              (hasActiveSubscription || captainPaymentRequired) &&
+              Platform.OS === 'ios' && (
+                <Button
+                  title={
+                    captainPaymentRequired
+                      ? 'Manage / Cancel Subscription'
+                      : 'Manage Apple Subscription'
+                  }
+                  onPress={handleManageSubscription}
+                  variant="outline"
+                  fullWidth
+                  style={styles.manageButton}
+                  disabled={isProcessing || isRestoring}
+                />
+              )}
           </View>
 
           <TouchableOpacity

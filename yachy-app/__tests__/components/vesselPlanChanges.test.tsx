@@ -12,10 +12,15 @@ const mockSubscription = {
   planTier: '1_5',
   billingPeriod: 'monthly',
   currentPeriodEnd: '2026-11-01',
+  status: 'active',
 };
 const mockSetPayment = jest.fn();
 let mockDark = false;
 let mockRestricted = false;
+const mockAppleRefresh = jest.fn().mockResolvedValue(true);
+jest.mock('../../src/services/subscription', () => ({
+  refreshAppleSubscriptionStatus: (...args: unknown[]) => mockAppleRefresh(...args),
+}));
 jest.mock('../../src/services/vesselDeparture', () => ({
   leaveVesselForAccount: jest.fn(),
   isOnlyCaptainError: jest.fn(),
@@ -67,6 +72,8 @@ jest.mock('../../src/components', () => ({
 beforeEach(() => {
   jest.clearAllMocks();
   mockRestricted = false;
+  mockSubscription.status = 'active';
+  mockAppleRefresh.mockResolvedValue(true);
   Platform.OS = 'ios';
   jest.mocked(iap.fetchIAPProducts).mockResolvedValue([
     { id: 'com.nauticalops.app.crew_1_5_v2.monthly', displayPrice: '$79.99' },
@@ -75,6 +82,30 @@ beforeEach(() => {
   jest
     .mocked(iap.purchaseSubscription)
     .mockResolvedValue({ id: 'transaction', transactionId: 'transaction' });
+});
+
+it('shows cancelled renewal, exact access expiry and no misleading Renews label', async () => {
+  mockSubscription.status = 'canceled';
+  const navigation = { navigate: jest.fn(), goBack: jest.fn() };
+  const ui = render(<VesselPlansScreen navigation={navigation} />);
+  await act(async () => {});
+  expect(ui.getByText('Renewal cancelled')).toBeTruthy();
+  expect(ui.getByText(/Access available until/)).toBeTruthy();
+  expect(ui.queryByText(/^Renews/)).toBeNull();
+  expect(ui.getByText('See Plans')).toBeTruthy();
+  expect(ui.getAllByText('Manage Apple Subscription')).toHaveLength(1);
+  fireEvent.press(ui.getByText('Continue to App'));
+  expect(navigation.navigate).toHaveBeenCalledWith('MainTabs');
+});
+
+it('refreshes cancellation from Apple even if management returns no purchases', async () => {
+  const ui = render(<VesselPlansScreen navigation={{ goBack: jest.fn() }} />);
+  await act(async () => {});
+  mockAppleRefresh.mockClear();
+  await act(async () => {
+    fireEvent.press(ui.getByText('Manage Apple Subscription'));
+  });
+  expect(mockAppleRefresh).toHaveBeenCalledWith('vessel');
 });
 
 it('offers payment and cancellation, but no departure, on the payment-restricted screen', async () => {

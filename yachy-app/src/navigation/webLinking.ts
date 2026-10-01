@@ -124,13 +124,16 @@ const PAYMENT_RESTRICTED_PATHS = {
 
 export const createWebLinkingConfig = (
   isAuthenticated: boolean,
-  captainPaymentRequired = false
+  captainPaymentRequired = false,
+  crewPaymentRequired = false
 ) => {
-  const screens = !isAuthenticated
+  const screens: Record<string, any> = !isAuthenticated
     ? AUTH_SCREEN_PATHS
-    : captainPaymentRequired
-      ? PAYMENT_RESTRICTED_PATHS
-      : APP_SCREEN_PATHS;
+    : crewPaymentRequired
+      ? { VesselAccess: 'vessel-access' }
+      : captainPaymentRequired
+        ? PAYMENT_RESTRICTED_PATHS
+        : APP_SCREEN_PATHS;
 
   return {
     prefixes: WEB_PREFIXES,
@@ -147,7 +150,14 @@ export const createWebLinkingConfig = (
 
       // Logged in: /login should resolve to home
       if (isAuthenticated && (cleanedPath === 'login' || cleanedPath === '')) {
-        return getStateFromPath(captainPaymentRequired ? '/vessel-plans' : '/app', options);
+        return getStateFromPath(
+          crewPaymentRequired
+            ? '/vessel-access'
+            : captainPaymentRequired
+              ? '/vessel-plans'
+              : '/app',
+          options
+        );
       }
 
       // Previously unmapped screens used their route names as URLs. Keep old
@@ -161,7 +171,13 @@ export const createWebLinkingConfig = (
       // - logged out -> /login
       // - logged in -> /
       return getStateFromPath(
-        isAuthenticated ? (captainPaymentRequired ? '/vessel-plans' : '/app') : '/login',
+        isAuthenticated
+          ? crewPaymentRequired
+            ? '/vessel-access'
+            : captainPaymentRequired
+              ? '/vessel-plans'
+              : '/app'
+          : '/login',
         options
       );
     },

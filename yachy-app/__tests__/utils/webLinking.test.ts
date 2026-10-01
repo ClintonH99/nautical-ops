@@ -2,6 +2,13 @@ import { getPathFromState } from '@react-navigation/native';
 import { createWebLinkingConfig } from '../../src/navigation/webLinking';
 
 describe('web page addresses', () => {
+  it('restricts crew deep links to the lockout screen only after confirmed payment restriction', () => {
+    const config = createWebLinkingConfig(true, false, true);
+    for (const path of ['/login', '/app', '/crew', '/vessel-plans', '/vessel-access']) {
+      const state = config.getStateFromPath(path, config.config)!;
+      expect(getPathFromState(state, config.config)).toBe('/vessel-access');
+    }
+  });
   const linking = createWebLinkingConfig(true);
   const parse = (path: string) => linking.getStateFromPath(path, linking.config)!;
   it.each(['/maintenance/log', '/safety/equipment', '/settings/profile', '/logs/fuel'])(

@@ -22,6 +22,8 @@ interface AuthState {
   deferUserUpdate: boolean;
   loginNotice: string | null;
   captainPaymentRequired: boolean;
+  crewPaymentRequired: boolean;
+  setCrewPaymentRequired: (required: boolean) => void;
   setUser: (user: User | null) => void;
   setLoading: (loading: boolean) => void;
   setDeferUserUpdate: (defer: boolean) => void;
@@ -33,6 +35,7 @@ interface AuthState {
 const CACHED_USER_STORAGE_KEY = 'nautical_ops_cached_user';
 export const LOGIN_NOTICE_STORAGE_KEY = 'nautical_ops_login_notice';
 export const PAYMENT_RESTRICTION_STORAGE_KEY = 'nautical_ops_payment_restriction';
+export const CREW_RESTRICTION_STORAGE_KEY = 'nautical_ops_crew_payment_restriction';
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
@@ -41,7 +44,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   deferUserUpdate: false,
   loginNotice: null,
   captainPaymentRequired: false,
+  crewPaymentRequired: false,
+  setCrewPaymentRequired: (crewPaymentRequired) => {
+    const operation = crewPaymentRequired
+      ? AsyncStorage.setItem(CREW_RESTRICTION_STORAGE_KEY, 'true')
+      : AsyncStorage.removeItem(CREW_RESTRICTION_STORAGE_KEY);
+    operation.catch(() => {});
+    set({ crewPaymentRequired });
+  },
   setUser: (user) => {
+    if (!user || (get().user && get().user?.id !== user.id)) {
+      get().setCrewPaymentRequired(false);
+    }
     setScreenCacheScope(
       user
         ? JSON.stringify([user.id, user.vesselId, user.role, user.department, user.department2])
@@ -78,6 +92,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     AsyncStorage.removeItem(CACHED_USER_STORAGE_KEY).catch(() => {});
     AsyncStorage.removeItem(LOGIN_NOTICE_STORAGE_KEY).catch(() => {});
     AsyncStorage.removeItem(PAYMENT_RESTRICTION_STORAGE_KEY).catch(() => {});
+    AsyncStorage.removeItem(CREW_RESTRICTION_STORAGE_KEY).catch(() => {});
     // Clear the analytics identity too, or the next person to log in on a
     // shared device is recorded as the person who just logged out.
     posthog.reset();
@@ -87,6 +102,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       deferUserUpdate: false,
       loginNotice: null,
       captainPaymentRequired: false,
+      crewPaymentRequired: false,
     });
   },
 }));

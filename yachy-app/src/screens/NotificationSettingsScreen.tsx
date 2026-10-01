@@ -13,7 +13,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import {
   registerForPushNotificationsAsync,
-  savePushToken,
+  enablePushForCurrentDevice,
   clearPushToken,
   isPushEnabledForCurrentDevice,
   getNotificationPreferences,
@@ -100,7 +100,7 @@ export const NotificationSettingsScreen = () => {
 
         const token = await registerForPushNotificationsAsync();
         if (token) {
-          await savePushToken(user.id, token);
+          await enablePushForCurrentDevice(user.id, token);
           setEnabled(true);
         } else {
           Alert.alert(

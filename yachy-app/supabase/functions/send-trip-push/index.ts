@@ -36,6 +36,14 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+async function queueEnabled(): Promise<boolean> {
+  const { data, error } = await supabase.from('notification_runtime').select('enabled').eq('id', true).maybeSingle();
+  // Before the migration, retain the existing sender. Other DB failures must
+  // fail closed rather than accidentally sending a second copy during rollout.
+  if (error && !['42P01', 'PGRST205'].includes(error.code)) throw error;
+  return data?.enabled === true;
+}
+
 function isTrustedInternalRequest(req: Request): boolean {
   return isTrustedNotificationRequest(
     req.headers,
@@ -320,6 +328,10 @@ async function sendCrewLeaveRequest(
     return jsonResponse({ error: 'Unauthorized' }, 401);
   }
 
+  // The database trigger already captured this save, even for older clients.
+  // Do not enqueue from the client again or send a duplicate direct push.
+  if (await queueEnabled()) return jsonResponse({ queued: true });
+
   // Historical leave survives account deletion. There is nobody to notify
   // once the referenced crew profile has been removed.
   if (!leave.crew_member_id) {
@@ -350,6 +362,13 @@ Deno.serve(async (req) => {
     if (body?.type === 'crew_leave') return await sendCrewLeaveRequest(req, body);
 
     if (!isTrustedInternalRequest(req)) return jsonResponse({ error: 'Unauthorized' }, 401);
+    if (await queueEnabled()) {
+      if (body?.type === 'reminders') {
+        const { error } = await supabase.rpc('enqueue_trip_notification_reminders');
+        if (error) throw error;
+      }
+      return jsonResponse({ queued: true });
+    }
     if (body?.type === 'reminders') return jsonResponse(await sendDayBeforeReminders());
 
     const payload = body as WebhookPayload;
