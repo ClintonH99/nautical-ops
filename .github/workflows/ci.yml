@@ -37,7 +37,9 @@ jobs:
         run: npm run typecheck
 
       - name: Run tests (QC Gate 2b)
-        run: npm run test
+        # React Native's cold transforms contend for the small hosted runner.
+        # Use the same deterministic execution mode as the local release check.
+        run: npm run test -- --runInBand
 
       - name: Database transaction and permission regressions (disposable PostgreSQL)
         run: |
