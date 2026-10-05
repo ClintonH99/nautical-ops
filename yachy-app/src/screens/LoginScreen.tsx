@@ -289,6 +289,14 @@ export const LoginScreen = ({ navigation }: any) => {
                 Forgot password?
               </Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('LostDevice')}
+              disabled={loading || socialLoading !== null}
+              style={styles.forgotBtn}
+              accessibilityRole="button"
+            >
+              <Text style={[styles.forgotText, { color: themeColors.accent }]}>Lost Device?</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Create account */}

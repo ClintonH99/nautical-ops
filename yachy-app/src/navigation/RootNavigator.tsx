@@ -26,6 +26,8 @@ import { PostHogProvider } from 'posthog-react-native';
 import { posthog } from '../config/posthog';
 import { createWebLinkingConfig } from './webLinking';
 import { VesselAccessScreen } from '../screens/VesselAccessScreen';
+import { ManageDevicesScreen } from '../screens/ManageDevicesScreen';
+import { LostDeviceScreen } from '../screens/LostDeviceScreen';
 import {
   WelcomeScreen,
   LoginScreen,
@@ -782,6 +784,7 @@ export const RootNavigator = () => {
                 options={{ headerShown: false }}
               />
               <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="LostDevice" component={LostDeviceScreen} options={{ headerShown: false }} />
               <Stack.Screen
                 name="ForgotPassword"
                 component={ForgotPasswordScreen}
@@ -888,6 +891,7 @@ export const RootNavigator = () => {
                 component={SettingsScreen}
                 options={{ headerShown: false }}
               />
+              <Stack.Screen name="ManageDevices" component={ManageDevicesScreen} options={{ headerShown: false }} />
               <Stack.Screen
                 name="AccountProfile"
                 component={ProfileScreen}

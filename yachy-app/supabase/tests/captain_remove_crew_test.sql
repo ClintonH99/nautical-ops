@@ -19,13 +19,18 @@ SELECT set_config('request.jwt.claim.sub', '20000000-0000-0000-0000-000000000001
 DO $$
 DECLARE blocked BOOLEAN := FALSE; returned_id UUID;
 BEGIN
-  -- Reproduce the exact old update-returning path, with production RLS enabled.
+  -- The old direct update must stay blocked, by RLS or the stricter profile guard.
   BEGIN
     UPDATE public.users SET vessel_id = NULL
     WHERE id = '20000000-0000-0000-0000-000000000003' RETURNING id INTO returned_id;
   EXCEPTION WHEN insufficient_privilege THEN blocked := TRUE;
+  WHEN raise_exception THEN
+    IF SQLERRM <> 'Vessel membership must be changed through the authorized vessel actions' THEN
+      RAISE;
+    END IF;
+    blocked := TRUE;
   END;
-  IF NOT blocked THEN RAISE EXCEPTION 'Old removal should reproduce RLS rejection'; END IF;
+  IF NOT blocked THEN RAISE EXCEPTION 'Direct removal bypassed authorization'; END IF;
   IF NOT public.remove_current_vessel_crew_member('20000000-0000-0000-0000-000000000002') THEN
     RAISE EXCEPTION 'Captain removal failed';
   END IF;

@@ -8,7 +8,7 @@ import { supabase } from './supabase';
 const FALLBACK_DEVICE_ID_KEY = 'nautical_ops_installation_device_id';
 
 export const DEVICE_LIMIT_MESSAGE =
-  'This account is already registered on 2 devices. Sign out from an existing device or contact support@nautical-ops.com.';
+  'This account already has 2 saved devices. Use Manage Devices on an approved device, or select Lost Device? below to recover access.';
 
 export type DeviceAccessResult =
   | { state: 'allowed'; activeDeviceCount: number }
@@ -50,7 +50,7 @@ export async function getCurrentDeviceFingerprint(): Promise<string> {
   );
 }
 
-function getDeviceLabel(): string {
+export function getDeviceLabel(): string {
   if (Platform.OS === 'web') return 'Web browser';
   return Device.modelName || (Platform.OS === 'ios' ? 'Apple device' : 'Android device');
 }

@@ -62,6 +62,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
       ALTER TABLE public.sea_mile_entries ENABLE ROW LEVEL SECURITY;
       CREATE TRIGGER protect_user_security_fields_trigger BEFORE INSERT OR UPDATE ON public.users
         FOR EACH ROW EXECUTE FUNCTION public.protect_user_security_fields();`);
+    await db.exec(read('supabase/migrations/20261002120000_UNCONDITIONAL_PROFILE_AUTHORIZATION.sql'));
     await db.exec(read('supabase/migrations/20260927100000_CAPTAIN_REMOVE_CREW.sql'));
     const previous = await db.exec(read('supabase/tests/captain_remove_crew_test.sql'));
     console.log(previous.at(-1).rows);

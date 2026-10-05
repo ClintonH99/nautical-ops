@@ -136,6 +136,13 @@ export const SettingsScreen = ({ navigation }: any) => {
           onPress: () => navigation.navigate('AccountProfile'),
           disabled: false,
         },
+        {
+          icon: 'phone-portrait-outline',
+          label: 'Manage Devices',
+          description: 'View saved devices and free a slot for a replacement',
+          onPress: () => navigation.navigate('ManageDevices'),
+          disabled: false,
+        },
       ],
     },
     ...(canVesselAdmin

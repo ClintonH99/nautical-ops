@@ -14,6 +14,7 @@
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { withBrowserCors } from '../_shared/browserCors.ts';
+import { authorizeSensitiveAction } from '../_shared/sensitiveActionAccess.ts';
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -36,24 +37,12 @@ Deno.serve(withBrowserCors(async (req) => {
     });
   }
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-    const token = authHeader.slice(7);
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser(token);
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+    const access = await authorizeSensitiveAction(req, {
+      url: Deno.env.get('SUPABASE_URL'),
+      anonKey: Deno.env.get('SUPABASE_ANON_KEY'),
+    });
+    if (!access.allowed) return access.response;
+    const user = { id: access.userId };
 
     const { data, error } = await supabase.rpc('admin_delete_current_vessel', {
       p_user_id: user.id,
