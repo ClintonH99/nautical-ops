@@ -32,7 +32,7 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/nautical-ops-web-icon.png"
     },
     "plugins": [
       "@react-native-community/datetimepicker",
