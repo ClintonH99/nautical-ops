@@ -12,16 +12,35 @@ Approved 7 October 2026: the six existing USD crew-tier base prices and four bil
 - Secure checkout retains the server-created transaction. A short-lived, tab-local billing address/email prefill is passed to Paddle, not used to authorize payment or exemptions. Paddle collects card details and any business tax ID and confirms the final tax/total. Completion events do not grant access; the existing verified webhook remains authoritative.
 - Existing subscriptions cannot start a duplicate subscription. Existing trial end dates are preserved.
 
-## Not activated by this code change
+## Sandbox activation — 7 October 2026
 
-No remote catalogue, Supabase deployment, live payment setting or production deployment is changed by this implementation.
+The original rollout omitted the server catalogue/preview switch and the web build's
+Paddle environment. All three are required; deploying the screen alone does not
+enable tax previews.
+
+- Created and validated 24 sandbox prices against the approved amounts, intervals,
+  external tax mode, quantity one and 30-day cardless trials. The older sandbox
+  test price and all live prices were left unchanged.
+- Verified the real sandbox pricing-preview API through the shared production
+  validator for all 24 plans in South Africa, France, the UK, the Bahamas,
+  US ZIP 33316 and Canadian postal code M5V 3L9 (144 plan/location checks).
+- Configured Supabase `PADDLE_ENV=sandbox`, the verified `PADDLE_PRICE_IDS`,
+  `PADDLE_PRICE_PREVIEW_ENABLED=true`, and a sandbox-only key. This temporary key
+  expires **6 November 2026** and must be replaced before then if sandbox testing
+  continues. It permits catalogue setup and read-only transaction/price previews,
+  not transaction creation or subscription changes.
+- Configured Vercel `EXPO_PUBLIC_PADDLE_ENV=sandbox`. Environment changes require
+  a new web deployment; existing bundles keep their old inlined environment.
+- Both server and client checkout flags remain explicitly `false`. No live
+  payments, subscriptions, customer records or entitlements were created by these
+  preview tests. Browser verification is separate from provider API verification.
 
 Before enabling regional totals:
 
 1. Verify all 24 price IDs in the chosen Paddle environment against the approved schedule. Prices must use `tax_mode: external` with no unit-price overrides. Earlier tax-inclusive/internal prices are intentionally rejected. Do not silently modify live prices.
 2. Deploy the `preview-paddle-prices` function and its shared modules alongside the checkout function using the updated shared validator. Configure the matching server-only Paddle API key and price IDs.
 3. Set the server-only secret `PADDLE_PRICE_PREVIEW_ENABLED=true` only after the catalogue and preview permissions have been tested. This separate switch does not enable purchases.
-4. Verify live-provider previews for US postal codes, Canada, EU, UK and Caribbean billing addresses, supported-country errors, zero-tax cases and validated business tax IDs in sandbox. Local tests use fixtures, not live tax determinations.
+4. Verify provider previews for US postal codes, Canada, EU, UK and Caribbean billing addresses, supported-country errors and zero-tax cases in sandbox. Business tax-ID treatment must additionally be verified in checkout before payment activation. Local tests use fixtures, not live tax determinations.
 
 Before enabling checkout:
 
