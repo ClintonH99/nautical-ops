@@ -1,9 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { ScrollView, View, Text, Pressable, StyleSheet } from 'react-native';
 import { PageHeader, Button } from '../components';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import { canAccessVesselManagement } from '../utils/access';
+import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus';
+import {
+  paddleCheckoutEnabled,
+  paddleEnvironment,
+  preparePaddleCheckout,
+} from '../services/paddleBilling';
 import {
   PADDLE_PLAN_TIERS,
   PADDLE_BILLING_PERIODS,
@@ -12,7 +19,7 @@ import {
   type PaddleBillingPeriod,
 } from '../constants/paddlePlans';
 
-/** Web payment UI is isolated from StoreKit. Activation waits for verified Paddle integration. */
+/** Paddle web checkout. Entitlements come only from server-verified subscription state. */
 export const VesselPlansScreen = () => {
   const theme = useThemeColors();
   const colors = { ...theme, text: theme.textPrimary, primary: theme.controlSelected };
@@ -21,6 +28,40 @@ export const VesselPlansScreen = () => {
   const [period, setPeriod] = useState<PaddleBillingPeriod>('monthly');
   const permitted = canAccessVesselManagement(user) && !!user?.vesselId;
   const price = getPaddlePrice(tier, period);
+  const { subscription, accessState, isLoading, refetch } = useSubscriptionStatus(
+    user?.vesselId ?? null
+  );
+  const [notice, setNotice] = useState('');
+  const [busy, setBusy] = useState(false);
+  const starting = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      void refetch();
+    }, [refetch])
+  );
+  const hasExistingPlan = !!subscription;
+  const startCheckout = async () => {
+    if (starting.current || !permitted || !user?.vesselId || accessState !== 'never_subscribed')
+      return;
+    starting.current = true;
+    setBusy(true);
+    setNotice('');
+    const vesselId = user.vesselId;
+    const userId = user.id;
+    try {
+      const url = await preparePaddleCheckout(vesselId, tier, period, window.location.origin);
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser?.id !== userId || currentUser.vesselId !== vesselId) return;
+      window.location.assign(url);
+    } catch (error) {
+      setNotice(
+        error instanceof Error ? error.message : 'Checkout could not start. Please try again later.'
+      );
+    } finally {
+      starting.current = false;
+      setBusy(false);
+    }
+  };
   return (
     <View style={[styles.page, { backgroundColor: colors.background }]}>
       <PageHeader title="Vessel Plans" />
@@ -32,10 +73,53 @@ export const VesselPlansScreen = () => {
             </Text>
           ) : (
             <>
+              {subscription && (
+                <View
+                  style={[
+                    styles.plan,
+                    { backgroundColor: colors.surface, borderColor: colors.border },
+                  ]}
+                >
+                  <View style={styles.planDetails}>
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>
+                      CURRENT PLAN
+                    </Text>
+                    <Text style={[styles.planTitle, { color: colors.text }]}>
+                      {PADDLE_PLAN_TIERS.find((item) => item.id === subscription.planTier)?.label ??
+                        subscription.planTier}
+                      {' · '}
+                      {PADDLE_BILLING_PERIODS.find((item) => item.id === subscription.billingPeriod)
+                        ?.label ?? subscription.billingPeriod}
+                    </Text>
+                    <Text style={[styles.copy, { color: colors.textSecondary }]}>
+                      {subscription.status === 'canceled'
+                        ? 'Renewal cancelled. Access ends '
+                        : subscription.status === 'trialing'
+                          ? 'Trial ends '
+                          : 'Current period ends '}
+                      {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+                    </Text>
+                  </View>
+                </View>
+              )}
+              {accessState === 'unavailable' && (
+                <Text
+                  accessibilityRole="alert"
+                  style={[styles.copy, { color: colors.textSecondary }]}
+                >
+                  Your subscription status could not be confirmed. Checkout is paused to prevent a
+                  duplicate subscription.
+                </Text>
+              )}
+              {!!notice && (
+                <Text accessibilityRole="alert" style={[styles.copy, { color: colors.text }]}>
+                  {notice}
+                </Text>
+              )}
               <Text style={[styles.heading, { color: colors.text }]}>Choose your vessel plan</Text>
               <Text style={[styles.copy, { color: colors.textSecondary }]}>
                 Choose your billing period and crew size. Prices are in USD for the full selected
-                period.
+                period, including applicable tax. New subscriptions include a 30-day free trial.
               </Text>
               <Text style={[styles.label, { color: colors.textSecondary }]}>BILLING PERIOD</Text>
               <View style={styles.periods}>
@@ -44,6 +128,7 @@ export const VesselPlansScreen = () => {
                     key={option.id}
                     accessibilityRole="radio"
                     accessibilityState={{ checked: period === option.id }}
+                    disabled={busy}
                     onPress={() => setPeriod(option.id)}
                     style={[
                       styles.period,
@@ -70,6 +155,7 @@ export const VesselPlansScreen = () => {
                 return (
                   <Pressable
                     key={option.id}
+                    disabled={busy}
                     onPress={() => setTier(option.id)}
                     accessibilityRole="radio"
                     accessibilityState={{ checked: tier === option.id }}
@@ -105,10 +191,42 @@ export const VesselPlansScreen = () => {
                 {price.displayTotal} {price.suffix}
               </Text>
               <Text style={[styles.copy, { color: colors.textSecondary }]}>
-                Paddle checkout is being configured. No payment can be taken yet. Any applicable tax
-                and the final amount will be shown at checkout before you confirm.
+                {paddleCheckoutEnabled
+                  ? 'Review your trial, renewal date and billing details in secure Paddle checkout before confirming. Your plan renews automatically until cancelled.'
+                  : 'Paddle checkout is being configured. No payment can be taken yet.'}
               </Text>
-              <Button title="Payments not yet available" onPress={() => {}} disabled />
+              {paddleCheckoutEnabled && paddleEnvironment === 'sandbox' && (
+                <Text style={[styles.copy, { color: colors.text }]}>
+                  Sandbox test — no real payment.
+                </Text>
+              )}
+              {hasExistingPlan && (
+                <Text style={[styles.copy, { color: colors.textSecondary }]}>
+                  You already have a subscription record. Subscription management is being
+                  connected; do not create another subscription.
+                </Text>
+              )}
+              <Button
+                title={
+                  !paddleCheckoutEnabled
+                    ? 'Payments not yet available'
+                    : busy
+                      ? 'Preparing Checkout…'
+                      : 'Continue to Secure Checkout'
+                }
+                onPress={startCheckout}
+                disabled={
+                  !paddleCheckoutEnabled || busy || isLoading || accessState !== 'never_subscribed'
+                }
+              />
+              <Button
+                title="Refresh Plan Status"
+                variant="outline"
+                onPress={() => {
+                  void refetch();
+                }}
+                disabled={busy || isLoading}
+              />
             </>
           )}
         </View>

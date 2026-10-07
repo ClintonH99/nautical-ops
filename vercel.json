@@ -13,6 +13,7 @@
     { "src": "/", "dest": "/landing.html" },
     { "handle": "filesystem" },
     { "src": "/pricing", "dest": "/pricing.html" },
+    { "src": "/checkout", "dest": "/checkout.html" },
     { "src": "/privacy-policy", "dest": "/privacy-policy.html" },
     { "src": "/refund-policy", "dest": "/refund-policy.html" },
     { "src": "/terms-and-conditions", "dest": "/terms-and-conditions.html" },

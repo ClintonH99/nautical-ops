@@ -11,6 +11,8 @@ import {
   verifyPaddleSignature,
   subscriptionEvent,
   paddleRequest,
+  checkoutPage,
+  checkoutResult,
 } from "../yachy-app/supabase/functions/_shared/paddle.mjs";
 const id = (prefix, n) => `${prefix}_${String(n).padStart(26, "0")}`;
 const tiers = ["1_5", "6_10", "11_15", "16_25", "26_40", "40_plus"];
@@ -61,12 +63,13 @@ test("configuration requires explicit environment, separate keys and 24 unique I
   env.PADDLE_PRICE_IDS = "{}";
   assert.throws(() => paddleConfig((key) => env[key]));
 });
-test("catalogue validation rejects wrong amounts, currencies, cycles, trials and quantity", () => {
+test("catalogue validation requires tax-inclusive prices and a free 30-day trial", () => {
   const price = {
     status: "active",
     unit_price: { amount: "86389", currency_code: "USD" },
     billing_cycle: { interval: "year", frequency: 1 },
-    trial_period: null,
+    trial_period: { interval: "day", frequency: 30 },
+    tax_mode: "internal",
     quantity: { minimum: 1, maximum: 1 },
   };
   assert.doesNotThrow(() => validatePrice(price, "1_5", "12_months"));
@@ -76,6 +79,24 @@ test("catalogue validation rejects wrong amounts, currencies, cycles, trials and
     { unit_price: { amount: "86389", currency_code: "EUR" } },
     { billing_cycle: { interval: "month", frequency: 1 } },
     { trial_period: { frequency: 1 } },
+    { trial_period: null },
+    {
+      trial_period: {
+        interval: "day",
+        frequency: 30,
+        unit_price: { amount: "1", currency_code: "USD" },
+      },
+    },
+    {
+      trial_period: {
+        interval: "day",
+        frequency: 30,
+        unit_price_overrides: [{}],
+      },
+    },
+    { tax_mode: "external" },
+    { tax_mode: "account_setting" },
+    { tax_mode: "location" },
     { quantity: { minimum: 1, maximum: 999 } },
     { unit_price_overrides: [{}] },
   ]) {
@@ -178,6 +199,7 @@ function harness(options = {}) {
     PADDLE_PRICE_IDS: JSON.stringify(prices),
     PADDLE_CHECKOUT_ENABLED: "true",
     PADDLE_WEBHOOK_SECRET: "secret",
+    PADDLE_CHECKOUT_URL: "https://checkout.example.com/checkout",
     ...options.env,
   };
   const deps = {
@@ -230,6 +252,8 @@ function harness(options = {}) {
               currency_code: "USD",
             },
             billing_cycle: { interval: "month", frequency: 1 },
+            tax_mode: "internal",
+            trial_period: { interval: "day", frequency: 30 },
             quantity: { minimum: 1, maximum: 1 },
           },
         });
@@ -239,7 +263,9 @@ function harness(options = {}) {
         data: {
           id: id("txn", 1),
           status: options.transactionStatus || "ready",
-          checkout: { url: "https://checkout.example.com/" },
+          checkout: {
+            url: `https://checkout.example.com/checkout?_ptxn=${id("txn", 1)}`,
+          },
         },
       });
     },
@@ -271,6 +297,34 @@ test("checkout stays disabled without flag and denies invalid auth, permissions 
     assert.ok(response.status >= 400);
     assert.equal(calls.purchases, 0);
     assert.equal(calls.writes, 0);
+  }
+});
+test("checkout links are bound to the configured HTTPS page and exact transaction", () => {
+  const page = checkoutPage(() => "https://example.com/checkout");
+  const transaction = {
+    id: id("txn", 1),
+    checkout: { url: `https://example.com/checkout?_ptxn=${id("txn", 1)}` },
+  };
+  assert.equal(
+    checkoutResult(transaction, page, "sandbox").environment,
+    "sandbox",
+  );
+  for (const url of [
+    "http://example.com/checkout",
+    "https://user:secret@example.com/checkout",
+    "https://example.com/checkout?x=1",
+    "bad",
+  ]) {
+    assert.throws(() => checkoutPage(() => url));
+  }
+  for (const url of [
+    "https://other.example/checkout",
+    `https://example.com/login?_ptxn=${id("txn", 1)}`,
+    `https://example.com/checkout?_ptxn=${id("txn", 2)}`,
+  ]) {
+    assert.throws(() =>
+      checkoutResult({ ...transaction, checkout: { url } }, page, "sandbox"),
+    );
   }
 });
 test("new checkout persists its transaction before returning, existing ready checkout is reused", async () => {

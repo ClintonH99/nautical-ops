@@ -56,6 +56,15 @@ export function paddleConfig(get) {
 export function validatePrice(price, tier, period) {
   const expected = approvedPrice(tier, period);
   const cycle = price?.billing_cycle;
+  const trial = price?.trial_period;
+  // The approved offer is free for exactly 30 days. Never inherit tax settings
+  // from the account: the price displayed to the customer must include tax.
+  const freeTrial =
+    trial?.interval === 'day' &&
+    trial.frequency === 30 &&
+    (trial.unit_price == null ||
+      (trial.unit_price.amount === '0' && trial.unit_price.currency_code === 'USD')) &&
+    (trial.unit_price_overrides?.length ?? 0) === 0;
   const matchesCycle =
     (cycle?.interval === 'month' && cycle.frequency === expected.months) ||
     (expected.months === 12 && cycle?.interval === 'year' && cycle.frequency === 1);
@@ -64,12 +73,43 @@ export function validatePrice(price, tier, period) {
     price?.unit_price?.currency_code !== 'USD' ||
     price.unit_price.amount !== expected.amount ||
     !matchesCycle ||
-    price.trial_period != null ||
+    !freeTrial ||
+    price.tax_mode !== 'internal' ||
     (price.unit_price_overrides?.length ?? 0) > 0 ||
     price.quantity?.minimum !== 1 ||
     price.quantity?.maximum !== 1
   ) {
     throw new BillingError('This plan is not ready for purchase. Please contact support.', 503);
+  }
+}
+
+/** Restrict returned checkout links to our configured payment page. */
+export function checkoutPage(get) {
+  try {
+    const url = new URL(get('PADDLE_CHECKOUT_URL'));
+    if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash)
+      throw new Error('Invalid checkout URL');
+    return url;
+  } catch {
+    throw new BillingError('Checkout page is not configured', 503);
+  }
+}
+export function checkoutResult(transaction, page, environment) {
+  try {
+    const url = new URL(transaction.checkout?.url);
+    if (
+      !/^txn_[a-z0-9]{26}$/.test(transaction.id || '') ||
+      url.origin !== page.origin ||
+      url.pathname !== page.pathname ||
+      url.username ||
+      url.password ||
+      url.hash ||
+      url.searchParams.get('_ptxn') !== transaction.id
+    )
+      throw new Error('Invalid checkout link');
+    return { url: url.href, transactionId: transaction.id, environment };
+  } catch {
+    throw new BillingError('Checkout is awaiting configuration', 503);
   }
 }
 export function planForPrice(prices, id) {

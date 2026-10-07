@@ -15,6 +15,7 @@ import {
   ImageBackground,
   Dimensions,
   Modal,
+  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,6 +40,8 @@ import {
 import { parseLocalDate, toYYYYMMDD } from '../utils';
 import { getCrewLeaveMonthRange } from '../utils/crewLeave';
 import { getActiveYardJobs } from '../utils/shipyardRecords';
+import { useTrialBillingReminder } from '../hooks/useTrialBillingReminder';
+import { paddleCheckoutEnabled } from '../services/paddleBilling';
 
 const { width } = Dimensions.get('window');
 const CATEGORY_SIZE = (width - SPACING.xl * 2 - SPACING.md * 2) / 3;
@@ -207,6 +210,12 @@ export const HomeScreen = ({ navigation }: any) => {
   const hasVessel = !!vesselId;
   const isCaptain = user?.role === 'CAPTAIN_MOV';
   const isCaptainLike = isCaptain;
+  const { reminder: trialReminder, dismiss: dismissTrialReminder } = useTrialBillingReminder({
+    enabled: Platform.OS === 'web' && paddleCheckoutEnabled && !showWelcomeModal,
+    userId: user?.id ?? null,
+    vesselId,
+    role: user?.role ?? null,
+  });
   const { colors: tripColors, load: loadColors } = useVesselTripColors(vesselId);
   const overrides = useDepartmentColorStore((s) => s.overrides);
   const typeColorMap = tripColors
@@ -339,32 +348,69 @@ export const HomeScreen = ({ navigation }: any) => {
   return (
     <>
       <Modal
-        visible={showWelcomeModal}
+        visible={showWelcomeModal || !!trialReminder}
         transparent
         animationType="fade"
-        onRequestClose={dismissWelcomeModal}
+        onRequestClose={showWelcomeModal ? dismissWelcomeModal : dismissTrialReminder}
       >
         <View style={styles.welcomeModalBackdrop}>
           <View style={[styles.welcomeModalCard, { backgroundColor: themeColors.surface }]}>
-            <Text style={[styles.welcomeModalTitle, { color: themeColors.textPrimary }]}>
-              Welcome to Nautical Ops!
-            </Text>
-            <Text style={[styles.welcomeModalMessage, { color: themeColors.textSecondary }]}>
-              {
-                'Your vessel is ready. Continue to explore Nautical Ops, or see the vessel plans to activate your subscription and invite your crew.'
-              }
-            </Text>
-            <Button title="Continue" onPress={dismissWelcomeModal} variant="outline" fullWidth />
-            <Button
-              title="See Plans"
-              onPress={async () => {
-                await dismissWelcomeModal();
-                navigation.navigate('VesselPlans');
-              }}
-              variant="primary"
-              fullWidth
-              style={{ marginTop: SPACING.sm }}
-            />
+            {showWelcomeModal ? (
+              <>
+                <Text style={[styles.welcomeModalTitle, { color: themeColors.textPrimary }]}>
+                  Welcome to Nautical Ops!
+                </Text>
+                <Text style={[styles.welcomeModalMessage, { color: themeColors.textSecondary }]}>
+                  {
+                    'Your vessel is ready. Continue to explore Nautical Ops, or see the vessel plans to activate your subscription and invite your crew.'
+                  }
+                </Text>
+                <Button
+                  title="Continue"
+                  onPress={dismissWelcomeModal}
+                  variant="outline"
+                  fullWidth
+                />
+                <Button
+                  title="See Plans"
+                  onPress={async () => {
+                    await dismissWelcomeModal();
+                    navigation.navigate('VesselPlans');
+                  }}
+                  variant="primary"
+                  fullWidth
+                  style={{ marginTop: SPACING.sm }}
+                />
+              </>
+            ) : trialReminder ? (
+              <>
+                <Text style={[styles.welcomeModalTitle, { color: themeColors.textPrimary }]}>
+                  {trialReminder.daysRemaining} {trialReminder.daysRemaining === 1 ? 'day' : 'days'}{' '}
+                  left of your free trial
+                </Text>
+                <Text style={[styles.welcomeModalMessage, { color: themeColors.textSecondary }]}>
+                  Your free trial ends on {new Date(trialReminder.endsAt).toLocaleDateString()}.{' '}
+                  Review your plan and set up billing when you’re ready. Adding payment details
+                  won’t end your trial early—you won’t be charged before it ends.
+                </Text>
+                <Button
+                  title="Continue"
+                  onPress={dismissTrialReminder}
+                  variant="outline"
+                  fullWidth
+                />
+                <Button
+                  title="See Plans"
+                  onPress={() => {
+                    dismissTrialReminder();
+                    navigation.navigate('VesselPlans');
+                  }}
+                  variant="primary"
+                  fullWidth
+                  style={{ marginTop: SPACING.sm }}
+                />
+              </>
+            ) : null}
           </View>
         </View>
       </Modal>

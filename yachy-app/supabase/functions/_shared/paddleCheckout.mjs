@@ -4,6 +4,8 @@ import {
   paddleConfig,
   paddleRequest,
   validatePrice,
+  checkoutPage,
+  checkoutResult,
 } from './paddle.mjs';
 
 // An ambiguous provider timeout deliberately leaves the reservation pending.
@@ -16,6 +18,7 @@ export function createPaddleCheckoutHandler({ getEnv, createClient, fetcher = fe
       if (getEnv('PADDLE_CHECKOUT_ENABLED') !== 'true')
         throw new BillingError('Payments are not yet available', 503);
       const config = paddleConfig(getEnv);
+      const page = checkoutPage(getEnv);
       const authorization = request.headers.get('authorization');
       if (!authorization?.startsWith('Bearer ')) throw new BillingError('Sign in to continue', 401);
       const scoped = createClient(getEnv('SUPABASE_URL'), getEnv('SUPABASE_ANON_KEY'), {
@@ -54,7 +57,7 @@ export function createPaddleCheckoutHandler({ getEnv, createClient, fetcher = fe
             'This payment is already being processed. Please refresh your plan.',
             409
           );
-        return Response.json({ url: transaction.checkout.url, transactionId: transaction.id });
+        return Response.json(checkoutResult(transaction, page, config.environment));
       }
       if (!reservation.created)
         throw new BillingError(
@@ -70,12 +73,12 @@ export function createPaddleCheckoutHandler({ getEnv, createClient, fetcher = fe
             collection_mode: 'automatic',
             items: [{ price_id: priceId, quantity: 1 }],
             custom_data: { checkout_id: reservation.id },
+            checkout: { url: page.href },
           }),
         },
         fetcher
       );
-      if (!/^txn_[a-z0-9]{26}$/.test(transaction.id || '') || !transaction.checkout?.url)
-        throw new BillingError('Checkout is awaiting configuration', 503);
+      const result = checkoutResult(transaction, page, config.environment);
       const { data: saved, error: saveError } = await admin
         .from('paddle_checkout_intents')
         .update({
@@ -90,7 +93,7 @@ export function createPaddleCheckoutHandler({ getEnv, createClient, fetcher = fe
           'Checkout could not be confirmed. Please contact support before retrying.',
           503
         );
-      return Response.json({ url: transaction.checkout.url, transactionId: transaction.id });
+      return Response.json(result);
     } catch (error) {
       return Response.json(
         {

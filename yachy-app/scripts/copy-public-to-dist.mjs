@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { WEB_ICON_FILES, withWebIcons } from './web-icons.mjs';
+import { publicPaddleScript } from './paddle-web-config.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.join(__dirname, '..');
@@ -20,6 +21,8 @@ const FILES = [
   'terms-and-conditions.html',
   'refund-policy.html',
   'support.html',
+  'checkout.html',
+  'paddle-checkout.js',
   ...WEB_ICON_FILES,
 ];
 
@@ -47,5 +50,6 @@ for (const name of ['index.html', ...FILES.filter((name) => name.endsWith('.html
   const file = path.join(distDir, name);
   fs.writeFileSync(file, withWebIcons(fs.readFileSync(file, 'utf8')));
 }
+fs.writeFileSync(path.join(distDir, 'paddle-checkout-config.js'), publicPaddleScript(process.env));
 
 console.log('[copy-public-to-dist] done,', copied, 'files');
