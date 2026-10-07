@@ -21,6 +21,7 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (cb: () => void) => jest.requireActual('react').useEffect(cb, [cb]),
+  useIsFocused: () => true,
 }));
 jest.mock('../../src/hooks/useScreenState', () => ({
   useScreenState: (_name: string, initial: unknown) =>
