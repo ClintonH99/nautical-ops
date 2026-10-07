@@ -63,13 +63,13 @@ test("configuration requires explicit environment, separate keys and 24 unique I
   env.PADDLE_PRICE_IDS = "{}";
   assert.throws(() => paddleConfig((key) => env[key]));
 });
-test("catalogue validation requires tax-inclusive prices and a free 30-day trial", () => {
+test("catalogue validation requires worldwide tax-exclusive bases and a free 30-day trial", () => {
   const price = {
     status: "active",
     unit_price: { amount: "86389", currency_code: "USD" },
     billing_cycle: { interval: "year", frequency: 1 },
     trial_period: { interval: "day", frequency: 30 },
-    tax_mode: "internal",
+    tax_mode: "external",
     quantity: { minimum: 1, maximum: 1 },
   };
   assert.doesNotThrow(() => validatePrice(price, "1_5", "12_months"));
@@ -94,7 +94,7 @@ test("catalogue validation requires tax-inclusive prices and a free 30-day trial
         unit_price_overrides: [{}],
       },
     },
-    { tax_mode: "external" },
+    { tax_mode: "internal" },
     { tax_mode: "account_setting" },
     { tax_mode: "location" },
     { quantity: { minimum: 1, maximum: 999 } },
@@ -252,7 +252,7 @@ function harness(options = {}) {
               currency_code: "USD",
             },
             billing_cycle: { interval: "month", frequency: 1 },
-            tax_mode: "internal",
+            tax_mode: "external",
             trial_period: { interval: "day", frequency: 30 },
             quantity: { minimum: 1, maximum: 1 },
           },

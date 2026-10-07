@@ -1,8 +1,9 @@
-/* global document, window, URLSearchParams */
 (() => {
   const status = document.getElementById('status');
   const config = window.NAUTICAL_PADDLE;
-  const transaction = new URLSearchParams(window.location.search).get('_ptxn');
+  const params = new URLSearchParams(window.location.search);
+  const manual = params.has('transaction');
+  const transaction = params.get('transaction') || params.get('_ptxn');
   const message = (text) => {
     status.textContent = text;
   };
@@ -16,6 +17,9 @@
     !prefix ||
     typeof config.token !== 'string' ||
     !config.token.startsWith(prefix) ||
+    (manual && params.has('_ptxn')) ||
+    params.getAll('transaction').length > 1 ||
+    params.getAll('_ptxn').length > 1 ||
     !/^txn_[a-z0-9]{26}$/.test(transaction || '')
   ) {
     message('This checkout link is invalid. Please return to Vessel Plans to continue.');
@@ -29,8 +33,8 @@
   script.onload = () => {
     try {
       if (config.environment === 'sandbox') window.Paddle.Environment.set('sandbox');
-      // Paddle automatically opens the server-created transaction from _ptxn.
-      // Do not construct client-side prices or call open() a second time.
+      // Old _ptxn links auto-open. New links use one explicit open so the chosen
+      // billing location can be carried over without creating a new transaction.
       window.Paddle.Initialize({
         token: config.token,
         checkout: { settings: { displayMode: 'overlay', allowLogout: false } },
@@ -48,6 +52,40 @@
           }
         },
       });
+      if (manual) {
+        let customer;
+        try {
+          const key = 'paddle-prefill:' + transaction;
+          const saved = JSON.parse(window.sessionStorage.getItem(key) || 'null');
+          window.sessionStorage.removeItem(key);
+          if (
+            saved &&
+            typeof saved.email === 'string' &&
+            saved.email.length <= 254 &&
+            /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(saved.email) &&
+            Number.isFinite(saved.savedAt) &&
+            Date.now() - saved.savedAt >= 0 &&
+            Date.now() - saved.savedAt < 600000 &&
+            /^[A-Z]{2}$/.test(saved.address?.countryCode || '') &&
+            typeof saved.address?.postalCode === 'string' &&
+            saved.address.postalCode.length <= 32
+          ) {
+            customer = {
+              email: saved.email,
+              address: {
+                countryCode: saved.address.countryCode,
+                ...(saved.address.postalCode ? { postalCode: saved.address.postalCode } : {}),
+              },
+            };
+          }
+        } catch {
+          /* Prefill is optional, never evidence of a payment or exemption. */
+        }
+        window.Paddle.Checkout.open({
+          transactionId: transaction,
+          ...(customer ? { customer } : {}),
+        });
+      }
       message('Review your plan and billing details in the secure Paddle window.');
     } catch {
       message(

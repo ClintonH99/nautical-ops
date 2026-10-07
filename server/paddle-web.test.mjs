@@ -38,16 +38,25 @@ const source = fs.readFileSync(
   new URL("../yachy-app/public/paddle-checkout.js", import.meta.url),
   "utf8",
 );
-function checkoutPage(config, transaction = `txn_${"1".repeat(26)}`) {
+function checkoutPage(
+  config,
+  transaction = `txn_${"1".repeat(26)}`,
+  options = {},
+) {
   const nodes = { status: { textContent: "" }, environment: { hidden: true } };
   const scripts = [];
   const calls = [];
   const win = {
     NAUTICAL_PADDLE: config,
-    location: { search: `?_ptxn=${transaction}` },
+    location: { search: options.search || `?_ptxn=${transaction}` },
+    sessionStorage: {
+      getItem: () => JSON.stringify(options.prefill || null),
+      removeItem: (key) => calls.push({ removed: key }),
+    },
     Paddle: {
       Environment: { set: (env) => calls.push(env) },
       Initialize: (settings) => calls.push(settings),
+      Checkout: { open: (settings) => calls.push({ opened: settings }) },
     },
   };
   vm.runInNewContext(source, {
@@ -69,6 +78,77 @@ test("unconfigured and malformed checkouts do not load Paddle", () => {
     [{ enabled: true, environment: "sandbox", token: "test_abc" }, "bad"],
   ]) {
     assert.equal(checkoutPage(config, transaction).scripts.length, 0);
+  }
+});
+
+test("explicit checkout carries a recent billing address to Paddle exactly once", () => {
+  const transaction = `txn_${"1".repeat(26)}`;
+  const page = checkoutPage(
+    { enabled: true, environment: "sandbox", token: "test_abc" },
+    transaction,
+    {
+      search: `?transaction=${transaction}`,
+      prefill: {
+        email: "test@example.com",
+        address: { countryCode: "FR", postalCode: "75001" },
+        savedAt: Date.now(),
+      },
+    },
+  );
+  page.scripts[0].onload();
+  const opened = page.calls.filter((call) => call.opened);
+  assert.equal(opened.length, 1);
+  assert.equal(opened[0].opened.transactionId, transaction);
+  assert.equal(opened[0].opened.customer.address.countryCode, "FR");
+  assert.equal(opened[0].opened.customer.address.postalCode, "75001");
+  assert.equal(opened[0].opened.customer.email, "test@example.com");
+  assert.equal(page.calls.filter((call) => call.removed).length, 1);
+  assert.equal(opened[0].opened.items, undefined);
+});
+
+test("expired or malformed address prefill never prevents secure checkout", () => {
+  const transaction = `txn_${"1".repeat(26)}`;
+  for (const prefill of [
+    null,
+    {
+      email: "test@example.com",
+      address: { countryCode: "FR", postalCode: "75001" },
+      savedAt: Date.now() - 600001,
+    },
+    {
+      email: "invalid",
+      address: { countryCode: "FR", postalCode: "75001" },
+      savedAt: Date.now(),
+    },
+  ]) {
+    const page = checkoutPage(
+      { enabled: true, environment: "sandbox", token: "test_abc" },
+      transaction,
+      {
+        search: `?transaction=${transaction}`,
+        prefill,
+      },
+    );
+    page.scripts[0].onload();
+    const opened = page.calls.filter((call) => call.opened);
+    assert.equal(opened.length, 1);
+    assert.equal(opened[0].opened.customer, undefined);
+  }
+});
+
+test("conflicting checkout parameters cannot open duplicate payment windows", () => {
+  const transaction = `txn_${"1".repeat(26)}`;
+  for (const search of [
+    `?transaction=${transaction}&_ptxn=${transaction}`,
+    `?transaction=${transaction}&transaction=${transaction}`,
+  ]) {
+    const page = checkoutPage(
+      { enabled: true, environment: "sandbox", token: "test_abc" },
+      transaction,
+      { search },
+    );
+    assert.equal(page.scripts.length, 0);
+    assert.match(page.nodes.status.textContent, /invalid/);
   }
 });
 test("sandbox checkout initializes once and never treats checkout completion as entitlement", () => {

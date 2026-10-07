@@ -57,8 +57,8 @@ export function validatePrice(price, tier, period) {
   const expected = approvedPrice(tier, period);
   const cycle = price?.billing_cycle;
   const trial = price?.trial_period;
-  // The approved offer is free for exactly 30 days. Never inherit tax settings
-  // from the account: the price displayed to the customer must include tax.
+  // Same approved USD base worldwide; Paddle adds regional tax. Never inherit
+  // an account/location mode that could absorb tax or override the base price.
   const freeTrial =
     trial?.interval === 'day' &&
     trial.frequency === 30 &&
@@ -74,7 +74,7 @@ export function validatePrice(price, tier, period) {
     price.unit_price.amount !== expected.amount ||
     !matchesCycle ||
     !freeTrial ||
-    price.tax_mode !== 'internal' ||
+    price.tax_mode !== 'external' ||
     (price.unit_price_overrides?.length ?? 0) > 0 ||
     price.quantity?.minimum !== 1 ||
     price.quantity?.maximum !== 1
