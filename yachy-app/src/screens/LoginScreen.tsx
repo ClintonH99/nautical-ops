@@ -25,7 +25,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import authService from '../services/auth';
 import { supabase } from '../services/supabase';
 import { evaluateAccountAccess } from '../services/accountAccess';
-import { DEVICE_LIMIT_MESSAGE } from '../services/deviceAccess';
+import { DEVICE_LIMIT_MESSAGE, DEVICE_SESSION_REVOKED_MESSAGE } from '../services/deviceAccess';
 import type { User } from '../types';
 import { useAuthStore } from '../store';
 import { usePostHog } from 'posthog-react-native';
@@ -78,8 +78,11 @@ export const LoginScreen = ({ navigation }: any) => {
   const completeLogin = async (user: User, method: 'email' | 'google' | 'apple') => {
     const decision = await evaluateAccountAccess(user);
 
-    if (decision.state === 'device_limit_reached') {
-      const message = DEVICE_LIMIT_MESSAGE;
+    if (decision.state === 'device_limit_reached' || decision.state === 'device_session_revoked') {
+      const message =
+        decision.state === 'device_session_revoked'
+          ? DEVICE_SESSION_REVOKED_MESSAGE
+          : DEVICE_LIMIT_MESSAGE;
       setLoginNotice(message);
       setLoginError('');
       setCaptainPaymentRequired(false);

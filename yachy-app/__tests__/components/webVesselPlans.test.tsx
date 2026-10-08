@@ -8,6 +8,22 @@ let mockWidth = 390;
 let mockSubscription: any = null;
 const mockRefetch = jest.fn();
 const mockPreview = jest.fn();
+const mockFocusListeners = new Set<() => void>();
+const originalAddEventListener = window.addEventListener;
+const originalRemoveEventListener = window.removeEventListener;
+beforeAll(() => {
+  // The React Native Jest environment supplies window but no browser events.
+  window.addEventListener = jest.fn((event: string, listener: any) => {
+    if (event === 'focus') mockFocusListeners.add(listener);
+  });
+  window.removeEventListener = jest.fn((event: string, listener: any) => {
+    if (event === 'focus') mockFocusListeners.delete(listener);
+  });
+});
+afterAll(() => {
+  window.addEventListener = originalAddEventListener;
+  window.removeEventListener = originalRemoveEventListener;
+});
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
   default: () => ({ width: mockWidth, height: 844, scale: 1, fontScale: 1 }),
@@ -94,12 +110,22 @@ function result(period = 'monthly', code = 'FR') {
   };
 }
 beforeEach(() => {
+  mockFocusListeners.clear();
+  mockRefetch.mockClear();
   mockUser = { id: 'captain', role: 'CAPTAIN_MOV', vesselId: 'vessel' };
   mockWidth = 390;
   mockSubscription = null;
   mockPreview
     .mockReset()
     .mockImplementation((_v, p, l) => Promise.resolve(result(p, l.countryCode)));
+});
+test('refreshes billing on browser focus and removes its listener on unmount', () => {
+  const screen = render(<VesselPlansScreen />);
+  mockRefetch.mockClear();
+  act(() => mockFocusListeners.forEach((listener) => listener()));
+  expect(mockRefetch).toHaveBeenCalledTimes(1);
+  screen.unmount();
+  expect(mockFocusListeners.size).toBe(0);
 });
 const choose = (screen: any, name = 'France') => {
   fireEvent.press(screen.getByLabelText('Change billing country'));

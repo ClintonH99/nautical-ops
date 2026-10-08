@@ -16,6 +16,8 @@ const distDir = path.join(appRoot, 'dist');
 
 const FILES = [
   'landing.html',
+  'landing.css',
+  'landing.js',
   'pricing.html',
   'privacy-policy.html',
   'terms-and-conditions.html',

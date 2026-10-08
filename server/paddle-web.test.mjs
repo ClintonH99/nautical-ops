@@ -34,6 +34,22 @@ test("enabled browser configuration requires a public token for the exact enviro
   ])
     assert.throws(() => publicPaddleConfig({ ...env, ...patch }));
 });
+test("sandbox trial switch cannot activate live checkout", () => {
+  const env = {
+    EXPO_PUBLIC_PADDLE_SANDBOX_TRIAL_ENABLED: "true",
+    EXPO_PUBLIC_PADDLE_ENV: "live",
+    EXPO_PUBLIC_PADDLE_CLIENT_TOKEN: "live_abc",
+  };
+  assert.deepEqual(publicPaddleConfig(env), { enabled: false });
+  assert.equal(
+    publicPaddleConfig({
+      ...env,
+      EXPO_PUBLIC_PADDLE_ENV: "sandbox",
+      EXPO_PUBLIC_PADDLE_CLIENT_TOKEN: "test_abc",
+    }).enabled,
+    true,
+  );
+});
 const source = fs.readFileSync(
   new URL("../yachy-app/public/paddle-checkout.js", import.meta.url),
   "utf8",
@@ -163,6 +179,7 @@ test("sandbox checkout initializes once and never treats checkout completion as 
   );
   page.scripts[0].onload();
   assert.equal(page.calls[0], "sandbox");
+  assert.equal(page.calls[1].checkout.settings.variant, "one-page");
   assert.equal(page.nodes.environment.hidden, false);
   page.calls[1].eventCallback({ name: "checkout.completed" });
   assert.match(page.nodes.status.textContent, /server-confirmed/);

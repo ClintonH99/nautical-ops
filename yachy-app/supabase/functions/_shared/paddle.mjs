@@ -125,7 +125,28 @@ export async function paddleRequest(config, path, options = {}, fetcher = fetch)
     headers: { Authorization: `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' },
     signal: AbortSignal.timeout(12000),
   });
-  if (!response.ok) throw new BillingError('Billing provider is temporarily unavailable', 502);
+  if (!response.ok) {
+    // Provider descriptions may contain customer data. Log only bounded machine
+    // identifiers; never request headers, payloads, query strings or raw errors.
+    let failure;
+    try {
+      failure = await response.json();
+    } catch {
+      /* non-JSON provider error */
+    }
+    const identifier = (value) =>
+      typeof value === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(value) ? value : undefined;
+    console.error('Paddle request rejected', {
+      status: response.status,
+      code: identifier(failure?.error?.code),
+      requestId: identifier(failure?.meta?.request_id),
+      fields: Array.isArray(failure?.error?.errors)
+        ? failure.error.errors.map((entry) => identifier(entry.field)).filter(Boolean)
+        : undefined,
+      operation: `${options.method || 'GET'} ${path.split('?')[0].replace(/(?:ctm|add|txn|sub|pri)_[a-z0-9]+/g, ':id')}`,
+    });
+    throw new BillingError('Billing provider is temporarily unavailable', 502);
+  }
   const json = await response.json();
   if (!json.data) throw new BillingError('Incomplete billing response', 502);
   return json.data;

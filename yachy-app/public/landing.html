@@ -1,699 +1,835 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Nautical Ops — Crew Operations, Simplified</title>
-<meta name="description" content="The professional operations app built for superyacht crews. Manage voyages, crew, tasks, and maintenance across all your devices."/>
-<meta property="og:title" content="Nautical Ops — Crew Operations, Simplified"/>
-<meta name="theme-color" content="#1e3a5f"/>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Secular+One&family=Mulish:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/devices.css@latest/dist/devices.min.css"/>
-<style>
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
-html{scroll-behavior:smooth;}
-body{background:#fff;color:#1e3a5f;font-family:'Mulish',sans-serif;font-size:15px;line-height:1.6;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
-a{color:inherit;text-decoration:none;}
-
-:root{
-  --navy:#1e3a5f;
-  --navy-dark:#152d4a;
-  --navy-light:#e8eef5;
-  --bg:#f7f8fa;
-  --white:#ffffff;
-  --border:#e2e8f0;
-  --text:#1e3a5f;
-  --muted:#1e3a5f;
-  --light:#4a6fa5;
-  --gold:#c9a227;
-  --gold-dim:rgba(201,162,39,0.12);
-  --ff-d:'Secular One',sans-serif;
-  --ff-b:'Mulish',sans-serif;
-}
-
-/* ── Nav ─────────────────────────────── */
-
-/* ── Devices.css overrides ───────────── */
-.device-frame .app-screen{width:100%;height:100%;background:#040e1c;overflow:hidden;}
-.device .device-frame{overflow:hidden !important;-webkit-transform:translateZ(0);transform:translateZ(0);}
-.device .device-frame img,.device .device-frame video{display:block;width:100%;height:100%;object-fit:cover;object-position:top;border-radius:inherit;}
-.hero-device-zoom{zoom:0.62;}
-.ss-device-zoom{zoom:0.54;transform:perspective(900px) rotateY(-10deg) rotateX(4deg) rotateZ(-0.5deg);filter:drop-shadow(-14px 22px 40px rgba(0,0,0,0.3)) drop-shadow(-4px 8px 16px rgba(0,0,0,0.15));display:inline-block;}
-.dev-showcase-phone-zoom{zoom:0.52;}
-.dev-showcase-ipad-zoom{zoom:0.42;}
-.dev-showcase-macbook-zoom{zoom:0.46;}
-
-/* ── Hero ────────────────────────────── */
-.hero{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:40px;padding:120px 80px 80px;background:var(--white);overflow:hidden;position:relative;}
-.hero-bg-img{position:absolute;inset:0;background-image:url('/yacht-bg.jpg');background-size:cover;background-position:center 55%;opacity:.4;z-index:0;}
-.hero-overlay{position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.6) 0%,rgba(255,255,255,.3) 60%,rgba(255,255,255,.1) 100%);z-index:1;}
-.hero-content,.hero-visual{position:relative;z-index:2;}
-.eyebrow{display:inline-flex;align-items:center;gap:10px;font-size:11px;font-weight:600;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:22px;}
-.eyebrow::before{content:'';width:24px;height:1.5px;background:var(--gold);}
-h1{font-family:var(--ff-d);font-size:clamp(38px,5vw,66px);font-weight:600;color:var(--navy);line-height:1.08;letter-spacing:-.025em;margin-bottom:22px;}
-h1 em{font-style:italic;color:var(--gold);}
-.hero-sub{font-size:16px;color:var(--muted);line-height:1.7;max-width:420px;margin-bottom:38px;}
-.hero-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
-.btn-primary{display:inline-flex;align-items:center;gap:8px;background:var(--navy);color:#fff;font-size:14px;font-weight:600;padding:13px 24px;border-radius:10px;transition:all .2s;}
-.btn-primary:hover{background:var(--navy-dark);transform:translateY(-2px);box-shadow:0 8px 24px rgba(30,58,95,0.2);}
-.btn-ghost{display:inline-flex;align-items:center;gap:8px;color:var(--navy);font-size:14px;font-weight:500;padding:13px 24px;border-radius:10px;border:1px solid var(--border);transition:all .2s;}
-.btn-ghost:hover{background:rgba(30,58,95,.06);border-color:#4a6fa5;}
-
-/* ── Hero phone (devices.css) ────────── */
-.hero-visual{display:flex;justify-content:center;align-items:center;position:relative;}
-.hero-float{animation:heroFloat 5s ease-in-out infinite;display:inline-block;}
-@keyframes heroFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-14px);}}
-.hero-tilt{transform:perspective(900px) rotateY(-24deg) rotateX(7deg) rotateZ(-1.5deg);filter:drop-shadow(-28px 40px 60px rgba(0,0,0,0.38)) drop-shadow(-8px 12px 20px rgba(0,0,0,0.2));display:inline-block;}
-
-/* Phone screen shared styles */
-.ps-nav{background:#071828;padding:34px 14px 10px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.05);}
-.ps-nav-title{font-size:11px;font-weight:700;color:#dceaf6;letter-spacing:.05em;}
-.ps-badge{background:rgba(201,162,39,.18);border:1px solid rgba(201,162,39,.32);color:#c9a227;font-size:9px;font-weight:700;padding:2px 7px;border-radius:7px;}
-.ps-body{padding:12px 14px 60px;}
-.ps-lbl{font-size:9px;font-weight:600;color:#3d5a70;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;}
-.ps-vessel{font-size:13px;font-weight:700;color:#dceaf6;margin-bottom:12px;}
-.ps-card{background:#0c2236;border:1px solid rgba(180,210,255,.07);border-radius:9px;padding:10px 11px;margin-bottom:7px;}
-.ps-card-tag{font-size:8px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#c9a227;margin-bottom:3px;}
-.ps-card-title{font-size:10px;font-weight:600;color:#dceaf6;}
-.ps-card-sub{font-size:9px;color:#3d5a70;margin-top:2px;}
-.ps-task{display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.03);}
-.ps-task:last-child{border-bottom:none;}
-.ps-dot{width:6px;height:6px;border-radius:50%;background:rgba(201,162,39,.45);flex-shrink:0;}
-.ps-dot.done{background:#16a34a;}
-.ps-txt{font-size:9px;color:#6e8fa8;}
-.ps-txt.done{color:#3d5a70;text-decoration:line-through;}
-.ps-tabbar{position:absolute;bottom:0;left:0;right:0;background:#071828;border-top:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-around;padding:8px 0 12px;}
-.ps-tab{display:flex;flex-direction:column;align-items:center;gap:3px;}
-.ps-tab-bar{width:18px;height:3px;border-radius:2px;background:rgba(255,255,255,.1);}
-.ps-tab-bar.active{background:var(--gold);}
-.ps-tab-lbl{font-size:7px;color:#3d5a70;}
-.ps-tab-lbl.active{color:var(--gold);}
-
-/* ── Sticky scroll features ──────────── */
-.sf{position:relative;background:var(--bg);}
-.sf-bg{position:absolute;inset:0;background-image:url('/yachts-aerial.jpg');background-size:cover;background-position:center;opacity:0.30;z-index:0;pointer-events:none;}
-.sf-intro{text-align:center;padding:80px 80px 0;position:relative;z-index:2;}
-.sf-inner{display:grid;grid-template-columns:1fr 1fr;min-height:auto;padding:0 80px;align-items:start;position:relative;z-index:2;}
-.sf-steps{padding:80px 20px 100px 0;}
-.sf-step{min-height:80vh;display:flex;align-items:center;opacity:.35;transition:opacity .4s;}
-.sf-step.active{opacity:1;}
-.sf-phone-col{position:sticky;top:0;height:100vh;display:flex;align-items:center;justify-content:center;z-index:2;}
-.sf-phone-scene{animation:sfSwell 6s ease-in-out infinite;filter:drop-shadow(0 30px 60px rgba(0,0,0,0.2)) drop-shadow(0 8px 20px rgba(0,0,0,0.12));}
-@keyframes sfSwell{0%,100%{transform:translateY(0);}50%{transform:translateY(-12px);}}
-.sf-phone{width:248px;height:524px;background:#040e1c;border-radius:42px;border:6px solid rgba(30,58,95,0.12);box-shadow:-20px 28px 70px rgba(30,58,95,0.2),0 40px 80px rgba(0,0,0,0.1);overflow:hidden;position:relative;}
-.sf-screen{display:none;width:100%;height:100%;position:absolute;top:0;left:0;}
-.sf-screen.active{display:block;}
-.sf-phone-col .device .device-frame{overflow:hidden !important;box-shadow:inset 0 0 0 2px rgba(0,0,0,0.9) !important;}
-/* Clean dark phone frame for sticky scroll */
-.sf-device-wrap{position:relative;width:300px;}
-.sf-device-frame{
-  width:300px;
-  background:#18182a;
-  border-radius:46px;
-  border:8px solid #111120;
-  box-shadow:0 0 0 1.5px rgba(255,255,255,0.06),0 32px 80px rgba(0,0,0,0.45),0 8px 24px rgba(0,0,0,0.3);
-  overflow:hidden;
-  position:relative;
-  min-height:648px;
-}
-.sf-device-island{
-  position:absolute;top:12px;left:50%;transform:translateX(-50%);
-  width:96px;height:28px;background:#111120;border-radius:20px;z-index:10;
-}
-.sf-device-frame .sf-screen{display:none;position:absolute;top:0;left:0;width:100%;height:100%;}
-.sf-device-frame .sf-screen.active{display:block;}
-.sf-device-frame img{width:100%;height:100%;display:block;object-fit:cover;object-position:top;}
-.feat-tag{display:block;text-align:center;font-size:12px;font-weight:600;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px;}
-.feat-title{font-family:var(--ff-d);font-size:clamp(30px,4vw,48px);font-weight:600;color:var(--navy);line-height:1.12;letter-spacing:-.02em;margin-bottom:16px;}
-.feat-desc{font-size:17px;color:var(--muted);line-height:1.8;}
-.fp-notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:78px;height:22px;background:#040e1c;border-radius:0 0 14px 14px;z-index:10;}
-.fp-body{padding:30px 12px 12px;height:100%;}
-.fp-lbl{font-size:8px;font-weight:700;color:#3d5a70;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;}
-.fp-item{background:#0c2236;border:1px solid rgba(180,210,255,.07);border-radius:9px;padding:9px 10px;margin-bottom:6px;}
-.fp-item-row{display:flex;justify-content:space-between;align-items:center;}
-.fp-item-title{font-size:10px;font-weight:600;color:#dceaf6;}
-.fp-item-sub{font-size:8px;color:#3d5a70;margin-top:2px;}
-.fp-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-.fp-badge{font-size:8px;padding:2px 7px;border-radius:5px;font-weight:600;}
-.fp-badge.done{background:rgba(22,163,74,.15);color:#16a34a;}
-.fp-badge.pending{background:rgba(201,162,39,.15);color:#c9a227;}
-.fp-bar-wrap{height:3px;background:rgba(201,162,39,.15);border-radius:2px;margin-top:7px;}
-.fp-bar{height:100%;background:var(--gold);border-radius:2px;}
-
-/* ── Screenshot gallery ──────────────── */
-.screenshots{background:var(--white);padding:80px 80px;}
-.screenshots-intro{text-align:center;margin-bottom:52px;}
-.ss-row{display:flex;gap:20px;justify-content:center;align-items:flex-end;overflow-x:auto;padding-bottom:20px;scrollbar-width:none;}
-.ss-row::-webkit-scrollbar{display:none;}
-.ss-item{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:14px;}
-.ss-raise{transform:translateY(-28px);}
-.ss-raise2{transform:translateY(-14px);}
-.ss-phone-frame{
-  width:240px;
-  background:#000;
-  border-radius:40px;
-  border:6px solid #1c1c1e;
-  box-shadow:0 24px 60px rgba(0,0,0,0.22),0 8px 20px rgba(0,0,0,0.12),inset 0 0 0 1px rgba(255,255,255,0.08);
-  overflow:hidden;
-  position:relative;
-}
-.ss-phone-frame::before{
-  content:'';
-  position:absolute;
-  top:0;left:50%;
-  transform:translateX(-50%);
-  width:95px;height:28px;
-  background:#000;
-  border-radius:0 0 18px 18px;
-  z-index:2;
-}
-.ss-phone-frame img{
-  width:100%;
-  display:block;
-  object-fit:cover;
-  object-position:top;
-}
-.ss-label{font-size:12px;font-weight:500;color:var(--muted);}
-
-/* ── Devices section ─────────────────── */
-.devices{background:var(--bg);padding:80px 80px;overflow:hidden;}
-.devices-intro{text-align:center;margin-bottom:60px;}
-.devices-intro .sec-title{margin-bottom:10px;}
-.devices-scene{position:relative;display:flex;align-items:flex-end;justify-content:center;gap:0;min-height:360px;}
-
-/* MacBook */
-.macbook-wrap{position:relative;z-index:2;flex-shrink:0;}
-.macbook-lid{width:480px;background:linear-gradient(160deg,#d0d8e4 0%,#c4ccd8 100%);border-radius:12px 12px 0 0;padding:10px 10px 0;border:1px solid #b8c4d0;border-bottom:none;box-shadow:0 -8px 40px rgba(30,58,95,0.1);}
-.macbook-screen{background:#040e1c;border-radius:6px;height:268px;overflow:hidden;position:relative;}
-.macbook-cam{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:#0a1628;}
-.macbook-chin{background:linear-gradient(#d0d8e4,#c0c8d4);height:5px;border-radius:0;}
-.macbook-hinge{background:linear-gradient(#a8b4c0,#98a4b0);height:4px;width:100%;border-radius:0;}
-.macbook-base{background:linear-gradient(160deg,#c8d0dc 0%,#b8c0cc 100%);height:14px;border-radius:0 0 4px 4px;border:1px solid #a8b4c0;border-top:none;box-shadow:0 6px 20px rgba(0,0,0,0.1);}
-.macbook-feet{display:flex;justify-content:space-between;padding:0 60px;margin-top:1px;}
-.macbook-foot{width:60px;height:3px;background:#a0aab4;border-radius:0 0 3px 3px;}
-.macbook-screen-content{padding:20px 16px 10px;}
-.mb-nav{background:#071828;border-radius:6px 6px 0 0;padding:8px 12px;display:flex;align-items:center;gap:6px;margin:-20px -16px 12px;}
-.mb-dot{width:6px;height:6px;border-radius:50%;}
-.mb-title{font-size:8px;color:rgba(255,255,255,.5);margin-left:auto;letter-spacing:.04em;}
-.mb-sidebar{display:flex;gap:10px;height:180px;}
-.mb-sidebar-nav{width:70px;display:flex;flex-direction:column;gap:4px;}
-.mb-nav-item{font-size:7px;padding:5px 8px;border-radius:5px;color:#6e8fa8;}
-.mb-nav-item.active{background:#0c2236;color:#c9a227;font-weight:600;}
-.mb-content{flex:1;display:flex;flex-direction:column;gap:6px;}
-.mb-stat-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;}
-.mb-stat{background:#0c2236;border-radius:5px;padding:6px 8px;}
-.mb-stat-val{font-size:11px;font-weight:700;color:#dceaf6;}
-.mb-stat-lbl{font-size:7px;color:#3d5a70;margin-top:1px;}
-.mb-table-row{background:#0c2236;border-radius:5px;padding:6px 8px;display:flex;justify-content:space-between;align-items:center;}
-.mb-table-title{font-size:8px;color:#dceaf6;}
-.mb-table-badge{font-size:7px;padding:1px 5px;border-radius:4px;background:rgba(22,163,74,.15);color:#16a34a;}
-
-/* iPad */
-.ipad-wrap{position:relative;z-index:1;margin-left:-20px;margin-bottom:16px;flex-shrink:0;}
-.ipad{width:200px;height:270px;background:#040e1c;border-radius:16px;border:7px solid #1a2a3a;box-shadow:0 20px 50px rgba(30,58,95,0.2);overflow:hidden;position:relative;}
-.ipad-cam{position:absolute;top:5px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:#0a1628;z-index:10;}
-.ipad-screen{padding:16px 10px 10px;height:100%;}
-
-/* iPhone (small, beside MacBook) */
-.iphone-wrap{position:relative;z-index:3;margin-left:16px;margin-bottom:0;flex-shrink:0;transform:perspective(800px) rotateY(-8deg);}
-.iphone-s{width:110px;height:234px;background:#040e1c;border-radius:28px;border:5px solid rgba(30,58,95,0.14);box-shadow:0 20px 50px rgba(30,58,95,0.18);overflow:hidden;position:relative;}
-.iphone-s-notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:44px;height:12px;background:#040e1c;border-radius:0 0 8px 8px;z-index:10;}
-.iphone-s-screen{padding:16px 8px 8px;height:100%;}
-.iphone-s-tabbar{position:absolute;bottom:0;left:0;right:0;background:#071828;display:flex;justify-content:space-around;padding:5px 0 8px;}
-.iphone-s-tab{width:14px;height:2.5px;border-radius:2px;background:rgba(255,255,255,.1);}
-.iphone-s-tab.active{background:var(--gold);}
-
-/* ── Sections ────────────────────────── */
-.section{padding:88px 80px;}
-.section.grey{background:var(--bg);}
-.sec-eyebrow{font-size:11px;font-weight:600;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:14px;}
-.sec-title{font-family:var(--ff-d);font-size:clamp(30px,4vw,50px);font-weight:600;color:var(--navy);line-height:1.1;letter-spacing:-.02em;}
-.sec-sub{font-size:16px;color:var(--muted);line-height:1.7;max-width:540px;}
-
-/* ── Roles ───────────────────────────── */
-
-.role-card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:28px 24px;transition:border-color .2s,transform .2s,box-shadow .2s;}
-.role-card:hover{border-color:#4a6fa5;transform:translateY(-4px);box-shadow:0 12px 32px rgba(30,58,95,0.08);}
-.role-icon{width:42px;height:42px;background:var(--navy-light);border-radius:11px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
-.role-icon svg{width:20px;height:20px;}
-.role-title{font-family:var(--ff-d);font-size:20px;font-weight:600;color:var(--navy);margin-bottom:2px;}
-.role-sub-title{font-size:12px;font-weight:500;color:var(--gold);letter-spacing:.04em;margin-bottom:10px;}
-
-/* ── Video section ───────────────────── */
-.video-inner{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;max-width:1100px;margin:0 auto;}
-.video-phone-col{display:flex;justify-content:center;align-items:center;}
-.video-text-col{display:flex;flex-direction:column;justify-content:center;}
-
-
-.faq-inner{max-width:720px;margin:0 auto;}
-.faq-hdr{text-align:center;margin-bottom:48px;}
-.faq-hdr .sec-title{margin-bottom:0;}
-.faq-item{border-bottom:1px solid var(--border);}
-.faq-item:first-child{border-top:1px solid var(--border);}
-.faq-q{width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:20px 0;display:flex;justify-content:space-between;align-items:center;gap:20px;font-size:15px;font-weight:500;color:var(--text);font-family:var(--ff-b);transition:color .15s;}
-.faq-q:hover,.faq-q.open{color:var(--navy);}
-.faq-icon{flex-shrink:0;width:18px;height:18px;position:relative;}
-.faq-icon::before,.faq-icon::after{content:'';position:absolute;background:currentColor;border-radius:1px;transition:transform .25s,opacity .25s;}
-.faq-icon::before{width:13px;height:1.5px;top:50%;left:50%;transform:translate(-50%,-50%);}
-.faq-icon::after{width:1.5px;height:13px;top:50%;left:50%;transform:translate(-50%,-50%);}
-.faq-q.open .faq-icon::after{transform:translate(-50%,-50%) rotate(90deg);opacity:0;}
-.faq-a{font-size:14px;color:var(--muted);line-height:1.75;max-height:0;overflow:hidden;transition:max-height .35s ease,padding .35s;padding:0;}
-.faq-a.open{max-height:400px;padding:0 0 20px;}
-.faq-a a{color:var(--navy);font-weight:500;}
-
-/* ── Footer ──────────────────────────── */
-footer{background:var(--navy);padding:56px 80px 40px;}
-.footer-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:48px;flex-wrap:wrap;gap:40px;}
-.footer-logo{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
-.footer-logo svg{width:26px;height:26px;}
-.footer-logo-name{font-family:var(--ff-d);font-size:17px;font-weight:600;color:#fff;}
-.footer-tagline{font-size:13px;color:rgba(255,255,255,.4);max-width:200px;line-height:1.6;}
-.footer-col h4{font-size:11px;font-weight:600;color:rgba(255,255,255,.45);letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px;}
-.footer-col ul{list-style:none;display:flex;flex-direction:column;gap:9px;}
-.footer-col a{font-size:13px;color:rgba(255,255,255,.45);transition:color .15s;}
-.footer-col a:hover{color:#fff;}
-.footer-bottom{border-top:1px solid rgba(255,255,255,.1);padding-top:26px;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:rgba(255,255,255,.28);flex-wrap:wrap;gap:10px;}
-
-/* ── Reveal ──────────────────────────── */
-.reveal{opacity:0;transform:translateY(28px);transition:opacity .6s ease,transform .6s ease;}
-.reveal.visible{opacity:1;transform:translateY(0);}
-.d1{transition-delay:.1s;}.d2{transition-delay:.2s;}.d3{transition-delay:.3s;}
-
-/* ── Responsive ──────────────────────── */
-@media(max-width:1024px){
-  .hero{padding:100px 40px 72px;}
-  .section{padding:64px 40px;}
-  .screenshots,.devices{padding:64px 40px;}
-
-  footer{padding:48px 40px 32px;}
-  .sf-intro,.sf-inner{padding-left:40px;padding-right:40px;}
-  .sf-steps{padding-right:40px;}
-  .macbook-lid{width:380px;}
-  .macbook-screen{height:212px;}
-}
-/* Read More button - hidden on desktop */
-.read-more-btn{display:none;}
-
-/* About expandable - always visible on desktop */
-.about-expandable{display:block;}
-
-@media(max-width:768px){
-  /* 1. Hero - hide device mockup, fill full viewport */
-  .hero{grid-template-columns:1fr;padding:28px 24px 40px;text-align:center;min-height:100svh;align-content:center;}
-  .hero-visual{display:none;}
-  .hero h1{font-size:clamp(30px,8vw,42px);margin-bottom:14px;}
-  .hero-sub{margin:0 auto 28px;font-size:15px;}
-  .hero-actions{justify-content:center;}
-  .eyebrow{justify-content:center;}
-
-  /* 2. Nav - compact strip */
-
-  /* 3. General sections */
-  .section,.screenshots,.devices{padding:48px 24px;}
-  .video-section{padding:48px 24px;}
-  .video-inner{grid-template-columns:1fr !important;gap:40px !important;text-align:center;}
-  .video-phone-col{justify-content:center;}
-  .video-text-col{align-items:center;text-align:center;}
-  .sf-intro{padding:48px 24px 0;}
-  .sf-inner{grid-template-columns:1fr;padding:0 24px;}
-  .sf-phone-col{display:none;}
-  .sf-step{min-height:auto;padding:28px 0;opacity:1;}
-  .sf-steps{padding:28px 0 48px;}
-
-  /* 4. About - Read More collapse */
-  .about-section{padding-top:32px !important;padding-bottom:0 !important;}
-  .about-grid{grid-template-columns:1fr !important;gap:20px !important;padding-bottom:16px !important;}
-  .about-expandable{display:none;margin-top:12px;}
-  .about-expandable.open{display:block;}
-  .read-more-btn{display:inline-flex;align-items:center;gap:6px;margin-top:16px;background:none;border:1.5px solid var(--navy);color:var(--navy);font-size:14px;font-weight:600;font-family:'Mulish',sans-serif;padding:10px 20px;border-radius:8px;cursor:pointer;transition:all .2s;}
-  .read-more-btn:hover{background:var(--navy);color:#fff;}
-  .read-more-btn.open::after{content:' ▲';font-size:10px;}
-  .read-more-btn:not(.open)::after{content:' ▼';font-size:10px;}
-
-  /* 5. Ocean stats - centred, Total Donated top, others side by side */
-  .ocean-section{padding:40px 24px !important;}
-  .ocean-stats{grid-template-columns:1fr 1fr !important;gap:14px !important;margin:0 auto;width:100%;max-width:100%;}
-  .stat-card-donated,.stat-card-subscribers,.stat-card-projected{width:100%;}
-  .stat-card-donated{grid-column:1 / -1;order:-1;top:0 !important;}
-  .stat-card-subscribers,.stat-card-projected{grid-column:span 1;}
-
-  /* 6. Footer - Product+Support side by side, Legal below */
-  footer{padding:40px 24px 28px;}
-  .footer-top{flex-direction:row;flex-wrap:wrap;gap:0 !important;}
-  .footer-top > div:first-child{width:100%;margin-bottom:24px;}
-  .footer-col:nth-child(2){width:50%;padding-right:8px;}
-  .footer-col:nth-child(3){width:50%;padding-left:8px;}
-  .footer-col:nth-child(4){width:100%;margin-top:20px;padding-top:20px;border-top:1px solid rgba(255,255,255,.08);}
-  .footer-bottom{flex-direction:column;text-align:center;}
-
-  .devices-scene{flex-wrap:wrap;justify-content:center;gap:20px;min-height:auto;}
-  .ipad-wrap,.iphone-wrap{margin:0;}
-  .hero-phone-wrap{animation:swellMobile 5s ease-in-out infinite;}
-  @keyframes swellMobile{0%,100%{transform:perspective(1100px) rotateY(-12deg) rotateX(3deg) translateY(0);}50%{transform:perspective(1100px) rotateY(-12deg) rotateX(3deg) translateY(-10px);}}
-}
-@media(max-width:480px){
-  h1{font-size:28px;}
-  .hero{padding:20px 20px 32px;}
-  .hero-actions{flex-direction:column;align-items:center;}
-  .btn-primary,.btn-ghost,.btn-white,.btn-ghost-white{width:100%;justify-content:center;}
-  .macbook-lid{width:280px;}
-  .macbook-screen{height:156px;}
-  .footer-col{width:100%;}
-}
-@media(prefers-reduced-motion:reduce){
-  .reveal{transition:none;}
-  .hero-phone-wrap,.sf-phone-scene{animation:none;}
-}
-</style>
-</head>
-<body>
-
-
-<main>
-
-<!-- ── Hero ─────────────────────────── -->
-<section class="hero">
-  <div class="hero-bg-img" aria-hidden="true"></div>
-  <div class="hero-overlay" aria-hidden="true"></div>
-  <div class="hero-content">
-    <h1>Operations built for<br><em>superyacht crews.</em></h1>
-    <p class="hero-sub">Manage voyages, crew, tasks, and maintenance — all from your mobile devices. Everything your vessel needs, in one place.</p>
-    <div class="hero-actions">
-      <a href="https://apps.apple.com/app/nautical-ops/id6760950524" class="btn-primary">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-        Download for iOS
-      </a>
-      <a href="/login" class="btn-ghost">
-        Log in to Web App
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-      </a>
-    </div>
-  </div>
-  <div class="hero-visual">
-    <div class="hero-float">
-      <img src="/devices-mockup.png" alt="Nautical Ops on all devices" style="width:100%;max-width:560px;height:auto;display:block;filter:drop-shadow(0 40px 80px rgba(0,0,0,0.18)) drop-shadow(0 12px 28px rgba(0,0,0,0.1));"/>
-    </div>
-  </div>
-</section>
-
-<!-- ── Video showcase ─────────────────── -->
-<section class="section video-section" style="background:var(--navy);">
-  <div class="reveal video-inner">
-    <div class="video-phone-col">
-      <div style="zoom:0.88;filter:drop-shadow(0 40px 70px rgba(0,0,0,0.35)) drop-shadow(0 12px 24px rgba(0,0,0,0.2));display:inline-block;">
-        <div class="device device-iphone-14-pro device-spacegray">
-          <div class="device-frame">
-            <video src="/app-demo.mp4" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;border-radius:inherit;"></video>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>Nautical Ops — Crew Operations, Simplified</title>
+    <meta
+      name="description"
+      content="Manage trips, tasks, maintenance and crew operations in one web app. Nautical Ops works on your phone, tablet and laptop."
+    />
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="canonical" href="https://www.nautical-ops.com/" />
+    <meta property="og:title" content="Nautical Ops — Crew Operations, Simplified" />
+    <meta
+      property="og:description"
+      content="Your vessel. Your crew. Everything connected. Crew operations for mobile, tablet and laptop."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.nautical-ops.com/" />
+    <meta property="og:image" content="https://www.nautical-ops.com/nautical-ops-icon-512.png" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-vessel.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="stylesheet" href="/landing.css" />
+    <script src="/landing.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <main>
+      <div id="nautical-home-concept" aria-label="Nautical Ops">
+        <div class="no-wrap">
+          <header class="no-header" id="no-top">
+            <a class="no-brand" href="#no-top"
+              ><img
+                src="/favicon-vessel.png"
+                width="38"
+                height="38"
+                alt=""
+                decoding="async"
+              />Nautical Ops</a
+            >
+            <nav class="no-nav" aria-label="Main navigation">
+              <a class="" href="#no-features">Features</a><a class="" href="#no-how">How it works</a
+              ><a class="" href="#no-pricing">Pricing</a><a class="no-link" href="/login">Log in</a
+              ><a class="no-button no-button-main" href="/login"
+                >Open Web App
+                <svg
+                  aria-hidden="true"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M7 17 17 7M7 7h10v10" /></svg
+              ></a>
+            </nav>
+            <button
+              type="button"
+              class="no-menu"
+              aria-expanded="false"
+              aria-controls="no-mobile-nav"
+            >
+              Menu
+              <svg
+                aria-hidden="true"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </header>
+          <noscript
+            ><p class="no-small">
+              JavaScript is off. You can still explore this page and open the web app. Turn on
+              JavaScript to compare plan prices and feature details.
+            </p></noscript
+          >
+          <nav class="no-mobile-nav" id="no-mobile-nav" aria-label="Mobile navigation" hidden>
+            <a href="#no-features">Features</a><a href="#no-how">How it works</a
+            ><a href="#no-pricing">Pricing</a><a href="#no-home-screen">Add to Home Screen</a
+            ><a href="#no-ocean">Ocean Giving</a><a href="#no-faq">Support & FAQs</a
+            ><a class="no-button no-button-main" href="/login">Log in to Web App</a>
+          </nav>
+          <section class="no-hero" id="main-content" aria-label="Welcome">
+            <div>
+              <span class="no-eyebrow">Crew operations, simplified</span>
+              <h1>
+                Your vessel.<br />Your crew.<br /><span>Everything<br />connected.</span>
+              </h1>
+              <p class="no-intro">
+                Manage trips, tasks, maintenance and crew operations in one place—from your phone,
+                tablet or laptop.
+              </p>
+              <div class="no-actions">
+                <a class="no-button no-button-main" href="/login"
+                  >Open Web App
+                  <svg
+                    aria-hidden="true"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M5 12h14m-6-6 6 6-6 6" /></svg></a
+                ><a class="no-button" href="#no-pricing">View plans</a>
+              </div>
+              <p class="no-availability">
+                <svg
+                  aria-hidden="true"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle cx="12" cy="12" r="9" />
+                  <ellipse cx="12" cy="12" rx="4" ry="9" />
+                  <path d="M3 12h18" /></svg
+                >One web app. No app-store download.
+              </p>
+              <a class="no-link" href="#no-home-screen">Add to your home screen →</a>
+            </div>
+            <div class="no-product">
+              <div class="no-app">
+                <div class="no-app-top">
+                  <span class="no-app-title"
+                    ><img
+                      src="/favicon-vessel.png"
+                      width="38"
+                      height="38"
+                      alt=""
+                      decoding="async"
+                    />Nautical Ops</span
+                  ><span>M/Y Horizon</span>
+                </div>
+                <div class="no-app-body">
+                  <p class="no-small">Your vessel, at a glance</p>
+                  <h3>Ready for the day ahead.</h3>
+                  <div class="no-voyage">
+                    <small>UPCOMING TRIP · SAMPLE</small><strong>A day on the water</strong>
+                    <div class="no-route">
+                      <span>Port departure</span><span></span
+                      ><svg
+                        aria-hidden="true"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.7"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <path d="m3 10 18-7-7 18-3-8z" /></svg
+                      ><span>Guest anchorage</span>
+                    </div>
+                  </div>
+                  <div class="no-app-label">TODAY'S TASKS</div>
+                  <div class="no-task">
+                    <svg
+                      aria-hidden="true"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="9" />
+                      <path d="m8 12 3 3 5-6" />
+                    </svg>
+                    <div>Complete pre-departure checks<small>Deck department</small></div>
+                  </div>
+                  <div class="no-task">
+                    <svg
+                      aria-hidden="true"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="9" />
+                    </svg>
+                    <div>Check engine-room equipment<small>Engineering department</small></div>
+                  </div>
+                  <div class="no-task">
+                    <svg
+                      aria-hidden="true"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="9" />
+                    </svg>
+                    <div>Prepare guest cabins<small>Interior department</small></div>
+                  </div>
+                </div>
+              </div>
+              <p class="no-demo-caption">Illustrative product preview · sample content</p>
+            </div>
+          </section>
+          <div class="no-device-strip">
+            <strong>Built for life onboard. Available wherever you log in.</strong>
+            <div class="no-devices">
+              <span
+                ><svg
+                  aria-hidden="true"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="6" y="2" width="12" height="20" rx="2" />
+                  <path d="M11 18h2" /></svg
+                >Mobile</span
+              ><span
+                ><svg
+                  aria-hidden="true"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="4" y="2" width="16" height="20" rx="2" />
+                  <path d="M11 18h2" /></svg
+                >Tablet</span
+              ><span
+                ><svg
+                  aria-hidden="true"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="4" y="3" width="16" height="13" rx="1" />
+                  <path d="M4 16 1 21h22l-3-5" /></svg
+                >Laptop</span
+              >
+            </div>
           </div>
-          <div class="device-stripe"></div>
-          <div class="device-header"></div>
-          <div class="device-sensors"></div>
-          <div class="device-btns"></div>
-          <div class="device-power"></div>
-        </div>
-      </div>
-    </div>
-    <div class="video-text-col">
-      <h2 class="sec-title" style="color:#fff;margin-bottom:16px;">Watch it in action.</h2>
-      <p style="font-size:16px;color:rgba(255,255,255,.6);line-height:1.8;margin-bottom:32px;">See how fast it is to log a trip, assign tasks, and manage your crew on board.</p>
-      <p style="font-size:15px;color:rgba(255,255,255,.45);line-height:1.8;">Most features let you save and export as a <span style="color:rgba(255,255,255,.8);font-weight:500;">PDF</span> — ready for filing, sharing with management, or keeping as an official record on board.</p>
-    </div>
-  </div>
-</section>
-
-<!-- ── Sticky scroll features ─────────── -->
-<section class="sf" id="features">
-  <div class="sf-bg"></div>
-  <div class="sf-intro reveal">
-    <h2 class="sec-title">Everything your vessel needs to run smoothly.</h2>
-  </div>
-  <div class="sf-inner">
-    <div class="sf-steps">
-
-      <div class="sf-step active" data-step="0">
-        <div>
-          <h3 class="feat-title">Every trip, logged and organised.</h3>
-          <p class="feat-desc">Record guest charters, owner voyages, delivery runs, and yard periods in seconds. Your vessel's full history — always at hand, beautifully organised by date and type.</p>
-        </div>
-      </div>
-
-      <div class="sf-step" data-step="1">
-        <div>
-          <h3 class="feat-title">Your crew, always in sync.</h3>
-          <p class="feat-desc">Assign tasks by department, set priorities and deadlines, and track completion in real time. Your crew knows exactly what needs doing — and so do you.</p>
-        </div>
-      </div>
-
-      <div class="sf-step" data-step="2">
-        <div>
-          <h3 class="feat-title">Keep your vessel in peak condition.</h3>
-          <p class="feat-desc">Log maintenance records, manage yard period jobs by department, and keep a full audit trail. Nothing falls through the cracks — from engine room to deckhead.</p>
-        </div>
-      </div>
-
-    </div>
-
-    <div class="sf-phone-col">
-      <div class="sf-phone-scene">
-        <div class="sf-device-wrap">
-          <div class="sf-device-frame">
-            <div class="sf-device-island"></div>
-
-            <!-- Screen 0: Voyages -->
-            <div class="sf-screen active" data-step="0">
-              <img src="/screen-trips.png" alt="Trips screen"/>
+          <section class="no-section" id="no-features">
+            <span class="no-eyebrow">One place for the everyday</span>
+            <h2>Less chasing updates.<br />More getting things done.</h2>
+            <p class="no-section-copy">
+              Keep the details of vessel life organised, with the tools your crew use every day.
+            </p>
+            <div class="no-feature-layout">
+              <div class="no-features" aria-label="Explore features">
+                <button type="button" class="no-feature" data-feature="trips" aria-pressed="true">
+                  <svg
+                    aria-hidden="true"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="m16 8-3 5-5 3 3-5z" /></svg
+                  ><span
+                    ><strong>Trips & planning</strong
+                    ><small>Keep everyone on the same itinerary.</small></span
+                  ><svg
+                    aria-hidden="true"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="m9 5 7 7-7 7" />
+                  </svg></button
+                ><button type="button" class="no-feature" data-feature="tasks" aria-pressed="false">
+                  <svg
+                    aria-hidden="true"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="m3 6 2 2 3-4m-5 9 2 2 3-4M11 6h10M11 13h10M3 20h18" /></svg
+                  ><span
+                    ><strong>Tasks & maintenance</strong
+                    ><small>Keep the work moving forward.</small></span
+                  ><svg
+                    aria-hidden="true"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="m9 5 7 7-7 7" />
+                  </svg></button
+                ><button type="button" class="no-feature" data-feature="crew" aria-pressed="false">
+                  <svg
+                    aria-hidden="true"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <circle cx="9" cy="7" r="3" />
+                    <path
+                      d="M2 21v-4a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v4M17 4a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 5v3"
+                    /></svg
+                  ><span
+                    ><strong>Crew & watchkeeping</strong
+                    ><small>Bring the onboard team together.</small></span
+                  ><svg
+                    aria-hidden="true"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="m9 5 7 7-7 7" />
+                  </svg></button
+                ><button
+                  type="button"
+                  class="no-feature"
+                  data-feature="records"
+                  aria-pressed="false"
+                >
+                  <svg
+                    aria-hidden="true"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <rect x="5" y="3" width="14" height="18" rx="2" />
+                    <path d="M3 7h4M3 12h4M3 17h4m3-2 5-5 2 2-5 5h-2z" /></svg
+                  ><span
+                    ><strong>Records & exports</strong
+                    ><small>Keep your vessel's information in order.</small></span
+                  ><svg
+                    aria-hidden="true"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="m9 5 7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+              <div class="no-feature-detail" aria-live="polite">
+                <span class="no-eyebrow" id="no-feature-label">Trips & planning</span>
+                <h3 id="no-feature-heading">Make the plan.<br />Keep the crew informed.</h3>
+                <p id="no-feature-copy">
+                  Bring upcoming trips and preparation together, so your crew know what's ahead.
+                </p>
+                <div class="no-detail-list" id="no-detail-list">
+                  <div class="no-detail-item">Plan upcoming trips and vessel movements</div>
+                  <div class="no-detail-item">Keep pre-departure checklists together</div>
+                  <div class="no-detail-item">Keep the crew informed of new trips</div>
+                </div>
+              </div>
             </div>
-
-            <!-- Screen 1: Tasks -->
-            <div class="sf-screen" data-step="1">
-              <img src="/screen-tasks.png" alt="Tasks screen"/>
+          </section>
+        </div>
+        <section class="no-band" id="no-how">
+          <div class="no-wrap">
+            <div class="no-section">
+              <span class="no-eyebrow">Getting started</span>
+              <h2>A simpler way to run your day.</h2>
+              <div class="no-steps">
+                <div>
+                  <span class="no-step-number">01 / SET UP</span>
+                  <h3>Create your vessel</h3>
+                  <p>Add your vessel's details and choose the plan that fits your crew.</p>
+                </div>
+                <div>
+                  <span class="no-step-number">02 / CONNECT</span>
+                  <h3>Invite your crew</h3>
+                  <p>Bring the team onboard using an invite code and assign their roles.</p>
+                </div>
+                <div>
+                  <span class="no-step-number">03 / GET UNDERWAY</span>
+                  <h3>Manage the everyday</h3>
+                  <p>Plan trips, organise tasks and keep your vessel's records together.</p>
+                </div>
+              </div>
             </div>
-
-            <!-- Screen 2: Maintenance -->
-            <div class="sf-screen" data-step="2">
-              <img src="/screen-maintenance.png" alt="Maintenance screen"/>
-            </div>
-
           </div>
+        </section>
+        <div class="no-wrap">
+          <section class="no-section" id="no-home-screen">
+            <div class="no-home-grid">
+              <div>
+                <span class="no-eyebrow">One tap to get onboard</span>
+                <h2>Keep Nautical Ops<br />on your home screen.</h2>
+                <p class="no-section-copy">
+                  Open your web app straight from your phone's home screen. No app-store download
+                  needed.
+                </p>
+                <div class="no-home-intro">
+                  <span class="no-home-icon"
+                    ><img src="/favicon-vessel.png" width="38" height="38" alt="" decoding="async"
+                  /></span>
+                  <div>
+                    <strong>Nautical Ops</strong>
+                    <p class="no-small">Your vessel, a tap away.</p>
+                  </div>
+                </div>
+                <a class="no-button no-button-main" href="/login"
+                  >Open Web App
+                  <svg
+                    aria-hidden="true"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M7 17 17 7M7 7h10v10" /></svg
+                ></a>
+              </div>
+              <div class="no-home-panel">
+                <div class="no-home-tabs" aria-label="Home screen instructions">
+                  <button
+                    type="button"
+                    class="no-button"
+                    data-home="iphone"
+                    aria-pressed="true"
+                    aria-controls="no-home-iphone"
+                  >
+                    iPhone · Safari</button
+                  ><button
+                    type="button"
+                    class="no-button"
+                    data-home="android"
+                    aria-pressed="false"
+                    aria-controls="no-home-android"
+                  >
+                    Android · Chrome
+                  </button>
+                </div>
+                <div id="no-home-iphone">
+                  <ol>
+                    <li>Open the <strong>Nautical Ops web app</strong> in Safari.</li>
+                    <li>
+                      Open Safari's <strong>Share</strong> menu (under <strong>More</strong> on some
+                      layouts).
+                    </li>
+                    <li>
+                      Choose <strong>Add to Home Screen</strong>. If shown, keep
+                      <strong>Open as Web App</strong> switched on.
+                    </li>
+                    <li>Check the name, then tap <strong>Add</strong>.</li>
+                  </ol>
+                  <p class="no-home-tip">
+                    Tip: add the web app, rather than this public homepage, so the icon takes you to
+                    your account.
+                  </p>
+                  <a
+                    class="no-guide-source"
+                    href="https://support.apple.com/guide/iphone/open-as-web-app-iphea86e5236/ios"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >Apple's home-screen guide ↗</a
+                  >
+                </div>
+                <div id="no-home-android" hidden>
+                  <ol>
+                    <li>Open the <strong>Nautical Ops web app</strong> in Chrome.</li>
+                    <li>Tap the <strong>three-dot menu</strong> beside the address bar.</li>
+                    <li>
+                      Choose <strong>Add to home screen</strong>, then
+                      <strong>Create shortcut</strong> if offered. If Chrome offers
+                      <strong>Install</strong> instead, follow that prompt.
+                    </li>
+                    <li>
+                      Confirm the name and tap <strong>Add</strong> or <strong>Install</strong>.
+                    </li>
+                  </ol>
+                  <p class="no-home-tip">
+                    The wording can vary by phone and browser version. Your account and two-device
+                    limit stay the same.
+                  </p>
+                  <a
+                    class="no-guide-source"
+                    href="https://support.google.com/chrome/answer/15085120?co=GENIE.Platform%3DAndroid&amp;hl=en"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >Google's home-screen guide ↗</a
+                  >
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+        <div class="no-wrap">
+          <section class="no-section" id="no-pricing">
+            <div class="no-price-layout">
+              <div>
+                <span class="no-eyebrow">Plans that fit your crew</span>
+                <h2>Your vessel's needs.<br />Your choice of plan.</h2>
+                <p class="no-section-copy">
+                  Choose your crew size and billing period. The same USD base prices apply
+                  worldwide, with local VAT or sales tax based on your billing address.
+                </p>
+                <div class="no-detail-list">
+                  <div class="no-detail-item">
+                    <svg
+                      aria-hidden="true"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="m5 12 4 4L19 6" /></svg
+                    >Monthly, 3-month, 6-month or yearly billing
+                  </div>
+                  <div class="no-detail-item">
+                    <svg
+                      aria-hidden="true"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="m5 12 4 4L19 6" /></svg
+                    >One vessel subscription for your crew
+                  </div>
+                  <div class="no-detail-item">
+                    <svg
+                      aria-hidden="true"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="m5 12 4 4L19 6" /></svg
+                    >Access from mobile, tablet and laptop
+                  </div>
+                </div>
+              </div>
+              <div class="no-price-panel">
+                <label class="no-field-label" for="no-crew-size">Crew size</label
+                ><select id="no-crew-size" class="">
+                  <option value="0">1–5 crew members</option>
+                  <option value="1">6–10 crew members</option>
+                  <option value="2">11–15 crew members</option>
+                  <option value="3">16–25 crew members</option>
+                  <option value="4">26–40 crew members</option>
+                  <option value="5">41+ crew members</option>
+                </select>
+                <div class="no-periods" aria-label="Billing period">
+                  <button type="button" class="" data-months="1" aria-pressed="true">Monthly</button
+                  ><button type="button" class="" data-months="3" aria-pressed="false">
+                    3 months</button
+                  ><button type="button" class="" data-months="6" aria-pressed="false">
+                    6 months</button
+                  ><button type="button" class="" data-months="12" aria-pressed="false">
+                    Yearly
+                  </button>
+                </div>
+                <div aria-live="polite">
+                  <p class="no-price" id="no-price">$79.99 <span>/ month</span></p>
+                  <p class="no-price-note" id="no-price-note">USD base price. Billed monthly.</p>
+                </div>
+                <p class="no-price-note">
+                  Applicable VAT / sales tax is calculated using your billing location and shown
+                  before payment.
+                </p>
+                <a class="no-button no-button-main" href="/vessel-plans"
+                  >View vessel plans
+                  <svg
+                    aria-hidden="true"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M5 12h14m-6-6 6 6-6 6" /></svg
+                ></a>
+                <p class="no-price-disclosure">
+                  Sign in to see your vessel plans and confirmed regional totals.
+                </p>
+              </div>
+            </div>
+          </section>
+          <section class="no-story">
+            <div>
+              <span class="no-eyebrow">From one crew member to another</span>
+              <h2>Built around the realities<br />of life onboard.</h2>
+            </div>
+            <p>
+              Nautical Ops was created by a crew member who understands the day-to-day demands of
+              running a vessel. One shared place for the plans, jobs and records that keep
+              everything moving.
+            </p>
+          </section>
+          <section class="no-ocean" id="no-ocean">
+            <div class="no-ocean-heading">
+              <div>
+                <span class="no-eyebrow">Giving back to the ocean</span>
+                <h2>Better operations.<br />A positive impact.</h2>
+                <p class="no-section-copy">
+                  Our commitment: 5% of every subscription goes back to the ocean. We distinguish
+                  completed donations from projections so you can see the difference.
+                </p>
+              </div>
+              <svg
+                aria-hidden="true"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M2 6q3-4 6 0t6 0 6 0M2 12q3-4 6 0t6 0 6 0M2 18q3-4 6 0t6 0 6 0" />
+              </svg>
+            </div>
+            <div class="no-donation-counters">
+              <div class="no-donation-counter">
+                <span
+                  class="no-donation-value"
+                  id="stat-subscribers"
+                  aria-label="Subscriber count not yet published"
+                  >—</span
+                ><span class="no-donation-label">Active subscriptions</span
+                ><span class="no-donation-caption">Our onboard community</span>
+              </div>
+              <div class="no-donation-counter">
+                <span
+                  class="no-donation-value"
+                  id="stat-donated"
+                  aria-label="Confirmed donation total not yet published"
+                  >$—</span
+                ><span class="no-donation-label">Donated to date</span
+                ><span class="no-donation-caption">Confirmed contributions · USD</span>
+              </div>
+              <div class="no-donation-counter">
+                <span
+                  class="no-donation-value"
+                  id="stat-projected"
+                  aria-label="Annual projection not yet published"
+                  >$—</span
+                ><span class="no-donation-label">Projected annual giving</span
+                ><span class="no-donation-caption">Estimate, not a completed donation</span>
+              </div>
+            </div>
+            <p class="no-donation-note">
+              Verified donation figures are not available yet. Estimates and test subscriptions are
+              not reported as completed donations.
+            </p>
+          </section>
+          <section class="no-section" id="no-faq">
+            <div class="no-faq-grid">
+              <div>
+                <span class="no-eyebrow">A few helpful answers</span>
+                <h2>Before you<br />come aboard.</h2>
+                <p class="no-section-copy">Have another question?</p>
+                <a class="no-link" href="/support">Contact support →</a>
+              </div>
+              <div>
+                <details>
+                  <summary class="">Do I need to download an app?</summary>
+                  <p>
+                    No. Nautical Ops runs in your web browser. Log in from your phone, tablet or
+                    laptop—there is no App Store or Google Play download to manage.
+                  </p>
+                </details>
+                <details>
+                  <summary class="">How does my crew join?</summary>
+                  <p>
+                    Your Captain/MOV can share the vessel's invite code. Crew members join using
+                    their own accounts and receive access based on their assigned roles.
+                  </p>
+                </details>
+                <details>
+                  <summary class="">Which billing options can I choose?</summary>
+                  <p>
+                    Choose monthly, 3-month, 6-month or yearly billing, with a plan based on crew
+                    size. The pricing selector above lets you compare the base prices.
+                  </p>
+                </details>
+                <details>
+                  <summary class="">How are VAT and sales tax calculated?</summary>
+                  <p>
+                    Your billing address—not the vessel's current location—determines applicable
+                    tax. The confirmed total is shown before you pay.
+                  </p>
+                </details>
+                <details>
+                  <summary class="">Can I use the same account on different devices?</summary>
+                  <p>
+                    Yes. Use your account on up to two devices. Device management and recovery let
+                    you replace a device while keeping the two-device limit.
+                  </p>
+                </details>
+              </div>
+            </div>
+          </section>
+          <section class="no-bottom-cta">
+            <div>
+              <h2>Bring your crew together.</h2>
+              <p>Your next trip. Your next task. One place to start.</p>
+            </div>
+            <a class="no-button" href="/login"
+              >Open Web App
+              <svg
+                aria-hidden="true"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M7 17 17 7M7 7h10v10" /></svg
+            ></a>
+          </section>
+          <footer class="no-footer">
+            <a class="no-brand" href="#no-top"
+              ><img
+                src="/favicon-vessel.png"
+                width="38"
+                height="38"
+                alt=""
+                decoding="async"
+              />Nautical Ops</a
+            >
+            <div class="no-footer-links">
+              <a href="#no-ocean">Ocean Giving</a><a href="#no-features">Features</a
+              ><a href="#no-pricing">Pricing</a><a class="" href="/support">Support</a
+              ><a class="" href="/privacy-policy">Privacy</a
+              ><a class="" href="/terms-and-conditions">Terms</a
+              ><a href="/refund-policy">Refunds</a>
+            </div>
+          </footer>
+          <p class="no-preview-note">© Nautical Ops · Crew operations, simplified.</p>
         </div>
       </div>
-    </div>
-  </div>
-</section>
-
-<!-- ── Screenshot gallery ─────────────── -->
-<!-- ── About ───────────────────────────── -->
-<section class="section about-section" style="background:var(--white);padding-top:96px;padding-bottom:0;">
-  <div class="about-grid reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:start;max-width:1200px;margin:0 auto;padding-bottom:48px;">
-    <div>
-      <h2 class="sec-title" style="margin-bottom:0;">Built by a Crew Member for other Crew.</h2>
-    </div>
-    <div>
-      <div class="about-expandable">
-        <p style="font-size:16px;color:var(--muted);line-height:1.8;margin-bottom:16px;">My name is <strong style="color:var(--navy);font-weight:600;">Clinton Handford</strong>. I've been in the yachting industry for about 4 years now, and in that time I noticed something missing — there wasn't a single app that handled everything we need day-to-day. No real all-in-one solution built for crew, by crew.</p>
-        <p style="font-size:16px;color:var(--muted);line-height:1.8;margin-bottom:16px;">So I decided to build one. Nautical Ops will never be "done" — I'm constantly updating it, keeping it user-friendly and relevant, not just for professional yacht crew, but for family-run boats and anyone who finds it useful for their maritime needs.</p>
-        <p style="font-size:16px;color:var(--muted);line-height:1.8;">I'm not just building this because I'm in the industry. I'm building it because I believe there's a better way to run a vessel — and I want everyone on the water to have access to it.</p>
-      </div>
-      <button class="read-more-btn" onclick="toggleReadMore(this)" aria-expanded="false">Read more</button>
-    </div>
-  </div>
-</section>
-
-<!-- ── Ocean Impact ──────────────────────── -->
-<section class="ocean-section" style="position:relative;padding:96px 80px;overflow:hidden;background:#fff;">
-
-  <!-- Faded ocean cleanup video background -->
-  <!-- Save an ocean cleanup video as /ocean-cleanup.mp4 to activate -->
-  <video autoplay loop muted playsinline
-    style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.30;z-index:0;"
-    onerror="this.style.display='none'">
-    <source src="/ocean-cleanup.mp4" type="video/mp4"/>
-  </video>
-  <!-- Fallback subtle wave gradient if no video -->
-  <div style="position:absolute;inset:0;background:linear-gradient(160deg,rgba(30,58,95,0.04) 0%,rgba(201,162,39,0.03) 100%);z-index:1;pointer-events:none;"></div>
-
-  <div style="position:relative;z-index:2;max-width:960px;margin:0 auto;">
-    <div class="reveal" style="text-align:center;margin-bottom:64px;">
-      <h2 class="sec-title" style="margin-bottom:16px;">5% of every subscription<br>goes back to the ocean.</h2>
-      <p style="font-size:16px;color:var(--muted);max-width:560px;margin:0 auto;line-height:1.75;">As a nature lover, I understand that even when we follow the rules, we're still part of the problem. Every subscription to Nautical Ops contributes directly to ocean cleanup — because the sea deserves better.</p>
-    </div>
-
-    <div class="ocean-stats reveal" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;">
-      <div class="stat-card-subscribers" style="background:#fff;border:1px solid var(--border);border-radius:20px;padding:36px 28px;text-align:center;box-shadow:0 4px 24px rgba(30,58,95,0.06);">
-        <div style="width:48px;height:48px;background:var(--navy-light);border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        </div>
-        <div style="font-size:11px;font-weight:600;color:var(--light);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px;">Active Subscribers</div>
-        <div id="stat-subscribers" style="font-family:'Secular One',sans-serif;font-size:56px;font-weight:600;color:var(--navy);line-height:1;margin-bottom:8px;">—</div>
-        <div style="font-size:13px;color:var(--light);">vessels on the water</div>
-      </div>
-
-      <div class="stat-card-donated" style="background:#fff;border:2px solid var(--gold);border-radius:20px;padding:36px 28px;text-align:center;box-shadow:0 8px 40px rgba(201,162,39,0.12);position:relative;top:-8px;">
-        <div style="width:48px;height:48px;background:rgba(201,162,39,0.1);border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c9a227" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        </div>
-        <div style="font-size:11px;font-weight:600;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px;">Total Donated</div>
-        <div id="stat-donated" style="font-family:'Secular One',sans-serif;font-size:56px;font-weight:600;color:var(--gold);line-height:1;margin-bottom:8px;">—</div>
-        <div style="font-size:13px;color:var(--light);">to ocean cleanup</div>
-      </div>
-
-      <div class="stat-card-projected" style="background:#fff;border:1px solid var(--border);border-radius:20px;padding:36px 28px;text-align:center;box-shadow:0 4px 24px rgba(30,58,95,0.06);">
-        <div style="width:48px;height:48px;background:var(--navy-light);border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-        </div>
-        <div style="font-size:11px;font-weight:600;color:var(--light);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px;">2026 Projection</div>
-        <div id="stat-projected" style="font-family:'Secular One',sans-serif;font-size:56px;font-weight:600;color:var(--navy);line-height:1;margin-bottom:8px;">—</div>
-        <div style="font-size:13px;color:var(--light);">estimated this year</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-
-
-<!-- ── FAQ ────────────────────────────── -->
-<section class="section grey" id="faq">
-  <div class="faq-inner">
-    <div class="faq-hdr reveal">
-      <h2 class="sec-title">Anything you want to know.</h2>
-    </div>
-    <div class="faq-list">
-      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">What is Nautical Ops?<span class="faq-icon"></span></button><div class="faq-a">Nautical Ops is a professional crew operations app built specifically for superyacht and commercial vessel crews. Log voyages, manage tasks, track maintenance, and run yard periods — from your iPhone, iPad, or browser.</div></div>
-      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">Who is it designed for?<span class="faq-icon"></span></button><div class="faq-a">Nautical Ops is built for professional superyacht crews — captains, heads of department, and crew members across all departments. Whether you're running a 40-metre motor yacht or a 90-metre sailing vessel, the app adapts to your team size and structure.</div></div>
-      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">Is there a free trial?<span class="faq-icon"></span></button><div class="faq-a">Yes — every vessel gets a 30-day free trial when they subscribe. You can invite your full crew, log trips, assign tasks, and explore all features before committing to a plan. No credit card required to get started.</div></div>
-      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">What devices is it available on?<span class="faq-icon"></span></button><div class="faq-a">Nautical Ops is available on iOS (iPhone and iPad) via the App Store, and as a web app accessible from any browser at nautical-ops.com. Android support is coming soon.</div></div>
-      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">How is pricing structured?<span class="faq-icon"></span></button><div class="faq-a">Pricing is based on the number of crew on your vessel — from 1–5 crew up to 40+ crew. Plans are available monthly or annually. Visit our <a href="/pricing">pricing page</a> for full details.</div></div>
-      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">How secure is our vessel data?<span class="faq-icon"></span></button><div class="faq-a">All data is encrypted in transit and at rest on enterprise-grade infrastructure. Your vessel's operational data is private to your crew — we never share or sell it. Read our <a href="/privacy-policy">privacy policy</a> for details.</div></div>
-      <div class="faq-item"><button class="faq-q" onclick="toggleFaq(this)">How do I get a refund?<span class="faq-icon"></span></button><div class="faq-a">Subscriptions are managed through Apple's App Store. Refunds are handled directly through Apple within 48 hours of purchase for unused subscriptions. See our <a href="/refund-policy">refund policy</a> for full details.</div></div>
-    </div>
-  </div>
-</section>
-
-</main>
-
-<footer>
-  <div class="footer-top">
-    <div>
-      <div class="footer-logo">
-        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 26 Q6 30 18 31 Q30 30 30 26 L28 18 L8 18 Z" fill="none" stroke="#c9a227" stroke-width="1.8" stroke-linejoin="round"/><rect x="11" y="12" width="14" height="7" rx="1.5" fill="none" stroke="#c9a227" stroke-width="1.8"/><line x1="18" y1="5" x2="18" y2="12" stroke="#c9a227" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="4" r="1.8" fill="#c9a227"/></svg>
-        <span class="footer-logo-name">Nautical Ops</span>
-      </div>
-      <p class="footer-tagline">The operations app built by crew, for crew.</p>
-    </div>
-    <div class="footer-col"><h4>Product</h4><ul><li><a href="#features">Features</a></li><li><a href="/pricing">Pricing</a></li><li><a href="/about">About</a></li><li><a href="https://apps.apple.com/app/nautical-ops/id6760950524">Download iOS App</a></li><li><a href="/login">Web App Login</a></li></ul></div>
-    <div class="footer-col"><h4>Support</h4><ul><li><a href="/support">Help &amp; Support</a></li><li><a href="#faq">FAQ</a></li><li><a href="mailto:support@nautical-ops.com">Contact Us</a></li></ul></div>
-    <div class="footer-col"><h4>Legal</h4><ul><li><a href="/privacy-policy">Privacy Policy</a></li><li><a href="/terms-and-conditions">Terms &amp; Conditions</a></li><li><a href="/refund-policy">Refund Policy</a></li></ul></div>
-  </div>
-  <div class="footer-bottom">
-    <span>© 2026 Nautical Ops · The Lumen Digital</span>
-    <span>Built by crew, for crew.</span>
-  </div>
-</footer>
-
-<script>
-// FAQ
-function toggleReadMore(btn){
-  const expandable = btn.previousElementSibling;
-  const isOpen = btn.classList.contains('open');
-  if(isOpen){
-    expandable.classList.remove('open');
-    btn.classList.remove('open');
-    btn.childNodes[0].textContent = 'Read more';
-  } else {
-    expandable.classList.add('open');
-    btn.classList.add('open');
-    btn.childNodes[0].textContent = 'Read less';
-  }
-}
-function toggleFaq(btn){
-  const ans=btn.nextElementSibling;
-  const wasOpen=btn.classList.contains('open');
-  document.querySelectorAll('.faq-q.open').forEach(q=>{q.classList.remove('open');q.nextElementSibling.classList.remove('open');});
-  if(!wasOpen){btn.classList.add('open');ans.classList.add('open');}
-}
-
-// ── Ocean impact stats from Supabase ──
-async function loadImpactStats(){
-  // ── CONFIG: update ANON_KEY if it changes ──────────────────────────
-  const SUPABASE_URL = 'https://grtrcjgsvfsknpnlarxv.supabase.co';
-  const ANON_KEY     = 'YOUR_SUPABASE_ANON_KEY'; // paste your anon key here
-  // ── PRICING: average monthly revenue per subscriber (adjust as needed)
-  const AVG_MONTHLY_PER_SUB = 29; // approximate average plan price
-  const DONATION_PCT = 0.05;
-  // ──────────────────────────────────────────────────────────────────
-
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?select=id`, {
-      headers: {
-        'apikey': ANON_KEY,
-        'Authorization': `Bearer ${ANON_KEY}`,
-        'Prefer': 'count=exact',
-        'Range': '0-0'
-      }
-    });
-    const count = parseInt(res.headers.get('content-range')?.split('/')[1] || '0');
-    if (!count) return;
-
-    const totalMonthlyRevenue = count * AVG_MONTHLY_PER_SUB;
-    const monthsSinceLaunch   = 1; // update as months pass
-    const totalDonated        = totalMonthlyRevenue * DONATION_PCT * monthsSinceLaunch;
-    const yearlyProjection    = totalMonthlyRevenue * DONATION_PCT * 12;
-
-    animateCount('stat-subscribers', count, '');
-    animateCount('stat-donated',     totalDonated,    '$');
-    animateCount('stat-projected',   yearlyProjection,'$');
-  } catch(e) {
-    // silently fail — stats stay as dashes
-  }
-}
-
-function animateCount(id, target, prefix){
-  const el = document.getElementById(id);
-  if (!el) return;
-  const duration = 1800;
-  const start    = performance.now();
-  const isFloat  = target % 1 !== 0;
-  function step(now){
-    const progress = Math.min((now - start) / duration, 1);
-    const eased    = 1 - Math.pow(1 - progress, 3);
-    const value    = Math.floor(eased * target);
-    el.textContent = prefix + (prefix === '$' ? value.toLocaleString() : value);
-    if (progress < 1) requestAnimationFrame(step);
-    else el.textContent = prefix + (prefix === '$' ? Math.floor(target).toLocaleString() : target);
-  }
-  requestAnimationFrame(step);
-}
-
-// Load stats when impact section scrolls into view
-const impactObs = new IntersectionObserver((entries) => {
-  entries.forEach(e => { if(e.isIntersecting){ loadImpactStats(); impactObs.disconnect(); }});
-}, { threshold: 0.3 });
-const impactEl = document.getElementById('stat-subscribers');
-if(impactEl) impactObs.observe(impactEl.closest('section') || impactEl);
-
-// Scroll reveal
-const obs=new IntersectionObserver((entries)=>{
-  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target);}});
-},{threshold:.1,rootMargin:'0px 0px -40px 0px'});
-document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
-
-// Sticky scroll feature swapper
-const sfSteps=document.querySelectorAll('.sf-step');
-const sfScreens=document.querySelectorAll('.sf-screen');
-
-const sfObs=new IntersectionObserver((entries)=>{
-  entries.forEach(entry=>{
-    if(entry.isIntersecting){
-      const step=entry.target.dataset.step;
-      sfSteps.forEach(s=>s.classList.toggle('active',s.dataset.step===step));
-      sfScreens.forEach(s=>s.classList.toggle('active',s.dataset.step===step));
-    }
-  });
-},{threshold:0.6,rootMargin:'-20% 0px -20% 0px'});
-
-sfSteps.forEach(s=>sfObs.observe(s));
-</script>
-</body>
+    </main>
+  </body>
 </html>

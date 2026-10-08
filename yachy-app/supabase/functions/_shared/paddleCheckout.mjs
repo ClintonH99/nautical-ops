@@ -32,6 +32,10 @@ export function createPaddleCheckoutHandler({ getEnv, createClient, fetcher = fe
       const priceId = config.prices[body.planTier][body.billingPeriod];
       const price = await paddleRequest(config, `/prices/${priceId}`, {}, fetcher);
       validatePrice(price, body.planTier, body.billingPeriod);
+      // Cardless trials must be billed through the server API, not Paddle.js.
+      // Keep this legacy path from accidentally creating an unusable checkout.
+      if (price.trial_period?.requires_payment_method === false)
+        throw new BillingError('Start your cardless trial through Vessel Plans.', 409);
       const { data: reservation, error } = await scoped.rpc('reserve_paddle_checkout', {
         p_vessel_id: body.vesselId,
         p_plan_tier: body.planTier,

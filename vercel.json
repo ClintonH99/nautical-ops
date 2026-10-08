@@ -10,6 +10,18 @@
   "buildCommand": "cd yachy-app && npm run vercel-build",
   "outputDirectory": "yachy-app/dist",
   "routes": [
+    {
+      "src": "/(.*)",
+      "headers": {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Permissions-Policy": "camera=(self), microphone=(), geolocation=(self), payment=(self \"https://buy.paddle.com\" \"https://sandbox-buy.paddle.com\")",
+        "Content-Security-Policy": "base-uri 'self'; object-src 'none'; frame-ancestors 'none'",
+        "Content-Security-Policy-Report-Only": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' https://cdn.paddle.com https://us-assets.i.posthog.com https://eu-assets.i.posthog.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.paddle.com https://*.sentry.io https://*.posthog.com; frame-src https://*.paddle.com; worker-src 'self' blob:; media-src 'self' blob: https:; manifest-src 'self'"
+      },
+      "continue": true
+    },
     { "src": "/", "dest": "/landing.html" },
     { "handle": "filesystem" },
     { "src": "/pricing", "dest": "/pricing.html" },

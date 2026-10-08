@@ -77,7 +77,7 @@ describe('device access', () => {
     });
   });
 
-  it('fails open when the device check is unavailable', async () => {
+  it('distinguishes an unavailable check from a device-limit violation', async () => {
     mockRpc.mockResolvedValue({ data: null, error: { message: 'Network request failed' } });
 
     await expect(registerCurrentDevice()).resolves.toEqual({
@@ -85,6 +85,25 @@ describe('device access', () => {
       activeDeviceCount: null,
     });
   });
+
+  it('recognizes a removed session without reporting a full device quota', async () => {
+    mockRpc.mockResolvedValue({ data: { allowed: false, reason: 'session_revoked' }, error: null });
+    await expect(registerCurrentDevice()).resolves.toEqual({
+      state: 'session_revoked',
+      activeDeviceCount: null,
+    });
+  });
+
+  it.each([null, {}, { allowed: 'yes' }, { allowed: true, active_device_count: 3 }])(
+    'never grants access or reports a quota violation from malformed data: %j',
+    async (data) => {
+      mockRpc.mockResolvedValue({ data, error: null });
+      await expect(registerCurrentDevice()).resolves.toEqual({
+        state: 'unavailable',
+        activeDeviceCount: null,
+      });
+    }
+  );
 
   it('releases only the current registered session', async () => {
     const abortSignal = jest.fn().mockResolvedValue({ data: true, error: null });

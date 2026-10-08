@@ -37,7 +37,7 @@
       // billing location can be carried over without creating a new transaction.
       window.Paddle.Initialize({
         token: config.token,
-        checkout: { settings: { displayMode: 'overlay', allowLogout: false } },
+        checkout: { settings: { displayMode: 'overlay', variant: 'one-page', allowLogout: false } },
         eventCallback(event) {
           if (event.name === 'checkout.completed') {
             message(

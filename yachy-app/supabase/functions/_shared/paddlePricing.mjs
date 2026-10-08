@@ -13,7 +13,11 @@ export function billingLocation(value) {
   const postalCode = typeof value.postalCode === 'string' ? value.postalCode.trim() : '';
   if (postalCode.length > 32 || /[\u0000-\u001f]/.test(postalCode))
     throw new BillingError('Enter a valid ZIP or postal code.');
-  if (['US', 'CA'].includes(value.countryCode) && !postalCode)
+  // Keep aligned with BillingCountryPicker and Paddle's supported-countries list.
+  if (
+    ['AU', 'CA', 'DE', 'ES', 'FR', 'GB', 'IN', 'IT', 'NL', 'US'].includes(value.countryCode) &&
+    !postalCode
+  )
     throw new BillingError('Enter your billing ZIP or postal code for local tax.');
   return { country_code: value.countryCode, ...(postalCode ? { postal_code: postalCode } : {}) };
 }

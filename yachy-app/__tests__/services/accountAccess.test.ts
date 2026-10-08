@@ -55,6 +55,21 @@ describe('evaluateAccountAccess', () => {
     await expect(evaluateAccountAccess(crew)).resolves.toEqual({ state: 'allowed' });
   });
 
+  it('does not read billing data before device registration can be verified', async () => {
+    mockRegisterCurrentDevice.mockResolvedValue({ state: 'unavailable', activeDeviceCount: null });
+    await expect(evaluateAccountAccess(crew)).resolves.toEqual({ state: 'unavailable' });
+    expect(mockGetVesselSubscriptionAccess).not.toHaveBeenCalled();
+  });
+
+  it('rejects removed sessions independently of subscription status', async () => {
+    mockRegisterCurrentDevice.mockResolvedValue({
+      state: 'session_revoked',
+      activeDeviceCount: null,
+    });
+    await expect(evaluateAccountAccess(crew)).resolves.toEqual({ state: 'device_session_revoked' });
+    expect(mockGetVesselSubscriptionAccess).not.toHaveBeenCalled();
+  });
+
   it('signs crew out after provider-confirmed non-payment', async () => {
     mockGetVesselSubscriptionAccess.mockResolvedValue({
       state: 'payment_required',

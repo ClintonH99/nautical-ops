@@ -191,6 +191,23 @@ test("provider failures are not exposed as secrets or acknowledged as successful
     /Incomplete/,
   );
 });
+test("provider diagnostics omit customer data and credentials", async (t) => {
+  const logs = [];
+  t.mock.method(console, "error", (...args) => logs.push(args));
+  await assert.rejects(paddleRequest(
+    { base: "https://example.com", apiKey: "private-api-key" },
+    "/customers/ctm_00000000000000000000000001/addresses?email=private@example.test",
+    { method: "POST", body: "private-payload" },
+    async () => Response.json({
+      error: { code: "forbidden", detail: "private-customer-detail" },
+      meta: { request_id: "request-123" },
+    }, { status: 403 }),
+  ), /temporarily unavailable/);
+  assert.deepEqual(logs, [["Paddle request rejected", {
+    status: 403, code: "forbidden", requestId: "request-123", fields: undefined,
+    operation: "POST /customers/:id/addresses",
+  }]]);
+});
 function harness(options = {}) {
   const calls = { purchases: 0, writes: 0, reservations: 0, applied: 0 };
   const env = {

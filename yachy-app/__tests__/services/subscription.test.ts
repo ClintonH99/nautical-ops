@@ -116,6 +116,24 @@ describe('resolveSubscriptionAccess', () => {
 describe('getVesselSubscriptionAccess', () => {
   beforeEach(() => mockRpc.mockReset());
 
+  it('recognizes the empty projection after an approved test-billing archive', async () => {
+    mockRpc.mockResolvedValue({ data: [], error: null });
+    expect(await getVesselSubscriptionAccess('vessel-1')).toEqual({
+      state: 'never_subscribed',
+      subscription: null,
+    });
+  });
+
+  it('never treats an RPC failure as an empty subscription', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'Temporary outage' } });
+    expect((await getVesselSubscriptionAccess('vessel-1')).state).toBe('unavailable');
+  });
+
+  it('keeps an interrupted request unconfirmed', async () => {
+    mockRpc.mockRejectedValue(new Error('Connection interrupted'));
+    expect((await getVesselSubscriptionAccess('vessel-1')).state).toBe('unavailable');
+  });
+
   it('loads only the safe server-side entitlement projection', async () => {
     // Keep this RPC-focused test independent of the real calendar date.
     mockRpc.mockResolvedValue({

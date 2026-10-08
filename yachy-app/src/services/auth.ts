@@ -11,7 +11,11 @@ import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import * as Device from 'expo-device';
 import { supabase } from './supabase';
 import vesselService from './vessel';
-import { registerCurrentDevice, releaseCurrentDevice } from './deviceAccess';
+import {
+  registerCurrentDevice,
+  releaseCurrentDevice,
+  DEVICE_SESSION_REVOKED_MESSAGE,
+} from './deviceAccess';
 import { User } from '../types';
 import { registrationErrorMessage } from '../utils/registrationError';
 
@@ -387,6 +391,13 @@ class AuthService {
         const deviceAccess = await registerCurrentDevice();
         if (deviceAccess.state === 'limit_reached') {
           throw new Error('This account is already registered on 2 devices.');
+        }
+        if (deviceAccess.state === 'session_revoked')
+          throw new Error(DEVICE_SESSION_REVOKED_MESSAGE);
+        if (deviceAccess.state !== 'allowed') {
+          throw new Error(
+            'Your account was created, but this device could not be verified. Please check your connection and sign in again to continue.'
+          );
         }
 
         let joinedProfile: User | null = null;

@@ -46,7 +46,10 @@ export function BillingCountryPicker({
       setPostal(value?.postalCode ?? '');
     }
   }, [visible, value]);
-  const requiredPostal = ['US', 'CA'].includes(country);
+  // Paddle supported-countries requirements, verified 8 October 2026.
+  const requiredPostal = ['AU', 'CA', 'DE', 'ES', 'FR', 'GB', 'IN', 'IT', 'NL', 'US'].includes(
+    country
+  );
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>

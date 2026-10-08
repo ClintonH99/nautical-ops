@@ -19,6 +19,9 @@ import {
   paddleCheckoutEnabled,
   paddleEnvironment,
   preparePaddleCheckout,
+  paddleSandboxTrialsEnabled,
+  startPaddleTrial,
+  preparePaddleTrialPayment,
 } from '../services/paddleBilling';
 import {
   previewPaddlePrices,
@@ -56,6 +59,7 @@ export const VesselPlansScreen = () => {
   const [review, setReview] = useState(false);
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
+  const [trialPending, setTrialPending] = useState(false);
   const starting = useRef(false);
   const scroll = useRef<ScrollView>(null);
   useFocusEffect(
@@ -68,7 +72,15 @@ export const VesselPlansScreen = () => {
     setPreview(null);
     setReview(false);
     setNotice('');
+    setTrialPending(false);
   }, [user?.id, user?.vesselId]);
+  useEffect(() => {
+    const refresh = () => {
+      void refetch();
+    };
+    window.addEventListener('focus', refresh);
+    return () => window.removeEventListener('focus', refresh);
+  }, [refetch]);
   useEffect(() => {
     let active = true;
     setPreview(null);
@@ -113,7 +125,8 @@ export const VesselPlansScreen = () => {
     subscription?.status === 'trialing' ? Date.parse(subscription.currentPeriodEnd) : NaN;
   const trialDays = Number.isFinite(trialEnd) ? Math.ceil((trialEnd - Date.now()) / 86400000) : 0;
   const canCheckout =
-    paddleCheckoutEnabled &&
+    (paddleCheckoutEnabled || paddleSandboxTrialsEnabled) &&
+    !trialPending &&
     !!quote &&
     !previewBusy &&
     !isLoading &&
@@ -131,6 +144,17 @@ export const VesselPlansScreen = () => {
     const vesselId = user.vesselId,
       userId = user.id;
     try {
+      if (paddleSandboxTrialsEnabled && location) {
+        await startPaddleTrial(vesselId, tier, period, location);
+        const current = useAuthStore.getState().user;
+        if (current?.id !== userId || current.vesselId !== vesselId) return;
+        setTrialPending(true);
+        setNotice(
+          'Your trial request was sent. Refresh Plan Status to check for confirmation. No payment details or charge are required.'
+        );
+        await refetch();
+        return;
+      }
       const url = await preparePaddleCheckout(vesselId, tier, period, window.location.origin);
       const current = useAuthStore.getState().user;
       if (current?.id !== userId || current.vesselId !== vesselId) return;
@@ -157,6 +181,42 @@ export const VesselPlansScreen = () => {
       setNotice(
         error instanceof Error ? error.message : 'Checkout could not start. Please try again later.'
       );
+    } finally {
+      starting.current = false;
+      setBusy(false);
+    }
+  };
+  const addTrialPaymentDetails = async () => {
+    if (
+      starting.current ||
+      !paddleSandboxTrialsEnabled ||
+      !permitted ||
+      !user?.vesselId ||
+      !subscription ||
+      subscription.status !== 'trialing' ||
+      trialDays <= 0 ||
+      accessState === 'unavailable'
+    )
+      return;
+    starting.current = true;
+    setBusy(true);
+    setNotice('');
+    const { id: userId, vesselId } = user;
+    try {
+      const url = await preparePaddleTrialPayment(
+        vesselId,
+        window.location.origin,
+        subscription.currentPeriodEnd
+      );
+      const current = useAuthStore.getState().user;
+      if (current?.id !== userId || current.vesselId !== vesselId) return;
+      const destination = new URL(url);
+      const transaction = destination.searchParams.get('_ptxn')!;
+      destination.searchParams.delete('_ptxn');
+      destination.searchParams.set('transaction', transaction);
+      window.location.assign(destination.href);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Payment setup could not be confirmed.');
     } finally {
       starting.current = false;
       setBusy(false);
@@ -200,11 +260,11 @@ export const VesselPlansScreen = () => {
       )}
       {!subscription && (
         <Text style={muted}>
-          New subscriptions include a 30-day free trial. Review the first payment date and recurring
-          total in Paddle before confirming.
+          Start a 30-day free trial without card details. Add payment details before the trial ends
+          to continue. No subscription payment is taken before the trial expires.
         </Text>
       )}
-      {review && (
+      {review && !paddleSandboxTrialsEnabled && (
         <Text style={muted}>
           Enter payment details and any business tax ID securely in Paddle. Applicable tax may
           change after validation. Nautical Ops does not collect your card details on this page.
@@ -218,24 +278,30 @@ export const VesselPlansScreen = () => {
       {subscription && (
         <Text style={muted}>
           {trialDays > 0
-            ? 'Payment setup for your existing trial is being connected. It is not available yet; do not start a second subscription.'
+            ? paddleSandboxTrialsEnabled
+              ? 'Use Set up new billing details on your current plan above. This keeps your original trial end date.'
+              : 'Payment setup for your existing trial is being connected. It is not available yet; do not start a second subscription.'
             : 'Existing subscription management is being connected. A second subscription cannot be created here.'}
         </Text>
       )}
-      {!paddleCheckoutEnabled && (
+      {!paddleCheckoutEnabled && !paddleSandboxTrialsEnabled && (
         <Text style={muted}>Paddle checkout is being configured. No payment can be taken yet.</Text>
       )}
-      {paddleCheckoutEnabled && paddleEnvironment === 'sandbox' && (
+      {(paddleCheckoutEnabled || paddleSandboxTrialsEnabled) && paddleEnvironment === 'sandbox' && (
         <Text style={text}>Sandbox test — no real payment.</Text>
       )}
       <Button
         title={
           review
-            ? !paddleCheckoutEnabled || !!subscription
+            ? (!paddleCheckoutEnabled && !paddleSandboxTrialsEnabled) || !!subscription
               ? 'Payments not yet available'
               : busy
-                ? 'Preparing Checkout…'
-                : 'Continue to Secure Checkout'
+                ? 'Preparing…'
+                : trialPending
+                  ? 'Awaiting trial confirmation'
+                  : paddleSandboxTrialsEnabled
+                    ? 'Start 30-day free trial'
+                    : 'Continue to Secure Checkout'
             : 'Continue'
         }
         onPress={
@@ -304,6 +370,19 @@ export const VesselPlansScreen = () => {
                         : 'Current period ends '}
                     {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
                   </Text>
+                  {paddleSandboxTrialsEnabled && trialDays > 0 && (
+                    <>
+                      <Text style={muted}>
+                        Add payment details securely in Paddle. Your trial end date stays the same;
+                        no subscription payment is taken today.
+                      </Text>
+                      <Button
+                        title={busy ? 'Preparing…' : 'Set up new billing details'}
+                        onPress={addTrialPaymentDetails}
+                        disabled={busy || isLoading || accessState === 'unavailable'}
+                      />
+                    </>
+                  )}
                 </View>
               )}
               {trialDays > 0 && <Text style={text}>{trialDays} days left in your free trial</Text>}

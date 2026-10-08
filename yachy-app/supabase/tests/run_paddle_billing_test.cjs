@@ -38,6 +38,7 @@ const uuid = (n) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
         AS $$ SELECT COALESCE(current_setting('test.device_allowed', true),'yes') <> 'no' $$;
       GRANT USAGE ON SCHEMA public,auth TO authenticated,anon,service_role;`);
     await db.exec(read('supabase/migrations/20261002100000_PADDLE_WEB_BILLING_FOUNDATION.sql'));
+    await db.exec(read('supabase/migrations/20261007150000_PADDLE_CARDLESS_TRIAL_RESERVATION.sql'));
     await db.exec(`INSERT INTO vessels(id,name,invite_code) VALUES('${uuid(1)}','A','A'),('${uuid(2)}','B','B');
       INSERT INTO users(id,vessel_id,role) VALUES('${uuid(10)}','${uuid(1)}','CAPTAIN_MOV'),('${uuid(11)}','${uuid(1)}','HOD'),('${uuid(12)}','${uuid(1)}','CREW'),('${uuid(13)}','${uuid(2)}','CAPTAIN_MOV');`);
     const reserve = (user = 10, tier = '1_5') =>
@@ -163,6 +164,43 @@ const uuid = (n) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
     );
     await db.exec('DROP TRIGGER fail_test ON vessel_subscriptions');
     equal((await apply(retry)).rows[0].result, 'applied');
+    // Cardless-trial permissions, duplicate prevention and payment lookup.
+    await db.exec(`INSERT INTO vessels(id,name,invite_code) VALUES('${uuid(3)}','Trial','TRIAL');
+      INSERT INTO users(id,vessel_id,role) VALUES('${uuid(20)}','${uuid(3)}','CAPTAIN_MOV');`);
+    const trial = (user = 20) =>
+      asUser(user, () =>
+        db.query(`SELECT reserve_paddle_trial($1,'1_5','monthly','pri_test') AS intent`, [uuid(3)])
+      );
+    for (const user of [10, 11, 12, 13]) await rejects(() => trial(user), /Captain/);
+    await db.exec("SELECT set_config('test.device_allowed','no',false)");
+    await rejects(() => trial(), /registered device/);
+    await db.exec("SELECT set_config('test.device_allowed','yes',false)");
+    const trialIntent = (await trial()).rows[0].intent;
+    equal(trialIntent.created, true);
+    equal((await trial()).rows[0].intent.created, false);
+    const lookup = (user = 20) =>
+      asUser(user, () => db.query('SELECT get_paddle_trial_billing($1) AS billing', [uuid(3)]));
+    await rejects(() => lookup(), /confirmed/);
+    await db.query(
+      "UPDATE paddle_checkout_intents SET state='ready',transaction_id='txn_trial' WHERE id=$1",
+      [trialIntent.id]
+    );
+    await apply({
+      ...base,
+      event_id: 'evt_trial',
+      subscription_id: 'sub_trial',
+      checkout_id: trialIntent.id,
+      transaction_id: 'txn_trial',
+      status: 'trialing',
+      period_start: '2099-01-01T00:00:00Z',
+      period_end: '2099-01-31T00:00:00Z',
+    });
+    equal((await lookup()).rows[0].billing.subscription_id, 'sub_trial');
+    await rejects(() => lookup(10), /Captain/);
+    await rejects(() => trial(), /second trial/);
+    await db.exec(`UPDATE vessel_subscriptions SET status='canceled' WHERE vessel_id='${uuid(3)}'`);
+    await rejects(() => lookup(), /confirmed/);
+    await rejects(() => trial(), /second trial/);
     console.log(`${checks} Paddle database checks passed`);
   } finally {
     await db.close();

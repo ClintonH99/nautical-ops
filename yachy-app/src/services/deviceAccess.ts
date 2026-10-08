@@ -9,10 +9,13 @@ const FALLBACK_DEVICE_ID_KEY = 'nautical_ops_installation_device_id';
 
 export const DEVICE_LIMIT_MESSAGE =
   'This account already has 2 saved devices. Use Manage Devices on an approved device, or select Lost Device? below to recover access.';
+export const DEVICE_SESSION_REVOKED_MESSAGE =
+  'This device session was removed or replaced. Please sign in again. If both device slots are occupied, use Lost Device? to recover access.';
 
 export type DeviceAccessResult =
   | { state: 'allowed'; activeDeviceCount: number }
   | { state: 'limit_reached'; activeDeviceCount: number }
+  | { state: 'session_revoked'; activeDeviceCount: null }
   | { state: 'unavailable'; activeDeviceCount: null };
 
 async function getFallbackInstallationId(): Promise<string> {
@@ -68,8 +71,8 @@ function isConnectivityError(error: any): boolean {
 /**
  * Claim or refresh this account's device slot.
  *
- * Unknown/network states deliberately fail open: loss of connectivity must
- * never be mistaken for a device-limit violation.
+ * Unknown/network states are not device-limit violations. The database still
+ * denies protected data unless this session has a registered device slot.
  */
 export async function registerCurrentDevice(): Promise<DeviceAccessResult> {
   try {
@@ -87,9 +90,24 @@ export async function registerCurrentDevice(): Promise<DeviceAccessResult> {
       return { state: 'unavailable', activeDeviceCount: null };
     }
 
-    const result = data as { allowed?: boolean; active_device_count?: number } | null | undefined;
-    const activeDeviceCount = Number(result?.active_device_count ?? 0);
-    return result?.allowed
+    const result = data as
+      | { allowed?: boolean; active_device_count?: number; reason?: string }
+      | null
+      | undefined;
+    if (result?.allowed === false && result.reason === 'session_revoked') {
+      return { state: 'session_revoked', activeDeviceCount: null };
+    }
+    const activeDeviceCount = result?.active_device_count;
+    if (
+      typeof result?.allowed !== 'boolean' ||
+      typeof activeDeviceCount !== 'number' ||
+      !Number.isInteger(activeDeviceCount) ||
+      activeDeviceCount < 0 ||
+      activeDeviceCount > 2
+    ) {
+      return { state: 'unavailable', activeDeviceCount: null };
+    }
+    return result.allowed
       ? { state: 'allowed', activeDeviceCount }
       : { state: 'limit_reached', activeDeviceCount };
   } catch (error) {

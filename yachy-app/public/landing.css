@@ -1,0 +1,1099 @@
+html {
+  color-scheme: light;
+  scroll-behavior: smooth;
+}
+body {
+  margin: 0;
+  background: #fff;
+}
+button,
+a,
+summary,
+select {
+  touch-action: manipulation;
+}
+button,
+summary,
+select {
+  cursor: pointer;
+}
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+select:focus-visible {
+  outline: 3px solid #306e70;
+  outline-offset: 4px;
+}
+.skip-link {
+  position: absolute;
+  left: 15px;
+  top: -90px;
+  z-index: 10;
+  background: #fff;
+  color: #132e43;
+  padding: 14px;
+}
+.skip-link:focus {
+  top: 10px;
+}
+
+#nautical-home-concept {
+  --no-bg: #ffffff;
+  --no-paper: #ffffff;
+  --no-ink: #132e43;
+  --no-muted: #526879;
+  --no-line: #dce5e7;
+  --no-soft: #f5f8f8;
+  --no-sea: #306e70;
+  --no-navy: #142f44;
+  --no-white: #ffffff;
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--no-bg);
+  color: var(--no-ink);
+  width: 100%;
+  margin: 0 auto;
+  container-type: inline-size;
+  text-align: left;
+  line-height: 1.55;
+  font-size: 15px;
+  border-radius: 0;
+  overflow-wrap: break-word;
+}
+#nautical-home-concept * {
+  box-sizing: border-box;
+}
+#nautical-home-concept [hidden] {
+  display: none !important;
+}
+#nautical-home-concept h1,
+#nautical-home-concept h2,
+#nautical-home-concept h3,
+#nautical-home-concept p {
+  margin: 0;
+}
+#nautical-home-concept button,
+#nautical-home-concept select {
+  font: inherit;
+}
+#nautical-home-concept button,
+#nautical-home-concept a {
+  -webkit-tap-highlight-color: transparent;
+}
+#nautical-home-concept a {
+  color: inherit;
+  text-decoration: none;
+}
+#nautical-home-concept button {
+  color: inherit;
+}
+#nautical-home-concept svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+#nautical-home-concept .no-wrap {
+  width: 100%;
+  max-width: 1200px;
+  padding: 0 42px;
+  margin: auto;
+}
+#nautical-home-concept .no-brand {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.7px;
+  white-space: nowrap;
+}
+#nautical-home-concept .no-brand svg {
+  width: 31px;
+  height: 31px;
+}
+#nautical-home-concept .no-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 85px;
+  border-bottom: 1px solid var(--no-line);
+}
+#nautical-home-concept .no-nav {
+  display: flex;
+  gap: 23px;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+}
+#nautical-home-concept .no-link {
+  border: 0;
+  background: transparent;
+  padding: 12px 0;
+}
+#nautical-home-concept .no-button {
+  min-height: 46px;
+  border: 1px solid var(--no-line);
+  border-radius: 7px;
+  padding: 12px 19px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--no-paper);
+  font-weight: 600;
+  font-size: 14px;
+  text-align: center;
+}
+#nautical-home-concept .no-button-main {
+  background: var(--no-navy);
+  color: var(--no-white);
+  border-color: var(--no-navy);
+}
+#nautical-home-concept .no-menu {
+  display: none;
+  padding: 10px;
+  background: var(--no-paper);
+  border: 1px solid var(--no-line);
+  border-radius: 7px;
+  min-height: 44px;
+}
+#nautical-home-concept .no-mobile-nav {
+  padding: 12px 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#nautical-home-concept .no-mobile-nav a {
+  padding: 10px 0;
+}
+#nautical-home-concept .no-hero {
+  padding: 72px 0 60px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 38px;
+  align-items: center;
+}
+#nautical-home-concept .no-eyebrow {
+  font-size: 11px;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--no-sea);
+  margin-bottom: 19px;
+  display: block;
+}
+#nautical-home-concept h1 {
+  font-size: clamp(40px, 5.6cqw, 66px);
+  letter-spacing: -2.8px;
+  line-height: 1.05;
+  font-weight: 600;
+  margin-bottom: 25px;
+}
+#nautical-home-concept h1 span {
+  color: var(--no-sea);
+}
+#nautical-home-concept .no-intro {
+  font-size: 16px;
+  color: var(--no-muted);
+  max-width: 430px;
+  line-height: 1.75;
+}
+#nautical-home-concept .no-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 28px;
+}
+#nautical-home-concept .no-availability {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--no-muted);
+  margin-top: 18px;
+}
+#nautical-home-concept .no-availability svg {
+  width: 16px;
+  height: 16px;
+}
+#nautical-home-concept .no-product {
+  background: var(--no-soft);
+  padding: 19px;
+  border-radius: 19px;
+  position: relative;
+}
+#nautical-home-concept .no-app {
+  background: var(--no-paper);
+  border: 1px solid var(--no-line);
+  border-radius: 11px;
+  box-shadow: 0 18px 40px #08223213;
+  overflow: hidden;
+}
+#nautical-home-concept .no-app-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 17px;
+  border-bottom: 1px solid var(--no-line);
+  font-size: 11px;
+  font-weight: 700;
+}
+#nautical-home-concept .no-app-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#nautical-home-concept .no-app-body {
+  padding: 23px 19px;
+}
+#nautical-home-concept .no-small {
+  font-size: 12px;
+  color: var(--no-muted);
+}
+#nautical-home-concept .no-app-body h3 {
+  font-size: 23px;
+  letter-spacing: -0.8px;
+  margin: 3px 0 17px;
+}
+#nautical-home-concept .no-voyage {
+  background: var(--no-navy);
+  color: var(--no-white);
+  padding: 17px;
+  border-radius: 8px;
+}
+#nautical-home-concept .no-voyage small {
+  display: block;
+  color: #bbd3db;
+  font-size: 11px;
+}
+#nautical-home-concept .no-voyage strong {
+  display: block;
+  font-size: 17px;
+  margin: 5px 0 11px;
+  font-weight: 500;
+}
+#nautical-home-concept .no-route {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+}
+#nautical-home-concept .no-route span:nth-child(2) {
+  flex: 1;
+  height: 1px;
+  background: #537182;
+}
+#nautical-home-concept .no-app-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  margin-top: 22px;
+  margin-bottom: 9px;
+}
+#nautical-home-concept .no-task {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--no-line);
+  font-size: 12px;
+}
+#nautical-home-concept .no-task:last-child {
+  border: 0;
+}
+#nautical-home-concept .no-task small {
+  display: block;
+  color: var(--no-muted);
+  font-size: 11px;
+}
+#nautical-home-concept .no-task svg {
+  color: var(--no-sea);
+  width: 17px;
+  height: 17px;
+}
+#nautical-home-concept .no-demo-caption {
+  font-size: 10px;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--no-muted);
+  margin-top: 13px;
+}
+#nautical-home-concept .no-device-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 0;
+  border-top: 1px solid var(--no-line);
+  border-bottom: 1px solid var(--no-line);
+  font-size: 12px;
+  color: var(--no-muted);
+}
+#nautical-home-concept .no-device-strip strong {
+  color: var(--no-ink);
+  font-weight: 600;
+}
+#nautical-home-concept .no-devices {
+  display: flex;
+  gap: 23px;
+  flex-wrap: wrap;
+}
+#nautical-home-concept .no-devices span {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+#nautical-home-concept .no-devices svg {
+  width: 17px;
+  height: 17px;
+}
+#nautical-home-concept .no-section {
+  padding: 70px 0;
+}
+#nautical-home-concept h2 {
+  font-size: 36px;
+  line-height: 1.16;
+  letter-spacing: -1.3px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+#nautical-home-concept .no-section-copy {
+  max-width: 600px;
+  color: var(--no-muted);
+  font-size: 15px;
+  line-height: 1.7;
+}
+#nautical-home-concept .no-feature-layout {
+  display: grid;
+  grid-template-columns: 0.92fr 1.08fr;
+  gap: 44px;
+  margin-top: 32px;
+  align-items: start;
+}
+#nautical-home-concept .no-features {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+#nautical-home-concept .no-feature {
+  display: flex;
+  align-items: center;
+  text-align: left;
+  gap: 14px;
+  padding: 17px 14px;
+  min-height: 72px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  width: 100%;
+}
+#nautical-home-concept .no-feature[aria-pressed='true'] {
+  background: var(--no-soft);
+  border-color: var(--no-line);
+}
+#nautical-home-concept .no-feature strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+}
+#nautical-home-concept .no-feature small {
+  display: block;
+  font-size: 12px;
+  margin-top: 3px;
+  color: var(--no-muted);
+}
+#nautical-home-concept .no-feature svg:last-child {
+  margin-left: auto;
+  width: 15px;
+}
+#nautical-home-concept .no-feature-detail {
+  border: 1px solid var(--no-line);
+  background: var(--no-paper);
+  border-radius: 12px;
+  padding: 27px;
+  min-height: 323px;
+}
+#nautical-home-concept .no-feature-detail h3 {
+  font-size: 24px;
+  letter-spacing: -0.7px;
+  margin: 10px 0;
+}
+#nautical-home-concept .no-feature-detail p {
+  color: var(--no-muted);
+  font-size: 14px;
+}
+#nautical-home-concept .no-detail-list {
+  margin-top: 20px;
+  display: grid;
+  gap: 13px;
+}
+#nautical-home-concept .no-detail-item {
+  display: flex;
+  gap: 9px;
+  align-items: start;
+  font-size: 13px;
+}
+#nautical-home-concept .no-detail-item svg {
+  width: 17px;
+  height: 17px;
+  color: var(--no-sea);
+  margin-top: 2px;
+}
+#nautical-home-concept .no-band {
+  background: var(--no-soft);
+  border-top: 1px solid var(--no-line);
+  border-bottom: 1px solid var(--no-line);
+}
+#nautical-home-concept .no-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 30px;
+  margin-top: 32px;
+}
+#nautical-home-concept .no-step-number {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--no-sea);
+  display: block;
+  margin-bottom: 13px;
+}
+#nautical-home-concept .no-steps h3 {
+  font-size: 19px;
+  font-weight: 600;
+  margin-bottom: 9px;
+}
+#nautical-home-concept .no-steps p {
+  font-size: 13px;
+  color: var(--no-muted);
+  line-height: 1.8;
+}
+#nautical-home-concept .no-price-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 55px;
+  align-items: start;
+}
+#nautical-home-concept .no-price-panel {
+  background: var(--no-paper);
+  border: 1px solid var(--no-line);
+  border-radius: 12px;
+  padding: 26px;
+}
+#nautical-home-concept .no-field-label {
+  font-size: 12px;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 8px;
+}
+#nautical-home-concept select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--no-line);
+  border-radius: 6px;
+  color: var(--no-ink);
+  background: var(--no-paper);
+  font-size: 16px;
+}
+#nautical-home-concept .no-periods {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin: 18px 0 23px;
+  background: var(--no-soft);
+  padding: 4px;
+  border-radius: 7px;
+}
+#nautical-home-concept .no-periods button {
+  border: 0;
+  background: transparent;
+  border-radius: 5px;
+  padding: 9px 3px;
+  font-size: 11px;
+  min-height: 40px;
+}
+#nautical-home-concept .no-periods button[aria-pressed='true'] {
+  background: var(--no-paper);
+  box-shadow: 0 1px 5px #0a243511;
+  font-weight: 700;
+}
+#nautical-home-concept .no-price {
+  font-size: 38px;
+  letter-spacing: -1.8px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+#nautical-home-concept .no-price span {
+  font-size: 14px;
+  letter-spacing: 0;
+  font-weight: 400;
+  color: var(--no-muted);
+}
+#nautical-home-concept .no-price-note {
+  font-size: 12px;
+  color: var(--no-muted);
+  margin-top: 10px;
+  line-height: 1.7;
+}
+#nautical-home-concept .no-price-panel .no-button {
+  width: 100%;
+  margin-top: 21px;
+}
+#nautical-home-concept .no-price-disclosure {
+  font-size: 11px;
+  color: var(--no-muted);
+  margin-top: 13px;
+}
+#nautical-home-concept .no-story {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 55px;
+  padding: 38px 0;
+  border-top: 1px solid var(--no-line);
+  border-bottom: 1px solid var(--no-line);
+}
+#nautical-home-concept .no-story h2 {
+  font-size: 29px;
+  margin: 0;
+}
+#nautical-home-concept .no-story p {
+  color: var(--no-muted);
+  font-size: 14px;
+  line-height: 1.8;
+}
+#nautical-home-concept .no-faq-grid {
+  display: grid;
+  grid-template-columns: 0.75fr 1.25fr;
+  gap: 55px;
+}
+#nautical-home-concept details {
+  border-bottom: 1px solid var(--no-line);
+  padding: 18px 0;
+}
+#nautical-home-concept details:first-child {
+  padding-top: 0;
+}
+#nautical-home-concept summary {
+  font-size: 14px;
+  font-weight: 600;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 32px;
+}
+#nautical-home-concept summary::-webkit-details-marker {
+  display: none;
+}
+#nautical-home-concept summary::after {
+  content: '+';
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--no-sea);
+}
+#nautical-home-concept details[open] summary::after {
+  content: '−';
+}
+#nautical-home-concept details p {
+  font-size: 13px;
+  color: var(--no-muted);
+  padding: 12px 22px 0 0;
+  line-height: 1.8;
+}
+#nautical-home-concept .no-bottom-cta {
+  background: var(--no-navy);
+  color: var(--no-white);
+  padding: 42px;
+  border-radius: 12px;
+  display: flex;
+  gap: 25px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+}
+#nautical-home-concept .no-bottom-cta h2 {
+  font-size: 30px;
+  margin-bottom: 8px;
+}
+#nautical-home-concept .no-bottom-cta p {
+  color: #c5d6df;
+  font-size: 14px;
+}
+#nautical-home-concept .no-bottom-cta .no-button {
+  background: var(--no-white);
+  color: var(--no-navy);
+  border-color: var(--no-white);
+  white-space: nowrap;
+}
+#nautical-home-concept .no-footer {
+  padding: 0 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+#nautical-home-concept .no-footer .no-brand {
+  font-size: 15px;
+}
+#nautical-home-concept .no-footer .no-brand svg {
+  width: 23px;
+  height: 23px;
+}
+#nautical-home-concept .no-footer-links {
+  display: flex;
+  gap: 19px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--no-muted);
+}
+#nautical-home-concept .no-footer-links button {
+  border: 0;
+  background: transparent;
+  padding: 8px 0;
+  font-size: 12px;
+}
+#nautical-home-concept .no-preview-note {
+  font-size: 10px;
+  color: var(--no-muted);
+  padding-bottom: 20px;
+}
+#nautical-home-concept .no-inline-message {
+  padding: 18px;
+  background: var(--no-soft);
+  border: 1px solid var(--no-line);
+  border-radius: 8px;
+  margin: 18px 0;
+  font-size: 13px;
+}
+#nautical-home-concept .no-inline-message strong {
+  display: block;
+  margin-bottom: 6px;
+}
+#nautical-home-concept .no-inline-message button {
+  margin-top: 12px;
+}
+#nautical-home-concept button:hover,
+#nautical-home-concept a:hover {
+  filter: brightness(0.94);
+}
+@container (max-width:760px) {
+  #nautical-home-concept .no-wrap {
+    padding: 0 25px;
+  }
+  #nautical-home-concept .no-nav {
+    display: none;
+  }
+  #nautical-home-concept .no-menu {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+  }
+  #nautical-home-concept .no-hero {
+    gap: 25px;
+    padding-top: 50px;
+  }
+  #nautical-home-concept h1 {
+    font-size: 44px;
+    letter-spacing: -2px;
+  }
+  #nautical-home-concept .no-product {
+    padding: 12px;
+  }
+  #nautical-home-concept .no-app-body {
+    padding: 17px 13px;
+  }
+  #nautical-home-concept .no-feature-layout,
+  #nautical-home-concept .no-price-layout,
+  #nautical-home-concept .no-faq-grid {
+    gap: 28px;
+  }
+  #nautical-home-concept .no-feature-detail {
+    padding: 20px;
+  }
+  #nautical-home-concept h2 {
+    font-size: 31px;
+  }
+  #nautical-home-concept .no-price-panel {
+    padding: 20px;
+  }
+  #nautical-home-concept .no-bottom-cta {
+    padding: 30px;
+  }
+  #nautical-home-concept .no-device-strip {
+    align-items: start;
+    flex-direction: column;
+    gap: 14px;
+  }
+}
+@container (max-width:580px) {
+  #nautical-home-concept .no-wrap {
+    padding: 0 21px;
+  }
+  #nautical-home-concept .no-header {
+    min-height: 73px;
+  }
+  #nautical-home-concept .no-brand {
+    font-size: 18px;
+  }
+  #nautical-home-concept .no-nav {
+    display: none;
+  }
+  #nautical-home-concept .no-menu {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+  }
+  #nautical-home-concept .no-hero {
+    grid-template-columns: 1fr;
+    padding: 42px 0 33px;
+    gap: 30px;
+  }
+  #nautical-home-concept h1 {
+    font-size: 46px;
+    letter-spacing: -2px;
+    max-width: 420px;
+  }
+  #nautical-home-concept .no-eyebrow {
+    font-size: 10px;
+    margin-bottom: 17px;
+  }
+  #nautical-home-concept .no-intro {
+    font-size: 15px;
+  }
+  #nautical-home-concept .no-actions {
+    margin-top: 23px;
+    gap: 9px;
+  }
+  #nautical-home-concept .no-button {
+    padding: 12px 15px;
+    font-size: 13px;
+  }
+  #nautical-home-concept .no-product {
+    padding: 16px;
+  }
+  #nautical-home-concept .no-app-body {
+    padding: 22px 18px;
+  }
+  #nautical-home-concept .no-app-top {
+    padding: 14px 18px;
+  }
+  #nautical-home-concept .no-task {
+    padding: 13px 0;
+  }
+  #nautical-home-concept .no-section {
+    padding: 47px 0;
+  }
+  #nautical-home-concept h2 {
+    font-size: 30px;
+    letter-spacing: -1px;
+  }
+  #nautical-home-concept .no-feature-layout,
+  #nautical-home-concept .no-price-layout,
+  #nautical-home-concept .no-faq-grid,
+  #nautical-home-concept .no-story {
+    grid-template-columns: 1fr;
+    gap: 25px;
+  }
+  #nautical-home-concept .no-feature-layout {
+    margin-top: 23px;
+  }
+  #nautical-home-concept .no-feature {
+    padding: 13px 11px;
+    min-height: 69px;
+  }
+  #nautical-home-concept .no-feature-detail {
+    min-height: 0;
+    padding: 23px;
+  }
+  #nautical-home-concept .no-steps {
+    grid-template-columns: 1fr;
+    gap: 27px;
+  }
+  #nautical-home-concept .no-step-number {
+    margin-bottom: 6px;
+  }
+  #nautical-home-concept .no-steps h3 {
+    margin-bottom: 5px;
+  }
+  #nautical-home-concept .no-bottom-cta {
+    padding: 27px;
+    flex-direction: column;
+    align-items: start;
+    gap: 19px;
+  }
+  #nautical-home-concept .no-bottom-cta h2 {
+    font-size: 29px;
+  }
+  #nautical-home-concept .no-footer {
+    align-items: start;
+    flex-direction: column;
+    gap: 12px;
+  }
+  #nautical-home-concept .no-footer-links {
+    gap: 15px;
+  }
+  #nautical-home-concept .no-devices {
+    gap: 18px;
+  }
+  #nautical-home-concept .no-story {
+    padding: 30px 0;
+  }
+  #nautical-home-concept .no-periods button {
+    min-height: 44px;
+  }
+}
+@container (max-width:350px) {
+  #nautical-home-concept .no-wrap {
+    padding: 0 16px;
+  }
+  #nautical-home-concept h1 {
+    font-size: 40px;
+  }
+  #nautical-home-concept .no-devices {
+    gap: 12px;
+  }
+  #nautical-home-concept .no-actions .no-button {
+    width: 100%;
+  }
+  #nautical-home-concept .no-price-panel {
+    padding: 17px;
+  }
+  #nautical-home-concept .no-brand {
+    font-size: 16px;
+  }
+}
+#nautical-home-concept {
+  color-scheme: light;
+  --no-bg: #ffffff;
+  --no-paper: #ffffff;
+  --no-ink: #132e43;
+  --no-muted: #526879;
+  --no-line: #dce5e7;
+  --no-soft: #f5f8f8;
+  --no-sea: #306e70;
+}
+#nautical-home-concept .no-voyage {
+  background: var(--no-soft);
+  color: var(--no-ink);
+  border: 1px solid var(--no-line);
+}
+#nautical-home-concept .no-voyage small {
+  color: var(--no-muted);
+}
+#nautical-home-concept .no-route span:nth-child(2) {
+  background: var(--no-line);
+}
+#nautical-home-concept .no-bottom-cta {
+  background: var(--no-paper);
+  color: var(--no-ink);
+  border: 1px solid var(--no-line);
+}
+#nautical-home-concept .no-bottom-cta p {
+  color: var(--no-muted);
+}
+#nautical-home-concept .no-bottom-cta .no-button {
+  background: var(--no-navy);
+  color: var(--no-white);
+  border-color: var(--no-navy);
+}
+#nautical-home-concept .no-home-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 45px;
+  align-items: start;
+}
+#nautical-home-concept .no-home-intro {
+  display: flex;
+  gap: 17px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+#nautical-home-concept .no-home-icon {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--no-line);
+  border-radius: 15px;
+  background: var(--no-paper);
+  box-shadow: 0 5px 12px #132e430b;
+}
+#nautical-home-concept .no-home-icon svg {
+  width: 33px;
+  height: 33px;
+}
+#nautical-home-concept .no-home-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 21px;
+}
+#nautical-home-concept .no-home-tabs button {
+  flex: 1;
+}
+#nautical-home-concept .no-home-tabs button[aria-pressed='true'] {
+  background: var(--no-navy);
+  color: var(--no-white);
+  border-color: var(--no-navy);
+}
+#nautical-home-concept .no-home-panel {
+  padding: 24px;
+  border: 1px solid var(--no-line);
+  border-radius: 12px;
+  background: var(--no-paper);
+}
+#nautical-home-concept .no-home-panel ol {
+  padding-left: 22px;
+  margin: 0;
+}
+#nautical-home-concept .no-home-panel li {
+  padding: 0 0 13px 5px;
+  color: var(--no-muted);
+  font-size: 14px;
+}
+#nautical-home-concept .no-home-panel li::marker {
+  color: var(--no-sea);
+  font-weight: 700;
+}
+#nautical-home-concept .no-home-panel strong {
+  color: var(--no-ink);
+}
+#nautical-home-concept .no-guide-source {
+  font-size: 11px;
+  color: var(--no-muted);
+  display: inline-block;
+  margin-top: 12px;
+  text-decoration: underline;
+}
+#nautical-home-concept .no-home-tip {
+  font-size: 12px;
+  color: var(--no-muted);
+  padding-top: 13px;
+  border-top: 1px solid var(--no-line);
+}
+#nautical-home-concept .no-ocean {
+  padding: 48px 0;
+  border-bottom: 1px solid var(--no-line);
+}
+#nautical-home-concept .no-ocean-heading {
+  display: flex;
+  align-items: start;
+  gap: 20px;
+  justify-content: space-between;
+}
+#nautical-home-concept .no-ocean-heading > svg {
+  width: 44px;
+  height: 44px;
+  color: var(--no-sea);
+}
+#nautical-home-concept .no-donation-counters {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+  margin-top: 28px;
+}
+#nautical-home-concept .no-donation-counter {
+  border-top: 1px solid var(--no-line);
+  padding-top: 20px;
+}
+#nautical-home-concept .no-donation-value {
+  font-size: 36px;
+  line-height: 1.2;
+  letter-spacing: -1px;
+  font-weight: 600;
+  display: block;
+  color: var(--no-sea);
+}
+#nautical-home-concept .no-donation-label {
+  display: block;
+  font-size: 13px;
+  margin-top: 8px;
+  font-weight: 600;
+}
+#nautical-home-concept .no-donation-caption {
+  display: block;
+  font-size: 11px;
+  color: var(--no-muted);
+  margin-top: 5px;
+}
+#nautical-home-concept .no-donation-note {
+  font-size: 11px;
+  color: var(--no-muted);
+  margin-top: 20px;
+}
+@container (max-width:580px) {
+  #nautical-home-concept .no-home-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  #nautical-home-concept .no-home-panel {
+    padding: 21px;
+  }
+  #nautical-home-concept .no-donation-counters {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  #nautical-home-concept .no-donation-counter {
+    display: grid;
+    grid-template-columns: 88px 1fr;
+    column-gap: 15px;
+    align-items: center;
+    padding-top: 17px;
+  }
+  #nautical-home-concept .no-donation-value {
+    grid-row: 1/3;
+  }
+  #nautical-home-concept .no-donation-label {
+    margin: 0;
+  }
+  #nautical-home-concept .no-ocean-heading > svg {
+    width: 30px;
+    height: 30px;
+  }
+  #nautical-home-concept .no-home-tabs .no-button {
+    font-size: 12px;
+    padding: 11px 9px;
+  }
+}
+
+#nautical-home-concept .no-brand img {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+}
+#nautical-home-concept .no-app-title img {
+  width: 24px;
+  height: 24px;
+}
+#nautical-home-concept .no-home-icon img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+#nautical-home-concept .no-footer .no-brand img {
+  width: 30px;
+  height: 30px;
+}
+#nautical-home-concept .no-donation-value {
+  font-variant-numeric: tabular-nums;
+}
+#nautical-home-concept .no-footer-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+#nautical-home-concept .no-home-intro {
+  margin-top: 25px;
+}
+#nautical-home-concept .no-feature {
+  scroll-margin-top: 20px;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

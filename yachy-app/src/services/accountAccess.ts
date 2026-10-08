@@ -10,18 +10,21 @@ export type AccountAccessDecision =
   | { state: 'unavailable' }
   | { state: 'captain_payment_required' }
   | { state: 'crew_payment_required' }
+  | { state: 'device_session_revoked' }
   | { state: 'device_limit_reached' };
 
 /**
  * Check device and subscription access for an authenticated profile.
- * Service outages fail open; only a positive server response may restrict
- * access or sign somebody out.
+ * Outages must not be misreported as non-payment or revoke a valid session.
+ * Database guards independently reject unregistered sessions.
  */
 export async function evaluateAccountAccess(user: User): Promise<AccountAccessDecision> {
   const deviceAccess = await registerCurrentDevice();
   if (deviceAccess.state === 'limit_reached') {
     return { state: 'device_limit_reached' };
   }
+  if (deviceAccess.state === 'session_revoked') return { state: 'device_session_revoked' };
+  if (deviceAccess.state === 'unavailable') return { state: 'unavailable' };
 
   if (!user.vesselId) return { state: 'allowed' };
 

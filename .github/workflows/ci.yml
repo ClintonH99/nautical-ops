@@ -48,10 +48,12 @@ jobs:
           node supabase/tests/run_watch_publication_test.cjs
           node supabase/tests/run_vessel_departure_test.cjs
           node supabase/tests/run_paddle_billing_test.cjs
+          node supabase/tests/run_subscription_cutover_test.cjs
           node supabase/tests/run_profile_authorization_test.cjs
           node supabase/tests/run_strict_device_test.cjs
           node supabase/tests/run_sensitive_actions_test.cjs
           node supabase/tests/run_device_recovery_test.cjs
+          node supabase/tests/run_web_security_test.cjs
 
       - name: Expo dependency check (QC Gate 3)
         run: npx expo install --check

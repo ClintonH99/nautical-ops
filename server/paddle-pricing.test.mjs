@@ -97,9 +97,11 @@ test("rejects missing, duplicate, discounted, tax-inclusive and inconsistent pro
     );
   }
 });
-test("billing location validates countries and requires US/Canada postal codes", () => {
-  assert.deepEqual(billingLocation({ countryCode: "FR" }), {
-    country_code: "FR",
+test("billing location requires all Paddle mandatory postal codes", () => {
+  for (const countryCode of ["AU", "CA", "DE", "ES", "FR", "GB", "IN", "IT", "NL", "US"])
+    assert.throws(() => billingLocation({ countryCode }));
+  assert.deepEqual(billingLocation({ countryCode: "ZA" }), {
+    country_code: "ZA",
   });
   assert.deepEqual(
     billingLocation({ countryCode: "US", postalCode: " 10001 " }),
@@ -164,6 +166,7 @@ test("preview endpoint enforces authentication, role, vessel and disabled config
           vesselId: "vessel",
           billingPeriod: "monthly",
           countryCode: "FR",
+          postalCode: "75001",
         }),
       }),
     );

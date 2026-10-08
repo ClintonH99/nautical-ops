@@ -134,7 +134,7 @@ import authService from '../services/auth';
 import { supabase, SUPABASE_AUTH_STORAGE_KEY } from '../services/supabase';
 import { startRealtimeSync, stopRealtimeSync } from '../services/realtimeSync';
 import { evaluateAccountAccess } from '../services/accountAccess';
-import { DEVICE_LIMIT_MESSAGE } from '../services/deviceAccess';
+import { DEVICE_LIMIT_MESSAGE, DEVICE_SESSION_REVOKED_MESSAGE } from '../services/deviceAccess';
 import { reconcileAppleSubscription } from '../services/iap';
 import { syncPushTokenForCurrentDevice } from '../services/notifications';
 import { notificationDestination } from '../utils/notificationDestination';
@@ -317,8 +317,15 @@ export const RootNavigator = () => {
           );
         }
 
-        if (decision.state === 'device_limit_reached') {
-          setLoginNotice(DEVICE_LIMIT_MESSAGE);
+        if (
+          decision.state === 'device_limit_reached' ||
+          decision.state === 'device_session_revoked'
+        ) {
+          setLoginNotice(
+            decision.state === 'device_session_revoked'
+              ? DEVICE_SESSION_REVOKED_MESSAGE
+              : DEVICE_LIMIT_MESSAGE
+          );
           setCaptainPaymentRequired(false);
           try {
             await supabase.auth.signOut({ scope: 'local' });
@@ -784,7 +791,11 @@ export const RootNavigator = () => {
                 options={{ headerShown: false }}
               />
               <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-              <Stack.Screen name="LostDevice" component={LostDeviceScreen} options={{ headerShown: false }} />
+              <Stack.Screen
+                name="LostDevice"
+                component={LostDeviceScreen}
+                options={{ headerShown: false }}
+              />
               <Stack.Screen
                 name="ForgotPassword"
                 component={ForgotPasswordScreen}
@@ -891,7 +902,11 @@ export const RootNavigator = () => {
                 component={SettingsScreen}
                 options={{ headerShown: false }}
               />
-              <Stack.Screen name="ManageDevices" component={ManageDevicesScreen} options={{ headerShown: false }} />
+              <Stack.Screen
+                name="ManageDevices"
+                component={ManageDevicesScreen}
+                options={{ headerShown: false }}
+              />
               <Stack.Screen
                 name="AccountProfile"
                 component={ProfileScreen}
