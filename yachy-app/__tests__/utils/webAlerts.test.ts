@@ -53,6 +53,18 @@ describe('browser Alert adapter', () => {
     expect(document.querySelector('dialog p')?.textContent).toContain('<script>');
     click('OK');
   });
+  it('blurs a focused password field and never refocuses it before navigation', () => {
+    const input = document.createElement('input');
+    input.type = 'password';
+    document.body.append(input);
+    input.focus();
+    const navigate = jest.fn(() => expect(document.activeElement).not.toBe(input));
+    Alert.alert('Password updated', '', [{ text: 'OK', onPress: navigate }]);
+    expect(document.activeElement).not.toBe(input);
+    click('OK');
+    expect(navigate).toHaveBeenCalledTimes(1);
+    input.remove();
+  });
   it('supports multi-choice filters and queues subsequent alerts', () => {
     const select = jest.fn();
     Alert.alert('Filter', '', [

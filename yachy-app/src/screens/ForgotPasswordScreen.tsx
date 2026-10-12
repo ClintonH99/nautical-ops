@@ -4,7 +4,7 @@
  * Uses Supabase's OTP recovery flow rather than an emailed link, since
  * deep linking is currently web-only in this app.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
 } from 'react-native';
 import { COLORS, FONTS, SPACING, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -31,6 +32,8 @@ export const ForgotPasswordScreen = ({ navigation }: any) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const submittingPassword = useRef(false);
+  const passwordUpdated = useRef(false);
   const setDeferUserUpdate = useAuthStore((s) => s.setDeferUserUpdate);
 
   // verifyOtp signs the user in as a side effect. Hold off any global
@@ -84,6 +87,8 @@ export const ForgotPasswordScreen = ({ navigation }: any) => {
   };
 
   const handleSetPassword = async () => {
+    // Keyboard submit and button taps can fire before loading re-renders.
+    if (submittingPassword.current || passwordUpdated.current) return;
     if (password.length < 6) {
       Alert.alert('Password too short', 'Please use at least 6 characters.');
       return;
@@ -92,17 +97,26 @@ export const ForgotPasswordScreen = ({ navigation }: any) => {
       Alert.alert('Passwords do not match', 'Please make sure both fields match.');
       return;
     }
+    submittingPassword.current = true;
+    Keyboard.dismiss();
     setLoading(true);
     try {
       await authService.updatePassword(password);
       await authService.signOut();
-      setDeferUserUpdate(false);
+      passwordUpdated.current = true;
       Alert.alert('Password updated', 'You can now sign in with your new password.', [
-        { text: 'OK', onPress: () => navigation.navigate('Login') },
+        {
+          text: 'OK',
+          onPress: () => {
+            setDeferUserUpdate(false);
+            navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+          },
+        },
       ]);
     } catch (e: any) {
       Alert.alert('Error', e?.message || 'Could not update your password. Please try again.');
     } finally {
+      submittingPassword.current = false;
       setLoading(false);
     }
   };
@@ -127,7 +141,9 @@ export const ForgotPasswordScreen = ({ navigation }: any) => {
       <PageHeader title="Reset Password" />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={[styles.title, { color: themeColors.textPrimary }]}>{titles[step]}</Text>
-        <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>{subtitles[step]}</Text>
+        <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+          {subtitles[step]}
+        </Text>
 
         {step === 'email' && (
           <>
@@ -216,7 +232,9 @@ export const ForgotPasswordScreen = ({ navigation }: any) => {
         )}
 
         <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.linkBtn}>
-          <Text style={[styles.linkText, { color: themeColors.textSecondary }]}>Back to sign in</Text>
+          <Text style={[styles.linkText, { color: themeColors.textSecondary }]}>
+            Back to sign in
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -225,8 +243,17 @@ export const ForgotPasswordScreen = ({ navigation }: any) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: SPACING.lg, paddingBottom: SIZES.bottomScrollPadding, paddingTop: SPACING.xl },
-  title: { fontSize: FONTS['2xl'], fontWeight: '700', marginBottom: SPACING.xs, textAlign: 'center' },
+  content: {
+    padding: SPACING.lg,
+    paddingBottom: SIZES.bottomScrollPadding,
+    paddingTop: SPACING.xl,
+  },
+  title: {
+    fontSize: FONTS['2xl'],
+    fontWeight: '700',
+    marginBottom: SPACING.xs,
+    textAlign: 'center',
+  },
   subtitle: { fontSize: FONTS.base, textAlign: 'center', lineHeight: 22, marginBottom: SPACING.xl },
   actionBtn: { marginTop: SPACING.md },
   linkBtn: { marginTop: SPACING.lg, alignItems: 'center', paddingVertical: SPACING.sm },

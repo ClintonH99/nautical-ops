@@ -8,6 +8,33 @@ export const paddleSandboxTrialsEnabled =
   paddleEnvironment === 'sandbox' &&
   process.env.EXPO_PUBLIC_PADDLE_SANDBOX_TRIAL_ENABLED === 'true';
 
+const trialFailure =
+  'Trial could not be confirmed. Refresh Plan Status before trying again. If this continues, contact support.';
+
+async function trialErrorMessage(error: unknown): Promise<string> {
+  // Supabase FunctionsHttpError carries the server response. Never display raw
+  // provider diagnostics or assume a timeout means no transaction was created.
+  try {
+    const context = (error as { context?: Response } | null)?.context;
+    if (!context || typeof context.clone !== 'function') return trialFailure;
+    const body = await context.clone().json();
+    if (context.status === 403 && body?.error === 'Sandbox testing is restricted.') {
+      return 'This account is not authorised for sandbox subscription testing. Ask support to enable this test account; no trial was started by this request.';
+    }
+    if (context.status === 401)
+      return 'Your session could not be verified. Sign in again before starting your trial.';
+    if (context.status === 409) {
+      return 'A trial could not be started because your vessel, device access or an existing billing request needs checking. Select Refresh Plan Status. If it remains unchanged, contact support before retrying.';
+    }
+    if (body?.error === 'Sandbox trials are not enabled.') {
+      return 'Sandbox trial testing is temporarily unavailable. No live payment has been enabled.';
+    }
+  } catch {
+    // A missing/unreadable response is ambiguous, not permission to retry.
+  }
+  return trialFailure;
+}
+
 export async function startPaddleTrial(
   vesselId: string,
   planTier: PaddlePlanTier,
@@ -18,10 +45,9 @@ export async function startPaddleTrial(
   const { data, error } = await supabase.functions.invoke('start-paddle-trial', {
     body: { vesselId, planTier, billingPeriod, ...location },
   });
-  if (error || data?.environment !== 'sandbox' || data?.state !== 'pending_confirmation')
-    throw new Error(
-      'Trial could not be confirmed. Refresh your plan before trying again. If this continues, contact support.'
-    );
+  if (error) throw new Error(await trialErrorMessage(error));
+  if (data?.environment !== 'sandbox' || data?.state !== 'pending_confirmation')
+    throw new Error(trialFailure);
 }
 
 export async function preparePaddleTrialPayment(

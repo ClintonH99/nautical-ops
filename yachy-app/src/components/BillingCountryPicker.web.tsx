@@ -8,6 +8,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   StyleSheet,
+  Keyboard,
 } from 'react-native';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { Button } from './Button';
@@ -39,6 +40,10 @@ export function BillingCountryPicker({
   const [search, setSearch] = useState('');
   const [country, setCountry] = useState('');
   const [postal, setPostal] = useState('');
+  const close = () => {
+    Keyboard.dismiss();
+    onClose();
+  };
   useEffect(() => {
     if (visible) {
       setSearch('');
@@ -51,7 +56,7 @@ export function BillingCountryPicker({
     country
   );
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={close}>
       <View style={styles.overlay}>
         <View
           accessibilityViewIsModal
@@ -68,7 +73,7 @@ export function BillingCountryPicker({
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Close billing country"
-                onPress={onClose}
+                onPress={close}
                 style={styles.close}
               >
                 <Text style={{ color: theme.textPrimary }}>Close</Text>
@@ -143,7 +148,10 @@ export function BillingCountryPicker({
             <Button
               title="Confirm Country"
               disabled={!country || (requiredPostal && !postal.trim())}
-              onPress={() => onConfirm({ countryCode: country, postalCode: postal.trim() })}
+              onPress={() => {
+                Keyboard.dismiss();
+                onConfirm({ countryCode: country, postalCode: postal.trim() });
+              }}
             />
           </ScrollView>
         </View>

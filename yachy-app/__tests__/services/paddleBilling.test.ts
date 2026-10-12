@@ -18,6 +18,35 @@ const response = {
 };
 const invoke = supabase.functions.invoke as jest.Mock;
 beforeEach(() => jest.clearAllMocks());
+test('explains an unapproved sandbox account without exposing arbitrary server errors', async () => {
+  const failure = (status: number, error: string) => ({
+    data: null,
+    error: { context: { status, clone: () => ({ json: async () => ({ error }) }) } },
+  });
+  invoke.mockResolvedValue(failure(403, 'Sandbox testing is restricted.'));
+  await expect(
+    startPaddleTrial('vessel', '1_5', 'monthly', { countryCode: 'US', postalCode: '33316' })
+  ).rejects.toThrow(/not authorised for sandbox/);
+  invoke.mockResolvedValue(failure(503, 'private provider diagnostic'));
+  await expect(
+    startPaddleTrial('vessel', '1_5', 'monthly', { countryCode: 'US', postalCode: '33316' })
+  ).rejects.toThrow(/could not be confirmed/);
+});
+test('distinguishes expired sessions and blocked reservations without retrying', async () => {
+  for (const [status, expected] of [
+    [401, /Sign in again/],
+    [409, /Refresh Plan Status/],
+  ] as const) {
+    invoke.mockResolvedValue({
+      data: null,
+      error: { context: { status, clone: () => ({ json: async () => ({}) }) } },
+    });
+    await expect(
+      startPaddleTrial('vessel', '1_5', 'monthly', { countryCode: 'US', postalCode: '33316' })
+    ).rejects.toThrow(expected);
+  }
+  expect(invoke).toHaveBeenCalledTimes(2);
+});
 test('accepts only a same-origin checkout for the correct transaction and environment', () => {
   expect(validatedCheckoutUrl(response, 'https://www.nautical-ops.com')).toBe(response.url);
   for (const patch of [

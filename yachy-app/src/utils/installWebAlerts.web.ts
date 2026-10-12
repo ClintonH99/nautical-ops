@@ -20,6 +20,9 @@ export function installWebAlerts(): void {
     queue.push(() => {
       const colors = BACKGROUND_THEMES[useThemeStore.getState().backgroundTheme];
       const previousFocus = document.activeElement as HTMLElement | null;
+      // Close the software keyboard before opening the top-layer dialog.
+      // Otherwise Safari can consume the first tap while dismissing the keyboard.
+      previousFocus?.blur();
       const dialog = document.createElement('dialog');
       const id = `nautical-alert-${++nextId}`;
       dialog.setAttribute('aria-labelledby', `${id}-title`);
@@ -46,11 +49,19 @@ export function installWebAlerts(): void {
         closed = true;
         dialog.close();
         dialog.remove();
-        previousFocus?.focus();
         showing = false;
         try {
           callback?.();
         } finally {
+          // Navigation actions must not reopen the old form's keyboard. Restore
+          // non-input focus only for passive dismissals and only if still mounted.
+          if (
+            !callback &&
+            previousFocus?.isConnected &&
+            !previousFocus.matches('input, textarea, select, [contenteditable]')
+          ) {
+            previousFocus.focus({ preventScroll: true });
+          }
           showNext();
         }
       };

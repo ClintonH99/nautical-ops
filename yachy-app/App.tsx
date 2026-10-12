@@ -12,8 +12,10 @@ import * as Sentry from '@sentry/react-native';
 import { useFonts } from 'expo-font';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { isSupabaseConfigured } from './src/services/supabase';
+import { installWebViewport } from './src/utils/installWebViewport';
 
 function AppContent() {
+  useEffect(() => installWebViewport(), []);
   const [fontsLoaded] = useFonts({
     'AlexBrush-Regular': require('./assets/fonts/AlexBrush-Regular.ttf'),
   });
