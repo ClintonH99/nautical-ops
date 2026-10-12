@@ -60,6 +60,51 @@ test('accepts only a same-origin checkout for the correct transaction and enviro
       validatedCheckoutUrl({ ...response, ...patch }, 'https://www.nautical-ops.com')
     ).toThrow();
 });
+test('canonical sandbox links stay on the current website or preview without changing the transaction', () => {
+  const canonical = {
+    ...response,
+    url: `https://nautical-ops.vercel.app/checkout?_ptxn=${transactionId}`,
+  };
+  for (const origin of [
+    'https://nautical-ops.com',
+    'https://www.nautical-ops.com',
+    'https://nautical-preview-clintonh99s-projects.vercel.app',
+  ]) {
+    expect(validatedCheckoutUrl(canonical, origin)).toBe(
+      `${origin}/checkout?_ptxn=${transactionId}`
+    );
+  }
+  for (const url of [
+    `https://nautical-ops.vercel.app.evil.example/checkout?_ptxn=${transactionId}`,
+    `https://nautical-ops.vercel.app/checkout?_ptxn=${transactionId}&_ptxn=${transactionId}`,
+    `https://nautical-ops.vercel.app/checkout?_ptxn=${transactionId}&redirect=https://evil.example`,
+    `https://user:password@nautical-ops.vercel.app/checkout?_ptxn=${transactionId}`,
+    `https://nautical-ops.vercel.app/checkout?_ptxn=${transactionId}#fragment`,
+  ])
+    expect(() => validatedCheckoutUrl({ ...response, url }, 'https://nautical-ops.com')).toThrow();
+  expect(() => validatedCheckoutUrl(canonical, 'http://nautical-ops.com')).toThrow();
+  expect(() => validatedCheckoutUrl(canonical, 'https://nautical-ops.com/path')).toThrow();
+});
+test('live checkout cannot use the sandbox canonical-origin exception', () => {
+  process.env.EXPO_PUBLIC_PADDLE_ENV = 'live';
+  try {
+    jest.isolateModules(() => {
+      const live = jest.requireActual<BillingModule>('../../src/services/paddleBilling');
+      expect(() =>
+        live.validatedCheckoutUrl(
+          {
+            ...response,
+            environment: 'live',
+            url: `https://nautical-ops.vercel.app/checkout?_ptxn=${transactionId}`,
+          },
+          'https://nautical-ops.com'
+        )
+      ).toThrow();
+    });
+  } finally {
+    process.env.EXPO_PUBLIC_PADDLE_ENV = 'sandbox';
+  }
+});
 test('sends plan identity, never a client-supplied amount or price ID', async () => {
   invoke.mockResolvedValue({ data: response, error: null });
   await expect(

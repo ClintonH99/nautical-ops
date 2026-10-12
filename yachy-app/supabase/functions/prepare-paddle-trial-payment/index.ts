@@ -4,6 +4,7 @@ import { createPaddleTrialPaymentHandler } from '../_shared/paddleTrialPayment.m
 
 Deno.serve(
   withBrowserCors(
-    createPaddleTrialPaymentHandler({ getEnv: (key: string) => Deno.env.get(key), createClient })
+    createPaddleTrialPaymentHandler({ getEnv: (key: string) => Deno.env.get(key), createClient }),
+    { getEnv: (key: string) => Deno.env.get(key) }
   )
 );

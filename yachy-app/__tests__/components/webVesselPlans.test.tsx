@@ -8,6 +8,11 @@ let mockWidth = 390;
 let mockSubscription: any = null;
 const mockRefetch = jest.fn();
 const mockPreview = jest.fn();
+const mockNavigate = jest.fn();
+const mockStartTrial = jest.fn();
+const mockPreparePayment = jest.fn();
+let mockSandboxTrials = false;
+let mockAccessState: string | null = null;
 const mockFocusListeners = new Set<() => void>();
 const originalAddEventListener = window.addEventListener;
 const originalRemoveEventListener = window.removeEventListener;
@@ -29,12 +34,13 @@ jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   default: () => ({ width: mockWidth, height: 844, scale: 1, fontScale: 1 }),
 }));
 jest.mock('@react-navigation/native', () => ({
+  useNavigation: () => ({ navigate: mockNavigate }),
   useFocusEffect: (effect: () => void) => jest.requireActual('react').useEffect(effect, [effect]),
 }));
 jest.mock('../../src/hooks/useSubscriptionStatus', () => ({
   useSubscriptionStatus: () => ({
     subscription: mockSubscription,
-    accessState: mockSubscription ? 'entitled' : 'never_subscribed',
+    accessState: mockAccessState ?? (mockSubscription ? 'entitled' : 'never_subscribed'),
     isLoading: false,
     refetch: mockRefetch,
   }),
@@ -43,13 +49,20 @@ jest.mock('../../src/services/paddleBilling', () => ({
   paddleCheckoutEnabled: false,
   paddleEnvironment: 'sandbox',
   preparePaddleCheckout: jest.fn(),
+  get paddleSandboxTrialsEnabled() {
+    return mockSandboxTrials;
+  },
+  startPaddleTrial: (...args: any[]) => mockStartTrial(...args),
+  preparePaddleTrialPayment: (...args: any[]) => mockPreparePayment(...args),
 }));
 jest.mock('../../src/services/paddlePricing', () => ({
   previewPaddlePrices: (...args: any[]) => mockPreview(...args),
   usd: (n: number) => 'US$' + (n / 100).toFixed(2),
 }));
 jest.mock('../../src/store', () => ({
-  useAuthStore: (selector: any) => selector({ user: mockUser }),
+  useAuthStore: Object.assign((selector: any) => selector({ user: mockUser }), {
+    getState: () => ({ user: mockUser }),
+  }),
 }));
 jest.mock('../../src/hooks/useThemeColors', () => ({
   useThemeColors: () => ({
@@ -111,7 +124,12 @@ function result(period = 'monthly', code = 'FR') {
 }
 beforeEach(() => {
   mockFocusListeners.clear();
-  mockRefetch.mockClear();
+  mockRefetch.mockReset();
+  mockNavigate.mockReset();
+  mockStartTrial.mockReset().mockResolvedValue(undefined);
+  mockPreparePayment.mockReset();
+  mockSandboxTrials = false;
+  mockAccessState = null;
   mockUser = { id: 'captain', role: 'CAPTAIN_MOV', vesselId: 'vessel' };
   mockWidth = 390;
   mockSubscription = null;
@@ -214,4 +232,142 @@ test('crew cannot view billing controls or trigger preview requests', () => {
   expect(screen.getByText(/Only the vessel/)).toBeTruthy();
   expect(screen.queryByText('Yearly')).toBeNull();
   expect(mockPreview).not.toHaveBeenCalled();
+});
+
+const trial = () => ({
+  vesselId: 'vessel',
+  status: 'trialing',
+  planTier: '6_10',
+  billingPeriod: 'monthly',
+  currentPeriodEnd: new Date(Date.now() + 30 * 86400000).toISOString(),
+});
+test('optional billing appears only after server confirmation; skip goes Home without payment setup', async () => {
+  mockSandboxTrials = true;
+  const screen = render(<VesselPlansScreen />);
+  choose(screen);
+  await waitFor(() => expect(screen.getByText('US$95.99 / month')).toBeTruthy());
+  fireEvent.press(screen.getByText('Continue'));
+  fireEvent.press(screen.getByText('Start 30-day free trial'));
+  await waitFor(() => expect(screen.getByText('Awaiting trial confirmation')).toBeTruthy());
+  expect(screen.queryByTestId('optional-trial-billing')).toBeNull();
+  expect(mockStartTrial).toHaveBeenCalledTimes(1);
+  mockSubscription = trial();
+  screen.rerender(<VesselPlansScreen />);
+  await waitFor(() => expect(screen.getByText('Your 30-day free trial is ready')).toBeTruthy());
+  expect(screen.getByText('US$107.99 / month')).toBeTruthy();
+  expect(screen.getByText('Due today: US$0.00')).toBeTruthy();
+  fireEvent.press(screen.getByText('Continue without payment details'));
+  expect(mockNavigate).toHaveBeenCalledWith('MainTabs', { screen: 'Home' });
+  expect(mockPreparePayment).not.toHaveBeenCalled();
+  expect(mockStartTrial).toHaveBeenCalledTimes(1);
+});
+
+test('existing trial opens the same optional step and payment errors stay beside its action', async () => {
+  mockSandboxTrials = true;
+  mockSubscription = trial();
+  mockPreparePayment.mockRejectedValue(new Error('Payment setup could not be confirmed.'));
+  const originalLocation = window.location;
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: { origin: 'https://nautical-ops.com', assign: jest.fn() },
+  });
+  try {
+    const screen = render(<VesselPlansScreen />);
+    choose(screen);
+    await waitFor(() => expect(screen.getByText('US$95.99 / month')).toBeTruthy());
+    fireEvent.press(screen.getByText('Set up new billing details'));
+    expect(screen.getByText('Set up your billing details')).toBeTruthy();
+    expect(screen.getByText('US$107.99 / month')).toBeTruthy();
+    fireEvent.press(screen.getByText('Set up billing details'));
+    await waitFor(() =>
+      expect(screen.getByText('Payment setup could not be confirmed.')).toBeTruthy()
+    );
+    expect(mockPreparePayment).toHaveBeenCalledWith(
+      'vessel',
+      'https://nautical-ops.com',
+      mockSubscription.currentPeriodEnd
+    );
+    expect(mockStartTrial).not.toHaveBeenCalled();
+    expect(window.location.assign).not.toHaveBeenCalled();
+  } finally {
+    Object.defineProperty(window, 'location', { configurable: true, value: originalLocation });
+  }
+});
+
+test('payment setup opens only the existing trial transaction and double taps do not duplicate it', async () => {
+  mockSandboxTrials = true;
+  mockSubscription = trial();
+  let resolvePayment: (value: string) => void = () => {};
+  mockPreparePayment.mockImplementation(
+    () =>
+      new Promise<string>((resolve) => {
+        resolvePayment = resolve;
+      })
+  );
+  const originalLocation = window.location;
+  const assign = jest.fn();
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: { origin: 'https://nautical-ops.com', assign },
+  });
+  try {
+    const screen = render(<VesselPlansScreen />);
+    choose(screen);
+    await waitFor(() => expect(screen.getByText('US$95.99 / month')).toBeTruthy());
+    fireEvent.press(screen.getByText('Set up new billing details'));
+    fireEvent.press(screen.getByText('Set up billing details'));
+    fireEvent.press(screen.getByText('Preparing secure checkout…'));
+    expect(mockPreparePayment).toHaveBeenCalledTimes(1);
+    const transaction = 'txn_' + '1'.repeat(26);
+    await act(async () => resolvePayment('https://nautical-ops.com/checkout?_ptxn=' + transaction));
+    expect(assign).toHaveBeenCalledWith(
+      'https://nautical-ops.com/checkout?transaction=' + transaction
+    );
+    expect(mockStartTrial).not.toHaveBeenCalled();
+  } finally {
+    Object.defineProperty(window, 'location', { configurable: true, value: originalLocation });
+  }
+});
+
+test.each([320, 390, 768, 820, 1024, 1366, 1440])(
+  'optional billing fits its parent at %s pixels',
+  (width) => {
+    mockWidth = width;
+    mockSandboxTrials = true;
+    mockSubscription = trial();
+    const screen = render(<VesselPlansScreen />);
+    fireEvent.press(screen.getByText('Set up new billing details'));
+    const style = StyleSheet.flatten(screen.getByTestId('optional-trial-billing').props.style);
+    expect(style.width).toBe('100%');
+    expect(style.maxWidth).toBe(720);
+    expect(
+      screen.getByRole('button', { name: 'Set up billing details' }).props.accessibilityState
+        .disabled
+    ).toBe(true);
+    expect(
+      screen.getByRole('button', { name: 'Continue without payment details' }).props
+        .accessibilityState.disabled
+    ).toBe(false);
+  }
+);
+
+test('an unavailable, expired or different-vessel trial cannot open payment setup', () => {
+  mockSandboxTrials = true;
+  mockSubscription = trial();
+  mockAccessState = 'unavailable';
+  const screen = render(<VesselPlansScreen />);
+  fireEvent.press(screen.getByText('Set up new billing details'));
+  expect(screen.queryByTestId('optional-trial-billing')).toBeNull();
+  mockAccessState = 'entitled';
+  mockSubscription.vesselId = 'other-vessel';
+  screen.rerender(<VesselPlansScreen />);
+  fireEvent.press(screen.getByText('Set up new billing details'));
+  expect(screen.queryByTestId('optional-trial-billing')).toBeNull();
+  mockSubscription = {
+    ...trial(),
+    currentPeriodEnd: new Date(Date.now() - 86400000).toISOString(),
+  };
+  screen.rerender(<VesselPlansScreen />);
+  expect(screen.queryByText('Set up new billing details')).toBeNull();
+  expect(mockPreparePayment).not.toHaveBeenCalled();
 });

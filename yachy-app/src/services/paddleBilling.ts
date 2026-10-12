@@ -81,18 +81,27 @@ export function validatedCheckoutUrl(data: unknown, origin: string): string {
   if (typeof result.url !== 'string' || typeof result.transactionId !== 'string')
     throw new Error('The payment link could not be verified. Please contact support.');
   const url = new URL(result.url);
+  const destination = new URL(origin);
+  // Sandbox links use Paddle's configured canonical payment page. Keep the
+  // verified transaction on this website/preview, preserving its return route.
+  // Live checkout remains strictly same-origin.
+  const canonicalSandboxLink =
+    paddleEnvironment === 'sandbox' && url.origin === 'https://nautical-ops.vercel.app';
   if (
     !/^txn_[a-z0-9]{26}$/.test(result.transactionId) ||
     url.protocol !== 'https:' ||
-    url.origin !== origin ||
+    (url.origin !== origin && !canonicalSandboxLink) ||
+    destination.origin !== origin ||
+    destination.protocol !== 'https:' ||
     url.pathname !== '/checkout' ||
     url.username ||
     url.password ||
     url.hash ||
-    url.searchParams.get('_ptxn') !== result.transactionId
+    url.searchParams.get('_ptxn') !== result.transactionId ||
+    [...url.searchParams.keys()].length !== 1
   )
     throw new Error('The payment link could not be verified. Please contact support.');
-  return url.href;
+  return new URL('/checkout?_ptxn=' + result.transactionId, destination.origin).href;
 }
 
 export async function preparePaddleCheckout(
