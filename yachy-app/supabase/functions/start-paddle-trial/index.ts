@@ -7,6 +7,7 @@ Deno.serve(
     createPaddleTrialHandler({
       getEnv: (key: string) => Deno.env.get(key),
       createClient,
-    })
+    }),
+    { getEnv: (key: string) => Deno.env.get(key) }
   )
 );
