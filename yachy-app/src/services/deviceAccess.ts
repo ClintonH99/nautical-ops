@@ -4,8 +4,10 @@ import * as Crypto from 'expo-crypto';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { supabase } from './supabase';
+import { getBrowserInstallationId, getBrowserDeviceLabel } from '../utils/browserDeviceIdentity';
 
 const FALLBACK_DEVICE_ID_KEY = 'nautical_ops_installation_device_id';
+let pendingInstallationId: Promise<string> | undefined;
 
 export const DEVICE_LIMIT_MESSAGE =
   'This account already has 2 saved devices. Use Manage Devices on an approved device, or select Lost Device? below to recover access.';
@@ -19,12 +21,19 @@ export type DeviceAccessResult =
   | { state: 'unavailable'; activeDeviceCount: null };
 
 async function getFallbackInstallationId(): Promise<string> {
-  const existing = await AsyncStorage.getItem(FALLBACK_DEVICE_ID_KEY);
-  if (existing) return existing;
-
-  const created = Crypto.randomUUID();
-  await AsyncStorage.setItem(FALLBACK_DEVICE_ID_KEY, created);
-  return created;
+  if (Platform.OS === 'web') return getBrowserInstallationId(() => Crypto.randomUUID());
+  if (!pendingInstallationId) {
+    pendingInstallationId = (async () => {
+      const existing = await AsyncStorage.getItem(FALLBACK_DEVICE_ID_KEY);
+      if (existing) return existing;
+      const created = Crypto.randomUUID();
+      await AsyncStorage.setItem(FALLBACK_DEVICE_ID_KEY, created);
+      return created;
+    })().finally(() => {
+      pendingInstallationId = undefined;
+    });
+  }
+  return pendingInstallationId;
 }
 
 async function getPlatformDeviceId(): Promise<string> {
@@ -46,7 +55,8 @@ async function getPlatformDeviceId(): Promise<string> {
 
 export async function getCurrentDeviceFingerprint(): Promise<string> {
   const rawId = await getPlatformDeviceId();
-  const appId = Application.applicationId ?? 'nautical-ops-web';
+  const appId =
+    Platform.OS === 'web' ? 'nautical-ops-web' : (Application.applicationId ?? 'nautical-ops-web');
   return Crypto.digestStringAsync(
     Crypto.CryptoDigestAlgorithm.SHA256,
     [appId, Platform.OS, rawId].join(':')
@@ -54,7 +64,11 @@ export async function getCurrentDeviceFingerprint(): Promise<string> {
 }
 
 export function getDeviceLabel(): string {
-  if (Platform.OS === 'web') return 'Web browser';
+  if (Platform.OS === 'web') {
+    return typeof navigator === 'undefined'
+      ? 'Web browser'
+      : getBrowserDeviceLabel(navigator.userAgent, navigator.platform, navigator.maxTouchPoints);
+  }
   return Device.modelName || (Platform.OS === 'ios' ? 'Apple device' : 'Android device');
 }
 

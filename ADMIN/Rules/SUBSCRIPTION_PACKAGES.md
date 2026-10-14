@@ -52,6 +52,7 @@
    - Provider webhooks must update subscription state in the background for existing and future subscribers.
 
 9. **Account device limit:** Every account may be registered on a maximum of **two active devices total**, across iOS, Android, and web. This is an account limit, not two devices per platform.
+   - **Confirmed 14 October 2026:** Repeated visits and sign-ins from the same saved browser must reuse its device slot. Preserve its installation identifier across releases, serialize creation during simultaneous startup checks, and restore it from a persistent host-only cookie if local storage alone is lost. Never claim a slot using an identifier that cannot be saved. Browser/device labels must distinguish examples such as Safari on iPhone and Chrome on Mac; labels are descriptive and must never authorize access or merge devices. Separate browser profiles, private browsing and separate website origins have separate storage; loss of both persistent copies still requires the existing device-recovery flow. The server continues to enforce two active devices and reject revoked sessions.
 
 ## Scope
 

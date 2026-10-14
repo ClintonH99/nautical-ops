@@ -125,6 +125,28 @@ const equal = (a,b) => { assert.deepEqual(a,b); checks++; };
     equal((await as(10,105,'SELECT current_session_has_registered_device() AS allowed','otp'))[0].allowed,true);
     await db.exec(closeReads); await db.exec(strict); // safe reapplication
     equal((await register(101))[0].result.reason,'session_revoked');
+    // Hundreds of fresh sign-in sessions from a laptop and a phone must reuse
+    // exactly two rows, even when both slots are occupied. The third device
+    // must remain blocked and replacing a session must revoke the old token.
+    const stableDevices = (await db.query(`SELECT id,device_fingerprint FROM user_devices
+      WHERE user_id='${id(10)}' AND revoked_at IS NULL ORDER BY id`)).rows;
+    const stableIds = stableDevices.map(row => row.id);
+    const latestSessions = [];
+    for (let browser = 0; browser < 2; browser++) {
+      for (let login = 0; login < (browser === 0 ? 500 : 200); login++) {
+        const session = 1000 + browser * 1000 + login;
+        const result = (await register(session, stableDevices[browser].device_fingerprint))[0].result;
+        equal(result, { allowed: true, active_device_count: 2 });
+        latestSessions[browser] = session;
+      }
+    }
+    equal((await db.query(`SELECT id FROM user_devices WHERE user_id='${id(10)}'
+      AND revoked_at IS NULL ORDER BY id`)).rows.map(row => row.id), stableIds);
+    for (const session of latestSessions) {
+      equal((await as(10,session,'SELECT current_session_has_registered_device() AS allowed'))[0].allowed,true);
+    }
+    equal((await register(4000,'third-distinct-browser'))[0].result.allowed,false);
+    equal((await register(1000,stableDevices[0].device_fingerprint))[0].result.reason,'session_revoked');
     // Deleting an account must not fail when FK cascades remove its devices.
     await db.exec(`DELETE FROM auth.users WHERE id='${id(10)}'`);
     equal((await db.query(`SELECT count(*)::int AS n FROM user_devices WHERE user_id='${id(10)}'`)).rows[0].n,0);
