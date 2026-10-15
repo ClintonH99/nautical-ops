@@ -56,6 +56,7 @@ export const SettingsScreen = ({ navigation }: any) => {
   const displaysAsCaptain =
     user?.role === 'CAPTAIN_MOV' || user?.position?.toLowerCase().includes('captain') === true;
   const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const profilePhotoUrl =
     user?.profilePhoto || (user?.id ? userService.getProfilePhotoUrl(user.id) : null);
 
@@ -111,8 +112,10 @@ export const SettingsScreen = ({ navigation }: any) => {
                 }
                 return;
               }
+              // Deletion already removed the account and its saved browser slots.
+              // Do not try an authenticated slot-release RPC for a deleted user.
+              await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
               logout();
-              await authService.signOut();
             } catch {
               Alert.alert(
                 'Error',
@@ -429,9 +432,22 @@ export const SettingsScreen = ({ navigation }: any) => {
         {/* Sign Out */}
         <Button
           title="Sign Out"
+          loading={signingOut}
+          disabled={signingOut}
           onPress={async () => {
-            await authService.signOut();
-            logout();
+            if (signingOut) return;
+            setSigningOut(true);
+            try {
+              await authService.signOut();
+              logout();
+            } catch (error) {
+              Alert.alert(
+                'Could not sign out',
+                error instanceof Error ? error.message : 'Please try signing out again.'
+              );
+            } finally {
+              setSigningOut(false);
+            }
           }}
           variant={themeColors.isDark ? 'outlineLight' : 'outline'}
           fullWidth

@@ -65,18 +65,24 @@ export const LoginScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({ email: '', password: '' });
 
-  const {
-    setUser,
-    loginNotice,
-    setLoginNotice,
-    setCaptainPaymentRequired,
-    setCrewPaymentRequired,
-  } = useAuthStore();
+  const { setUser, setLoginNotice, setCaptainPaymentRequired, setCrewPaymentRequired } =
+    useAuthStore();
   const [loginError, setLoginError] = useState('');
+  // Only a fresh sign-in check may display a device warning. Persisted notices
+  // from bootstrap/session revocation must not appear on an empty login form.
+  const [deviceNotice, setDeviceNotice] = useState('');
   const posthog = usePostHog();
 
   const completeLogin = async (user: User, method: 'email' | 'google' | 'apple') => {
     const decision = await evaluateAccountAccess(user);
+
+    if (decision.state === 'active_session_limit_reached') {
+      // Auth succeeded. Keep it, but the session gate blocks protected UI
+      // until a server-confirmed slot is available. No forced logout.
+      setLoginNotice(null);
+      setUser(user);
+      return;
+    }
 
     if (decision.state === 'device_limit_reached' || decision.state === 'device_session_revoked') {
       const message =
@@ -84,6 +90,7 @@ export const LoginScreen = ({ navigation }: any) => {
           ? DEVICE_SESSION_REVOKED_MESSAGE
           : DEVICE_LIMIT_MESSAGE;
       setLoginNotice(message);
+      setDeviceNotice(message);
       setLoginError('');
       setCaptainPaymentRequired(false);
       try {
@@ -139,6 +146,7 @@ export const LoginScreen = ({ navigation }: any) => {
   const handleSocialSignIn = async (provider: 'google' | 'apple') => {
     if (socialLoading || useAuthStore.getState().deferUserUpdate) return;
     setSocialLoading(provider);
+    setDeviceNotice('');
     setLoginError('');
     setLoginNotice(null);
     try {
@@ -165,6 +173,7 @@ export const LoginScreen = ({ navigation }: any) => {
 
   const handleLogin = async () => {
     if (useAuthStore.getState().deferUserUpdate) return;
+    setDeviceNotice('');
     setLoginError('');
     setLoginNotice(null);
     if (!validateForm()) return;
@@ -239,10 +248,10 @@ export const LoginScreen = ({ navigation }: any) => {
               },
             ]}
           >
-            {loginNotice ? (
+            {deviceNotice ? (
               <View style={styles.accessNotice}>
                 <Ionicons name="alert-circle-outline" size={20} color={COLORS.danger} />
-                <Text style={styles.accessNoticeText}>{loginNotice}</Text>
+                <Text style={styles.accessNoticeText}>{deviceNotice}</Text>
               </View>
             ) : null}
             <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]}>Sign in</Text>
@@ -255,7 +264,10 @@ export const LoginScreen = ({ navigation }: any) => {
               label="Email"
               placeholder="crew@vessel.com"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(value) => {
+                setEmail(value);
+                setDeviceNotice('');
+              }}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -267,7 +279,10 @@ export const LoginScreen = ({ navigation }: any) => {
               label="Password"
               placeholder="Your password"
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(value) => {
+                setPassword(value);
+                setDeviceNotice('');
+              }}
               secureTextEntry
               showPasswordToggle
               autoCapitalize="none"

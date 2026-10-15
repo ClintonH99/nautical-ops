@@ -135,6 +135,8 @@ import { supabase, SUPABASE_AUTH_STORAGE_KEY } from '../services/supabase';
 import { startRealtimeSync, stopRealtimeSync } from '../services/realtimeSync';
 import { evaluateAccountAccess } from '../services/accountAccess';
 import { DEVICE_LIMIT_MESSAGE, DEVICE_SESSION_REVOKED_MESSAGE } from '../services/deviceAccess';
+import { BrowserSessionBoundary } from '../components/BrowserSessionBoundary';
+import { useBrowserSessionLease, isBrowserSessionVisible } from '../services/browserSessionLease';
 import { reconcileAppleSubscription } from '../services/iap';
 import { syncPushTokenForCurrentDevice } from '../services/notifications';
 import { notificationDestination } from '../utils/notificationDestination';
@@ -166,6 +168,8 @@ export const RootNavigator = () => {
     setLoginNotice,
   } = useAuthStore();
   const isCaptain = user?.role === 'CAPTAIN_MOV';
+  const browserLease = useBrowserSessionLease();
+  const sessionBlocked = browserLease.userId === user?.id && browserLease.status !== 'allowed';
   const hasVessel = !!user?.vesselId;
   const navigationRef = useNavigationContainerRef();
   const previousVesselProfile = useRef(user);
@@ -315,6 +319,12 @@ export const RootNavigator = () => {
             !useAuthStore.getState().captainPaymentRequired &&
             !useAuthStore.getState().crewPaymentRequired
           );
+        }
+
+        if (decision.state === 'active_session_limit_reached') {
+          setLoginNotice(null);
+          setUser(candidate);
+          return false;
         }
 
         if (
@@ -598,6 +608,7 @@ export const RootNavigator = () => {
     let checking = false;
 
     const checkAccess = async () => {
+      if (Platform.OS === 'web' && !isBrowserSessionVisible()) return;
       if (checking) return;
       checking = true;
       try {
@@ -755,6 +766,10 @@ export const RootNavigator = () => {
         </View>
       }
     >
+      <BrowserSessionBoundary userId={user?.id} checkAccess={async () => {
+        const current = useAuthStore.getState().user;
+        if (current) await applyAccountAccess(current);
+      }}>
       <PostHogProvider
         client={posthog}
         autocapture={{
@@ -763,7 +778,7 @@ export const RootNavigator = () => {
           propsToCapture: ['testID'],
         }}
       >
-        {!captainPaymentRequired && !crewPaymentRequired && <InventoryAutoSaveSync />}
+        {!sessionBlocked && !captainPaymentRequired && !crewPaymentRequired && <InventoryAutoSaveSync />}
         <Stack.Navigator
           key={isAuthenticated ? `main-${initialRoute}` : 'auth'}
           initialRouteName={initialRoute}
@@ -1369,6 +1384,7 @@ export const RootNavigator = () => {
           )}
         </Stack.Navigator>
       </PostHogProvider>
+      </BrowserSessionBoundary>
     </NavigationContainer>
   );
 };

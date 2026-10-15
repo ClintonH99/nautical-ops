@@ -21,6 +21,7 @@ jest.mock('../../src/services/supabase', () => ({
 import {
   getCurrentDeviceFingerprint,
   registerCurrentDevice,
+  releaseCurrentDevice,
 } from '../../src/services/deviceAccess';
 import { createHash } from 'node:crypto';
 
@@ -56,5 +57,75 @@ describe('web registration identity', () => {
     const expected = createHash('sha256').update(`nautical-ops-web:web:${raw}`).digest('hex');
     await expect(getCurrentDeviceFingerprint()).resolves.toBe(expected);
     expect(mockRandomUUID).not.toHaveBeenCalled();
+  });
+
+  it('does not renew a slot during a background token refresh', async () => {
+    const spy = jest.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    await expect(registerCurrentDevice()).resolves.toEqual({
+      state: 'unavailable',
+      activeDeviceCount: null,
+    });
+    expect(mockRpc).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('returns the active-session mode so a full quota does not sign the user out', async () => {
+    mockRpc.mockResolvedValue({
+      data: {
+        allowed: false,
+        active_device_count: 2,
+        mode: 'active_sessions',
+        user_id: 'test-user',
+        server_time: new Date().toISOString(),
+      },
+      error: null,
+    });
+    await expect(registerCurrentDevice()).resolves.toEqual({
+      state: 'limit_reached',
+      activeDeviceCount: 2,
+      mode: 'active_sessions',
+    });
+  });
+
+  it('rejects incomplete active-session metadata instead of opening the app', async () => {
+    mockRpc.mockResolvedValue({
+      data: { allowed: false, active_device_count: 2, mode: 'active_sessions' },
+      error: null,
+    });
+    await expect(registerCurrentDevice()).resolves.toEqual({
+      state: 'unavailable',
+      activeDeviceCount: null,
+    });
+  });
+  it('accepts saved-browser grants without a lease expiry', async () => {
+    mockRpc.mockResolvedValue({
+      data: {
+        allowed: true,
+        active_device_count: 2,
+        mode: 'saved_browsers',
+        user_id: 'test-user',
+        server_time: new Date().toISOString(),
+      },
+      error: null,
+    });
+    await expect(registerCurrentDevice()).resolves.toEqual({
+      state: 'allowed',
+      activeDeviceCount: 2,
+      mode: 'saved_browsers',
+    });
+  });
+  it('requires confirmed slot release, without clearing the browser identity', async () => {
+    const identity = await getCurrentDeviceFingerprint();
+    mockRpc.mockReturnValue({ abortSignal: () => Promise.resolve({ data: true, error: null }) });
+    await expect(releaseCurrentDevice()).resolves.toBeUndefined();
+    expect(mockRpc).toHaveBeenCalledWith('revoke_current_device');
+    await expect(getCurrentDeviceFingerprint()).resolves.toBe(identity);
+    mockRpc.mockReturnValue({ abortSignal: () => Promise.resolve({ data: false, error: null }) });
+    await expect(releaseCurrentDevice()).rejects.toThrow('Could not release this browser slot');
+    mockRpc.mockReturnValue({
+      abortSignal: () =>
+        Promise.resolve({ data: null, error: { message: 'Network request failed' } }),
+    });
+    await expect(releaseCurrentDevice()).rejects.toThrow('Could not release this browser slot');
   });
 });

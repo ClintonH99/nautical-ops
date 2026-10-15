@@ -60,6 +60,7 @@ jest.mock('react-native', () => ({
 }));
 
 import authService from '../../src/services/auth';
+import { releaseCurrentDevice } from '../../src/services/deviceAccess';
 
 describe('AuthService', () => {
   beforeEach(() => {
@@ -316,6 +317,13 @@ describe('AuthService', () => {
   });
 
   describe('signOut', () => {
+    it('does not clear authentication when slot release fails', async () => {
+      jest
+        .mocked(releaseCurrentDevice)
+        .mockRejectedValueOnce(new Error('Slot release unavailable'));
+      await expect(authService.signOut()).rejects.toThrow('Slot release unavailable');
+      expect(mockSignOut).not.toHaveBeenCalled();
+    });
     it('calls supabase.auth.signOut', async () => {
       mockSignOut.mockResolvedValue({ error: null });
 

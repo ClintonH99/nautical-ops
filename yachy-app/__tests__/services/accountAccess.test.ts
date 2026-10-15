@@ -55,9 +55,32 @@ describe('evaluateAccountAccess', () => {
     await expect(evaluateAccountAccess(crew)).resolves.toEqual({ state: 'allowed' });
   });
 
+  it('returns an authenticated waiting state for a full active-session account', async () => {
+    mockRegisterCurrentDevice.mockResolvedValue({
+      state: 'limit_reached',
+      activeDeviceCount: 2,
+      mode: 'active_sessions',
+    });
+    await expect(evaluateAccountAccess(crew)).resolves.toEqual({
+      state: 'active_session_limit_reached',
+    });
+    expect(mockGetVesselSubscriptionAccess).not.toHaveBeenCalled();
+  });
+
   it('does not read billing data before device registration can be verified', async () => {
     mockRegisterCurrentDevice.mockResolvedValue({ state: 'unavailable', activeDeviceCount: null });
     await expect(evaluateAccountAccess(crew)).resolves.toEqual({ state: 'unavailable' });
+    expect(mockGetVesselSubscriptionAccess).not.toHaveBeenCalled();
+  });
+  it('keeps a third saved browser authenticated for verified replacement', async () => {
+    mockRegisterCurrentDevice.mockResolvedValue({
+      state: 'limit_reached',
+      activeDeviceCount: 2,
+      mode: 'saved_browsers',
+    });
+    await expect(evaluateAccountAccess(crew)).resolves.toEqual({
+      state: 'active_session_limit_reached',
+    });
     expect(mockGetVesselSubscriptionAccess).not.toHaveBeenCalled();
   });
 

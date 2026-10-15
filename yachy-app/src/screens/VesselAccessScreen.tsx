@@ -7,7 +7,6 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import authService from '../services/auth';
 import { evaluateAccountAccess } from '../services/accountAccess';
-import { supabase } from '../services/supabase';
 
 /** Only registered in the authenticated, subscription-restricted navigator. */
 export function VesselAccessScreen() {
@@ -55,8 +54,7 @@ export function VesselAccessScreen() {
     inFlight.current = true;
     setBusy(true);
     try {
-      const { error } = await supabase.auth.signOut({ scope: 'local' });
-      if (error) throw error;
+      await authService.signOut();
       useAuthStore.getState().logout();
     } catch {
       setNotice('Unable to sign out. Please try again.');

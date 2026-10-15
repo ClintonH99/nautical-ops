@@ -24,7 +24,10 @@ jest.mock('../../src/services/accountAccess', () => ({
 }));
 jest.mock('../../src/services/auth', () => ({
   __esModule: true,
-  default: { getUserProfile: () => Promise.resolve(mockUser) },
+  default: {
+    getUserProfile: () => Promise.resolve(mockUser),
+    signOut: (...args: any[]) => mockSignOut(...args),
+  },
 }));
 jest.mock('../../src/services/supabase', () => ({
   supabase: { auth: { signOut: (...args: any[]) => mockSignOut(...args) } },
@@ -96,7 +99,17 @@ it('signs out without removing vessel membership', async () => {
   await act(async () => {
     fireEvent.press(ui.getByText('Sign Out'));
   });
-  expect(mockSignOut).toHaveBeenCalledWith({ scope: 'local' });
+  expect(mockSignOut).toHaveBeenCalledWith();
   expect(mockStore.logout).toHaveBeenCalled();
   expect(mockLeave).not.toHaveBeenCalled();
+});
+
+it('keeps the session available to retry if releasing its browser slot fails', async () => {
+  mockSignOut.mockRejectedValueOnce(new Error('Connection lost'));
+  const ui = render(<VesselAccessScreen />);
+  await act(async () => {
+    fireEvent.press(ui.getByText('Sign Out'));
+  });
+  expect(mockStore.logout).not.toHaveBeenCalled();
+  expect(ui.getByText('Unable to sign out. Please try again.')).toBeTruthy();
 });

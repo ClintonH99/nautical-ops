@@ -126,8 +126,9 @@ describe('device access', () => {
         }),
     });
     const release = releaseCurrentDevice();
+    const rejected = expect(release).rejects.toThrow('Could not release this browser slot');
     await jest.advanceTimersByTimeAsync(3_001);
-    await expect(release).resolves.toBeUndefined();
+    await rejected;
     expect(mockRpc).toHaveBeenCalledTimes(1);
     jest.useRealTimers();
   });

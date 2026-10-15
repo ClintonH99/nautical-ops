@@ -11,6 +11,7 @@ export type AccountAccessDecision =
   | { state: 'captain_payment_required' }
   | { state: 'crew_payment_required' }
   | { state: 'device_session_revoked' }
+  | { state: 'active_session_limit_reached' }
   | { state: 'device_limit_reached' };
 
 /**
@@ -21,6 +22,8 @@ export type AccountAccessDecision =
 export async function evaluateAccountAccess(user: User): Promise<AccountAccessDecision> {
   const deviceAccess = await registerCurrentDevice();
   if (deviceAccess.state === 'limit_reached') {
+    if (deviceAccess.mode === 'active_sessions' || deviceAccess.mode === 'saved_browsers')
+      return { state: 'active_session_limit_reached' };
     return { state: 'device_limit_reached' };
   }
   if (deviceAccess.state === 'session_revoked') return { state: 'device_session_revoked' };

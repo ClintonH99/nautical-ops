@@ -5,6 +5,7 @@ import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { supabase } from './supabase';
 import { getBrowserInstallationId, getBrowserDeviceLabel } from '../utils/browserDeviceIdentity';
+import { isBrowserSessionVisible, recordBrowserSessionResult } from './browserSessionLease';
 
 const FALLBACK_DEVICE_ID_KEY = 'nautical_ops_installation_device_id';
 let pendingInstallationId: Promise<string> | undefined;
@@ -14,11 +15,12 @@ export const DEVICE_LIMIT_MESSAGE =
 export const DEVICE_SESSION_REVOKED_MESSAGE =
   'This device session was removed or replaced. Please sign in again. If both device slots are occupied, use Lost Device? to recover access.';
 
-export type DeviceAccessResult =
+export type DeviceAccessResult = (
   | { state: 'allowed'; activeDeviceCount: number }
   | { state: 'limit_reached'; activeDeviceCount: number }
   | { state: 'session_revoked'; activeDeviceCount: null }
-  | { state: 'unavailable'; activeDeviceCount: null };
+  | { state: 'unavailable'; activeDeviceCount: null }
+) & { mode?: 'active_sessions' | 'saved_browsers' };
 
 async function getFallbackInstallationId(): Promise<string> {
   if (Platform.OS === 'web') return getBrowserInstallationId(() => Crypto.randomUUID());
@@ -89,6 +91,11 @@ function isConnectivityError(error: any): boolean {
  * denies protected data unless this session has a registered device slot.
  */
 export async function registerCurrentDevice(): Promise<DeviceAccessResult> {
+  // Token refresh/realtime callbacks may run in a hidden tab. They must not
+  // renew a foreground lease or sign the user out when the lease expires.
+  if (Platform.OS === 'web' && !isBrowserSessionVisible())
+    return { state: 'unavailable', activeDeviceCount: null };
+  const requestStartedAt = Date.now();
   try {
     const fingerprint = await getCurrentDeviceFingerprint();
     const { data, error } = await supabase.rpc('register_user_device', {
@@ -105,10 +112,31 @@ export async function registerCurrentDevice(): Promise<DeviceAccessResult> {
     }
 
     const result = data as
-      | { allowed?: boolean; active_device_count?: number; reason?: string }
+      | {
+          allowed?: boolean;
+          active_device_count?: number;
+          reason?: string;
+          mode?: string;
+          user_id?: string;
+          lease_expires_at?: string;
+          server_time?: string;
+        }
       | null
       | undefined;
+    const mode =
+      result?.mode === 'saved_browsers'
+        ? { mode: 'saved_browsers' as const }
+        : result?.mode === 'active_sessions'
+          ? { mode: 'active_sessions' as const }
+          : {};
+    if (
+      (result?.mode === 'active_sessions' || result?.mode === 'saved_browsers') &&
+      (!result.user_id || !Number.isFinite(Date.parse(result.server_time ?? '')))
+    ) {
+      return { state: 'unavailable', activeDeviceCount: null };
+    }
     if (result?.allowed === false && result.reason === 'session_revoked') {
+      recordBrowserSessionResult(result, requestStartedAt);
       return { state: 'session_revoked', activeDeviceCount: null };
     }
     const activeDeviceCount = result?.active_device_count;
@@ -121,9 +149,19 @@ export async function registerCurrentDevice(): Promise<DeviceAccessResult> {
     ) {
       return { state: 'unavailable', activeDeviceCount: null };
     }
+    if (
+      result.mode === 'active_sessions' &&
+      result.allowed &&
+      (!result.user_id ||
+        !Number.isFinite(Date.parse(result.lease_expires_at ?? '')) ||
+        !Number.isFinite(Date.parse(result.server_time ?? '')) ||
+        Date.parse(result.lease_expires_at!) <= Date.parse(result.server_time!))
+    )
+      return { state: 'unavailable', activeDeviceCount: null };
+    recordBrowserSessionResult(result, requestStartedAt);
     return result.allowed
-      ? { state: 'allowed', activeDeviceCount }
-      : { state: 'limit_reached', activeDeviceCount };
+      ? { state: 'allowed', activeDeviceCount, ...mode }
+      : { state: 'limit_reached', activeDeviceCount, ...mode };
   } catch (error) {
     if (__DEV__ && !isConnectivityError(error)) {
       console.warn('[Device access] Registration failed:', error);
@@ -137,14 +175,17 @@ export async function releaseCurrentDevice(): Promise<void> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 3_000);
   try {
-    const { error } = await supabase.rpc('revoke_current_device').abortSignal(controller.signal);
-    if (error && __DEV__ && !isConnectivityError(error)) {
-      console.warn('[Device access] Could not release device slot:', error.message);
-    }
+    const { data, error } = await supabase
+      .rpc('revoke_current_device')
+      .abortSignal(controller.signal);
+    if (error || data !== true) throw new Error('Slot release was not confirmed');
   } catch (error) {
     if (__DEV__ && !isConnectivityError(error)) {
       console.warn('[Device access] Could not release device slot:', error);
     }
+    throw new Error(
+      'Could not release this browser slot. Check your connection and try signing out again.'
+    );
   } finally {
     clearTimeout(timer);
   }
