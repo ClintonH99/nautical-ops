@@ -259,6 +259,16 @@ export const VesselPlansScreen = () => {
       if (current?.id !== userId || current.vesselId !== vesselId) return;
       const destination = new URL(url);
       const transaction = destination.searchParams.get('_ptxn')!;
+      // Display-only date, after the service verifies it against Paddle's
+      // existing trial. Never restart the trial or persist payment credentials.
+      try {
+        window.sessionStorage.setItem(
+          'paddle-trial-summary:' + transaction,
+          JSON.stringify({ trialEnd: subscription.currentPeriodEnd, savedAt: Date.now() })
+        );
+      } catch {
+        /* Paddle still displays the authoritative dates if storage is unavailable. */
+      }
       destination.searchParams.delete('_ptxn');
       destination.searchParams.set('transaction', transaction);
       window.location.assign(destination.href);

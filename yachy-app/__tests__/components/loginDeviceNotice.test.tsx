@@ -1,6 +1,6 @@
 import React from 'react';
 import { Alert } from 'react-native';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 
 const mockSignIn = jest.fn();
 const mockAccess = jest.fn();
@@ -65,6 +65,36 @@ const fillDetails = (screen: ReturnType<typeof render>) => {
   fireEvent.changeText(screen.getByLabelText('Password'), 'password123');
 };
 
+it.each(['Email', 'Password'])('submits valid credentials with Enter from %s', async (label) => {
+  const screen = render(<LoginScreen navigation={{}} />);
+  fillDetails(screen);
+  fireEvent(screen.getByLabelText(label), 'submitEditing');
+  await waitFor(() => expect(mockStore.setUser).toHaveBeenCalled());
+  expect(mockSignIn).toHaveBeenCalledTimes(1);
+  expect(mockSignIn).toHaveBeenCalledWith({ email: 'test@example.com', password: 'password123' });
+});
+
+it('validates an Enter submission and prevents repeated Enter/click requests while signing in', async () => {
+  const screen = render(<LoginScreen navigation={{}} />);
+  fireEvent(screen.getByLabelText('Password'), 'submitEditing');
+  expect(mockSignIn).not.toHaveBeenCalled();
+  let finish!: (value: { user: null }) => void;
+  mockSignIn.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      })
+  );
+  fillDetails(screen);
+  fireEvent(screen.getByLabelText('Password'), 'submitEditing');
+  fireEvent(screen.getByLabelText('Password'), 'submitEditing');
+  fireEvent.press(screen.getByLabelText('Sign in'));
+  expect(mockSignIn).toHaveBeenCalledTimes(1);
+  await act(async () => finish({ user: null }));
+  fireEvent(screen.getByLabelText('Password'), 'submitEditing');
+  await waitFor(() => expect(mockSignIn).toHaveBeenCalledTimes(2));
+});
+
 it('hides a restored notice on arrival, while typing and on an empty submission', () => {
   const screen = render(<LoginScreen navigation={{}} />);
   expect(screen.queryByText(mockStore.loginNotice)).toBeNull();
@@ -122,7 +152,9 @@ it('keeps authentication when both temporary browser slots are occupied', async 
   const screen = render(<LoginScreen navigation={{}} />);
   fillDetails(screen);
   fireEvent.press(screen.getByLabelText('Sign in'));
-  await waitFor(() => expect(mockStore.setUser).toHaveBeenCalledWith(expect.objectContaining({ id: 'user' })));
+  await waitFor(() =>
+    expect(mockStore.setUser).toHaveBeenCalledWith(expect.objectContaining({ id: 'user' }))
+  );
   expect(mockSignOut).not.toHaveBeenCalled();
   expect(screen.queryByText('Two device limit')).toBeNull();
 });

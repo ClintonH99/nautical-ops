@@ -3,7 +3,7 @@
  * Maritime / superyacht industry–focused sign-in
  */
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -63,6 +63,7 @@ export const LoginScreen = ({ navigation }: any) => {
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
 
   const [loading, setLoading] = useState(false);
+  const loginInFlight = useRef(false);
   const [errors, setErrors] = useState({ email: '', password: '' });
 
   const { setUser, setLoginNotice, setCaptainPaymentRequired, setCrewPaymentRequired } =
@@ -172,12 +173,13 @@ export const LoginScreen = ({ navigation }: any) => {
   };
 
   const handleLogin = async () => {
-    if (useAuthStore.getState().deferUserUpdate) return;
+    if (loginInFlight.current || socialLoading || useAuthStore.getState().deferUserUpdate) return;
     setDeviceNotice('');
     setLoginError('');
     setLoginNotice(null);
     if (!validateForm()) return;
 
+    loginInFlight.current = true;
     setLoading(true);
     try {
       const { user } = await authService.signIn({ email, password });
@@ -195,6 +197,7 @@ export const LoginScreen = ({ navigation }: any) => {
       if (Platform.OS !== 'web') Alert.alert('Error', msg);
       else if (typeof window !== 'undefined') window.alert(`Error: ${msg}`);
     } finally {
+      loginInFlight.current = false;
       setLoading(false);
     }
   };
@@ -271,6 +274,8 @@ export const LoginScreen = ({ navigation }: any) => {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              returnKeyType="go"
+              onSubmitEditing={handleLogin}
               error={errors.email}
             />
 
@@ -286,6 +291,8 @@ export const LoginScreen = ({ navigation }: any) => {
               secureTextEntry
               showPasswordToggle
               autoCapitalize="none"
+              returnKeyType="go"
+              onSubmitEditing={handleLogin}
               error={errors.password}
             />
 

@@ -2,71 +2,415 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="robots" content="noindex,nofollow" />
     <meta name="referrer" content="no-referrer" />
-    <title>Secure Checkout — Nautical Ops</title>
+    <title>Set up billing details — Nautical Ops</title>
     <style>
       :root {
-        color-scheme: light dark;
-        font-family: system-ui, sans-serif;
-        color: #17223b;
-        background: #f6f7f9;
+        color-scheme: light;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        color: #142442;
+        background: #fff;
+        font-synthesis: none;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      [hidden] {
+        display: none !important;
       }
       body {
         margin: 0;
-        padding: clamp(12px, 3vw, 32px);
-      }
-      main {
-        max-width: 760px;
-        margin: 4vh auto;
-        padding: clamp(16px, 4vw, 32px);
         background: #fff;
-        border: 1px solid #e1e5eb;
-        border-radius: 20px;
+        line-height: 1.5;
       }
-      header {
+      a {
+        color: #243d8a;
+        text-underline-offset: 4px;
+      }
+      a:focus-visible {
+        outline: 3px solid #243d8a;
+        outline-offset: 4px;
+        border-radius: 4px;
+      }
+      button,
+      input {
+        font: inherit;
+      }
+      button:focus-visible,
+      input:focus-visible,
+      summary:focus-visible {
+        outline: 3px solid #243d8a;
+        outline-offset: 3px;
+      }
+      .promo {
+        margin: 4px 24px 16px;
+        padding: 16px;
+        border: 1px solid #dfe5ed;
+        border-radius: 10px;
+      }
+      .promo summary {
+        cursor: pointer;
+        font-weight: 650;
+        font-size: 14px;
+        min-height: 28px;
+      }
+      .promo form {
+        margin-top: 12px;
+      }
+      .promo label {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 6px;
+      }
+      .promo-controls {
+        display: flex;
+        gap: 8px;
+      }
+      .promo input {
+        width: 100%;
+        min-width: 0;
+        border: 1px solid #aab7cb;
+        border-radius: 8px;
+        padding: 11px;
+        font-size: 16px;
+      }
+      .promo button {
+        border: 1px solid #243d8a;
+        color: #243d8a;
+        background: #fff;
+        border-radius: 8px;
+        padding: 10px 16px;
+        min-height: 44px;
+        cursor: pointer;
+      }
+      .promo button:disabled {
+        opacity: 0.55;
+        cursor: wait;
+      }
+      .promo-message {
+        font-size: 13px;
+        margin-top: 10px;
+      }
+      .promo-message[data-state='success'] {
+        color: #17613c;
+      }
+      .promo-message[data-state='error'] {
+        color: #9b2636;
+      }
+      .promo-help {
+        font-size: 12px;
+        color: #62738f;
+        margin-top: 8px;
+      }
+      #promo-remove {
+        margin-top: 8px;
+        border: 0;
+        text-decoration: underline;
+        padding-left: 0;
+      }
+      .site-header {
+        border-bottom: 1px solid #e7ebf1;
+      }
+      .header-inner,
+      main {
+        width: min(1120px, 100%);
+        margin-inline: auto;
+        padding-inline: 32px;
+      }
+      .header-inner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        padding-block: 20px;
+      }
+      .brand {
         display: flex;
         align-items: center;
         gap: 12px;
-        font-weight: 700;
+        font-size: 22px;
+        font-weight: 750;
+        white-space: nowrap;
       }
-      img {
-        width: 42px;
-        height: 42px;
+      .brand img {
+        width: 44px;
+        height: 44px;
+      }
+      .header-actions {
+        text-align: right;
+      }
+      .back-link {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        padding-block: 10px;
+      }
+      .badge {
+        display: inline-block;
+        border-radius: 6px;
+        padding: 5px 10px;
+        background: #edf2ff;
+        color: #243d8a;
+        font-size: 12px;
+        font-weight: 650;
+      }
+      main {
+        padding-block: 44px 32px;
       }
       h1 {
-        font-size: 26px;
-        margin-top: 28px;
+        margin: 0 0 8px;
+        font-size: clamp(26px, 3vw, 34px);
+        letter-spacing: -0.7px;
+        line-height: 1.2;
+      }
+      h2 {
+        margin: 0;
+        font-size: 19px;
       }
       p {
-        line-height: 1.6;
+        margin: 0;
         overflow-wrap: anywhere;
       }
-      a {
-        color: #233f89;
-        font-weight: 600;
+      .subtitle,
+      .muted {
+        color: #62738f;
+      }
+      .subtitle {
+        margin-bottom: 24px;
+      }
+      .checkout-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+        align-items: start;
+        gap: 24px;
+      }
+      .card {
+        min-width: 0;
+        border: 1px solid #dfe5ed;
+        border-radius: 16px;
+        background: #fff;
+      }
+      .summary {
+        padding: 24px;
+      }
+      .eyebrow {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1.1px;
+        font-weight: 700;
+        color: #62738f;
+        margin-bottom: 16px;
+      }
+      #plan-items {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 16px;
+      }
+      #plan-items li + li {
+        margin-top: 16px;
+      }
+      .item-name {
+        font-size: 21px;
+        font-weight: 700;
+        line-height: 1.3;
+      }
+      .item-period {
+        margin-top: 5px;
+        color: #62738f;
+        font-size: 14px;
+      }
+      #trial-badge {
+        margin-bottom: 16px;
+      }
+      .totals {
+        padding-top: 16px;
+        border-top: 1px solid #e7ebf1;
+        margin: 0;
+      }
+      .totals > div {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 12px;
+        font-size: 14px;
+      }
+      dt {
+        color: #62738f;
+      }
+      dd {
+        margin: 0;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        overflow-wrap: anywhere;
+      }
+      .totals .due {
+        align-items: baseline;
+        margin-top: 16px;
+      }
+      .due dt {
+        color: #142442;
+        font-weight: 650;
+      }
+      .due dd {
+        font-size: 26px;
+        font-weight: 750;
+        letter-spacing: -0.5px;
+      }
+      #recurring-section {
+        margin-top: 20px;
+      }
+      .summary-note {
+        border-top: 1px solid #e7ebf1;
+        padding-top: 16px;
+        margin-top: 20px;
+        font-size: 12px;
+        color: #62738f;
+      }
+      .summary-note p + p {
+        margin-top: 10px;
+      }
+      .payment-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 24px 24px 12px;
+      }
+      .secure-label {
+        font-size: 12px;
+        color: #62738f;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .secure-label svg {
+        width: 14px;
+        height: 14px;
+      }
+      /* Paddle controls iframe height. Never clip its fields, challenges or legal footer. */
+      .checkout-container {
+        min-width: 0;
+        visibility: hidden;
+      }
+      .checkout-container iframe {
+        display: block;
+        width: 100%;
+        border: 0;
+      }
+      .payment-note {
+        padding: 12px 24px 24px;
+        font-size: 12px;
+        color: #62738f;
+      }
+      .payment-note p + p {
+        margin-top: 10px;
+      }
+      .status-panel {
+        border: 1px solid #dfe5ed;
+        background: #f7f9fc;
+        padding: 14px 18px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+      }
+      #status {
+        font-size: 14px;
+      }
+      #retry {
         display: inline-block;
-        padding: 12px 0;
+        padding: 10px 0 0;
+        font-size: 14px;
+        font-weight: 650;
       }
-      #environment {
-        font-weight: 600;
-        color: #785000;
+      .return-action {
+        display: inline-block;
+        padding: 12px 18px;
+        border-radius: 10px;
+        background: #243d8a;
+        color: #fff;
+        text-decoration: none;
+        font-weight: 650;
+        margin-top: 14px;
       }
-      @media (prefers-color-scheme: dark) {
-        :root {
-          background: #101827;
-          color: #fff;
+      .footer {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px 24px;
+        margin-top: 28px;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+      .footer a {
+        padding: 10px 0;
+        font-size: 12px;
+      }
+      @media (max-width: 960px) {
+        .checkout-grid {
+          grid-template-columns: minmax(0, 1fr);
         }
         main {
-          background: #192439;
-          border-color: #354159;
+          max-width: 660px;
+          padding-top: 28px;
         }
-        a {
-          color: #cbd8ff;
+      }
+      @media (max-width: 480px) {
+        .header-inner,
+        main {
+          padding-inline: 16px;
         }
-        #environment {
-          color: #fbd890;
+        .header-inner {
+          align-items: flex-start;
+          padding-top: max(16px, env(safe-area-inset-top));
+          gap: 8px;
+        }
+        .brand {
+          font-size: 17px;
+          gap: 8px;
+        }
+        .brand img {
+          width: 32px;
+          height: 32px;
+        }
+        .back-link {
+          font-size: 12px;
+        }
+        .badge {
+          font-size: 11px;
+          padding: 4px 7px;
+        }
+        .summary {
+          padding: 20px;
+        }
+        .payment-heading {
+          padding: 20px 16px 12px;
+        }
+        .payment-note {
+          padding-inline: 16px;
+        }
+        .promo {
+          margin-inline: 16px;
+          padding: 12px;
+        }
+        .checkout-grid {
+          gap: 16px;
+        }
+      }
+      /* Preserve Paddle's documented 312px minimum on narrow 320px phones. */
+      @media (max-width: 359px) {
+        main {
+          padding-inline: 3px;
+        }
+        .intro,
+        .status-panel {
+          margin-inline: 9px;
+        }
+        .header-inner {
+          flex-wrap: wrap;
+        }
+        .header-actions {
+          text-align: left;
         }
       }
     </style>
@@ -74,21 +418,148 @@
     <script src="/paddle-checkout.js" defer></script>
   </head>
   <body>
+    <header class="site-header">
+      <div class="header-inner">
+        <div class="brand">
+          <img src="/nautical-ops-icon-192.png" alt="Nautical Ops vessel logo" />Nautical Ops
+        </div>
+        <div class="header-actions">
+          <span id="environment" class="badge" hidden>Sandbox · Test mode</span>
+          <a class="back-link" href="/vessel-plans">← Return to Nautical Ops</a>
+        </div>
+      </div>
+    </header>
     <main>
-      <header><img src="/favicon-vessel.png" alt="" />Nautical Ops</header>
-      <p id="environment" hidden>Sandbox test — no real payment</p>
-      <h1>Secure checkout</h1>
-      <p id="status" role="status" aria-live="polite">Preparing your secure checkout…</p>
-      <p>
-        The same USD base prices apply worldwide. Review the VAT or sales tax calculated for your
-        billing address and the full recurring total in Paddle before confirming.
-      </p>
-      <p>
-        Enter your payment details and any business tax ID only in the secure Paddle window. Check
-        your trial end date and first payment date before continuing.
-      </p>
-      <p>Your vessel plan is activated only after the server verifies your subscription.</p>
-      <a href="/vessel-plans">Return to Vessel Plans</a>
+      <div class="intro">
+        <h1 id="page-title">Set up billing details</h1>
+        <p class="subtitle">Secure billing for your vessel, all in one place.</p>
+      </div>
+      <div class="status-panel" id="status-panel">
+        <p id="status" role="status" aria-live="polite">Preparing your secure checkout…</p>
+        <a id="retry" href="" hidden>Reload Checkout</a>
+        <a id="return-action" class="return-action" href="/vessel-plans" hidden
+          >Return to Vessel Plans</a
+        >
+      </div>
+      <noscript
+        ><p>
+          Enable JavaScript to load Paddle's secure checkout, or return to Vessel Plans.
+        </p></noscript
+      >
+      <div class="checkout-grid" id="checkout-grid" hidden>
+        <section class="card summary" aria-labelledby="summary-title">
+          <h2 class="eyebrow" id="summary-title">Your plan</h2>
+          <p id="summary-loading" class="muted">Confirming your plan and totals with Paddle…</p>
+          <div id="summary-details" hidden>
+            <ul id="plan-items"></ul>
+            <p id="trial-badge" class="badge" hidden></p>
+            <dl class="totals">
+              <div>
+                <dt>Subtotal today</dt>
+                <dd id="subtotal"></dd>
+              </div>
+              <div id="discount-row" hidden>
+                <dt>Discount</dt>
+                <dd id="discount"></dd>
+              </div>
+              <div>
+                <dt>VAT / sales tax today</dt>
+                <dd id="tax"></dd>
+              </div>
+              <div id="credit-row" hidden>
+                <dt>Credit</dt>
+                <dd id="credit"></dd>
+              </div>
+              <div class="due">
+                <dt>Due today</dt>
+                <dd id="due-today"></dd>
+              </div>
+            </dl>
+            <dl class="totals" id="recurring-section" hidden>
+              <div id="first-payment-row" hidden>
+                <dt>First payment</dt>
+                <dd id="first-payment"></dd>
+              </div>
+              <div>
+                <dt>Recurring subtotal</dt>
+                <dd id="recurring-subtotal"></dd>
+              </div>
+              <div id="recurring-discount-row" hidden>
+                <dt>Recurring discount</dt>
+                <dd id="recurring-discount"></dd>
+              </div>
+              <div>
+                <dt>Recurring VAT / sales tax</dt>
+                <dd id="recurring-tax"></dd>
+              </div>
+              <div>
+                <dt>Recurring total</dt>
+                <dd id="recurring-total"></dd>
+              </div>
+            </dl>
+            <div class="summary-note">
+              <p id="trial-note" hidden></p>
+              <p>Totals update with your billing address and any applicable tax ID in Paddle.</p>
+            </div>
+          </div>
+        </section>
+        <section class="card payment" aria-labelledby="payment-title">
+          <div class="payment-heading">
+            <h2 id="payment-title">Payment details</h2>
+            <span class="secure-label"
+              ><svg
+                aria-hidden="true"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <rect x="3" y="7" width="10" height="8" rx="2" />
+                <path d="M5 7V4a3 3 0 0 1 6 0v3" /></svg
+              >Secure checkout by Paddle</span
+            >
+          </div>
+          <details class="promo" id="promo-section">
+            <summary>Have a promo code?</summary>
+            <form id="promo-form">
+              <label for="promo-code">Promo code</label>
+              <div class="promo-controls">
+                <input
+                  id="promo-code"
+                  type="text"
+                  maxlength="100"
+                  autocomplete="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                  aria-describedby="promo-message promo-help"
+                />
+                <button id="promo-apply" type="submit" disabled>Apply</button>
+              </div>
+            </form>
+            <p id="promo-message" class="promo-message" role="status" aria-live="polite">
+              Available once checkout loads.
+            </p>
+            <button id="promo-remove" type="button" hidden>Remove code</button>
+            <p id="promo-help" class="promo-help">
+              Paddle validates your code and updates the totals. The offer's eligibility and
+              duration apply.
+            </p>
+          </details>
+          <div class="checkout-container" id="payment-frame"></div>
+          <div class="payment-note">
+            <p id="payment-note">
+              Check the full recurring total and payment dates in Paddle before confirming.
+            </p>
+            <p>Your vessel plan is updated only after our server verifies your subscription.</p>
+          </div>
+        </section>
+      </div>
+      <nav class="footer" aria-label="Checkout help and policies">
+        <a href="/support" target="_blank" rel="noopener noreferrer">Support</a>
+        <a href="/terms-and-conditions" target="_blank" rel="noopener noreferrer">Terms</a>
+        <a href="/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy</a>
+        <a href="/refund-policy" target="_blank" rel="noopener noreferrer">Refund policy</a>
+      </nav>
     </main>
   </body>
 </html>

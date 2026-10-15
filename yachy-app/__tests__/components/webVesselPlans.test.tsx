@@ -306,6 +306,9 @@ test('payment setup opens only the existing trial transaction and double taps do
   );
   const originalLocation = window.location;
   const assign = jest.fn();
+  const originalStorage = window.sessionStorage;
+  const setItem = jest.fn();
+  Object.defineProperty(window, 'sessionStorage', { configurable: true, value: { setItem } });
   Object.defineProperty(window, 'location', {
     configurable: true,
     value: { origin: 'https://nautical-ops.com', assign },
@@ -324,8 +327,15 @@ test('payment setup opens only the existing trial transaction and double taps do
       'https://nautical-ops.com/checkout?transaction=' + transaction
     );
     expect(mockStartTrial).not.toHaveBeenCalled();
+    const [key, value] = setItem.mock.calls[0];
+    expect(key).toBe('paddle-trial-summary:' + transaction);
+    expect(JSON.parse(value)).toEqual({
+      trialEnd: mockSubscription.currentPeriodEnd,
+      savedAt: expect.any(Number),
+    });
   } finally {
     Object.defineProperty(window, 'location', { configurable: true, value: originalLocation });
+    Object.defineProperty(window, 'sessionStorage', { configurable: true, value: originalStorage });
   }
 });
 
