@@ -662,10 +662,6 @@ export const VesselPlansScreen = () => {
                       <Text accessibilityRole="header" style={heading}>
                         {review ? 'Review your billing details' : 'Choose your vessel plan'}
                       </Text>
-                      <Text style={muted}>
-                        The same USD base prices worldwide. Your billing location determines
-                        applicable VAT / sales tax.
-                      </Text>
                       <View style={card}>
                         <View style={styles.between}>
                           <View style={styles.grow}>
@@ -755,6 +751,9 @@ export const VesselPlansScreen = () => {
                           <Text style={[styles.label, { color: theme.textPrimary }]}>
                             CREW SIZE
                           </Text>
+                          <Text style={[styles.taxNote, { color: theme.textSecondary }]}>
+                            Tax/VAT is calculated at checkout based on your billing region.
+                          </Text>
                           {PADDLE_PLAN_TIERS.map((p) => {
                             const base = getPaddlePrice(p.id, period),
                               q = currentPreview?.quotes.find((item) => item.tier === p.id);
@@ -805,15 +804,14 @@ export const VesselPlansScreen = () => {
                                   <Text style={[styles.planTitle, { color: theme.textPrimary }]}>
                                     {p.label}
                                   </Text>
-                                  <Text style={text}>
-                                    {q ? usd(q.totalCents) : usd(base.totalCents)} {base.suffix}
-                                    {q ? '' : ' before tax'}
-                                  </Text>
-                                  {q && (
-                                    <Text style={muted}>
-                                      {usd(q.baseCents)} base + {usd(q.taxCents)} VAT / tax
+                                  <Text style={[styles.planPrice, { color: theme.accent }]}>
+                                    {q ? usd(q.totalCents) : usd(base.totalCents)}{' '}
+                                    <Text
+                                      style={[styles.planPeriod, { color: theme.textSecondary }]}
+                                    >
+                                      {base.suffix}
                                     </Text>
-                                  )}
+                                  </Text>
                                 </View>
                               </Pressable>
                             );
@@ -860,6 +858,9 @@ const styles = StyleSheet.create({
   heading: { fontSize: 23, fontWeight: '700' },
   copy: { fontSize: 15, lineHeight: 23, flexShrink: 1 },
   planTitle: { fontSize: 17, fontWeight: '600', flexShrink: 1 },
+  planPrice: { fontSize: 24, lineHeight: 32, fontWeight: '700', flexShrink: 1 },
+  planPeriod: { fontSize: 18, fontWeight: '400' },
+  taxNote: { fontSize: 13, lineHeight: 20 },
   label: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
   grow: { flex: 1, minWidth: 0, gap: 4 },
   between: {

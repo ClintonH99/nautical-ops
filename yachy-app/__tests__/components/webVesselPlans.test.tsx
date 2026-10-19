@@ -72,6 +72,7 @@ jest.mock('../../src/hooks/useThemeColors', () => ({
     surface: '#fff',
     textPrimary: '#111',
     textSecondary: '#444',
+    accent: '#1E3A8A',
     border: '#ccc',
     controlSelected: '#123456',
     textOnAccent: '#fff',
@@ -238,8 +239,12 @@ test.each(['CREW', 'HOD'])('payment recovery is never offered to %s', (role) => 
 test('shows exact worldwide base totals before country selection, never as final tax-inclusive prices', () => {
   const screen = render(<VesselPlansScreen />);
   fireEvent.press(screen.getByText('Yearly'));
-  expect(screen.getByText('US$1295.89 / year before tax')).toBeTruthy();
-  expect(screen.getByText('US$2699.89 / year before tax')).toBeTruthy();
+  expect(screen.getByText('US$1295.89 / year')).toBeTruthy();
+  expect(screen.getByText('US$2699.89 / year')).toBeTruthy();
+  expect(
+    screen.getAllByText('Tax/VAT is calculated at checkout based on your billing region.')
+  ).toHaveLength(1);
+  expect(screen.queryByText(/^US\$.*before tax$/)).toBeNull();
   expect(screen.getByText('Awaiting tax total')).toBeTruthy();
   expect(screen.queryByText(/OFF|Apple|iPhone/)).toBeNull();
   expect(screen.getByRole('button', { name: 'Continue' }).props.accessibilityState.disabled).toBe(
@@ -250,7 +255,8 @@ test('country preview displays tax-inclusive prices and the separate base/tax br
   const screen = render(<VesselPlansScreen />);
   choose(screen);
   await waitFor(() => expect(screen.getByText('US$95.99 / month')).toBeTruthy());
-  expect(screen.getByText('US$79.99 base + US$16.00 VAT / tax')).toBeTruthy();
+  expect(screen.queryByText('US$79.99 base + US$16.00 VAT / tax')).toBeNull();
+  expect(screen.getByText('Subscription before tax')).toBeTruthy();
   fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
   expect(screen.getByText('Set up billing')).toBeTruthy();
   expect(
