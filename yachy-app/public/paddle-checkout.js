@@ -304,8 +304,9 @@
         checkout: {
           settings: {
             displayMode: 'inline',
-            variant: 'express',
-            showNonExpressPaymentMethods: true,
+            // Paddle rejects express for cardless-trial subscriptions, including
+            // their payment-method updates. One-page retains wallets and cards.
+            variant: 'one-page',
             allowLogout: false,
             showAddDiscounts: false,
             allowDiscountRemoval: true,

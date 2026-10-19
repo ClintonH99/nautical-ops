@@ -212,10 +212,10 @@ test("sandbox checkout initializes once and never treats checkout completion as 
   );
   page.scripts[0].onload();
   assert.equal(page.calls[0], "sandbox");
-  assert.equal(page.calls[1].checkout.settings.variant, "express");
+  assert.equal(page.calls[1].checkout.settings.variant, "one-page");
   assert.equal(
     page.calls[1].checkout.settings.showNonExpressPaymentMethods,
-    true,
+    undefined,
   );
   assert.equal(page.calls[1].checkout.settings.displayMode, "inline");
   assert.equal(
@@ -567,7 +567,7 @@ test("completed and closed checkouts cannot accept further promo edits from late
   }
 });
 
-test("payment-method checkout is compact, wallet-first and never invents a trial", () => {
+test("payment-method checkout is compact and never invents a trial", () => {
   const page = loadedPage({
     search: `?transaction=${txn}&flow=payment-method`,
   });
@@ -609,7 +609,7 @@ test("a display hint cannot hide an outstanding amount or invent zero-charge upd
   );
 });
 
-test("existing trial setup keeps the verified original date with wallet-first payment setup", () => {
+test("existing trial setup keeps the verified original date with supported payment setup", () => {
   const trialEnd = new Date(Date.now() + 7 * 86400000).toISOString();
   const page = loadedPage({
     search: `?transaction=${txn}&flow=payment-method`,
