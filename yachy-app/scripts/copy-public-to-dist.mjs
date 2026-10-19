@@ -25,6 +25,7 @@ const FILES = [
   'support.html',
   'checkout.html',
   'paddle-checkout.js',
+  '.well-known/apple-developer-merchantid-domain-association',
   ...WEB_ICON_FILES,
 ];
 
@@ -43,6 +44,7 @@ for (const name of FILES) {
     console.error('[copy-public-to-dist] missing source:', src);
     process.exit(1);
   }
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.copyFileSync(src, dest);
   copied += 1;
   console.log('[copy-public-to-dist]', name);

@@ -334,6 +334,59 @@
         font-weight: 650;
         margin-top: 14px;
       }
+      .success-panel {
+        max-width: 480px;
+        margin: 12px auto 40px;
+        padding: 24px 16px;
+        text-align: center;
+      }
+      .success-mark {
+        display: grid;
+        place-items: center;
+        width: 72px;
+        height: 72px;
+        margin: 0 auto 28px;
+        border-radius: 50%;
+        color: white;
+        background: #142442;
+      }
+      .success-mark svg {
+        width: 36px;
+        height: 36px;
+      }
+      .success-panel h1 {
+        margin-bottom: 20px;
+      }
+      .success-panel .return-action {
+        display: block;
+        margin-top: 28px;
+        background: #142442;
+      }
+      .success-method {
+        margin-top: 24px;
+        padding: 16px;
+        border: 1px solid #dfe5ed;
+        border-radius: 12px;
+        font-weight: 650;
+      }
+      .update-note {
+        margin-top: 16px;
+        font-size: 13px;
+        color: #62738f;
+      }
+      [data-flow='payment-method'] .summary {
+        padding: 20px;
+      }
+      [data-flow='payment-method'] .item-name {
+        font-size: 19px;
+      }
+      [data-flow='payment-method'] .totals > div {
+        margin-bottom: 8px;
+      }
+      [data-flow='payment-method'] .summary-note {
+        margin-top: 16px;
+        padding-top: 12px;
+      }
       .footer {
         display: flex;
         flex-wrap: wrap;
@@ -430,9 +483,9 @@
       </div>
     </header>
     <main>
-      <div class="intro">
+      <div class="intro" id="checkout-intro">
         <h1 id="page-title">Set up billing details</h1>
-        <p class="subtitle">Secure billing for your vessel, all in one place.</p>
+        <p class="subtitle" id="page-subtitle">Secure billing for your vessel, all in one place.</p>
       </div>
       <div class="status-panel" id="status-panel">
         <p id="status" role="status" aria-live="polite">Preparing your secure checkout…</p>
@@ -446,6 +499,25 @@
           Enable JavaScript to load Paddle's secure checkout, or return to Vessel Plans.
         </p></noscript
       >
+      <section class="success-panel" id="success-panel" aria-labelledby="success-title" hidden>
+        <div class="success-mark" aria-hidden="true">
+          <svg
+            viewBox="0 0 32 32"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="3.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="m7 16 6 6L25 10" />
+          </svg>
+        </div>
+        <h1 id="success-title" tabindex="-1"></h1>
+        <p id="success-message"></p>
+        <p id="success-method" class="success-method" hidden></p>
+        <a class="return-action" href="/vessel-plans">Return to Nautical Ops</a>
+        <p class="muted update-note">Secure checkout by Paddle</p>
+      </section>
       <div class="checkout-grid" id="checkout-grid" hidden>
         <section class="card summary" aria-labelledby="summary-title">
           <h2 class="eyebrow" id="summary-title">Your plan</h2>
@@ -475,6 +547,9 @@
                 <dd id="due-today"></dd>
               </div>
             </dl>
+            <p id="update-note" class="update-note" hidden>
+              Payment details for your existing subscription.
+            </p>
             <dl class="totals" id="recurring-section" hidden>
               <div id="first-payment-row" hidden>
                 <dt>First payment</dt>

@@ -272,6 +272,7 @@ export const VesselPlansScreen = () => {
       }
       destination.searchParams.delete('_ptxn');
       destination.searchParams.set('transaction', transaction);
+      destination.searchParams.set('flow', 'payment-method');
       window.location.assign(destination.href);
     } catch (error) {
       const current = useAuthStore.getState().user;

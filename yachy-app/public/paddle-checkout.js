@@ -4,6 +4,9 @@
   const params = new URLSearchParams(window.location.search);
   const manual = params.has('transaction');
   const transaction = params.get('transaction') || params.get('_ptxn');
+  // Presentation intent only. Paddle's matching transaction and actual totals
+  // remain authoritative; this flag cannot set prices, dates or entitlement.
+  const paymentMethodIntent = params.get('flow') === 'payment-method';
   const node = (id) => document.getElementById(id);
   let loadTimer;
   let promoPending = false;
@@ -12,6 +15,8 @@
   let appliedCode = '';
   let requestedCode;
   let checkoutStopped = false;
+  let checkoutCompleted = false;
+  let paymentMethodUpdate = false;
   const promoMessage = (text, state = '') => {
     node('promo-message').textContent = text;
     node('promo-message').dataset.state = state;
@@ -26,7 +31,7 @@
     node('promo-code').disabled = !checkoutReady;
   };
   const changePromo = (code) => {
-    if (!checkoutReady || promoPending || checkoutStopped) return;
+    if (!checkoutReady || promoPending || checkoutStopped || paymentMethodIntent) return;
     if (code !== null && (!code.trim() || code.length > 100)) {
       promoMessage('Enter a promo code first.', 'error');
       return;
@@ -201,14 +206,23 @@
       text('recurring-total', money(recurring.total) + ' · ' + cycles.join(', ').toLowerCase());
       line('recurring-discount', recurring.discount);
     }
-    const trial = items.length === 1 ? items[0].trial_period : null;
-    const trialPeriod = cycleLabel(trial);
-    const inFreeTrial = due === 0 && hasRecurring && Boolean(trialEnd || trialPeriod);
-    node('trial-badge').hidden = !inFreeTrial;
+    // A price's trial_period describes its catalogue offer, NOT the current
+    // subscription. Active payment-method updates carry it too. Only show a
+    // trial when this transaction has recent server-verified trial context.
+    const inFreeTrial = due === 0 && hasRecurring && Boolean(trialEnd);
+    paymentMethodUpdate = paymentMethodIntent && hasRecurring && due === 0 && totals.total === 0;
+    node('checkout-grid').dataset.flow = paymentMethodUpdate ? 'payment-method' : 'checkout';
+    text('page-title', paymentMethodUpdate ? 'Update payment method' : 'Set up billing details');
     text(
-      'trial-badge',
-      trialPeriod ? trial.frequency + '-' + trial.interval + ' free trial' : 'Free trial'
+      'page-subtitle',
+      paymentMethodUpdate
+        ? 'Choose how to pay for your vessel.'
+        : 'Secure billing for your vessel, all in one place.'
     );
+    node('update-note').hidden = !paymentMethodUpdate;
+    node('promo-section').hidden = paymentMethodIntent;
+    node('trial-badge').hidden = !inFreeTrial;
+    text('trial-badge', 'Existing free trial');
     node('first-payment-row').hidden = !inFreeTrial;
     text('first-payment', trialEnd || 'See payment form');
     node('trial-note').hidden = !inFreeTrial;
@@ -222,7 +236,9 @@
       'payment-note',
       inFreeTrial
         ? 'No subscription payment today. Review the recurring total and first payment date in Paddle. Cancel before the trial ends to avoid a subscription payment.'
-        : 'Review the amount due today and any recurring charges in Paddle before confirming.'
+        : paymentMethodUpdate
+          ? 'No payment is due today. This checkout saves payment details for your existing subscription.'
+          : 'Review the amount due today and any recurring charges in Paddle before confirming.'
     );
     node('summary-loading').hidden = true;
     node('summary-details').hidden = false;
@@ -288,7 +304,8 @@
         checkout: {
           settings: {
             displayMode: 'inline',
-            variant: 'one-page',
+            variant: 'express',
+            showNonExpressPaymentMethods: true,
             allowLogout: false,
             showAddDiscounts: false,
             allowDiscountRemoval: true,
@@ -300,18 +317,39 @@
           },
         },
         eventCallback(event) {
+          if (checkoutCompleted) return;
           if (event.data?.transaction_id && event.data.transaction_id !== transaction) return;
           if (event.name === 'checkout.completed') {
+            // Ignore incomplete/unbound success messages. This confirmation is
+            // payment UI only; the app still verifies access on the server.
+            if (event.data?.transaction_id !== transaction || event.data?.status !== 'completed') {
+              fail(
+                'Payment confirmation is incomplete. Return to Vessel Plans to check your subscription.'
+              );
+              return;
+            }
+            checkoutCompleted = true;
             checkoutStopped = true;
             checkoutReady = false;
             settlePromo();
             promoMessage('Checkout completed.');
             stopLoading();
-            message(
-              'Checkout completed. Return to Vessel Plans to check your server-confirmed subscription.'
-            );
-            node('page-title').textContent = 'Checkout completed';
-            node('return-action').hidden = false;
+            node('status-panel').hidden = true;
+            node('checkout-grid').hidden = true;
+            node('checkout-intro').hidden = true;
+            node('success-title').textContent = paymentMethodUpdate
+              ? 'Payment method updated'
+              : 'Checkout completed';
+            node('success-message').textContent = paymentMethodUpdate
+              ? 'Paddle has confirmed your payment details. Return to Nautical Ops to check your current plan.'
+              : 'Paddle has confirmed checkout. Return to Nautical Ops to check your server-confirmed subscription.';
+            // Completed events use snake_case (selected/loaded use kebab-case).
+            const methods = { apple_pay: 'Apple Pay', google_pay: 'Google Pay', card: 'Card' };
+            const method = methods[event.data.payment?.method_details?.type];
+            node('success-method').hidden = !method;
+            node('success-method').textContent = method || '';
+            node('success-panel').hidden = false;
+            node('success-title').focus();
           } else if (event.name === 'checkout.closed') {
             checkoutStopped = true;
             checkoutReady = false;

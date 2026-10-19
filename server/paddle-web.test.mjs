@@ -212,7 +212,11 @@ test("sandbox checkout initializes once and never treats checkout completion as 
   );
   page.scripts[0].onload();
   assert.equal(page.calls[0], "sandbox");
-  assert.equal(page.calls[1].checkout.settings.variant, "one-page");
+  assert.equal(page.calls[1].checkout.settings.variant, "express");
+  assert.equal(
+    page.calls[1].checkout.settings.showNonExpressPaymentMethods,
+    true,
+  );
   assert.equal(page.calls[1].checkout.settings.displayMode, "inline");
   assert.equal(
     page.calls[1].checkout.settings.frameTarget,
@@ -222,7 +226,8 @@ test("sandbox checkout initializes once and never treats checkout completion as 
   assert.equal(page.calls.filter((call) => call.opened).length, 0); // _ptxn auto-open only
   assert.equal(page.nodes.environment.hidden, false);
   page.calls[1].eventCallback({ name: "checkout.completed" });
-  assert.match(page.nodes.status.textContent, /server-confirmed/);
+  assert.equal(page.nodes["success-panel"].hidden, true);
+  assert.match(page.nodes.status.textContent, /confirmation is incomplete/);
   page.calls[1].eventCallback({ name: "checkout.closed" });
   assert.match(page.nodes.status.textContent, /closed/);
 });
@@ -240,6 +245,7 @@ test("Paddle load failures present a recoverable error instead of a blank screen
 const txn = `txn_${"1".repeat(26)}`;
 const eventData = (patch = {}) => ({
   transaction_id: txn,
+  status: "ready",
   currency_code: "USD",
   items: [
     {
@@ -282,7 +288,7 @@ test("summary uses Paddle major units, tax and dates, not the illustrative mocku
       year: "numeric",
     }).format(new Date(trialEnd)),
   );
-  assert.equal(page.nodes["trial-badge"].textContent, "30-day free trial");
+  assert.equal(page.nodes["trial-badge"].textContent, "Existing free trial");
   assert.equal(page.nodes["payment-frame"].style.visibility, "visible");
   assert.equal(page.nodes["status-panel"].hidden, true);
   assert.equal(page.timers.size, 0);
@@ -303,6 +309,9 @@ test("missing or stale trial context never invents a fresh trial end date", () =
     const page = loadedPage(options);
     page.event("checkout.loaded");
     assert.equal(page.nodes["first-payment"].textContent, "See payment form");
+    assert.equal(page.nodes["first-payment-row"].hidden, true);
+    assert.equal(page.nodes["trial-badge"].hidden, true);
+    assert.equal(page.nodes["trial-note"].hidden, true);
     assert.equal(page.nodes["payment-frame"].style.visibility, "visible");
   }
 });
@@ -407,9 +416,9 @@ test("declined payment and completion have visible actions without granting app 
   const page = loadedPage();
   page.event("checkout.payment.failed");
   assert.match(page.nodes.status.textContent, /could not be completed/);
-  page.event("checkout.completed");
-  assert.equal(page.nodes["return-action"].hidden, false);
-  assert.match(page.nodes.status.textContent, /server-confirmed/);
+  page.event("checkout.completed", eventData({ status: "completed" }));
+  assert.equal(page.nodes["success-panel"].hidden, false);
+  assert.match(page.nodes["success-message"].textContent, /server-confirmed/);
   assert.equal(page.calls.filter((call) => call.opened).length, 0);
 });
 test("branded page has no first-party card inputs and keeps provider frame plus refund link", () => {
@@ -550,10 +559,135 @@ test("completed and closed checkouts cannot accept further promo edits from late
   for (const event of ["checkout.completed", "checkout.closed"]) {
     const page = loadedPage();
     page.event("checkout.loaded");
-    page.event(event);
+    page.event(event, eventData({ status: "completed" }));
     page.event("checkout.updated");
     applyPromo(page, "DEMO");
     assert.equal(page.nodes["promo-apply"].disabled, true);
     assert.equal(page.calls.filter((call) => call.updated).length, 0);
   }
+});
+
+test("payment-method checkout is compact, wallet-first and never invents a trial", () => {
+  const page = loadedPage({
+    search: `?transaction=${txn}&flow=payment-method`,
+  });
+  page.event("checkout.loaded");
+  assert.equal(page.nodes["page-title"].textContent, "Update payment method");
+  assert.equal(page.nodes["checkout-grid"].dataset.flow, "payment-method");
+  assert.equal(page.nodes["promo-section"].hidden, true);
+  assert.equal(page.nodes["trial-badge"].hidden, true);
+  assert.equal(page.nodes["trial-note"].hidden, true);
+  assert.equal(page.nodes["recurring-section"].hidden, false);
+  assert.match(page.nodes["payment-note"].textContent, /existing subscription/);
+  applyPromo(page, "IGNORED");
+  assert.equal(page.calls.filter((call) => call.updated).length, 0);
+});
+
+test("a display hint cannot hide an outstanding amount or invent zero-charge update copy", () => {
+  const page = loadedPage({
+    search: `?transaction=${txn}&flow=payment-method`,
+  });
+  page.event(
+    "checkout.loaded",
+    eventData({
+      totals: {
+        subtotal: 89.99,
+        tax: 0,
+        total: 89.99,
+        balance: 0.7,
+        credit: 89.29,
+      },
+    }),
+  );
+  assert.equal(page.nodes["page-title"].textContent, "Set up billing details");
+  assert.match(page.nodes["due-today"].textContent, /0\.70/);
+  assert.equal(page.nodes["credit-row"].hidden, false);
+  assert.equal(page.nodes["update-note"].hidden, true);
+  assert.doesNotMatch(
+    page.nodes["payment-note"].textContent,
+    /No payment is due/,
+  );
+});
+
+test("existing trial setup keeps the verified original date with wallet-first payment setup", () => {
+  const trialEnd = new Date(Date.now() + 7 * 86400000).toISOString();
+  const page = loadedPage({
+    search: `?transaction=${txn}&flow=payment-method`,
+    trialSummary: { trialEnd, savedAt: Date.now() },
+  });
+  page.event("checkout.loaded");
+  assert.equal(page.nodes["trial-badge"].hidden, false);
+  assert.match(
+    page.nodes["trial-note"].textContent,
+    /existing trial end date stays the same/,
+  );
+  assert.doesNotMatch(page.nodes["trial-badge"].textContent, /30/);
+});
+
+test("only matching completed events show confirmation, with actual wallet type and no access claim", () => {
+  for (const [type, label] of [
+    ["apple_pay", "Apple Pay"],
+    ["google_pay", "Google Pay"],
+    ["card", "Card"],
+    ["unknown", ""],
+  ]) {
+    const page = loadedPage({
+      search: `?transaction=${txn}&flow=payment-method`,
+    });
+    page.event("checkout.loaded");
+    for (const data of [
+      {},
+      eventData(),
+      eventData({
+        status: "completed",
+        transaction_id: `txn_${"2".repeat(26)}`,
+      }),
+    ]) {
+      page.event("checkout.completed", data);
+      assert.equal(page.nodes["success-panel"].hidden, true);
+    }
+    page.event(
+      "checkout.completed",
+      eventData({ status: "completed", payment: { method_details: { type } } }),
+    );
+    assert.equal(page.nodes["success-panel"].hidden, false);
+    assert.equal(
+      page.nodes["success-title"].textContent,
+      "Payment method updated",
+    );
+    assert.equal(page.nodes["success-method"].textContent, label);
+    assert.equal(page.nodes["success-method"].hidden, !label);
+    assert.doesNotMatch(
+      page.nodes["success-message"].textContent,
+      /remains active|access restored/,
+    );
+    assert.equal(page.nodes["checkout-grid"].hidden, true);
+    assert.equal(page.document.activeElement.id, "success-title");
+    page.event("checkout.closed");
+    page.event("checkout.payment.failed");
+    assert.equal(page.nodes["success-panel"].hidden, false);
+    assert.equal(page.nodes["status-panel"].hidden, true);
+  }
+});
+
+test("Apple Pay association artifact is present and copied with its required directory", () => {
+  const association = fs.readFileSync(
+    new URL(
+      "../yachy-app/public/.well-known/apple-developer-merchantid-domain-association",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(association.trim(), /^[A-Fa-f0-9]+$/);
+  const payload = JSON.parse(Buffer.from(association.trim(), "hex").toString());
+  assert.ok(payload.pspId && payload.signature);
+  const build = fs.readFileSync(
+    new URL("../yachy-app/scripts/copy-public-to-dist.mjs", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    build,
+    /\.well-known\/apple-developer-merchantid-domain-association/,
+  );
+  assert.match(build, /mkdirSync\(path.dirname\(dest\)/);
 });
