@@ -12,7 +12,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ImageBackground,
   Dimensions,
   Modal,
   Platform,
@@ -22,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from 'react-native-calendars';
 import { useFocusEffect } from '@react-navigation/native';
 import { Button } from '../components';
+import { VesselBanner } from '../components/VesselBanner';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES, SHADOWS } from '../constants/theme';
 import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -45,7 +45,6 @@ import { paddleCheckoutEnabled } from '../services/paddleBilling';
 
 const { width } = Dimensions.get('window');
 const CATEGORY_SIZE = (width - SPACING.xl * 2 - SPACING.md * 2) / 3;
-const BANNER_HEIGHT = 220;
 
 // Default vessel banner when none set (per ADMIN/Rules/DEFAULT_VESSEL_BANNER.md)
 const DEFAULT_BANNER_IMAGE = require('../../assets/default-vessel-banner.png');
@@ -430,24 +429,17 @@ export const HomeScreen = ({ navigation }: any) => {
                 },
               ]}
             >
-              <ImageBackground
+              <VesselBanner
+                name={vesselName || ''}
                 source={
                   !bannerLoadFailed && bannerImageUrl
                     ? { uri: bannerImageUrl }
                     : DEFAULT_BANNER_IMAGE
                 }
-                style={styles.bannerImage}
-                imageStyle={styles.bannerImageStyle}
                 onError={() => {
                   if (bannerImageUrl) setBannerLoadFailed(true);
                 }}
-              >
-                {vesselName && (
-                  <Text style={styles.bannerVesselName} numberOfLines={1}>
-                    {vesselName}
-                  </Text>
-                )}
-              </ImageBackground>
+              />
             </View>
           )}
 
@@ -721,25 +713,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     borderWidth: 1,
     ...SHADOWS.lg,
-  },
-  bannerImage: {
-    height: BANNER_HEIGHT,
-    justifyContent: 'flex-end',
-    paddingHorizontal: SPACING.md + 2,
-    paddingBottom: SPACING.md,
-  },
-  bannerImageStyle: {
-    resizeMode: 'cover',
-    borderRadius: 21,
-  },
-  bannerVesselName: {
-    fontSize: FONTS['2xl'],
-    fontWeight: '600',
-    color: COLORS.white,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-    zIndex: 1,
   },
   noVesselCard: {
     padding: SPACING.xl,

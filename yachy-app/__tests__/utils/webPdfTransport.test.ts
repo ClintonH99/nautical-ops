@@ -3,7 +3,10 @@ jest.mock('../../src/utils/pdfAsset', () => ({ readPdfAsset: jest.fn(async () =>
 jest.mock('../../src/utils/pdfBranding', () => ({ brandPdf: jest.fn(async () => 'JVBERg==') }));
 jest.mock('../../assets/sea-miles-pdf-logo-source.png', () => 1);
 import { supabase } from '../../src/services/supabase';
-import { printStandardPdf } from '../../src/utils/standardPdf.web';
+import { printStandardPdf, getPdfLogoBase64 } from '../../src/utils/standardPdf.web';
+import { getPdfSignatureFontBase64 } from '../../src/utils/pdfSignatureFont.web';
+import { getPdfExportErrorMessage, PdfExportError } from '../../src/utils/pdfErrors';
+import assets from '../../src/utils/pdfEmbeddedAssets.json';
 import { brandPdf } from '../../src/utils/pdfBranding';
 import { sharePdfFile } from '../../src/utils/sharePdfFile.web';
 
@@ -25,13 +28,11 @@ afterEach(() => {
 });
 
 test('sends an authenticated prepared document and brands real PDF bytes', async () => {
-  global.fetch = jest
-    .fn()
-    .mockResolvedValue({
-      ok: true,
-      headers: new Headers({ 'content-type': 'application/pdf' }),
-      arrayBuffer: async () => new Uint8Array([37, 80, 68, 70]).buffer,
-    });
+  global.fetch = jest.fn().mockResolvedValue({
+    ok: true,
+    headers: new Headers({ 'content-type': 'application/pdf' }),
+    arrayBuffer: async () => new Uint8Array([37, 80, 68, 70]).buffer,
+  });
   expect(
     await printStandardPdf({
       html: '<html><head></head><body>Test</body></html>',
@@ -42,13 +43,61 @@ test('sends an authenticated prepared document and brands real PDF bytes', async
   expect(call[0]).toBe('/api/export-pdf');
   expect(call[1].headers.Authorization).toBe('Bearer test-token');
   expect(JSON.parse(call[1].body).html).toContain('nautical-pdf-standard');
-  expect(brandPdf).toHaveBeenCalledWith(expect.any(Uint8Array), 'Inventory', 'logo', false);
+  expect(global.fetch).toHaveBeenCalledTimes(1);
+  expect(brandPdf).toHaveBeenCalledWith(expect.any(Uint8Array), 'Inventory', assets.logo, false);
+});
+test('loads the exact embedded logo and signature font without any network request', async () => {
+  global.fetch = jest.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+  expect(await getPdfLogoBase64()).toBe(assets.logo);
+  expect(await getPdfSignatureFontBase64()).toBe(assets.signatureFont);
+  expect(global.fetch).not.toHaveBeenCalled();
+});
+test('explains network failures and busy responses without disclosing raw errors', async () => {
+  global.fetch = jest.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+  await expect(printStandardPdf({ html: '', title: 'Test' })).rejects.toThrow(
+    'Check your connection'
+  );
+  global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 429 });
+  await expect(printStandardPdf({ html: '', title: 'Test' })).rejects.toThrow('service is busy');
+  expect(getPdfExportErrorMessage(new Error('sensitive backend detail'))).not.toContain(
+    'sensitive'
+  );
+  expect(getPdfExportErrorMessage(new PdfExportError('Please sign in again.'))).toBe(
+    'Please sign in again.'
+  );
+});
+test('aborts a stalled request with a useful timeout message', async () => {
+  jest.useFakeTimers();
+  try {
+    global.fetch = jest.fn(
+      (_url, options) =>
+        new Promise((_resolve, reject) => {
+          options?.signal?.addEventListener('abort', () => reject(new Error('aborted')));
+        })
+    ) as typeof fetch;
+    const result = printStandardPdf({ html: '', title: 'Test' });
+    const assertion = expect(result).rejects.toThrow('took too long');
+    await jest.advanceTimersByTimeAsync(55_000);
+    await assertion;
+  } finally {
+    jest.useRealTimers();
+  }
 });
 test('does not call the renderer without a session', async () => {
   (supabase.auth.getSession as jest.Mock).mockResolvedValue({ data: { session: null } });
   global.fetch = jest.fn();
   await expect(printStandardPdf({ html: '', title: 'Test' })).rejects.toThrow('sign in');
   expect(global.fetch).not.toHaveBeenCalled();
+});
+test('does not mislabel a PDF engine failure as a network problem', async () => {
+  global.fetch = jest.fn().mockResolvedValue({
+    ok: true,
+    headers: new Headers({ 'content-type': 'application/pdf' }),
+    arrayBuffer: async () => new Uint8Array([37, 80, 68, 70]).buffer,
+  });
+  const error = new TypeError('PDF engine failed');
+  (brandPdf as jest.Mock).mockRejectedValueOnce(error);
+  await expect(printStandardPdf({ html: '', title: 'Test' })).rejects.toBe(error);
 });
 test('rejects expired authorization and SPA fallback responses', async () => {
   global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 403 });

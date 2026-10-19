@@ -1,21 +1,12 @@
 import { supabase } from '../services/supabase';
-import { readPdfAsset } from './pdfAsset';
+import assets from './pdfEmbeddedAssets.json';
+import { PdfExportError } from './pdfErrors';
 import { brandPdf } from './pdfBranding';
 import { preparePdfHtml, type PdfOrientation } from './pdfLayout';
 import { toByteArray } from 'base64-js';
 
-let logoPromise: Promise<string> | undefined;
-export function getPdfLogoBase64(): Promise<string> {
-  if (!logoPromise) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    logoPromise = readPdfAsset(require('../../assets/sea-miles-pdf-logo-source.png')).catch(
-      (error) => {
-        logoPromise = undefined;
-        throw error;
-      }
-    );
-  }
-  return logoPromise;
+export async function getPdfLogoBase64(): Promise<string> {
+  return assets.logo;
 }
 
 export async function printStandardPdf({
@@ -32,9 +23,10 @@ export async function printStandardPdf({
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  if (!session) throw new Error('Please sign in again before exporting.');
+  if (!session) throw new PdfExportError('Please sign in again before exporting.');
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 55_000);
+  let readingResponse = true;
   try {
     const [logo, response] = await Promise.all([
       getPdfLogoBase64(),
@@ -51,21 +43,36 @@ export async function printStandardPdf({
       }),
     ]);
     if (!response.ok) {
-      throw new Error(
+      throw new PdfExportError(
         response.status === 401 || response.status === 403
           ? 'Please sign in on an authorized device before exporting.'
-          : 'The PDF could not be generated. Please try again.'
+          : response.status === 429
+            ? 'The PDF service is busy. Please wait a few seconds and try again.'
+            : 'The PDF service is unavailable. Please try again shortly.'
       );
     }
     if (!response.headers.get('content-type')?.includes('application/pdf')) {
-      throw new Error('PDF export is not available on this website deployment yet.');
+      throw new PdfExportError('PDF export is not available on this website deployment yet.');
     }
     const source = new Uint8Array(await response.arrayBuffer());
+    readingResponse = false;
+    clearTimeout(timer);
     const branded = await brandPdf(source, title, logo, headerInContent);
     const bytes = toByteArray(branded);
     return {
       uri: URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: 'application/pdf' })),
     };
+  } catch (error) {
+    if (error instanceof PdfExportError) throw error;
+    if (controller.signal.aborted) {
+      throw new PdfExportError('PDF export took too long. Please try again.');
+    }
+    if (readingResponse && error instanceof TypeError) {
+      throw new PdfExportError(
+        'Could not connect to the PDF service. Check your connection and try again. If your browser shows a security warning, do not bypass it.'
+      );
+    }
+    throw error;
   } finally {
     clearTimeout(timer);
     controller.abort();

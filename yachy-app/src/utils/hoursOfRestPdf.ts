@@ -5,7 +5,7 @@
 
 import { sharePdfFile } from './sharePdfFile';
 import { getPdfLogoBase64, printStandardPdf } from './standardPdf';
-import { readPdfAsset } from './pdfAsset';
+import { getPdfSignatureFontBase64 } from './pdfSignatureFont';
 import { PdfMonthData } from '../services/restEntries';
 import { UserSignature } from '../services/signatures';
 
@@ -25,9 +25,7 @@ function formatDateDisplay(dateStr: string): string {
 // to the app's expo-font setup - the font file has to be read and
 // base64-embedded directly into this document's own @font-face.
 async function getAlexBrushFontBase64(): Promise<string> {
-  // Expo Asset resolves bundled font modules through Metro's numeric require ID.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return readPdfAsset(require('../../assets/fonts/AlexBrush-Regular.ttf'));
+  return getPdfSignatureFontBase64();
 }
 
 function buildSignatureBlock(sig: UserSignature | null | undefined, label: string): string {

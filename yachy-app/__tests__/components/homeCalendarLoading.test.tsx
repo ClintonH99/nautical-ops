@@ -1,4 +1,5 @@
 import React from 'react';
+import { ImageBackground, StyleSheet } from 'react-native';
 import { act, fireEvent, render } from '@testing-library/react-native';
 import type { CalendarProps } from 'react-native-calendars';
 import { HomeScreen } from '../../src/screens/HomeScreen';
@@ -94,6 +95,11 @@ it('shows trips without waiting for yard jobs, leave or colors', async () => {
   const ui = render(<HomeScreen navigation={{}} />);
   await act(async () => {});
   expect(ui.getByTestId('calendar')).toHaveTextContent('2026-09-27');
+  const banner = ui.getByTestId('home-vessel-banner');
+  expect(banner.props.resizeMode).toBe('cover');
+  const bannerStyle = StyleSheet.flatten(ui.UNSAFE_getByType(ImageBackground).props.style);
+  expect(bannerStyle).toMatchObject({ width: '100%', aspectRatio: 4 / 3 });
+  expect(bannerStyle.height).toBeUndefined();
   await act(async () => {
     finishYard([]);
     finishLeave([]);

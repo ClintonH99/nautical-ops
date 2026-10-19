@@ -17,6 +17,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import inventoryService, { InventoryItem } from '../services/inventory';
 import { Department } from '../types';
 import { exportInventoryToPdf } from '../utils/inventoryPdf';
+import { getPdfExportErrorMessage } from '../utils/pdfErrors';
 import {
   Button,
   Input,
@@ -118,7 +119,7 @@ export const InventoryScreen = ({ navigation }: any) => {
       setSelectedIds(new Set());
     } catch (e) {
       console.error('Export PDF error:', e);
-      Alert.alert('Error', 'Could not export PDF.');
+      Alert.alert('Error', getPdfExportErrorMessage(e));
     } finally {
       setExporting(false);
     }
