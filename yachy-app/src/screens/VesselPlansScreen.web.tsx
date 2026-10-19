@@ -23,6 +23,7 @@ import {
   paddleSandboxTrialsEnabled,
   startPaddleTrial,
   preparePaddleTrialPayment,
+  preparePaddlePaymentRecovery,
 } from '../services/paddleBilling';
 import {
   previewPaddlePrices,
@@ -283,6 +284,44 @@ export const VesselPlansScreen = () => {
       setBusy(false);
     }
   };
+  const recoverPayment = async () => {
+    if (
+      starting.current ||
+      !permitted ||
+      !user?.vesselId ||
+      !paddleSandboxTrialsEnabled ||
+      isLoading ||
+      subscription?.vesselId !== user.vesselId ||
+      subscription?.status !== 'past_due' ||
+      !['grace_period', 'payment_required'].includes(accessState)
+    )
+      return;
+    starting.current = true;
+    setBusy(true);
+    setPaymentNotice('');
+    const { id, vesselId } = user;
+    try {
+      const url = await preparePaddlePaymentRecovery(vesselId, window.location.origin);
+      const current = useAuthStore.getState().user;
+      if (current?.id !== id || current.vesselId !== vesselId) return;
+      const destination = new URL(url);
+      const transaction = destination.searchParams.get('_ptxn')!;
+      destination.searchParams.delete('_ptxn');
+      destination.searchParams.set('transaction', transaction);
+      // The existing checkout shows Paddle's actual outstanding amount.
+      // Only a verified webhook, never this redirect, can restore access.
+      window.location.assign(destination.href);
+    } catch (error) {
+      const current = useAuthStore.getState().user;
+      if (current?.id === id && current.vesselId === vesselId)
+        setPaymentNotice(
+          error instanceof Error ? error.message : 'Payment recovery could not be confirmed.'
+        );
+    } finally {
+      starting.current = false;
+      setBusy(false);
+    }
+  };
   const openBillingStep = () => {
     if (!confirmedTrial || !subscription) return;
     setTier(subscription.planTier);
@@ -461,7 +500,7 @@ export const VesselPlansScreen = () => {
           {notice}
         </Text>
       )}
-      {subscription && (
+      {subscription && subscription.status !== 'past_due' && (
         <Text style={muted}>
           {trialDays > 0
             ? paddleSandboxTrialsEnabled
@@ -571,6 +610,40 @@ export const VesselPlansScreen = () => {
                             onPress={openBillingStep}
                             disabled={busy || !confirmedTrial}
                           />
+                        </>
+                      )}
+                      {subscription.status === 'past_due' && (
+                        <>
+                          <Text style={muted}>
+                            {accessState === 'grace_period'
+                              ? subscription.gracePeriodEnd
+                                ? `Payment is overdue. Grace access ends ${new Date(subscription.gracePeriodEnd).toLocaleDateString()}.`
+                                : 'Payment is overdue. Please resolve it before grace access ends.'
+                              : 'Payment is overdue. Access returns after the payment is confirmed.'}{' '}
+                            Resolve the existing payment in Paddle; this will not create a second
+                            subscription.
+                          </Text>
+                          <Button
+                            title={busy ? 'Preparing…' : 'Resolve payment'}
+                            onPress={recoverPayment}
+                            disabled={
+                              busy ||
+                              isLoading ||
+                              !paddleSandboxTrialsEnabled ||
+                              subscription.vesselId !== user?.vesselId ||
+                              accessState === 'unavailable'
+                            }
+                          />
+                          {!paddleSandboxTrialsEnabled && (
+                            <Text style={muted}>
+                              Payment recovery is not enabled on this release. Contact support.
+                            </Text>
+                          )}
+                          {!!paymentNotice && (
+                            <Text accessibilityRole="alert" style={text}>
+                              {paymentNotice}
+                            </Text>
+                          )}
                         </>
                       )}
                     </View>

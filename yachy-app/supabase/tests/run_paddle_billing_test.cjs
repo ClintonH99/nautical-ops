@@ -39,6 +39,12 @@ const uuid = (n) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
       GRANT USAGE ON SCHEMA public,auth TO authenticated,anon,service_role;`);
     await db.exec(read('supabase/migrations/20261002100000_PADDLE_WEB_BILLING_FOUNDATION.sql'));
     await db.exec(read('supabase/migrations/20261007150000_PADDLE_CARDLESS_TRIAL_RESERVATION.sql'));
+    await db.exec(read('supabase/migrations/20261019120000_PADDLE_PAYMENT_RECOVERY.sql'));
+    await db.exec(
+      read('supabase/migrations/20260903152000_SERVER_SIDE_ACCESS_ENFORCEMENT.sql').split(
+        'CREATE OR REPLACE FUNCTION public.current_user_can_access_vessel'
+      )[0]
+    );
     await db.exec(`INSERT INTO vessels(id,name,invite_code) VALUES('${uuid(1)}','A','A'),('${uuid(2)}','B','B');
       INSERT INTO users(id,vessel_id,role) VALUES('${uuid(10)}','${uuid(1)}','CAPTAIN_MOV'),('${uuid(11)}','${uuid(1)}','HOD'),('${uuid(12)}','${uuid(1)}','CREW'),('${uuid(13)}','${uuid(2)}','CAPTAIN_MOV');`);
     const reserve = (user = 10, tier = '1_5') =>
@@ -133,8 +139,49 @@ const uuid = (n) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
       status: 'past_due',
       period_start: '2030-02-01T00:00:00Z',
       period_end: '2030-03-01T00:00:00Z',
+      paid_history_verified: true,
+      previously_paid: true,
     };
+    await rejects(
+      () => apply({ ...overdue, paid_history_verified: false }),
+      /Verified payment history/
+    );
+    equal((await row()).status, 'active');
     await apply(overdue);
+    equal(new Date((await row()).grace_period_end).toISOString(), '2030-02-17T00:00:00.000Z');
+    const recovery = (user = 10) =>
+      asUser(user, () => db.query('SELECT get_paddle_recovery_billing($1) AS billing', [uuid(1)]));
+    equal((await recovery()).rows[0].billing.subscription_id, 'sub_1');
+    equal(
+      (await db.query('SELECT vessel_subscription_allows_access($1) AS allowed', [uuid(1)])).rows[0]
+        .allowed,
+      true
+    );
+    await db.query(
+      "UPDATE vessel_subscriptions SET grace_period_end=now()-INTERVAL '1 second' WHERE vessel_id=$1",
+      [uuid(1)]
+    );
+    equal(
+      (await db.query('SELECT vessel_subscription_allows_access($1) AS allowed', [uuid(1)])).rows[0]
+        .allowed,
+      false
+    );
+    equal((await recovery()).rows[0].billing.subscription_id, 'sub_1');
+    await db.query(
+      "UPDATE vessel_subscriptions SET grace_period_end='2030-02-17T00:00:00Z' WHERE vessel_id=$1",
+      [uuid(1)]
+    );
+    for (const user of [11, 12, 13]) await rejects(() => recovery(user), /Captain/);
+    await db.exec("SELECT set_config('test.device_allowed','no',false)");
+    await rejects(() => recovery(), /registered device/);
+    await db.exec("SELECT set_config('test.device_allowed','yes',false)");
+    // Old failures must never restart the grace clock, even with a later period.
+    await apply({
+      ...overdue,
+      event_id: 'evt_due_later',
+      occurred_at: '2030-02-05T01:00:00Z',
+      period_start: '2030-02-04T00:00:00Z',
+    });
     equal(new Date((await row()).grace_period_end).toISOString(), '2030-02-17T00:00:00.000Z');
     await apply({ ...overdue, event_id: 'evt_due_repeat', occurred_at: '2030-02-05T00:00:00Z' });
     equal(new Date((await row()).grace_period_end).toISOString(), '2030-02-17T00:00:00.000Z');
@@ -147,8 +194,10 @@ const uuid = (n) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
       period_end: null,
     });
     equal((await row()).status, 'revoked');
+    await rejects(() => recovery(), /past-due/);
     await apply({ ...base, event_id: 'evt_recovered', occurred_at: '2030-02-07T00:00:00Z' });
     equal((await row()).grace_period_end, null);
+    await rejects(() => recovery(), /past-due/);
     // A failed entitlement write must roll back event deduplication and link state.
     await db.exec(`CREATE FUNCTION fail_test() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'simulated failure'; END $$;
       CREATE TRIGGER fail_test BEFORE UPDATE ON vessel_subscriptions FOR EACH ROW EXECUTE FUNCTION fail_test();`);
@@ -198,6 +247,25 @@ const uuid = (n) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
     equal((await lookup()).rows[0].billing.subscription_id, 'sub_trial');
     await rejects(() => lookup(10), /Captain/);
     await rejects(() => trial(), /second trial/);
+    await apply({
+      ...base,
+      event_id: 'evt_trial_due',
+      occurred_at: '2099-01-31T00:00:00Z',
+      subscription_id: 'sub_trial',
+      checkout_id: trialIntent.id,
+      transaction_id: 'txn_trial',
+      status: 'past_due',
+      period_start: '2099-01-31T00:00:00Z',
+      period_end: '2099-02-28T00:00:00Z',
+      paid_history_verified: true,
+      previously_paid: false,
+    });
+    const trialRow = (
+      await db.query('SELECT * FROM vessel_subscriptions WHERE vessel_id=$1', [uuid(3)])
+    ).rows[0];
+    equal(new Date(trialRow.grace_period_end).toISOString(), '2099-01-31T00:00:00.000Z');
+    // Explicit end, not NULL: NULL would incorrectly activate legacy grace.
+    equal(trialRow.status, 'past_due');
     await db.exec(`UPDATE vessel_subscriptions SET status='canceled' WHERE vessel_id='${uuid(3)}'`);
     await rejects(() => lookup(), /confirmed/);
     await rejects(() => trial(), /second trial/);

@@ -29,6 +29,19 @@ function row(overrides: Record<string, unknown> = {}) {
 }
 
 describe('resolveSubscriptionAccess', () => {
+  it('does not give a first failed Paddle payment legacy grace or future paid access', () => {
+    expect(
+      resolveSubscriptionAccess(
+        row({
+          payment_provider: 'paddle',
+          status: 'past_due',
+          current_period_end: '2026-10-01T00:00:00Z',
+          grace_period_end: '2026-09-01T00:00:00Z',
+        }),
+        NOW
+      ).state
+    ).toBe('payment_required');
+  });
   it('does not restrict a vessel that has never subscribed', () => {
     expect(resolveSubscriptionAccess(null, NOW).state).toBe('never_subscribed');
   });

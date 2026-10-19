@@ -120,6 +120,11 @@ export function planForPrice(prices, id) {
   throw new BillingError('Unrecognised subscription price', 422);
 }
 export async function paddleRequest(config, path, options = {}, fetcher = fetch) {
+  return (await paddleResponse(config, path, options, fetcher)).data;
+}
+// List callers need pagination metadata to distinguish no history from an
+// incomplete lookup. Never treat a provider failure as an unpaid customer.
+export async function paddleResponse(config, path, options = {}, fetcher = fetch) {
   const response = await fetcher(`${config.base}${path}`, {
     ...options,
     headers: { Authorization: `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' },
@@ -149,7 +154,7 @@ export async function paddleRequest(config, path, options = {}, fetcher = fetch)
   }
   const json = await response.json();
   if (!json.data) throw new BillingError('Incomplete billing response', 502);
-  return json.data;
+  return json;
 }
 export async function verifyPaddleSignature(raw, header, secret, now = Date.now()) {
   if (!secret || !header) return false;

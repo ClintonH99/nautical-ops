@@ -69,6 +69,22 @@ export async function preparePaddleTrialPayment(
   return validatedCheckoutUrl(data, origin);
 }
 
+export async function preparePaddlePaymentRecovery(
+  vesselId: string,
+  origin: string
+): Promise<string> {
+  if (!paddleSandboxTrialsEnabled)
+    throw new Error('Sandbox payment recovery is not yet available.');
+  const { data, error } = await supabase.functions.invoke('prepare-paddle-payment-recovery', {
+    body: { vesselId },
+  });
+  if (error || data?.environment !== 'sandbox' || data?.purpose !== 'payment_recovery')
+    throw new Error(
+      'Payment recovery could not be confirmed. Refresh Plan Status before trying again. If this continues, contact support.'
+    );
+  return validatedCheckoutUrl(data, origin);
+}
+
 export function validatedCheckoutUrl(data: unknown, origin: string): string {
   if (!data || typeof data !== 'object')
     throw new Error('The payment link could not be verified. Please contact support.');

@@ -11,6 +11,7 @@ const mockPreview = jest.fn();
 const mockNavigate = jest.fn();
 const mockStartTrial = jest.fn();
 const mockPreparePayment = jest.fn();
+const mockRecoverPayment = jest.fn();
 let mockSandboxTrials = false;
 let mockAccessState: string | null = null;
 const mockFocusListeners = new Set<() => void>();
@@ -54,6 +55,7 @@ jest.mock('../../src/services/paddleBilling', () => ({
   },
   startPaddleTrial: (...args: any[]) => mockStartTrial(...args),
   preparePaddleTrialPayment: (...args: any[]) => mockPreparePayment(...args),
+  preparePaddlePaymentRecovery: (...args: any[]) => mockRecoverPayment(...args),
 }));
 jest.mock('../../src/services/paddlePricing', () => ({
   previewPaddlePrices: (...args: any[]) => mockPreview(...args),
@@ -128,6 +130,7 @@ beforeEach(() => {
   mockNavigate.mockReset();
   mockStartTrial.mockReset().mockResolvedValue(undefined);
   mockPreparePayment.mockReset();
+  mockRecoverPayment.mockReset();
   mockSandboxTrials = false;
   mockAccessState = null;
   mockUser = { id: 'captain', role: 'CAPTAIN_MOV', vesselId: 'vessel' };
@@ -149,6 +152,89 @@ const choose = (screen: any, name = 'France') => {
   fireEvent.press(screen.getByLabelText('Change billing country'));
   fireEvent.press(screen.getByText('Choose ' + name));
 };
+test('past-due recovery opens the existing payment once, without trial creation or local activation', async () => {
+  mockSandboxTrials = true;
+  mockAccessState = 'payment_required';
+  mockSubscription = {
+    vesselId: 'vessel',
+    status: 'past_due',
+    planTier: '1_5',
+    billingPeriod: 'monthly',
+    currentPeriodEnd: '2030-03-01',
+  };
+  let complete: (url: string) => void = () => {};
+  mockRecoverPayment.mockImplementation(
+    () =>
+      new Promise<string>((resolve) => {
+        complete = resolve;
+      })
+  );
+  const oldLocation = window.location;
+  const assign = jest.fn();
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: { origin: 'https://nautical-ops.com', assign },
+  });
+  try {
+    const screen = render(<VesselPlansScreen />);
+    fireEvent.press(screen.getByText('Resolve payment'));
+    fireEvent.press(screen.getByText('Preparing…'));
+    expect(mockRecoverPayment).toHaveBeenCalledTimes(1);
+    const transaction = 'txn_' + '1'.repeat(26);
+    await act(async () => complete(`https://nautical-ops.com/checkout?_ptxn=${transaction}`));
+    expect(assign).toHaveBeenCalledWith(
+      `https://nautical-ops.com/checkout?transaction=${transaction}`
+    );
+    expect(mockStartTrial).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  } finally {
+    Object.defineProperty(window, 'location', { configurable: true, value: oldLocation });
+  }
+});
+test('recovery is disabled for unknown entitlement and wrong-vessel state; errors remain visible', async () => {
+  mockSandboxTrials = true;
+  mockAccessState = 'unavailable';
+  mockSubscription = {
+    vesselId: 'vessel',
+    status: 'past_due',
+    planTier: '1_5',
+    billingPeriod: 'monthly',
+    currentPeriodEnd: '2030-03-01',
+  };
+  const screen = render(<VesselPlansScreen />);
+  fireEvent.press(screen.getByText('Resolve payment'));
+  expect(mockRecoverPayment).not.toHaveBeenCalled();
+  mockAccessState = 'payment_required';
+  mockSubscription.vesselId = 'other';
+  screen.rerender(<VesselPlansScreen />);
+  fireEvent.press(screen.getByText('Resolve payment'));
+  expect(mockRecoverPayment).not.toHaveBeenCalled();
+  mockSubscription.vesselId = 'vessel';
+  screen.rerender(<VesselPlansScreen />);
+  const oldLocation = window.location;
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: { origin: 'https://nautical-ops.com' },
+  });
+  try {
+    mockRecoverPayment.mockRejectedValue(new Error('Refresh Plan Status before retrying.'));
+    fireEvent.press(screen.getByText('Resolve payment'));
+    await waitFor(() =>
+      expect(screen.getByText('Refresh Plan Status before retrying.')).toBeTruthy()
+    );
+  } finally {
+    Object.defineProperty(window, 'location', { configurable: true, value: oldLocation });
+  }
+});
+test.each(['CREW', 'HOD'])('payment recovery is never offered to %s', (role) => {
+  mockUser.role = role;
+  mockSandboxTrials = true;
+  mockAccessState = 'payment_required';
+  mockSubscription = { vesselId: 'vessel', status: 'past_due' };
+  const screen = render(<VesselPlansScreen />);
+  expect(screen.queryByText('Resolve payment')).toBeNull();
+  expect(mockRecoverPayment).not.toHaveBeenCalled();
+});
 test('shows exact worldwide base totals before country selection, never as final tax-inclusive prices', () => {
   const screen = render(<VesselPlansScreen />);
   fireEvent.press(screen.getByText('Yearly'));

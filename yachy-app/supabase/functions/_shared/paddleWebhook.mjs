@@ -1,7 +1,8 @@
 import { BillingError, paddleConfig, subscriptionEvent, verifyPaddleSignature } from './paddle.mjs';
+import { previouslyPaid } from './paddlePaidHistory.mjs';
 
 // Deploy with JWT verification disabled ONLY for this signed provider endpoint.
-export function createPaddleWebhookHandler({ getEnv, createClient }) {
+export function createPaddleWebhookHandler({ getEnv, createClient, fetcher = fetch }) {
   return async (request) => {
     if (request.method !== 'POST') return new Response(null, { status: 405 });
     try {
@@ -18,6 +19,10 @@ export function createPaddleWebhookHandler({ getEnv, createClient }) {
       const config = paddleConfig(getEnv);
       const event = subscriptionEvent(JSON.parse(raw), config);
       if (!event) return Response.json({ ignored: true });
+      if (event.status === 'past_due') {
+        event.previously_paid = await previouslyPaid(config, event, fetcher);
+        event.paid_history_verified = true;
+      }
       const admin = createClient(getEnv('SUPABASE_URL'), getEnv('SUPABASE_SERVICE_ROLE_KEY'));
       const { error } = await admin.rpc('apply_paddle_subscription_event', { p_event: event });
       // Do not acknowledge a failed database write: Paddle must retry it.

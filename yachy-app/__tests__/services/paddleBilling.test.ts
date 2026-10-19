@@ -7,8 +7,13 @@ jest.mock('../../src/services/supabase', () => ({
 import { supabase } from '../../src/services/supabase';
 type BillingModule = typeof import('../../src/services/paddleBilling');
 // Load after environment setup; static imports are hoisted by this Jest preset.
-const { preparePaddleCheckout, validatedCheckoutUrl, startPaddleTrial, preparePaddleTrialPayment } =
-  jest.requireActual<BillingModule>('../../src/services/paddleBilling');
+const {
+  preparePaddleCheckout,
+  validatedCheckoutUrl,
+  startPaddleTrial,
+  preparePaddleTrialPayment,
+  preparePaddlePaymentRecovery,
+} = jest.requireActual<BillingModule>('../../src/services/paddleBilling');
 
 const transactionId = `txn_${'1'.repeat(26)}`;
 const response = {
@@ -18,6 +23,32 @@ const response = {
 };
 const invoke = supabase.functions.invoke as jest.Mock;
 beforeEach(() => jest.clearAllMocks());
+test('payment recovery sends only vessel identity and requires a verified sandbox recovery transaction', async () => {
+  invoke.mockResolvedValue({ data: { ...response, purpose: 'payment_recovery' }, error: null });
+  await expect(
+    preparePaddlePaymentRecovery('vessel', 'https://www.nautical-ops.com')
+  ).resolves.toBe(response.url);
+  expect(invoke).toHaveBeenCalledWith('prepare-paddle-payment-recovery', {
+    body: { vesselId: 'vessel' },
+  });
+  for (const patch of [
+    { purpose: 'trial_payment_method' },
+    { environment: 'live' },
+    { url: 'https://evil.example/checkout' },
+  ]) {
+    invoke.mockResolvedValue({
+      data: { ...response, purpose: 'payment_recovery', ...patch },
+      error: null,
+    });
+    await expect(
+      preparePaddlePaymentRecovery('vessel', 'https://www.nautical-ops.com')
+    ).rejects.toThrow();
+  }
+  invoke.mockResolvedValue({ data: null, error: { message: 'private diagnostics' } });
+  await expect(
+    preparePaddlePaymentRecovery('vessel', 'https://www.nautical-ops.com')
+  ).rejects.toThrow(/Refresh Plan Status/);
+});
 test('explains an unapproved sandbox account without exposing arbitrary server errors', async () => {
   const failure = (status: number, error: string) => ({
     data: null,
