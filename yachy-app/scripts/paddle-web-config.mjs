@@ -1,5 +1,10 @@
 // Public Paddle.js configuration only. API keys and webhook secrets never belong here.
 export function publicPaddleConfig(env) {
+  if (
+    env.EXPO_PUBLIC_PADDLE_ENV === 'live' &&
+    env.EXPO_PUBLIC_PADDLE_LIVE_BILLING_ENABLED !== 'true'
+  )
+    return { enabled: false };
   const sandboxTrial =
     env.EXPO_PUBLIC_PADDLE_ENV === 'sandbox' &&
     env.EXPO_PUBLIC_PADDLE_SANDBOX_TRIAL_ENABLED === 'true';

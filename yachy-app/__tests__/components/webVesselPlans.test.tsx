@@ -12,6 +12,11 @@ const mockNavigate = jest.fn();
 const mockStartTrial = jest.fn();
 const mockPreparePayment = jest.fn();
 const mockRecoverPayment = jest.fn();
+const mockManagementStatus = jest.fn();
+const mockCancelRenewal = jest.fn();
+const mockKeepSubscription = jest.fn();
+const mockPaymentMethod = jest.fn();
+let mockManagementEnabled = false;
 let mockSandboxTrials = false;
 let mockAccessState: string | null = null;
 const mockFocusListeners = new Set<() => void>();
@@ -50,9 +55,16 @@ jest.mock('../../src/services/paddleBilling', () => ({
   paddleCheckoutEnabled: false,
   paddleEnvironment: 'sandbox',
   preparePaddleCheckout: jest.fn(),
-  get paddleSandboxTrialsEnabled() {
+  get paddleBillingEnabled() {
     return mockSandboxTrials;
   },
+  get paddleManagementEnabled() {
+    return mockManagementEnabled;
+  },
+  getPaddleManagementStatus: (...args: any[]) => mockManagementStatus(...args),
+  cancelPaddleRenewal: (...args: any[]) => mockCancelRenewal(...args),
+  keepPaddleSubscription: (...args: any[]) => mockKeepSubscription(...args),
+  preparePaddlePaymentMethod: (...args: any[]) => mockPaymentMethod(...args),
   startPaddleTrial: (...args: any[]) => mockStartTrial(...args),
   preparePaddleTrialPayment: (...args: any[]) => mockPreparePayment(...args),
   preparePaddlePaymentRecovery: (...args: any[]) => mockRecoverPayment(...args),
@@ -132,6 +144,11 @@ beforeEach(() => {
   mockStartTrial.mockReset().mockResolvedValue(undefined);
   mockPreparePayment.mockReset();
   mockRecoverPayment.mockReset();
+  mockManagementStatus.mockReset();
+  mockCancelRenewal.mockReset();
+  mockKeepSubscription.mockReset();
+  mockPaymentMethod.mockReset();
+  mockManagementEnabled = false;
   mockSandboxTrials = false;
   mockAccessState = null;
   mockUser = { id: 'captain', role: 'CAPTAIN_MOV', vesselId: 'vessel' };
@@ -140,6 +157,265 @@ beforeEach(() => {
   mockPreview
     .mockReset()
     .mockImplementation((_v, p, l) => Promise.resolve(result(p, l.countryCode)));
+});
+test('management is opt-in and cancellation needs a provider date and explicit second confirmation', async () => {
+  mockSubscription = {
+    vesselId: 'vessel',
+    status: 'active',
+    planTier: '1_5',
+    billingPeriod: 'monthly',
+    currentPeriodEnd: '2030-03-01T00:00:00.000Z',
+  };
+  const screen = render(<VesselPlansScreen />);
+  expect(screen.queryByText('Manage Subscription')).toBeNull();
+  mockManagementEnabled = true;
+  screen.rerender(<VesselPlansScreen />);
+  mockManagementStatus.mockResolvedValue({
+    status: 'active',
+    periodEnd: '2030-03-01T00:00:00.000Z',
+    cancellationScheduled: false,
+  });
+  fireEvent.press(screen.getByText('Manage Subscription'));
+  await waitFor(() => expect(screen.getByText('Cancel Renewal')).toBeTruthy());
+  expect(mockCancelRenewal).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByText('Cancel Renewal'));
+  expect(screen.getByText(/Any overdue payment remains due/)).toBeTruthy();
+  expect(mockCancelRenewal).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByText('Keep Subscription'));
+  expect(screen.queryByText('Confirm Cancellation')).toBeNull();
+  fireEvent.press(screen.getByText('Cancel Renewal'));
+  mockCancelRenewal.mockResolvedValue(undefined);
+  fireEvent.press(screen.getByText('Confirm Cancellation'));
+  await waitFor(() => expect(screen.getByText(/Cancellation requested/)).toBeTruthy());
+  expect(mockCancelRenewal).toHaveBeenCalledTimes(1);
+  expect(mockCancelRenewal).toHaveBeenCalledWith('vessel', '2030-03-01T00:00:00.000Z');
+  expect(mockNavigate).not.toHaveBeenCalled();
+  expect(mockStartTrial).not.toHaveBeenCalled();
+});
+test('confirmed cancellation replaces management with a persistent status and access-end date', () => {
+  mockManagementEnabled = true;
+  mockSubscription = {
+    vesselId: 'vessel',
+    status: 'canceled',
+    planTier: '1_5',
+    billingPeriod: 'monthly',
+    currentPeriodEnd: '2030-03-01T08:40:00.000Z',
+  };
+  const screen = render(<VesselPlansScreen />);
+  expect(screen.getByText('Renewal cancelled')).toBeTruthy();
+  expect(screen.getByText(/Access ends .*2030/)).toBeTruthy();
+  expect(screen.queryByText('Manage Subscription')).toBeNull();
+  expect(screen.queryByText('Cancel Renewal')).toBeNull();
+  expect(screen.queryByText('Update Payment Method')).toBeNull();
+  expect(screen.getByText('Refresh Plan Status')).toBeTruthy();
+  expect(mockManagementStatus).not.toHaveBeenCalled();
+});
+test('provider-confirmed scheduled cancellation replaces management before the webhook refresh', async () => {
+  mockManagementEnabled = true;
+  mockSubscription = {
+    vesselId: 'vessel',
+    status: 'active',
+    planTier: '1_5',
+    billingPeriod: 'monthly',
+    currentPeriodEnd: '2030-03-01T08:40:00.000Z',
+  };
+  mockManagementStatus.mockResolvedValue({
+    status: 'active',
+    periodEnd: mockSubscription.currentPeriodEnd,
+    cancellationScheduled: true,
+  });
+  const screen = render(<VesselPlansScreen />);
+  fireEvent.press(screen.getByText('Manage Subscription'));
+  await waitFor(() => expect(screen.getByText('Renewal cancelled')).toBeTruthy());
+  expect(screen.queryByText('Manage Subscription')).toBeNull();
+  expect(screen.queryByText('Cancel Renewal')).toBeNull();
+  expect(mockCancelRenewal).not.toHaveBeenCalled();
+});
+test('expired cancelled subscriptions do not promise continuing access', () => {
+  mockManagementEnabled = true;
+  mockSubscription = {
+    vesselId: 'vessel',
+    status: 'canceled',
+    planTier: '1_5',
+    billingPeriod: 'monthly',
+    currentPeriodEnd: '2020-03-01T08:40:00.000Z',
+  };
+  mockAccessState = 'payment_required';
+  const screen = render(<VesselPlansScreen />);
+  expect(screen.getByText(/Access ended .*2020/)).toBeTruthy();
+  expect(screen.queryByText('Manage Subscription')).toBeNull();
+  expect(screen.queryByText('Keep Subscription')).toBeNull();
+});
+test('keeping a cancelled renewal requires a fresh provider check and separate confirmation', async () => {
+  mockManagementEnabled = true;
+  mockSubscription = {
+    vesselId: 'vessel',
+    status: 'canceled',
+    planTier: '1_5',
+    billingPeriod: 'monthly',
+    currentPeriodEnd: '2030-03-01T08:40:00.000Z',
+  };
+  mockManagementStatus.mockResolvedValue({
+    status: 'active',
+    periodEnd: mockSubscription.currentPeriodEnd,
+    cancellationScheduled: true,
+  });
+  let complete: () => void = () => {};
+  mockKeepSubscription.mockImplementation(
+    () =>
+      new Promise<void>((resolve) => {
+        complete = resolve;
+      })
+  );
+  const screen = render(<VesselPlansScreen />);
+  fireEvent.press(screen.getByText('Keep Subscription'));
+  await waitFor(() => expect(screen.getByText('Confirm Renewal')).toBeTruthy());
+  expect(mockKeepSubscription).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByText('Leave Cancelled'));
+  expect(screen.queryByText('Confirm Renewal')).toBeNull();
+  expect(mockKeepSubscription).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByText('Keep Subscription'));
+  await waitFor(() => expect(screen.getByText('Confirm Renewal')).toBeTruthy());
+  const confirm = screen.getByText('Confirm Renewal');
+  fireEvent.press(confirm);
+  fireEvent.press(confirm);
+  expect(mockKeepSubscription).toHaveBeenCalledTimes(1);
+  expect(mockKeepSubscription).toHaveBeenCalledWith('vessel', mockSubscription.currentPeriodEnd);
+  await act(async () => complete());
+  expect(screen.getByText(/Renewal restoration requested/)).toBeTruthy();
+  // API success alone must not mark the database subscription active.
+  expect(screen.getByText('Renewal cancelled')).toBeTruthy();
+  expect(mockStartTrial).not.toHaveBeenCalled();
+});
+test('a failed keep request stays cancelled and requires another explicit attempt', async () => {
+  mockManagementEnabled = true;
+  mockSubscription = {
+    vesselId: 'vessel',
+    status: 'canceled',
+    planTier: '1_5',
+    billingPeriod: 'monthly',
+    currentPeriodEnd: '2030-03-01T08:40:00.000Z',
+  };
+  mockManagementStatus.mockResolvedValue({
+    status: 'active',
+    periodEnd: mockSubscription.currentPeriodEnd,
+    cancellationScheduled: true,
+  });
+  mockKeepSubscription.mockRejectedValue(new Error('timeout'));
+  const screen = render(<VesselPlansScreen />);
+  fireEvent.press(screen.getByText('Keep Subscription'));
+  await waitFor(() => expect(screen.getByText('Confirm Renewal')).toBeTruthy());
+  fireEvent.press(screen.getByText('Confirm Renewal'));
+  await waitFor(() =>
+    expect(screen.getByText(/Subscription action could not be confirmed/)).toBeTruthy()
+  );
+  expect(screen.queryByText('Confirm Renewal')).toBeNull();
+  expect(screen.getByText('Renewal cancelled')).toBeTruthy();
+  expect(mockKeepSubscription).toHaveBeenCalledTimes(1);
+});
+test.each(['CREW', 'HOD'])('%s cannot reinstate a cancelled renewal', (role) => {
+  mockManagementEnabled = true;
+  mockUser = { id: 'crew', role, vesselId: 'vessel' };
+  mockSubscription = {
+    vesselId: 'vessel',
+    status: 'canceled',
+    planTier: '1_5',
+    billingPeriod: 'monthly',
+    currentPeriodEnd: '2030-03-01T08:40:00.000Z',
+  };
+  const screen = render(<VesselPlansScreen />);
+  expect(screen.queryByText('Keep Subscription')).toBeNull();
+  expect(mockManagementStatus).not.toHaveBeenCalled();
+  expect(mockKeepSubscription).not.toHaveBeenCalled();
+});
+test('management responses from a previous vessel cannot display or cancel its subscription', async () => {
+  mockManagementEnabled = true;
+  mockSubscription = {
+    vesselId: 'vessel',
+    status: 'active',
+    planTier: '1_5',
+    billingPeriod: 'monthly',
+    currentPeriodEnd: '2030-03-01',
+  };
+  let resolve: (value: any) => void = () => {};
+  mockManagementStatus.mockImplementation(
+    () =>
+      new Promise((r) => {
+        resolve = r;
+      })
+  );
+  const screen = render(<VesselPlansScreen />);
+  fireEvent.press(screen.getByText('Manage Subscription'));
+  mockUser = { id: 'other', role: 'CAPTAIN_MOV', vesselId: 'other-vessel' };
+  screen.rerender(<VesselPlansScreen />);
+  await act(async () =>
+    resolve({ status: 'active', periodEnd: '2030-03-01', cancellationScheduled: false })
+  );
+  expect(screen.queryByText('Cancel Renewal')).toBeNull();
+  expect(mockCancelRenewal).not.toHaveBeenCalled();
+});
+test('management failures do not automatically retry or claim cancellation succeeded', async () => {
+  mockManagementEnabled = true;
+  mockSubscription = {
+    vesselId: 'vessel',
+    status: 'active',
+    planTier: '1_5',
+    billingPeriod: 'monthly',
+    currentPeriodEnd: '2030-03-01',
+  };
+  mockManagementStatus.mockRejectedValue(new Error('provider unavailable'));
+  const screen = render(<VesselPlansScreen />);
+  fireEvent.press(screen.getByText('Manage Subscription'));
+  await waitFor(() =>
+    expect(screen.getByText(/Subscription action could not be confirmed/)).toBeTruthy()
+  );
+  expect(mockManagementStatus).toHaveBeenCalledTimes(1);
+  expect(screen.queryByText('Cancel Renewal')).toBeNull();
+});
+test('active payment-method updates use the existing branded checkout and suppress duplicate clicks', async () => {
+  mockManagementEnabled = true;
+  mockSubscription = {
+    vesselId: 'vessel',
+    status: 'active',
+    planTier: '1_5',
+    billingPeriod: 'monthly',
+    currentPeriodEnd: '2030-03-01',
+  };
+  mockManagementStatus.mockResolvedValue({
+    status: 'active',
+    periodEnd: '2030-03-01',
+    cancellationScheduled: false,
+  });
+  let complete: (url: string) => void = () => {};
+  mockPaymentMethod.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        complete = resolve;
+      })
+  );
+  const oldLocation = window.location;
+  const assign = jest.fn();
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: { origin: 'https://nautical-ops.com', assign },
+  });
+  try {
+    const screen = render(<VesselPlansScreen />);
+    fireEvent.press(screen.getByText('Manage Subscription'));
+    await waitFor(() => expect(screen.getByText('Update Payment Method')).toBeTruthy());
+    fireEvent.press(screen.getByText('Update Payment Method'));
+    fireEvent.press(screen.getByText('Update Payment Method'));
+    expect(mockPaymentMethod).toHaveBeenCalledTimes(1);
+    const transaction = 'txn_' + '1'.repeat(26);
+    await act(async () => complete('https://nautical-ops.com/checkout?_ptxn=' + transaction));
+    expect(assign).toHaveBeenCalledWith(
+      'https://nautical-ops.com/checkout?transaction=' + transaction + '&flow=payment-method'
+    );
+    expect(mockStartTrial).not.toHaveBeenCalled();
+    expect(mockCancelRenewal).not.toHaveBeenCalled();
+  } finally {
+    Object.defineProperty(window, 'location', { configurable: true, value: oldLocation });
+  }
 });
 test('refreshes billing on browser focus and removes its listener on unmount', () => {
   const screen = render(<VesselPlansScreen />);
@@ -416,7 +692,7 @@ test('payment setup opens only the existing trial transaction and double taps do
     const transaction = 'txn_' + '1'.repeat(26);
     await act(async () => resolvePayment('https://nautical-ops.com/checkout?_ptxn=' + transaction));
     expect(assign).toHaveBeenCalledWith(
-      'https://nautical-ops.com/checkout?transaction=' + transaction
+      'https://nautical-ops.com/checkout?transaction=' + transaction + '&flow=payment-method'
     );
     expect(mockStartTrial).not.toHaveBeenCalled();
     const [key, value] = setItem.mock.calls[0];

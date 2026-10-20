@@ -17,6 +17,9 @@ export function createPaddleCheckoutHandler({ getEnv, createClient, fetcher = fe
     try {
       if (getEnv('PADDLE_CHECKOUT_ENABLED') !== 'true')
         throw new BillingError('Payments are not yet available', 503);
+      // The legacy endpoint must not bypass the new live kill switch.
+      if (getEnv('PADDLE_ENV') === 'live' && getEnv('PADDLE_LIVE_BILLING_ENABLED') !== 'true')
+        throw new BillingError('Live payments are not enabled', 503);
       const config = paddleConfig(getEnv);
       const page = checkoutPage(getEnv);
       const authorization = request.headers.get('authorization');

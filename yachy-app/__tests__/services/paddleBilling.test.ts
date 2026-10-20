@@ -1,6 +1,7 @@
 process.env.EXPO_PUBLIC_PADDLE_CHECKOUT_ENABLED = 'true';
 process.env.EXPO_PUBLIC_PADDLE_ENV = 'sandbox';
 process.env.EXPO_PUBLIC_PADDLE_SANDBOX_TRIAL_ENABLED = 'true';
+process.env.EXPO_PUBLIC_PADDLE_SUBSCRIPTION_MANAGEMENT_ENABLED = 'true';
 jest.mock('../../src/services/supabase', () => ({
   supabase: { functions: { invoke: jest.fn() } },
 }));
@@ -13,6 +14,10 @@ const {
   startPaddleTrial,
   preparePaddleTrialPayment,
   preparePaddlePaymentRecovery,
+  getPaddleManagementStatus,
+  cancelPaddleRenewal,
+  keepPaddleSubscription,
+  preparePaddlePaymentMethod,
 } = jest.requireActual<BillingModule>('../../src/services/paddleBilling');
 
 const transactionId = `txn_${'1'.repeat(26)}`;
@@ -23,6 +28,74 @@ const response = {
 };
 const invoke = supabase.functions.invoke as jest.Mock;
 beforeEach(() => jest.clearAllMocks());
+test('keeping a subscription requires an environment-matched confirmation of the same renewal date', async () => {
+  const periodEnd = '2030-03-01T00:00:00.000Z';
+  invoke.mockResolvedValue({
+    data: { environment: 'sandbox', state: 'pending_confirmation', periodEnd },
+  });
+  await keepPaddleSubscription('vessel', periodEnd);
+  expect(invoke).toHaveBeenLastCalledWith('manage-paddle-subscription', {
+    body: { vesselId: 'vessel', action: 'keep_subscription', confirm: true, periodEnd },
+  });
+  for (const data of [
+    { environment: 'live', state: 'pending_confirmation', periodEnd },
+    { environment: 'sandbox', state: 'active', periodEnd },
+    { environment: 'sandbox', state: 'pending_confirmation', periodEnd: '2031-01-01' },
+  ]) {
+    invoke.mockResolvedValue({ data });
+    await expect(keepPaddleSubscription('vessel', periodEnd)).rejects.toThrow();
+  }
+});
+test('management only sends vessel and confirmed date, and does not accept unverified responses', async () => {
+  const periodEnd = '2030-03-01T00:00:00.000Z';
+  invoke.mockResolvedValue({
+    data: { environment: 'sandbox', status: 'active', periodEnd, cancellationScheduled: false },
+  });
+  await expect(getPaddleManagementStatus('vessel')).resolves.toMatchObject({ periodEnd });
+  expect(invoke).toHaveBeenLastCalledWith('manage-paddle-subscription', {
+    body: { vesselId: 'vessel', action: 'status' },
+  });
+  invoke.mockResolvedValue({
+    data: { environment: 'sandbox', state: 'pending_confirmation', periodEnd },
+  });
+  await cancelPaddleRenewal('vessel', periodEnd);
+  expect(invoke).toHaveBeenLastCalledWith('manage-paddle-subscription', {
+    body: { vesselId: 'vessel', action: 'cancel_renewal', confirm: true, periodEnd },
+  });
+  invoke.mockResolvedValue({ data: { ...response, purpose: 'payment_method' } });
+  await expect(preparePaddlePaymentMethod('vessel', 'https://www.nautical-ops.com')).resolves.toBe(
+    response.url
+  );
+  invoke.mockResolvedValue({ data: { ...response, purpose: 'payment_recovery' } });
+  await expect(
+    preparePaddlePaymentMethod('vessel', 'https://www.nautical-ops.com')
+  ).rejects.toThrow();
+  invoke.mockResolvedValue({
+    data: { environment: 'live', state: 'pending_confirmation', periodEnd },
+  });
+  await expect(cancelPaddleRenewal('vessel', periodEnd)).rejects.toThrow();
+});
+test('live billing and management default off even with the old checkout flag', async () => {
+  process.env.EXPO_PUBLIC_PADDLE_ENV = 'live';
+  delete process.env.EXPO_PUBLIC_PADDLE_LIVE_BILLING_ENABLED;
+  try {
+    jest.isolateModules(() => {
+      const live = jest.requireActual<BillingModule>('../../src/services/paddleBilling');
+      expect(live.paddleBillingEnabled).toBe(false);
+      expect(live.paddleCheckoutEnabled).toBe(false);
+      expect(live.paddleManagementEnabled).toBe(false);
+    });
+    process.env.EXPO_PUBLIC_PADDLE_LIVE_BILLING_ENABLED = 'true';
+    jest.isolateModules(() => {
+      const live = jest.requireActual<BillingModule>('../../src/services/paddleBilling');
+      expect(live.paddleBillingEnabled).toBe(true);
+      expect(live.paddleManagementEnabled).toBe(true);
+    });
+  } finally {
+    process.env.EXPO_PUBLIC_PADDLE_ENV = 'sandbox';
+    delete process.env.EXPO_PUBLIC_PADDLE_LIVE_BILLING_ENABLED;
+  }
+});
 test('payment recovery sends only vessel identity and requires a verified sandbox recovery transaction', async () => {
   invoke.mockResolvedValue({ data: { ...response, purpose: 'payment_recovery' }, error: null });
   await expect(

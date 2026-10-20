@@ -20,10 +20,16 @@ import {
   paddleCheckoutEnabled,
   paddleEnvironment,
   preparePaddleCheckout,
-  paddleSandboxTrialsEnabled,
+  paddleBillingEnabled,
   startPaddleTrial,
   preparePaddleTrialPayment,
   preparePaddlePaymentRecovery,
+  paddleManagementEnabled,
+  getPaddleManagementStatus,
+  preparePaddlePaymentMethod,
+  cancelPaddleRenewal,
+  keepPaddleSubscription,
+  type PaddleManagementStatus,
 } from '../services/paddleBilling';
 import {
   previewPaddlePrices,
@@ -68,6 +74,19 @@ export const VesselPlansScreen = () => {
   const [billingStepOwner, setBillingStepOwner] = useState('');
   const [newTrialStep, setNewTrialStep] = useState(false);
   const [paymentNotice, setPaymentNotice] = useState('');
+  const [management, setManagement] = useState<PaddleManagementStatus | null>(null);
+  const [managementOwner, setManagementOwner] = useState('');
+  const [confirmCancellation, setConfirmCancellation] = useState(false);
+  const [confirmRenewal, setConfirmRenewal] = useState(false);
+  const [managementNotice, setManagementNotice] = useState('');
+  const currentManagement =
+    managementOwner === owner && subscription?.vesselId === user?.vesselId ? management : null;
+  const cancellationEnd =
+    subscription?.vesselId === user?.vesselId && subscription?.status === 'canceled'
+      ? subscription.currentPeriodEnd
+      : currentManagement?.cancellationScheduled
+        ? currentManagement.periodEnd
+        : null;
   const starting = useRef(false);
   const scroll = useRef<ScrollView>(null);
   useFocusEffect(
@@ -83,6 +102,11 @@ export const VesselPlansScreen = () => {
     setPendingOwner('');
     setBillingStepOwner('');
     setPaymentNotice('');
+    setManagement(null);
+    setManagementOwner('');
+    setConfirmCancellation(false);
+    setConfirmRenewal(false);
+    setManagementNotice('');
   }, [user?.id, user?.vesselId]);
   useEffect(() => {
     const refresh = () => {
@@ -173,7 +197,7 @@ export const VesselPlansScreen = () => {
     };
   }, [trialPending, refetch]);
   const canCheckout =
-    (paddleCheckoutEnabled || paddleSandboxTrialsEnabled) &&
+    (paddleCheckoutEnabled || paddleBillingEnabled) &&
     !trialPending &&
     !!quote &&
     !previewBusy &&
@@ -192,7 +216,7 @@ export const VesselPlansScreen = () => {
     const vesselId = user.vesselId,
       userId = user.id;
     try {
-      if (paddleSandboxTrialsEnabled && location) {
+      if (paddleBillingEnabled && location) {
         await startPaddleTrial(vesselId, tier, period, location);
         const current = useAuthStore.getState().user;
         if (current?.id !== userId || current.vesselId !== vesselId) return;
@@ -237,7 +261,7 @@ export const VesselPlansScreen = () => {
   const addTrialPaymentDetails = async () => {
     if (
       starting.current ||
-      !paddleSandboxTrialsEnabled ||
+      !paddleBillingEnabled ||
       !permitted ||
       !user?.vesselId ||
       !subscription ||
@@ -290,7 +314,7 @@ export const VesselPlansScreen = () => {
       starting.current ||
       !permitted ||
       !user?.vesselId ||
-      !paddleSandboxTrialsEnabled ||
+      !paddleBillingEnabled ||
       isLoading ||
       subscription?.vesselId !== user.vesselId ||
       subscription?.status !== 'past_due' ||
@@ -331,6 +355,99 @@ export const VesselPlansScreen = () => {
     setPaymentNotice('');
     setBillingStepOwner(owner);
     scroll.current?.scrollTo({ y: 0, animated: false });
+  };
+  const manageSubscription = async (
+    action: 'status' | 'payment_method' | 'cancel_renewal' | 'review_renewal' | 'keep_subscription'
+  ) => {
+    if (
+      starting.current ||
+      !paddleManagementEnabled ||
+      !permitted ||
+      !user?.vesselId ||
+      isLoading ||
+      accessState === 'unavailable' ||
+      subscription?.vesselId !== user.vesselId
+    )
+      return;
+    if (action === 'cancel_renewal' && (!confirmCancellation || !currentManagement)) return;
+    if (
+      action === 'keep_subscription' &&
+      (!confirmRenewal || !currentManagement?.cancellationScheduled)
+    )
+      return;
+    starting.current = true;
+    setBusy(true);
+    setManagementNotice('');
+    const { id, vesselId } = user;
+    const stillCurrent = () => {
+      const current = useAuthStore.getState().user;
+      return current?.id === id && current.vesselId === vesselId;
+    };
+    try {
+      if (action === 'status' || action === 'review_renewal') {
+        setConfirmCancellation(false);
+        setConfirmRenewal(false);
+        setManagement(null);
+        const result = await getPaddleManagementStatus(vesselId);
+        if (!stillCurrent()) return;
+        setManagement(result);
+        setManagementOwner(`${id}:${vesselId}`);
+        if (action === 'review_renewal') {
+          if (
+            result.cancellationScheduled &&
+            ['active', 'trialing'].includes(result.status) &&
+            Date.parse(result.periodEnd) > Date.now()
+          ) {
+            setConfirmRenewal(true);
+          } else {
+            setManagementNotice(
+              'Subscription status has changed. The current plan is being refreshed; no renewal change was sent.'
+            );
+            await refetch();
+          }
+        }
+      } else if (action === 'payment_method') {
+        const url = await preparePaddlePaymentMethod(vesselId, window.location.origin);
+        if (!stillCurrent()) return;
+        const destination = new URL(url);
+        const transaction = destination.searchParams.get('_ptxn')!;
+        destination.searchParams.delete('_ptxn');
+        destination.searchParams.set('transaction', transaction);
+        destination.searchParams.set('flow', 'payment-method');
+        window.location.assign(destination.href);
+      } else if (action === 'keep_subscription') {
+        await keepPaddleSubscription(vesselId, currentManagement!.periodEnd);
+        if (!stillCurrent()) return;
+        setManagement(null);
+        setConfirmRenewal(false);
+        setManagementNotice(
+          'Renewal restoration requested. Refresh Plan Status to confirm it. Your plan and billing date have not been changed.'
+        );
+        await refetch();
+      } else {
+        await cancelPaddleRenewal(vesselId, currentManagement!.periodEnd);
+        if (!stillCurrent()) return;
+        setManagement(null);
+        setConfirmCancellation(false);
+        setConfirmRenewal(false);
+        setManagementNotice(
+          'Cancellation requested. Refresh Plan Status to confirm it. No vessel records or crew memberships are removed.'
+        );
+        await refetch();
+      }
+    } catch {
+      if (stillCurrent()) {
+        setManagement(null);
+        setConfirmCancellation(false);
+        setConfirmRenewal(false);
+        setManagementNotice(
+          'Subscription action could not be confirmed. Refresh Plan Status and check subscription management before retrying.'
+        );
+      }
+    } finally {
+      starting.current = false;
+      setBusy(false);
+    }
   };
   const optionalBilling = (
     <View style={[...card, styles.optionalBilling]} testID="optional-trial-billing">
@@ -490,7 +607,7 @@ export const VesselPlansScreen = () => {
           to continue. No subscription payment is taken before the trial expires.
         </Text>
       )}
-      {review && !paddleSandboxTrialsEnabled && (
+      {review && !paddleBillingEnabled && (
         <Text style={muted}>
           Enter payment details and any business tax ID securely in Paddle. Applicable tax may
           change after validation. Nautical Ops does not collect your card details on this page.
@@ -503,29 +620,33 @@ export const VesselPlansScreen = () => {
       )}
       {subscription && subscription.status !== 'past_due' && (
         <Text style={muted}>
-          {trialDays > 0
-            ? paddleSandboxTrialsEnabled
-              ? 'Use Set up new billing details on your current plan above. This keeps your original trial end date.'
-              : 'Payment setup for your existing trial is being connected. It is not available yet; do not start a second subscription.'
-            : 'Existing subscription management is being connected. A second subscription cannot be created here.'}
+          {cancellationEnd
+            ? 'Renewal is cancelled. See the end date on your current plan above. Use Refresh Plan Status to check for updates.'
+            : trialDays > 0
+              ? paddleBillingEnabled
+                ? 'Use Set up new billing details on your current plan above. This keeps your original trial end date.'
+                : 'Payment setup for your existing trial is being connected. It is not available yet; do not start a second subscription.'
+              : paddleManagementEnabled
+                ? 'Use Manage Subscription above for payment details or cancellation. Plan and billing-period changes are not available yet. Do not start a second subscription.'
+                : 'Existing subscription management is being connected. A second subscription cannot be created here.'}
         </Text>
       )}
-      {!paddleCheckoutEnabled && !paddleSandboxTrialsEnabled && (
+      {!paddleCheckoutEnabled && !paddleBillingEnabled && (
         <Text style={muted}>Paddle checkout is being configured. No payment can be taken yet.</Text>
       )}
-      {(paddleCheckoutEnabled || paddleSandboxTrialsEnabled) && paddleEnvironment === 'sandbox' && (
+      {(paddleCheckoutEnabled || paddleBillingEnabled) && paddleEnvironment === 'sandbox' && (
         <Text style={text}>Sandbox test — no real payment.</Text>
       )}
       <Button
         title={
           review
-            ? (!paddleCheckoutEnabled && !paddleSandboxTrialsEnabled) || !!subscription
+            ? (!paddleCheckoutEnabled && !paddleBillingEnabled) || !!subscription
               ? 'Payments not yet available'
               : busy
                 ? 'Preparing…'
                 : trialPending
                   ? 'Awaiting trial confirmation'
-                  : paddleSandboxTrialsEnabled
+                  : paddleBillingEnabled
                     ? 'Start 30-day free trial'
                     : 'Continue to Secure Checkout'
             : 'Continue'
@@ -592,15 +713,67 @@ export const VesselPlansScreen = () => {
                         {PADDLE_BILLING_PERIODS.find((p) => p.id === subscription.billingPeriod)
                           ?.label ?? subscription.billingPeriod}
                       </Text>
-                      <Text style={muted}>
-                        {subscription.status === 'canceled'
-                          ? 'Renewal cancelled. Access ends '
-                          : subscription.status === 'trialing'
+                      {cancellationEnd ? (
+                        <View accessibilityLiveRegion="polite" style={{ gap: 8 }}>
+                          <Text style={[styles.planTitle, { color: theme.textPrimary }]}>
+                            Renewal cancelled
+                          </Text>
+                          <Text style={text}>
+                            {subscription.status === 'past_due'
+                              ? 'Cancellation takes effect '
+                              : Date.parse(cancellationEnd) > Date.now()
+                                ? 'Access ends '
+                                : 'Access ended '}
+                            {new Date(cancellationEnd).toLocaleString(undefined, {
+                              day: 'numeric',
+                              month: 'long',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                            .
+                          </Text>
+                          {paddleManagementEnabled &&
+                            Date.parse(cancellationEnd) > Date.now() &&
+                            subscription.status !== 'past_due' &&
+                            (confirmRenewal && currentManagement?.cancellationScheduled ? (
+                              <View style={{ gap: 10 }}>
+                                <Text style={text}>
+                                  Keep this subscription and restore automatic renewal on{' '}
+                                  {new Date(currentManagement.periodEnd).toLocaleString()}? Your
+                                  current plan and billing date stay the same. This does not start a
+                                  new trial or take a payment today.
+                                </Text>
+                                <Button
+                                  title={busy ? 'Checking…' : 'Confirm Renewal'}
+                                  disabled={busy || isLoading || accessState === 'unavailable'}
+                                  onPress={() => void manageSubscription('keep_subscription')}
+                                />
+                                <Button
+                                  title="Leave Cancelled"
+                                  variant="outline"
+                                  disabled={busy}
+                                  onPress={() => setConfirmRenewal(false)}
+                                />
+                              </View>
+                            ) : (
+                              <Button
+                                title={busy ? 'Checking…' : 'Keep Subscription'}
+                                variant="outline"
+                                disabled={busy || isLoading || accessState === 'unavailable'}
+                                onPress={() => void manageSubscription('review_renewal')}
+                              />
+                            ))}
+                        </View>
+                      ) : (
+                        <Text style={muted}>
+                          {subscription.status === 'trialing'
                             ? 'Trial ends '
                             : 'Current period ends '}
-                        {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
-                      </Text>
-                      {paddleSandboxTrialsEnabled && trialDays > 0 && (
+                          {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+                        </Text>
+                      )}
+                      {paddleBillingEnabled && trialDays > 0 && (
                         <>
                           <Text style={muted}>
                             Add payment details securely in Paddle. Your trial end date stays the
@@ -630,12 +803,12 @@ export const VesselPlansScreen = () => {
                             disabled={
                               busy ||
                               isLoading ||
-                              !paddleSandboxTrialsEnabled ||
+                              !paddleBillingEnabled ||
                               subscription.vesselId !== user?.vesselId ||
                               accessState === 'unavailable'
                             }
                           />
-                          {!paddleSandboxTrialsEnabled && (
+                          {!paddleBillingEnabled && (
                             <Text style={muted}>
                               Payment recovery is not enabled on this release. Contact support.
                             </Text>
@@ -646,6 +819,77 @@ export const VesselPlansScreen = () => {
                             </Text>
                           )}
                         </>
+                      )}
+                      {paddleManagementEnabled && !cancellationEnd && (
+                        <>
+                          <Button
+                            title={busy ? 'Checking…' : 'Manage Subscription'}
+                            variant="outline"
+                            disabled={busy || isLoading || accessState === 'unavailable'}
+                            onPress={() => {
+                              void manageSubscription('status');
+                            }}
+                          />
+                          {currentManagement && (
+                            <>
+                              {currentManagement.cancellationScheduled ? (
+                                <Text style={text}>
+                                  Renewal cancellation is scheduled for{' '}
+                                  {new Date(currentManagement.periodEnd).toLocaleString()}.
+                                </Text>
+                              ) : (
+                                <>
+                                  {currentManagement.status === 'active' && (
+                                    <Button
+                                      title="Update Payment Method"
+                                      variant="outline"
+                                      disabled={busy}
+                                      onPress={() => {
+                                        void manageSubscription('payment_method');
+                                      }}
+                                    />
+                                  )}
+                                  {!confirmCancellation ? (
+                                    <Button
+                                      title="Cancel Renewal"
+                                      variant="outline"
+                                      disabled={busy}
+                                      onPress={() => setConfirmCancellation(true)}
+                                    />
+                                  ) : (
+                                    <View style={{ gap: 10 }}>
+                                      <Text style={text}>
+                                        Cancel renewal at the end of this period,{' '}
+                                        {new Date(currentManagement.periodEnd).toLocaleString()}?{' '}
+                                        This does not delete vessel records or remove crew. Any
+                                        overdue payment remains due; cancellation does not restore
+                                        unpaid access.
+                                      </Text>
+                                      <Button
+                                        title="Confirm Cancellation"
+                                        disabled={busy}
+                                        onPress={() => {
+                                          void manageSubscription('cancel_renewal');
+                                        }}
+                                      />
+                                      <Button
+                                        title="Keep Subscription"
+                                        variant="outline"
+                                        disabled={busy}
+                                        onPress={() => setConfirmCancellation(false)}
+                                      />
+                                    </View>
+                                  )}
+                                </>
+                              )}
+                            </>
+                          )}
+                        </>
+                      )}
+                      {!!managementNotice && (
+                        <Text accessibilityRole="alert" style={text}>
+                          {managementNotice}
+                        </Text>
                       )}
                     </View>
                   )}

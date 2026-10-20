@@ -6,6 +6,11 @@ import {
   checkoutResult,
   validatePrice,
 } from './paddle.mjs';
+import {
+  requirePaddleBilling,
+  requirePaddleTester,
+  billingEnvironmentArgs,
+} from './paddleRollout.mjs';
 
 // Collect a card for an EXISTING trial. Never activate, replace or extend it.
 export function createPaddleTrialPaymentHandler({
@@ -18,8 +23,7 @@ export function createPaddleTrialPaymentHandler({
     if (request.method !== 'POST')
       return Response.json({ error: 'Method not allowed' }, { status: 405 });
     try {
-      if (getEnv('PADDLE_ENV') !== 'sandbox' || getEnv('PADDLE_SANDBOX_TRIAL_ENABLED') !== 'true')
-        throw new BillingError('Sandbox trials are not enabled.', 503);
+      const environment = requirePaddleBilling(getEnv);
       const authorization = request.headers.get('authorization');
       if (!authorization?.startsWith('Bearer ')) throw new BillingError('Sign in to continue', 401);
       const client = createClient(getEnv('SUPABASE_URL'), getEnv('SUPABASE_ANON_KEY'), {
@@ -27,19 +31,16 @@ export function createPaddleTrialPaymentHandler({
       });
       const { data: auth, error: authError } = await client.auth.getUser();
       if (authError || !auth.user) throw new BillingError('Sign in to continue', 401);
-      const testers = (getEnv('PADDLE_SANDBOX_TEST_USER_IDS') || '')
-        .split(',')
-        .map((id) => id.trim());
-      if (!testers.includes(auth.user.id))
-        throw new BillingError('Sandbox testing is restricted.', 403);
+      requirePaddleTester(getEnv, auth.user.id);
       const body = await request.json();
       if (!/^[0-9a-f-]{36}$/i.test(body.vesselId || '')) throw new BillingError('Invalid vessel');
       const { data: billing, error } = await client.rpc('get_paddle_trial_billing', {
         p_vessel_id: body.vesselId,
+        ...billingEnvironmentArgs(environment),
       });
       if (
         error ||
-        billing?.environment !== 'sandbox' ||
+        billing?.environment !== environment ||
         !/^sub_[a-z0-9]{26}$/.test(billing.subscription_id || '') ||
         !/^ctm_[a-z0-9]{26}$/.test(billing.customer_id || '')
       )

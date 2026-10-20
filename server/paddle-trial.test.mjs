@@ -107,8 +107,9 @@ function harness(options = {}) {
           },
         }),
       },
-      rpc: async (name) => {
+      rpc: async (name, args) => {
         calls.push(name);
+        if (env.PADDLE_ENV === "live") assert.equal(args.p_environment, "live");
         return {
           error: options.denied,
           data:
@@ -135,6 +136,12 @@ function harness(options = {}) {
       }),
     }),
     fetcher: async (url, init) => {
+      assert.equal(
+        new URL(url).origin,
+        env.PADDLE_ENV === "live"
+          ? "https://api.paddle.com"
+          : "https://sandbox-api.paddle.com",
+      );
       const path = new URL(url).pathname;
       calls.push(`${init.method || "GET"} ${path}`);
       let data;
@@ -180,6 +187,24 @@ test("trial saves transaction binding before billing and grants no browser entit
       h.calls.indexOf(`PATCH /transactions/${id("txn")}`),
   );
   assert(!h.calls.some((c) => c.includes("apply_paddle")));
+});
+test("explicitly enabled live trial and payment setup use the live API and live-bound RPCs", async () => {
+  const h = harness({
+    env: {
+      PADDLE_ENV: "live",
+      PADDLE_CHECKOUT_ENABLED: "true",
+      PADDLE_LIVE_BILLING_ENABLED: "true",
+      PADDLE_LIVE_API_KEY: "fake-live-key",
+      PADDLE_SANDBOX_TEST_USER_IDS: "",
+    },
+    billing: { environment: "live" },
+  });
+  const trial = await h.trial(request());
+  assert.equal(trial.status, 202);
+  assert.equal((await trial.json()).environment, "live");
+  const payment = await h.payment(request());
+  assert.equal(payment.status, 200);
+  assert.equal((await payment.json()).environment, "live");
 });
 test("trial reuses exact existing customer rather than creating a duplicate", async () => {
   const h = harness({

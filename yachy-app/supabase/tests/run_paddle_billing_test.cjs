@@ -40,6 +40,7 @@ const uuid = (n) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
     await db.exec(read('supabase/migrations/20261002100000_PADDLE_WEB_BILLING_FOUNDATION.sql'));
     await db.exec(read('supabase/migrations/20261007150000_PADDLE_CARDLESS_TRIAL_RESERVATION.sql'));
     await db.exec(read('supabase/migrations/20261019120000_PADDLE_PAYMENT_RECOVERY.sql'));
+    await db.exec(read('supabase/migrations/20261020120000_PADDLE_ENVIRONMENT_BILLING.sql'));
     await db.exec(
       read('supabase/migrations/20260903152000_SERVER_SIDE_ACCESS_ENFORCEMENT.sql').split(
         'CREATE OR REPLACE FUNCTION public.current_user_can_access_vessel'
@@ -269,6 +270,89 @@ const uuid = (n) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
     await db.exec(`UPDATE vessel_subscriptions SET status='canceled' WHERE vessel_id='${uuid(3)}'`);
     await rejects(() => lookup(), /confirmed/);
     await rejects(() => trial(), /second trial/);
+    // The new overloads preserve sandbox callers while isolating live bindings.
+    const management = (user = 10, environment = 'sandbox') =>
+      asUser(user, () =>
+        db.query('SELECT get_paddle_management_billing($1,$2) AS billing', [uuid(1), environment])
+      );
+    equal((await management()).rows[0].billing.subscription_id, 'sub_1');
+    for (const user of [11, 12, 13]) await rejects(() => management(user), /Captain/);
+    await rejects(() => management(10, 'live'), /confirmed subscription/);
+    await rejects(() => management(10, null), /Invalid billing environment/);
+    await db.exec("SELECT set_config('test.device_allowed','no',false)");
+    await rejects(() => management(), /registered device/);
+    await db.exec("SELECT set_config('test.device_allowed','yes',false)");
+    await db.exec(`INSERT INTO vessels(id,name,invite_code) VALUES('${uuid(4)}','Live fixture','LIVE');
+      INSERT INTO users(id,vessel_id,role) VALUES('${uuid(30)}','${uuid(4)}','CAPTAIN_MOV');`);
+    const liveTrial = (environment = 'live', user = 30) =>
+      asUser(user, () =>
+        db.query("SELECT reserve_paddle_trial($1,'1_5','monthly','pri_live',$2) AS intent", [
+          uuid(4),
+          environment,
+        ])
+      );
+    await rejects(() => liveTrial('live', 10), /Captain/);
+    await rejects(() => liveTrial('unknown'), /Invalid billing environment/);
+    const liveIntent = (await liveTrial()).rows[0].intent;
+    equal(liveIntent.created, true);
+    equal((await liveTrial()).rows[0].intent.created, false);
+    await rejects(() => liveTrial('sandbox'), /existing billing request/);
+    equal(
+      (
+        await db.query('SELECT environment FROM paddle_checkout_intents WHERE id=$1', [
+          liveIntent.id,
+        ])
+      ).rows[0].environment,
+      'live'
+    );
+    await db.query(
+      "UPDATE paddle_checkout_intents SET state='ready',transaction_id='txn_live' WHERE id=$1",
+      [liveIntent.id]
+    );
+    const liveEvent = {
+      ...base,
+      event_id: 'evt_live',
+      environment: 'live',
+      subscription_id: 'sub_live',
+      checkout_id: liveIntent.id,
+      transaction_id: 'txn_live',
+      status: 'trialing',
+      period_start: '2099-01-01T00:00:00Z',
+      period_end: '2099-01-31T00:00:00Z',
+    };
+    await rejects(() => apply({ ...liveEvent, environment: 'sandbox' }), /verified checkout/);
+    equal((await apply(liveEvent)).rows[0].result, 'applied');
+    const liveLookup = (name, environment = 'live') =>
+      asUser(30, () => db.query(`SELECT ${name}($1,$2) AS billing`, [uuid(4), environment]));
+    equal((await liveLookup('get_paddle_trial_billing')).rows[0].billing.environment, 'live');
+    await rejects(
+      () => liveLookup('get_paddle_trial_billing', 'sandbox'),
+      /confirmed subscription/
+    );
+    await rejects(
+      () => asUser(30, () => db.query('SELECT get_paddle_trial_billing($1)', [uuid(4)])),
+      /sandbox trial/
+    );
+    await rejects(() => liveTrial(), /second trial/);
+    await rejects(() => liveLookup('get_paddle_recovery_billing'), /past-due/);
+    await apply({
+      ...liveEvent,
+      event_id: 'evt_live_due',
+      occurred_at: '2099-01-31T00:00:00Z',
+      status: 'past_due',
+      period_start: '2099-01-31T00:00:00Z',
+      period_end: '2099-02-28T00:00:00Z',
+      paid_history_verified: true,
+      previously_paid: false,
+    });
+    equal((await liveLookup('get_paddle_recovery_billing')).rows[0].billing.environment, 'live');
+    await rejects(() => liveLookup('get_paddle_trial_billing'), /uncancelled trial/);
+    await db.exec('SET ROLE anon');
+    await rejects(
+      () => db.query("SELECT get_paddle_management_billing($1,'live')", [uuid(4)]),
+      /permission denied/
+    );
+    await db.exec('RESET ROLE');
     console.log(`${checks} Paddle database checks passed`);
   } finally {
     await db.close();

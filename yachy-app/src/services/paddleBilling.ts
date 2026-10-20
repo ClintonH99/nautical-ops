@@ -2,11 +2,19 @@ import { supabase } from './supabase';
 import type { PaddlePlanTier, PaddleBillingPeriod } from '../constants/paddlePlans';
 import type { BillingLocation } from './paddlePricing';
 
-export const paddleCheckoutEnabled = process.env.EXPO_PUBLIC_PADDLE_CHECKOUT_ENABLED === 'true';
 export const paddleEnvironment = process.env.EXPO_PUBLIC_PADDLE_ENV;
+export const paddleCheckoutEnabled =
+  process.env.EXPO_PUBLIC_PADDLE_CHECKOUT_ENABLED === 'true' &&
+  (paddleEnvironment === 'sandbox' ||
+    (paddleEnvironment === 'live' &&
+      process.env.EXPO_PUBLIC_PADDLE_LIVE_BILLING_ENABLED === 'true'));
 export const paddleSandboxTrialsEnabled =
   paddleEnvironment === 'sandbox' &&
   process.env.EXPO_PUBLIC_PADDLE_SANDBOX_TRIAL_ENABLED === 'true';
+export const paddleBillingEnabled =
+  paddleSandboxTrialsEnabled || (paddleEnvironment === 'live' && paddleCheckoutEnabled);
+export const paddleManagementEnabled =
+  paddleBillingEnabled && process.env.EXPO_PUBLIC_PADDLE_SUBSCRIPTION_MANAGEMENT_ENABLED === 'true';
 
 const trialFailure =
   'Trial could not be confirmed. Refresh Plan Status before trying again. If this continues, contact support.';
@@ -26,8 +34,8 @@ async function trialErrorMessage(error: unknown): Promise<string> {
     if (context.status === 409) {
       return 'A trial could not be started because your vessel, device access or an existing billing request needs checking. Select Refresh Plan Status. If it remains unchanged, contact support before retrying.';
     }
-    if (body?.error === 'Sandbox trials are not enabled.') {
-      return 'Sandbox trial testing is temporarily unavailable. No live payment has been enabled.';
+    if (body?.error === 'Billing is not enabled for this environment.') {
+      return 'Billing is temporarily unavailable. Please contact support.';
     }
   } catch {
     // A missing/unreadable response is ambiguous, not permission to retry.
@@ -41,12 +49,12 @@ export async function startPaddleTrial(
   billingPeriod: PaddleBillingPeriod,
   location: BillingLocation
 ): Promise<void> {
-  if (!paddleSandboxTrialsEnabled) throw new Error('Sandbox trials are not yet available.');
+  if (!paddleBillingEnabled) throw new Error('Trials are not yet available.');
   const { data, error } = await supabase.functions.invoke('start-paddle-trial', {
     body: { vesselId, planTier, billingPeriod, ...location },
   });
   if (error) throw new Error(await trialErrorMessage(error));
-  if (data?.environment !== 'sandbox' || data?.state !== 'pending_confirmation')
+  if (data?.environment !== paddleEnvironment || data?.state !== 'pending_confirmation')
     throw new Error(trialFailure);
 }
 
@@ -55,7 +63,7 @@ export async function preparePaddleTrialPayment(
   origin: string,
   trialEnd: string
 ): Promise<string> {
-  if (!paddleSandboxTrialsEnabled) throw new Error('Sandbox payment setup is not yet available.');
+  if (!paddleBillingEnabled) throw new Error('Payment setup is not yet available.');
   const { data, error } = await supabase.functions.invoke('prepare-paddle-trial-payment', {
     body: { vesselId },
   });
@@ -73,16 +81,84 @@ export async function preparePaddlePaymentRecovery(
   vesselId: string,
   origin: string
 ): Promise<string> {
-  if (!paddleSandboxTrialsEnabled)
-    throw new Error('Sandbox payment recovery is not yet available.');
+  if (!paddleBillingEnabled) throw new Error('Payment recovery is not yet available.');
   const { data, error } = await supabase.functions.invoke('prepare-paddle-payment-recovery', {
     body: { vesselId },
   });
-  if (error || data?.environment !== 'sandbox' || data?.purpose !== 'payment_recovery')
+  if (error || data?.environment !== paddleEnvironment || data?.purpose !== 'payment_recovery')
     throw new Error(
       'Payment recovery could not be confirmed. Refresh Plan Status before trying again. If this continues, contact support.'
     );
   return validatedCheckoutUrl(data, origin);
+}
+
+export type PaddleManagementStatus = {
+  status: 'active' | 'trialing' | 'past_due';
+  periodEnd: string;
+  cancellationScheduled: boolean;
+};
+
+async function managementRequest(body: Record<string, unknown>): Promise<Record<string, unknown>> {
+  if (!paddleManagementEnabled) throw new Error('Subscription management is not yet available.');
+  const { data, error } = await supabase.functions.invoke('manage-paddle-subscription', { body });
+  if (error || !data || data.environment !== paddleEnvironment)
+    throw new Error(
+      'Subscription action could not be confirmed. Refresh Plan Status before retrying.'
+    );
+  return data;
+}
+
+export async function getPaddleManagementStatus(vesselId: string): Promise<PaddleManagementStatus> {
+  const data = await managementRequest({ vesselId, action: 'status' });
+  if (
+    !['active', 'trialing', 'past_due'].includes(String(data.status)) ||
+    typeof data.periodEnd !== 'string' ||
+    !Number.isFinite(Date.parse(data.periodEnd)) ||
+    typeof data.cancellationScheduled !== 'boolean'
+  )
+    throw new Error('Subscription details could not be confirmed.');
+  return data as PaddleManagementStatus;
+}
+
+export async function cancelPaddleRenewal(vesselId: string, periodEnd: string): Promise<void> {
+  const data = await managementRequest({
+    vesselId,
+    action: 'cancel_renewal',
+    confirm: true,
+    periodEnd,
+  });
+  if (
+    data.state !== 'pending_confirmation' ||
+    typeof data.periodEnd !== 'string' ||
+    !Number.isFinite(Date.parse(periodEnd)) ||
+    Date.parse(data.periodEnd) !== Date.parse(periodEnd)
+  )
+    throw new Error('Cancellation could not be confirmed. Refresh Plan Status before retrying.');
+}
+
+export async function preparePaddlePaymentMethod(
+  vesselId: string,
+  origin: string
+): Promise<string> {
+  const data = await managementRequest({ vesselId, action: 'payment_method' });
+  if (data.purpose !== 'payment_method') throw new Error('Payment setup could not be confirmed.');
+  return validatedCheckoutUrl(data, origin);
+}
+
+export async function keepPaddleSubscription(vesselId: string, periodEnd: string): Promise<void> {
+  const data = await managementRequest({
+    vesselId,
+    action: 'keep_subscription',
+    confirm: true,
+    periodEnd,
+  });
+  if (
+    data.state !== 'pending_confirmation' ||
+    typeof data.periodEnd !== 'string' ||
+    !Number.isFinite(Date.parse(periodEnd)) ||
+    Date.parse(data.periodEnd) !== Date.parse(periodEnd)
+  )
+    throw new Error('Renewal could not be confirmed. Refresh Plan Status before retrying.');
 }
 
 export function validatedCheckoutUrl(data: unknown, origin: string): string {

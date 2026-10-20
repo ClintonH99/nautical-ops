@@ -59,6 +59,28 @@ test("sandbox trial switch cannot activate live checkout", () => {
     true,
   );
 });
+test("live public checkout requires both independent switches and a live token", () => {
+  const env = {
+    EXPO_PUBLIC_PADDLE_ENV: "live",
+    EXPO_PUBLIC_PADDLE_CLIENT_TOKEN: "live_testtoken",
+    EXPO_PUBLIC_PADDLE_CHECKOUT_ENABLED: "true",
+  };
+  assert.deepEqual(publicPaddleConfig(env), { enabled: false });
+  assert.deepEqual(
+    publicPaddleConfig({
+      ...env,
+      EXPO_PUBLIC_PADDLE_LIVE_BILLING_ENABLED: "true",
+    }),
+    { enabled: true, environment: "live", token: "live_testtoken" },
+  );
+  assert.throws(() =>
+    publicPaddleConfig({
+      ...env,
+      EXPO_PUBLIC_PADDLE_LIVE_BILLING_ENABLED: "true",
+      EXPO_PUBLIC_PADDLE_CLIENT_TOKEN: "test_wrong",
+    }),
+  );
+});
 const source = fs.readFileSync(
   new URL("../yachy-app/public/paddle-checkout.js", import.meta.url),
   "utf8",

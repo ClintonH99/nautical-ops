@@ -6,16 +6,20 @@ import {
   validatePrice,
 } from './paddle.mjs';
 import { billingLocation } from './paddlePricing.mjs';
+import {
+  requirePaddleBilling,
+  requirePaddleTester,
+  billingEnvironmentArgs,
+} from './paddleRollout.mjs';
 
-// Deliberately sandbox-only until the complete billing lifecycle is verified.
+// Live remains disabled unless both server rollout switches are explicitly set.
 // No browser success event, provider API response or local clock grants access.
 export function createPaddleTrialHandler({ getEnv, createClient, fetcher = fetch }) {
   return async (request) => {
     if (request.method !== 'POST')
       return Response.json({ error: 'Method not allowed' }, { status: 405 });
     try {
-      if (getEnv('PADDLE_ENV') !== 'sandbox' || getEnv('PADDLE_SANDBOX_TRIAL_ENABLED') !== 'true')
-        throw new BillingError('Sandbox trials are not enabled.', 503);
+      const environment = requirePaddleBilling(getEnv);
       const authorization = request.headers.get('authorization');
       if (!authorization?.startsWith('Bearer ')) throw new BillingError('Sign in to continue', 401);
       const scoped = createClient(getEnv('SUPABASE_URL'), getEnv('SUPABASE_ANON_KEY'), {
@@ -23,11 +27,7 @@ export function createPaddleTrialHandler({ getEnv, createClient, fetcher = fetch
       });
       const { data: auth, error: authError } = await scoped.auth.getUser();
       if (authError || !auth.user?.email) throw new BillingError('Sign in to continue', 401);
-      const testers = (getEnv('PADDLE_SANDBOX_TEST_USER_IDS') || '')
-        .split(',')
-        .map((id) => id.trim());
-      if (!testers.includes(auth.user.id))
-        throw new BillingError('Sandbox testing is restricted.', 403);
+      requirePaddleTester(getEnv, auth.user.id);
       const body = await request.json();
       if (!/^[0-9a-f-]{36}$/i.test(body.vesselId || '')) throw new BillingError('Invalid vessel');
       approvedPrice(body.planTier, body.billingPeriod);
@@ -43,6 +43,7 @@ export function createPaddleTrialHandler({ getEnv, createClient, fetcher = fetch
         p_plan_tier: body.planTier,
         p_billing_period: body.billingPeriod,
         p_price_id: priceId,
+        ...billingEnvironmentArgs(environment),
       });
       if (error || !intent?.id)
         throw new BillingError(
@@ -150,7 +151,7 @@ export function createPaddleTrialHandler({ getEnv, createClient, fetcher = fetch
         throw new BillingError('This trial request cannot be completed. Contact support.', 409);
       }
       return Response.json(
-        { state: 'pending_confirmation', environment: 'sandbox' },
+        { state: 'pending_confirmation', environment },
         {
           status: 202,
           headers: { 'Cache-Control': 'no-store' },

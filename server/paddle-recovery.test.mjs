@@ -111,6 +111,30 @@ test("recovery reuses the bound overdue transaction with only provider GETs", as
       .every((call) => call.method === "GET" && !call.url.includes("forged")),
   );
 });
+test("enabled live recovery requires a live binding and uses only the live provider", async () => {
+  const h = harness({
+    env: {
+      PADDLE_ENV: "live",
+      PADDLE_CHECKOUT_ENABLED: "true",
+      PADDLE_LIVE_BILLING_ENABLED: "true",
+      PADDLE_LIVE_API_KEY: "fake-key",
+      PADDLE_SANDBOX_TEST_USER_IDS: "",
+    },
+    billing: { environment: "live" },
+  });
+  const response = await h.run();
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).environment, "live");
+  assert.equal(h.calls[0].args.p_environment, "live");
+  assert.ok(
+    h.calls
+      .filter((c) => c.url)
+      .every(
+        (c) =>
+          c.url.startsWith("https://api.paddle.com/") && c.method === "GET",
+      ),
+  );
+});
 test("recovery blocks live, unapproved users, missing sessions and denied Captain/device lookup before provider access", async () => {
   for (const [options, status] of [
     [{ env: { PADDLE_ENV: "live" } }, 503],
