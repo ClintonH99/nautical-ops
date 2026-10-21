@@ -2,7 +2,12 @@ import React from 'react';
 import { act, fireEvent, render } from '@testing-library/react-native';
 import { Keyboard, KeyboardAvoidingView, ScrollView, TextInput } from 'react-native';
 import { RestDayEntryScreen } from '../../src/screens/RestDayEntryScreen';
-import { getWeekEntries, saveEntry } from '../../src/services/restEntries';
+import {
+  canManageRestFor,
+  confirmEntryForUser,
+  getWeekEntries,
+  saveEntry,
+} from '../../src/services/restEntries';
 
 const mockUser = { id: 'crew', vesselId: 'vessel', role: 'CREW' };
 jest.mock('../../src/store', () => ({ useAuthStore: () => ({ user: mockUser }) }));
@@ -40,6 +45,7 @@ jest.mock('../../src/services/restEntries', () => ({
   canManageRestFor: jest.fn(async () => false),
   checkCompliance: () => ({ compliant: true, totalRestHours: 10, violations: [] }),
   saveEntry: jest.fn(async () => undefined),
+  confirmEntryForUser: jest.fn(async () => undefined),
 }));
 jest.mock('../../src/services/signatures', () => ({
   getSignatureForUser: async () => ({ id: 'signature' }),
@@ -51,8 +57,55 @@ jest.mock('../../src/services/watchKeeping', () => ({
 }));
 
 describe('Create Rest Entry keyboard', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockUser.role = 'CREW';
+    jest.mocked(canManageRestFor).mockResolvedValue(false);
+  });
   afterEach(() => jest.restoreAllMocks());
+
+  it.each(['CREW', 'HOD'])(
+    'does not show confirmation to %s even with stale legacy access',
+    async (role) => {
+      mockUser.role = role;
+      jest.mocked(canManageRestFor).mockResolvedValue(true);
+      const ui = render(
+        <RestDayEntryScreen
+          navigation={{ goBack: jest.fn() }}
+          route={{ params: { date: '2026-10-21' } }}
+        />
+      );
+      await act(async () => {});
+      expect(ui.queryByText('Confirm Rest Entry')).toBeNull();
+      expect(ui.getByText('Save Draft')).toBeTruthy();
+      expect(confirmEntryForUser).not.toHaveBeenCalled();
+    }
+  );
+
+  it('lets a server-authorized Captain confirm an entry', async () => {
+    mockUser.role = 'CAPTAIN_MOV';
+    jest.mocked(canManageRestFor).mockResolvedValue(true);
+    const ui = render(
+      <RestDayEntryScreen
+        navigation={{ goBack: jest.fn() }}
+        route={{ params: { date: '2026-10-21', targetUserId: 'other-crew' } }}
+      />
+    );
+    await act(async () => {});
+    await act(async () => fireEvent.press(ui.getByText('Confirm Rest Entry')));
+    expect(confirmEntryForUser).toHaveBeenCalledWith(
+      'other-crew',
+      'vessel',
+      '2026-10-21',
+      expect.any(Array),
+      '08:00',
+      '17:00',
+      '12:00',
+      '13:00',
+      'crew',
+      null
+    );
+  });
 
   it('displays the saved comment when reopening an entry', async () => {
     jest.mocked(getWeekEntries).mockResolvedValueOnce([

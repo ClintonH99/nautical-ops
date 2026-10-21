@@ -124,10 +124,10 @@ footer{background:var(--navy);border-top:1px solid rgba(255,255,255,.08);padding
 
 <div class="billing-wrap">
   <div class="billing-toggle">
-    <button class="billing-tab active" onclick="setBilling('monthly',this)">Monthly</button>
-    <button class="billing-tab" onclick="setBilling('3months',this)">3 Months</button>
-    <button class="billing-tab" onclick="setBilling('6months',this)">6 Months</button>
-    <button class="billing-tab" onclick="setBilling('yearly',this)">Yearly</button>
+    <button class="billing-tab active" data-billing="monthly">Monthly</button>
+    <button class="billing-tab" data-billing="3months">3 Months</button>
+    <button class="billing-tab" data-billing="6months">6 Months</button>
+    <button class="billing-tab" data-billing="yearly">Yearly</button>
   </div>
 </div>
 
@@ -248,37 +248,6 @@ footer{background:var(--navy);border-top:1px solid rgba(255,255,255,.08);padding
   </div>
 </footer>
 
-<script>
-const data = {
-  monthly:  {a:'$79.99',b:'$89.99',c:'$119.99',d:'$149.99',e:'$199.99',f:'$249.99',period:'per month'},
-  '3months':{a:'$227.97',b:'$256.47',c:'$341.97',d:'$427.47',e:'$569.97',f:'$712.47',period:'per 3 months'},
-  '6months':{a:'$441.54',b:'$496.74',c:'$662.34',d:'$827.94',e:'$1103.94',f:'$1379.94',period:'per 6 months'},
-  yearly:   {a:'$863.89',b:'$971.89',c:'$1295.89',d:'$1619.89',e:'$2159.89',f:'$2699.89',period:'per year'}
-};
-const ids=[['1-5','a'],['6-10','b'],['11-15','c'],['16-25','d'],['26-40','e'],['40plus','f']];
-
-function setBilling(key,btn){
-  document.querySelectorAll('.billing-tab').forEach(t=>t.classList.remove('active'));
-  btn.classList.add('active');
-  const d=data[key];
-  ids.forEach(([id,k])=>{
-    const card=document.getElementById('card-'+id);
-    const priceEl=document.getElementById('price-'+id);
-    const periodEl=document.getElementById('period-'+id);
-    const val=d[k];
-    if(val===null){
-      card.classList.add('unavailable');
-      priceEl.className='price-amount unavailable-text';
-      priceEl.textContent='Not available for this period';
-      periodEl.textContent='';
-    } else {
-      card.classList.remove('unavailable');
-      priceEl.className='price-amount';
-      priceEl.textContent=val;
-      periodEl.textContent=d.period;
-    }
-  });
-}
-</script>
+<script src="/pricing.js" defer></script>
 </body>
 </html>

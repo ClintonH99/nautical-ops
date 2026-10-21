@@ -3,7 +3,7 @@ import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinne
  * Rest Day Entry Screen
  * Lets a crew member enter their rest, work, and lunch periods for a single
  * day, with a live STCW compliance preview before saving. Manager access
- * (Captain, or the assigned department signer) is determined by real
+ * (Captain/MOV only) is determined by real
  * permission - not by which screen the person navigated from - so editing
  * works consistently whether reached via the crew's own calendar or the
  * review queue.
@@ -95,7 +95,8 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   const [status, setStatus] = useState<RestEntryStatus>('draft');
   const [watchPeriods, setWatchPeriods] = useState<WatchWorkPeriod[]>([]);
   const [saving, setSaving] = useState(false);
-  const [isManager, setIsManager] = useState(false);
+  const [reviewAccess, setReviewAccess] = useState(false);
+  const isManager = user?.role === 'CAPTAIN_MOV' && reviewAccess;
   const [hasExistingEntry, setHasExistingEntry] = useState(false);
   const [loadingEntry, setLoadingEntry] = useState(true);
   const scrollRef = useRef<ScrollView>(null);
@@ -146,11 +147,9 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
     }
 
     if (user?.id && user?.vesselId && user?.role) {
-      // canManageRestFor already returns true immediately for the Captain,
-      // regardless of whose entry it is — including their own. No special
-      // case needed here.
+      // Verify Captain/MOV membership on the server, including own-entry review.
       const canManage = await canManageRestFor(user.id, user.role, effectiveUserId, user.vesselId);
-      setIsManager(canManage);
+      setReviewAccess(canManage);
     }
   }, [effectiveUserId, date, user?.id, user?.vesselId, user?.role]);
 
@@ -273,7 +272,7 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   };
 
   const confirmManagedEntry = async () => {
-    if (!effectiveUserId || !user?.vesselId || !user?.id) return;
+    if (!isManager || !effectiveUserId || !user?.vesselId || !user?.id) return;
     if (!validateComment()) return;
     setSaving(true);
     try {
@@ -298,7 +297,7 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   };
 
   const handleConfirm = async () => {
-    if (!effectiveUserId || !user?.vesselId || !user?.id) return;
+    if (!isManager || !effectiveUserId || !user?.vesselId || !user?.id) return;
     if (!validateComment()) return;
     const signature = await getSignatureForUser(user.id);
     if (!signature) {

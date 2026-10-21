@@ -33,7 +33,7 @@ const HOURS_OF_REST_INFO = {
   features: [
     'Tap any date on the calendar to log your hours of rest, time worked, and lunch break',
     'Green dates are completed, red dates still need an entry',
-    'Once your week is filled in, submit it for your Captain or department signer to confirm',
+    'Save your entries for your Captain/MOV to review and confirm',
     'Confirmed entries can still be corrected later by the Captain if needed',
     'Compliance is checked against real STCW rules: minimum 10 hours rest in any 24-hour period, minimum 77 hours in any 7-day period, and no more than a 14-hour gap between rest periods',
   ],

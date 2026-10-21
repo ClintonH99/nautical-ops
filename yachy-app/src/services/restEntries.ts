@@ -310,50 +310,6 @@ export async function confirmEntry(entryId: string, confirmedByUserId: string): 
 export const DEPARTMENTS = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'] as const;
 export type Department = (typeof DEPARTMENTS)[number];
 
-export interface DepartmentSigner {
-  department: Department;
-  signerUserId: string;
-  signerName: string;
-}
-
-export async function getDepartmentSigners(vesselId: string): Promise<DepartmentSigner[]> {
-  const { data: rows } = await supabase
-    .from('department_signers')
-    .select('department, signer_user_id')
-    .eq('vessel_id', vesselId);
-
-  if (!rows || rows.length === 0) return [];
-
-  const userIds = rows.map((r) => r.signer_user_id);
-  const { data: users } = await supabase.from('users').select('id, name').in('id', userIds);
-
-  const nameMap = new Map((users ?? []).map((u) => [u.id, u.name]));
-
-  return rows.map((r) => ({
-    department: r.department as Department,
-    signerUserId: r.signer_user_id,
-    signerName: nameMap.get(r.signer_user_id) ?? 'Unknown',
-  }));
-}
-
-export async function setDepartmentSigner(
-  vesselId: string,
-  department: Department,
-  signerUserId: string
-): Promise<void> {
-  const { error } = await supabase.from('department_signers').upsert(
-    {
-      vessel_id: vesselId,
-      department,
-      signer_user_id: signerUserId,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'vessel_id,department' }
-  );
-
-  if (error) throw error;
-}
-
 export interface DayReviewEntry {
   userId: string;
   userName: string;
@@ -517,55 +473,24 @@ export async function confirmEntryForUser(
   await saveEntry(entry);
 }
 
-// Determines whether the logged-in user has manager-level access to edit
-// or confirm a specific crew member's rest entries: either they are the
-// vessel's Captain (always has access), or they are the assigned signer
-// for that crew member's department.
+// Captain/MOV only. The server verifies current membership and access;
+// cached roles and legacy department-signer assignments cannot grant access.
 export async function canManageRestFor(
   viewerUserId: string,
   viewerRole: string,
   targetUserId: string,
   vesselId: string
 ): Promise<boolean> {
-  if (viewerRole === 'CAPTAIN_MOV') return true;
-
-  const { data: target } = await supabase
-    .from('users')
-    .select('department')
-    .eq('id', targetUserId)
-    .single();
-
-  if (!target?.department) return false;
-
-  const { data: signer } = await supabase
-    .from('department_signers')
-    .select('signer_user_id')
-    .eq('vessel_id', vesselId)
-    .eq('department', target.department)
-    .maybeSingle();
-
-  return signer?.signer_user_id === viewerUserId;
-}
-
-// Returns which departments a user can review rest entries for: the
-// Captain can review every department ('ALL'), while a department signer
-// can only review the department(s) they've been assigned to (possibly
-// more than one, since the same person can be assigned across several
-// departments).
-export async function getManagedDepartments(
-  userId: string,
-  role: string,
-  vesselId: string
-): Promise<Department[] | 'ALL'> {
-  if (role === 'CAPTAIN_MOV') return 'ALL';
-
-  const { data } = await supabase
-    .from('department_signers')
-    .select('department')
-    .eq('vessel_id', vesselId)
-    .eq('signer_user_id', userId);
-
-  return (data ?? []).map((d) => d.department as Department);
+  if (viewerRole !== 'CAPTAIN_MOV' || !viewerUserId || !targetUserId || !vesselId) return false;
+  try {
+    const { data, error } = await supabase.rpc('current_user_can_manage_rest_entry', {
+      target_user_id: targetUserId,
+      target_vessel_id: vesselId,
+    });
+    return !error && data === true;
+  } catch {
+    return false;
+  }
 }
 
 export interface PdfDayRow {

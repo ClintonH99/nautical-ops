@@ -22,6 +22,13 @@
       },
       "continue": true
     },
+    {
+      "src": "/(?:|landing\\.html|(?:pricing|privacy-policy|refund-policy|terms-and-conditions|support)(?:\\.html)?/?)",
+      "headers": {
+        "Content-Security-Policy": "default-src 'none'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-src 'none'; form-action 'self'; manifest-src 'self'"
+      },
+      "continue": true
+    },
     { "src": "/", "dest": "/landing.html" },
     { "handle": "filesystem" },
     { "src": "/pricing", "dest": "/pricing.html" },

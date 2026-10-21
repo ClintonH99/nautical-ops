@@ -19,6 +19,7 @@ const FILES = [
   'landing.css',
   'landing.js',
   'pricing.html',
+  'pricing.js',
   'privacy-policy.html',
   'terms-and-conditions.html',
   'refund-policy.html',
