@@ -42,6 +42,7 @@ import { getCrewLeaveMonthRange } from '../utils/crewLeave';
 import { getActiveYardJobs } from '../utils/shipyardRecords';
 import { useTrialBillingReminder } from '../hooks/useTrialBillingReminder';
 import { paddleCheckoutEnabled } from '../services/paddleBilling';
+import { useHomeVesselName } from '../hooks/useHomeVesselName';
 
 const { width } = Dimensions.get('window');
 const CATEGORY_SIZE = (width - SPACING.xl * 2 - SPACING.md * 2) / 3;
@@ -186,7 +187,6 @@ export const HomeScreen = ({ navigation }: any) => {
   const themeColors = useThemeColors();
   const [vesselName, setVesselName] = useScreenState<string | null>('vesselName', null);
   const [bannerCacheBust, setBannerCacheBust] = useState<number | null>(null);
-  const [loadingVessel, setLoadingVessel] = useState(false);
   const [bannerLoadFailed, setBannerLoadFailed] = useState(false);
   const [trips, setTrips] = useScreenState<Trip[]>('trips', []);
   const [yardJobs, setYardJobs] = useScreenState<YardPeriodJob[]>('yardJobs', []);
@@ -206,6 +206,7 @@ export const HomeScreen = ({ navigation }: any) => {
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   const vesselId = user?.vesselId ?? null;
+  const vesselDetails = useHomeVesselName(vesselId, setVesselName);
   const hasVessel = !!vesselId;
   const isCaptain = user?.role === 'CAPTAIN_MOV';
   const isCaptainLike = isCaptain;
@@ -323,22 +324,8 @@ export const HomeScreen = ({ navigation }: any) => {
   }, [user?.id, vesselId]);
 
   useEffect(() => {
-    const fetchVessel = async () => {
-      if (user?.vesselId) {
-        setLoadingVessel(true);
-        try {
-          const vessel = await vesselService.getVessel(user.vesselId);
-          if (vessel) setVesselName(vessel.name);
-          setBannerLoadFailed(false);
-        } catch (error) {
-          console.error('Error fetching vessel:', error);
-        } finally {
-          setLoadingVessel(false);
-        }
-      }
-    };
-    fetchVessel();
-  }, [setVesselName, user?.vesselId]);
+    setBannerLoadFailed(false);
+  }, [vesselId, bannerCacheBust]);
 
   const bannerImageUrl = vesselId
     ? vesselService.getBannerPublicUrl(vesselId, bannerCacheBust ?? undefined)
@@ -440,6 +427,14 @@ export const HomeScreen = ({ navigation }: any) => {
                   if (bannerImageUrl) setBannerLoadFailed(true);
                 }}
               />
+              {vesselDetails.unavailable && !vesselName && (
+                <Text
+                  accessibilityLiveRegion="polite"
+                  style={{ padding: SPACING.sm, color: themeColors.textSecondary }}
+                >
+                  Vessel details are temporarily unavailable. Reconnect or refresh to retry.
+                </Text>
+              )}
             </View>
           )}
 

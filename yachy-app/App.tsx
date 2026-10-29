@@ -14,6 +14,7 @@ import { useFonts } from 'expo-font';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { isSupabaseConfigured } from './src/services/supabase';
 import { installWebViewport } from './src/utils/installWebViewport';
+import { WebPageRefresh } from './src/components/WebPageRefresh';
 
 function AppContent() {
   useEffect(() => installWebViewport(), []);
@@ -56,6 +57,7 @@ function AppContent() {
       {/* Session recovery is outside the stack and needs the same safe-area context. */}
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
         <RootNavigator />
+        <WebPageRefresh />
         <StatusBar style="auto" />
       </SafeAreaProvider>
     </GestureHandlerRootView>
