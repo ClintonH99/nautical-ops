@@ -37,7 +37,6 @@ export function isRefreshStartAllowed(target: EventTarget | null): boolean {
 
 export function createPageRefresh(actions: {
   online: () => boolean;
-  confirm: (message: string) => boolean;
   reload: () => void;
   status: (message: string) => void;
 }) {
@@ -50,14 +49,6 @@ export function createPageRefresh(actions: {
       );
       return;
     }
-    // Conservative on every screen: drafts can remain mounted in navigation
-    // history, and custom controls do not necessarily dispatch DOM input events.
-    if (
-      !actions.confirm(
-        'Refresh this page? Any unsaved changes will be lost. Save your work before continuing.'
-      )
-    )
-      return;
     reloading = true;
     actions.status('Refreshing…');
     try {
@@ -104,7 +95,7 @@ export function installWebRefresh(refresh: () => void, status: (text: string) =>
     gesture.move(touch.clientX, touch.clientY, event.touches.length);
     const distance = touch.clientY - startY;
     if (distance > 12) {
-      // Suppress browser-native pull reload so it cannot bypass confirmation.
+      // Avoid a second native reload and preserve our offline/gesture safeguards.
       if (event.cancelable) event.preventDefault();
       status(distance >= 85 ? 'Release to refresh' : 'Pull down to refresh');
     }

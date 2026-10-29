@@ -17,29 +17,48 @@ beforeEach(() => {
   document.body.innerHTML = '';
 });
 
-it('requires confirmation, cancels safely and reloads only once', () => {
+it('refreshes immediately without confirmation and reloads only once', () => {
+  const confirm = jest.spyOn(window, 'confirm');
   const actions = {
     online: () => true,
-    confirm: jest.fn().mockReturnValue(false),
     reload: jest.fn(),
     status: jest.fn(),
   };
   const refresh = createPageRefresh(actions);
   refresh();
-  expect(actions.reload).not.toHaveBeenCalled();
-  actions.confirm.mockReturnValue(true);
-  refresh();
   refresh();
   expect(actions.reload).toHaveBeenCalledTimes(1);
-  expect(actions.confirm).toHaveBeenCalledWith(expect.stringContaining('unsaved changes'));
+  expect(confirm).not.toHaveBeenCalled();
+  confirm.mockRestore();
 });
 
 it('keeps the page when offline without asking to discard anything', () => {
-  const actions = { online: () => false, confirm: jest.fn(), reload: jest.fn(), status: jest.fn() };
+  const actions = { online: () => false, reload: jest.fn(), status: jest.fn() };
   createPageRefresh(actions)();
   expect(actions.reload).not.toHaveBeenCalled();
-  expect(actions.confirm).not.toHaveBeenCalled();
   expect(actions.status).toHaveBeenCalledWith(expect.stringContaining('offline'));
+});
+
+it('a completed pull reloads immediately, without a confirmation dialog', () => {
+  const target = document.createElement('div');
+  document.body.appendChild(target);
+  const confirm = jest.spyOn(window, 'confirm');
+  const reload = jest.fn();
+  const status = jest.fn();
+  const cleanup = installWebRefresh(
+    createPageRefresh({ online: () => true, reload, status }),
+    status
+  );
+  try {
+    touch(target, 'touchstart', 30, 20);
+    touch(target, 'touchmove', 30, 115);
+    touch(target, 'touchend', 30, 115, 0);
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(confirm).not.toHaveBeenCalled();
+  } finally {
+    cleanup();
+    confirm.mockRestore();
+  }
 });
 
 it.each(['input', 'textarea', 'select', 'button', 'a', 'canvas', 'iframe', 'svg'])(
