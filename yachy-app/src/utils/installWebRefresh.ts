@@ -39,6 +39,7 @@ export function createPageRefresh(actions: {
   online: () => boolean;
   reload: () => void;
   status: (message: string) => void;
+  scheduleReload?: (reload: () => void) => void;
 }) {
   let reloading = false;
   return () => {
@@ -51,12 +52,16 @@ export function createPageRefresh(actions: {
     }
     reloading = true;
     actions.status('Refreshing…');
-    try {
-      actions.reload();
-    } catch {
-      reloading = false;
-      actions.status('Could not refresh. Please try again.');
-    }
+    const reload = () => {
+      try {
+        actions.reload();
+      } catch {
+        reloading = false;
+        actions.status('Could not refresh. Please try again.');
+      }
+    };
+    if (actions.scheduleReload) actions.scheduleReload(reload);
+    else reload();
   };
 }
 

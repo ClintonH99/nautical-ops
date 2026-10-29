@@ -17,6 +17,27 @@ beforeEach(() => {
   document.body.innerHTML = '';
 });
 
+it('allows feedback to paint before reload, rejects duplicate requests and reports reload failures', () => {
+  let scheduled: (() => void) | undefined;
+  const reload = jest.fn(() => {
+    throw new Error('Navigation blocked');
+  });
+  const status = jest.fn();
+  const scheduleReload = jest.fn((callback: () => void) => {
+    scheduled = callback;
+  });
+  const refresh = createPageRefresh({ online: () => true, reload, status, scheduleReload });
+  refresh();
+  refresh();
+  expect(scheduleReload).toHaveBeenCalledTimes(1);
+  expect(status).toHaveBeenCalledWith('Refreshing…');
+  expect(reload).not.toHaveBeenCalled();
+  scheduled!();
+  expect(status).toHaveBeenCalledWith('Could not refresh. Please try again.');
+  refresh();
+  expect(scheduleReload).toHaveBeenCalledTimes(2);
+});
+
 it('refreshes immediately without confirmation and reloads only once', () => {
   const confirm = jest.spyOn(window, 'confirm');
   const actions = {
