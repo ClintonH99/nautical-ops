@@ -90,6 +90,12 @@ export function resolveSubscriptionAccess(data: any, now = Date.now()): VesselSu
     return { state: 'entitled', subscription };
   }
 
+  // A confirmed Paddle free-trial deadline is not paid renewal time. Do not
+  // extend it while waiting for a webhook; a verified payment restores access.
+  if (data.payment_provider === 'paddle' && subscription.status === 'trialing') {
+    return { state: 'payment_required', subscription };
+  }
+
   // Older Apple rows were not refreshed server-side at renewal. An expired
   // date on a row still marked active is therefore stale/unknown, not proof of
   // failed payment. Only a provider-confirmed state may lock somebody out.

@@ -16,18 +16,21 @@
  */
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { withModernSupabaseKeys } from '../_shared/modernSupabaseKeys.mjs';
+
+const runtimeEnv = withModernSupabaseKeys((name: string) => Deno.env.get(name));
 import { Resend } from 'npm:resend@4';
+import { isTrustedNotificationRequest } from '../send-trip-push/internal-auth.ts';
 
 const supabase = createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  runtimeEnv('SUPABASE_URL')!,
+  runtimeEnv('SUPABASE_SERVICE_ROLE_KEY')!
 );
 
-const resend = new Resend(Deno.env.get('RESEND_API_KEY')!);
+const resend = new Resend(runtimeEnv('RESEND_API_KEY')!);
 
 function isTrustedInternalRequest(req: Request): boolean {
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  return Boolean(serviceRoleKey && req.headers.get('authorization') === `Bearer ${serviceRoleKey}`);
+  return isTrustedNotificationRequest(req.headers, undefined, runtimeEnv('NOTIFICATION_WORKER_SECRET'));
 }
 
 function escapeHtml(value: unknown): string {

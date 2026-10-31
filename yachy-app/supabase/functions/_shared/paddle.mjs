@@ -1,17 +1,19 @@
 // Server-only Paddle primitives. Never accept price IDs or amounts from a browser.
+// Exact Paddle live catalogue totals approved 29 October 2026, in USD cents.
+// Keep strict provider validation; never substitute a percentage calculation.
 const amounts = {
-  '1_5': 7999,
-  '6_10': 8999,
-  '11_15': 11999,
-  '16_25': 14999,
-  '26_40': 19999,
-  '40_plus': 24999,
+  '1_5': { monthly: 7999, '3_months': 22999, '6_months': 44999, '12_months': 86999 },
+  '6_10': { monthly: 8999, '3_months': 25999, '6_months': 49999, '12_months': 97999 },
+  '11_15': { monthly: 11999, '3_months': 34999, '6_months': 66999, '12_months': 129999 },
+  '16_25': { monthly: 14999, '3_months': 42999, '6_months': 82999, '12_months': 161999 },
+  '26_40': { monthly: 19999, '3_months': 56999, '6_months': 110999, '12_months': 215999 },
+  '40_plus': { monthly: 24999, '3_months': 71999, '6_months': 137999, '12_months': 269999 },
 };
 const periods = {
-  monthly: [1, 100],
-  '3_months': [3, 95],
-  '6_months': [6, 92],
-  '12_months': [12, 90],
+  monthly: 1,
+  '3_months': 3,
+  '6_months': 6,
+  '12_months': 12,
 };
 export class BillingError extends Error {
   constructor(message, status = 400) {
@@ -22,8 +24,7 @@ export class BillingError extends Error {
 export function approvedPrice(tier, period) {
   if (!Object.hasOwn(amounts, tier) || !Object.hasOwn(periods, period))
     throw new BillingError('Unknown plan');
-  const [months, factor] = periods[period];
-  return { amount: String(Math.round((amounts[tier] * months * factor) / 100)), months };
+  return { amount: String(amounts[tier][period]), months: periods[period] };
 }
 export function paddleConfig(get) {
   const environment = get('PADDLE_ENV');
@@ -33,7 +34,9 @@ export function paddleConfig(get) {
   const apiKey = get(environment === 'live' ? 'PADDLE_LIVE_API_KEY' : 'PADDLE_SANDBOX_API_KEY');
   let prices;
   try {
-    prices = JSON.parse(get('PADDLE_PRICE_IDS') || '{}');
+    prices = JSON.parse(
+      get(environment === 'live' ? 'PADDLE_LIVE_PRICE_IDS' : 'PADDLE_PRICE_IDS') || '{}'
+    );
   } catch {
     throw new BillingError('Billing catalogue is not configured', 503);
   }
@@ -46,14 +49,31 @@ export function paddleConfig(get) {
       seen.add(id);
     }
   if (!apiKey) throw new BillingError('Billing is not configured', 503);
+  // Separate catalogue entries with identical prices but NO trial. Optional
+  // until a reviewed reactivation release; never fall back to a trial price.
+  let paidPrices;
+  try {
+    paidPrices = JSON.parse(
+      get(environment === 'live' ? 'PADDLE_LIVE_PAID_PRICE_IDS' : 'PADDLE_PAID_PRICE_IDS') || '{}'
+    );
+    for (const [tier, entries] of Object.entries(paidPrices))
+      for (const [period, id] of Object.entries(entries)) {
+        approvedPrice(tier, period);
+        if (!/^pri_[a-z0-9]{26}$/.test(id) || seen.has(id)) throw new Error('Invalid paid price');
+        seen.add(id);
+      }
+  } catch {
+    throw new BillingError('Paid billing catalogue is not configured', 503);
+  }
   return {
     environment,
     apiKey,
     prices,
+    paidPrices,
     base: environment === 'live' ? 'https://api.paddle.com' : 'https://sandbox-api.paddle.com',
   };
 }
-export function validatePrice(price, tier, period) {
+export function validatePrice(price, tier, period, noTrial = false) {
   const expected = approvedPrice(tier, period);
   const cycle = price?.billing_cycle;
   const trial = price?.trial_period;
@@ -73,7 +93,7 @@ export function validatePrice(price, tier, period) {
     price?.unit_price?.currency_code !== 'USD' ||
     price.unit_price.amount !== expected.amount ||
     !matchesCycle ||
-    !freeTrial ||
+    !(noTrial ? trial === null : freeTrial) ||
     price.tax_mode !== 'external' ||
     (price.unit_price_overrides?.length ?? 0) > 0 ||
     price.quantity?.minimum !== 1 ||
@@ -208,7 +228,17 @@ export function subscriptionEvent(event, config) {
     !['active', 'trialing', 'past_due', 'paused', 'canceled'].includes(data.status)
   )
     throw new BillingError('Invalid subscription event', 422);
-  const plan = planForPrice(config.prices, data.items[0].price?.id);
+  const priceId = data.items[0].price?.id;
+  let plan;
+  let noTrialPrice = false;
+  try {
+    plan = planForPrice(config.prices, priceId);
+  } catch {
+    plan = planForPrice(config.paidPrices || {}, priceId);
+    validatePrice(data.items[0].price, plan.tier, plan.period, true);
+    noTrialPrice = true;
+    if (data.status === 'trialing') throw new BillingError('A repeat trial is not allowed', 422);
+  }
   const period = data.current_billing_period;
   if (
     period &&
@@ -233,6 +263,8 @@ export function subscriptionEvent(event, config) {
     transaction_id: event.event_type === 'subscription.created' ? data.transaction_id : null,
     plan_tier: plan.tier,
     billing_period: plan.period,
+    price_id: priceId,
+    no_trial_price: noTrialPrice,
     status: data.status,
     period_start: period?.starts_at ?? null,
     period_end: period?.ends_at ?? null,

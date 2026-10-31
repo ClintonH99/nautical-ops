@@ -3,6 +3,7 @@
  */
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { getModernSupabaseKey } from '../_shared/modernSupabaseKeys.mjs';
 
 const ALLOWED_ORIGINS = [
   'https://www.nautical-ops.com',
@@ -19,11 +20,6 @@ function corsHeaders(req: Request, extra: Record<string, string> = {}): Record<s
   const allowOrigin = allowed && origin ? origin : ALLOWED_ORIGINS[0];
   return { 'Access-Control-Allow-Origin': allowOrigin, ...extra };
 }
-
-const supabase = createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-);
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -50,6 +46,11 @@ Deno.serve(async (req) => {
         headers: corsHeaders(req, { 'Content-Type': 'application/json' }),
       });
     }
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      getModernSupabaseKey((key: string) => Deno.env.get(key), 'secret'),
+      { auth: { persistSession: false, autoRefreshToken: false } }
+    );
     const { data, error } = await supabase.rpc('admin_consume_auth_link', { p_code: code });
     if (error) throw error;
     if (data?.status === 'pending') {
@@ -72,7 +73,7 @@ Deno.serve(async (req) => {
       headers: corsHeaders(req, { 'Content-Type': 'application/json' }),
     });
   } catch (e) {
-    console.error('get-auth-link:', e);
+    console.error('get-auth-link: request failed');
     return new Response(JSON.stringify({ error: 'Could not check sign-in status' }), {
       status: 500,
       headers: corsHeaders(req, { 'Content-Type': 'application/json' }),

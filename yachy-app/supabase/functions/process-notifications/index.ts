@@ -1,8 +1,11 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { withModernSupabaseKeys } from '../_shared/modernSupabaseKeys.mjs';
+
+const runtimeEnv = withModernSupabaseKeys((name: string) => Deno.env.get(name));
 import { isTrustedNotificationRequest } from '../send-trip-push/internal-auth.ts';
 import { checkReceipts, sendDeliveries, Delivery, DeliveryStore } from './delivery.ts';
 
-const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+const db = createClient(runtimeEnv('SUPABASE_URL')!, runtimeEnv('SUPABASE_SERVICE_ROLE_KEY')!);
 const store: DeliveryStore = {
   async finish(row, patch) {
     const { error } = await db.from('notification_deliveries').update({
@@ -23,7 +26,7 @@ const store: DeliveryStore = {
 
 Deno.serve(async req => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
-  if (!isTrustedNotificationRequest(req.headers, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'), Deno.env.get('NOTIFICATION_WORKER_SECRET'))) {
+  if (!isTrustedNotificationRequest(req.headers, undefined, runtimeEnv('NOTIFICATION_WORKER_SECRET'))) {
     return new Response('Unauthorized', { status: 401 });
   }
   try {
@@ -37,7 +40,7 @@ Deno.serve(async req => {
       if (error) throw error;
     }
     const headers: Record<string,string> = { 'Content-Type': 'application/json', Accept: 'application/json' };
-    if (Deno.env.get('EXPO_ACCESS_TOKEN')) headers.Authorization = `Bearer ${Deno.env.get('EXPO_ACCESS_TOKEN')}`;
+    if (runtimeEnv('EXPO_ACCESS_TOKEN')) headers.Authorization = `Bearer ${runtimeEnv('EXPO_ACCESS_TOKEN')}`;
     const { data: pending, error: sendError } = await db.rpc('claim_notification_deliveries', { p_receipts: false });
     if (sendError) throw sendError;
     await sendDeliveries((pending || []) as Delivery[], store, fetch, headers);

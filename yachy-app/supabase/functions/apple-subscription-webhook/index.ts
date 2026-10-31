@@ -11,6 +11,9 @@
  * from the incoming request alone.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { withModernSupabaseKeys } from '../_shared/modernSupabaseKeys.mjs';
+
+const runtimeEnv = withModernSupabaseKeys((name: string) => Deno.env.get(name));
 import { SignJWT, importPKCS8, decodeJwt } from 'npm:jose@5';
 import { appleRenewalStatus } from '../_shared/appleRenewal.ts';
 
@@ -18,8 +21,8 @@ const BUNDLE_ID = 'com.nauticalops.app';
 const GRACE_PERIOD_MS = 16 * 24 * 60 * 60 * 1000;
 
 const supabase = createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  runtimeEnv('SUPABASE_URL')!,
+  runtimeEnv('SUPABASE_SERVICE_ROLE_KEY')!
 );
 
 const PRODUCT_ID_TO_PLAN: Record<string, { planTierId: string; billingPeriodId: string }> = {
@@ -59,11 +62,11 @@ type AppleNotification = {
 };
 
 async function generateAppleJWT(): Promise<string> {
-  const privateKey = await importPKCS8(Deno.env.get('APPLE_PRIVATE_KEY')!, 'ES256');
+  const privateKey = await importPKCS8(runtimeEnv('APPLE_PRIVATE_KEY')!, 'ES256');
   const now = Math.floor(Date.now() / 1000);
   return new SignJWT({ bid: BUNDLE_ID })
-    .setProtectedHeader({ alg: 'ES256', kid: Deno.env.get('APPLE_KEY_ID')!, typ: 'JWT' })
-    .setIssuer(Deno.env.get('APPLE_ISSUER_ID')!)
+    .setProtectedHeader({ alg: 'ES256', kid: runtimeEnv('APPLE_KEY_ID')!, typ: 'JWT' })
+    .setIssuer(runtimeEnv('APPLE_ISSUER_ID')!)
     .setIssuedAt(now)
     .setExpirationTime(now + 600)
     .setAudience('appstoreconnect-v1')
@@ -159,7 +162,7 @@ function response(body: Record<string, unknown>, status = 200): Response {
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return response({ error: 'Method not allowed' }, 405);
 
-  const expectedToken = Deno.env.get('APPLE_NOTIFICATION_WEBHOOK_TOKEN');
+  const expectedToken = runtimeEnv('APPLE_NOTIFICATION_WEBHOOK_TOKEN');
   const suppliedToken =
     new URL(req.url).searchParams.get('token') ?? req.headers.get('x-nautical-ops-webhook-token');
   if (!expectedToken || suppliedToken !== expectedToken) {

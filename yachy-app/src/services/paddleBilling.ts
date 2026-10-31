@@ -61,11 +61,12 @@ export async function startPaddleTrial(
 export async function preparePaddleTrialPayment(
   vesselId: string,
   origin: string,
-  trialEnd: string
+  trialEnd: string,
+  promoCode?: string
 ): Promise<string> {
   if (!paddleBillingEnabled) throw new Error('Payment setup is not yet available.');
   const { data, error } = await supabase.functions.invoke('prepare-paddle-trial-payment', {
-    body: { vesselId },
+    body: { vesselId, ...(promoCode?.trim() ? { promoCode: promoCode.trim() } : {}) },
   });
   if (
     error ||
@@ -97,6 +98,18 @@ export type PaddleManagementStatus = {
   periodEnd: string;
   cancellationScheduled: boolean;
 };
+
+export async function preparePaddleReactivation(vesselId: string, origin: string): Promise<string> {
+  if (!paddleBillingEnabled) throw new Error('Payments are not yet available.');
+  const { data, error } = await supabase.functions.invoke('prepare-paddle-reactivation', {
+    body: { vesselId },
+  });
+  if (error || data?.purpose !== 'paid_reactivation')
+    throw new Error(
+      'Payment could not be prepared. Refresh Plan Status. If this continues, contact support before retrying.'
+    );
+  return validatedCheckoutUrl(data, origin);
+}
 
 async function managementRequest(body: Record<string, unknown>): Promise<Record<string, unknown>> {
   if (!paddleManagementEnabled) throw new Error('Subscription management is not yet available.');

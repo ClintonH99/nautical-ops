@@ -14,6 +14,7 @@ const {
   startPaddleTrial,
   preparePaddleTrialPayment,
   preparePaddlePaymentRecovery,
+  preparePaddleReactivation,
   getPaddleManagementStatus,
   cancelPaddleRenewal,
   keepPaddleSubscription,
@@ -28,6 +29,33 @@ const response = {
 };
 const invoke = supabase.functions.invoke as jest.Mock;
 beforeEach(() => jest.clearAllMocks());
+test('trial payment sends optional promo only to the authenticated server flow', async () => {
+  const trialEnd = '2030-02-01T00:00:00.000Z';
+  invoke.mockResolvedValue({ data: { ...response, purpose: 'trial_payment_method', trialEnd } });
+  await preparePaddleTrialPayment('vessel', 'https://www.nautical-ops.com', trialEnd, ' VQ72100 ');
+  expect(invoke).toHaveBeenCalledWith('prepare-paddle-trial-payment', {
+    body: { vesselId: 'vessel', promoCode: 'VQ72100' },
+  });
+});
+test('reactivation sends no client prices or subscription IDs and rejects wrong-purpose or hostile checkout responses', async () => {
+  invoke.mockResolvedValue({ data: { ...response, purpose: 'paid_reactivation' } });
+  await expect(preparePaddleReactivation('vessel', 'https://www.nautical-ops.com')).resolves.toBe(
+    response.url
+  );
+  expect(invoke).toHaveBeenCalledWith('prepare-paddle-reactivation', {
+    body: { vesselId: 'vessel' },
+  });
+  for (const patch of [
+    { purpose: 'trial_payment_method' },
+    { environment: 'live' },
+    { url: 'https://evil.example/checkout' },
+  ]) {
+    invoke.mockResolvedValue({ data: { ...response, purpose: 'paid_reactivation', ...patch } });
+    await expect(
+      preparePaddleReactivation('vessel', 'https://www.nautical-ops.com')
+    ).rejects.toThrow();
+  }
+});
 test('keeping a subscription requires an environment-matched confirmation of the same renewal date', async () => {
   const periodEnd = '2030-03-01T00:00:00.000Z';
   invoke.mockResolvedValue({

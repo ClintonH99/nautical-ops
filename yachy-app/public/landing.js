@@ -75,14 +75,18 @@
   });
 
   // Approved worldwide USD base catalogue. These are not regional tax totals.
-  // Integer minor-unit calculations match the server catalogue rounding.
-  const monthlyCents = [7999, 8999, 11999, 14999, 19999, 24999];
-  const periodPercent = { 1: 100, 3: 95, 6: 92, 12: 90 };
+  // Exact Paddle live prices approved 29 October 2026; never derive discounts.
+  const priceCents = {
+    1: [7999, 8999, 11999, 14999, 19999, 24999],
+    3: [22999, 25999, 34999, 42999, 56999, 71999],
+    6: [44999, 49999, 66999, 82999, 110999, 137999],
+    12: [86999, 97999, 129999, 161999, 215999, 269999],
+  };
   let months = 1;
   function renderPrice() {
     const tier = Number(one('#no-crew-size').value);
-    if (!Number.isInteger(tier) || tier < 0 || tier >= monthlyCents.length) return;
-    const amount = Math.round((monthlyCents[tier] * months * periodPercent[months]) / 100) / 100;
+    if (!Number.isInteger(tier) || tier < 0 || tier >= priceCents[months].length) return;
+    const amount = priceCents[months][tier] / 100;
     const unit = months === 1 ? 'month' : months === 12 ? 'year' : `${months} months`;
     const suffix = document.createElement('span');
     suffix.textContent = ` / ${unit}`;
@@ -102,7 +106,7 @@
   all('[data-months]').forEach((button) =>
     button.addEventListener('click', () => {
       const next = Number(button.dataset.months);
-      if (!Object.hasOwn(periodPercent, next)) return;
+      if (!Object.hasOwn(priceCents, next)) return;
       months = next;
       renderPrice();
     })

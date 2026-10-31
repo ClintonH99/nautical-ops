@@ -1,3 +1,7 @@
 /node_modules/
 /.vercel/
 /.env.local
+
+# Private local payment harness and linked dependencies are not release source.
+/payment-test/
+/yachy-app/node_modules

@@ -14,12 +14,15 @@
  * database RPC performs the move atomically, so a partial failure rolls back.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { withModernSupabaseKeys } from '../_shared/modernSupabaseKeys.mjs';
+
+const runtimeEnv = withModernSupabaseKeys((name: string) => Deno.env.get(name));
 import { withBrowserCors } from '../_shared/browserCors.ts';
 import { authorizeSensitiveAction } from '../_shared/sensitiveActionAccess.ts';
 
 const supabase = createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  runtimeEnv('SUPABASE_URL')!,
+  runtimeEnv('SUPABASE_SERVICE_ROLE_KEY')!
 );
 
 Deno.serve(withBrowserCors(async (req) => {
@@ -31,8 +34,8 @@ Deno.serve(withBrowserCors(async (req) => {
   }
   try {
     const access = await authorizeSensitiveAction(req, {
-      url: Deno.env.get('SUPABASE_URL'),
-      anonKey: Deno.env.get('SUPABASE_ANON_KEY'),
+      url: runtimeEnv('SUPABASE_URL'),
+      anonKey: runtimeEnv('SUPABASE_ANON_KEY'),
     });
     if (!access.allowed) return access.response;
     const user = { id: access.userId };

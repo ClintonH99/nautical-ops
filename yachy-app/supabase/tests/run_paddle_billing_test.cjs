@@ -46,6 +46,7 @@ const uuid = (n) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
         'CREATE OR REPLACE FUNCTION public.current_user_can_access_vessel'
       )[0]
     );
+    await db.exec(read('supabase/migrations/20261030160225_expired_trial_paid_reactivation.sql'));
     await db.exec(`INSERT INTO vessels(id,name,invite_code) VALUES('${uuid(1)}','A','A'),('${uuid(2)}','B','B');
       INSERT INTO users(id,vessel_id,role) VALUES('${uuid(10)}','${uuid(1)}','CAPTAIN_MOV'),('${uuid(11)}','${uuid(1)}','HOD'),('${uuid(12)}','${uuid(1)}','CREW'),('${uuid(13)}','${uuid(2)}','CAPTAIN_MOV');`);
     const reserve = (user = 10, tier = '1_5') =>
@@ -347,7 +348,149 @@ const uuid = (n) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
     });
     equal((await liveLookup('get_paddle_recovery_billing')).rows[0].billing.environment, 'live');
     await rejects(() => liveLookup('get_paddle_trial_billing'), /uncancelled trial/);
+    // Full expiry -> canceled -> paid replacement lifecycle in disposable
+    // PostgreSQL. These are synthetic provider events, not a Paddle checkout.
+    await db.exec(`INSERT INTO vessels(id,name,invite_code) VALUES('${uuid(5)}','Expired trial','EXP');
+      INSERT INTO users(id,vessel_id,role) VALUES('${uuid(40)}','${uuid(5)}','CAPTAIN_MOV');`);
+    const expiredIntent = (
+      await asUser(40, () =>
+        db.query(
+          "SELECT reserve_paddle_trial($1,'1_5','monthly','pri_original','sandbox') AS intent",
+          [uuid(5)]
+        )
+      )
+    ).rows[0].intent;
+    await db.query(
+      "UPDATE paddle_checkout_intents SET state='ready',transaction_id='txn_expired' WHERE id=$1",
+      [expiredIntent.id]
+    );
+    const expired = {
+      ...base,
+      event_id: 'evt_expired_trial',
+      occurred_at: '2020-01-01',
+      subscription_id: 'sub_expired',
+      checkout_id: expiredIntent.id,
+      transaction_id: 'txn_expired',
+      status: 'trialing',
+      period_start: '2020-01-01',
+      period_end: '2020-01-31',
+    };
+    await apply(expired);
+    const allowed = async () =>
+      (await db.query('SELECT vessel_subscription_allows_access($1) AS ok', [uuid(5)])).rows[0].ok;
+    equal(await allowed(), false);
+    const reactivate = (
+      user = 40,
+      environment = 'sandbox',
+      price = 'pri_00000000000000000000000100'
+    ) =>
+      asUser(user, () =>
+        db.query("SELECT reserve_paddle_reactivation($1,$2,'sub_expired',$3) AS intent", [
+          uuid(5),
+          environment,
+          price,
+        ])
+      );
+    await rejects(() => reactivate(), /confirmed expired/);
+    await apply({
+      ...expired,
+      event_id: 'evt_expired_cancel',
+      occurred_at: '2020-01-31',
+      status: 'canceled',
+      canceled_at: '2020-01-31',
+    });
+    for (const user of [10, 11, 12, 13]) await rejects(() => reactivate(user), /Captain/);
+    await rejects(() => reactivate(40, 'live'), /confirmed expired/);
+    await db.exec("SELECT set_config('test.device_allowed','no',false)");
+    await rejects(() => reactivate(), /registered device/);
+    await db.exec("SELECT set_config('test.device_allowed','yes',false)");
+    const paymentIntent = (await reactivate()).rows[0].intent;
+    equal(paymentIntent.created, true);
+    equal((await reactivate()).rows[0].intent.created, false);
+    equal(await allowed(), false);
+    await rejects(
+      () => reactivate(40, 'sandbox', 'pri_00000000000000000000000101'),
+      /existing checkout/
+    );
+    await db.query(
+      "UPDATE paddle_checkout_intents SET state='ready',transaction_id='txn_reactivated' WHERE id=$1",
+      [paymentIntent.id]
+    );
+    equal(await allowed(), false);
+    const replacement = {
+      ...base,
+      event_id: 'evt_reactivated',
+      occurred_at: '2030-01-01',
+      subscription_id: 'sub_reactivated',
+      checkout_id: paymentIntent.id,
+      transaction_id: 'txn_reactivated',
+      no_trial_price: true,
+      price_id: 'pri_00000000000000000000000100',
+    };
+    await rejects(() => apply(replacement), /Confirmed paid/);
+    await rejects(
+      () => apply({ ...replacement, initial_payment_verified: true, status: 'trialing' }),
+      /Confirmed paid/
+    );
+    await rejects(
+      () => apply({ ...replacement, initial_payment_verified: true, customer_id: 'ctm_forged' }),
+      /Confirmed paid/
+    );
+    await rejects(
+      () => apply({ ...replacement, initial_payment_verified: true, price_id: 'pri_forged' }),
+      /Confirmed paid/
+    );
+    equal(await allowed(), false);
+    equal(
+      (await apply({ ...replacement, initial_payment_verified: true })).rows[0].result,
+      'applied'
+    );
+    equal(await allowed(), true);
+    equal(
+      (await apply({ ...replacement, initial_payment_verified: true })).rows[0].result,
+      'duplicate'
+    );
+    equal(
+      (
+        await apply({
+          ...expired,
+          event_id: 'evt_late_old',
+          occurred_at: '2030-01-02',
+          status: 'canceled',
+        })
+      ).rows[0].result,
+      'superseded'
+    );
+    equal(await allowed(), true);
+    equal(
+      (
+        await db.query(
+          'SELECT paddle_subscription_id FROM vessel_subscriptions WHERE vessel_id=$1',
+          [uuid(5)]
+        )
+      ).rows[0].paddle_subscription_id,
+      'sub_reactivated'
+    );
+    equal(
+      (await db.query('SELECT count(*)::int AS n FROM users WHERE vessel_id=$1', [uuid(5)])).rows[0]
+        .n,
+      1
+    );
+    equal(
+      (
+        await db.query(
+          'SELECT count(*)::int AS n FROM paddle_subscription_links WHERE vessel_id=$1',
+          [uuid(5)]
+        )
+      ).rows[0].n,
+      2
+    );
+    await rejects(() => reactivate(), /confirmed expired/);
     await db.exec('SET ROLE anon');
+    await rejects(
+      () => db.query("SELECT get_paddle_reactivation_billing($1,'sandbox')", [uuid(5)]),
+      /permission denied/
+    );
     await rejects(
       () => db.query("SELECT get_paddle_management_billing($1,'live')", [uuid(4)]),
       /permission denied/

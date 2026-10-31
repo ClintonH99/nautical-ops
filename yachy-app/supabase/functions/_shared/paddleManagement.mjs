@@ -64,8 +64,12 @@ export function createPaddleManagementHandler({
         end !== Date.parse(billing.period_end) ||
         subscription.items?.length !== 1 ||
         subscription.items[0].quantity !== 1 ||
-        subscription.items[0].price?.id !==
-          config.prices[billing.plan_tier]?.[billing.billing_period]
+        ![
+          config.prices[billing.plan_tier]?.[billing.billing_period],
+          config.paidPrices?.[billing.plan_tier]?.[billing.billing_period],
+        ]
+          .filter(Boolean)
+          .includes(subscription.items[0].price?.id)
       )
         throw new BillingError(
           'Subscription details have changed. Refresh Plan Status before continuing.',

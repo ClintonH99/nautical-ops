@@ -56,6 +56,7 @@ function harness(options = {}) {
     PADDLE_SANDBOX_TEST_USER_IDS: "captain",
     PADDLE_SANDBOX_API_KEY: "test-key",
     PADDLE_PRICE_IDS: JSON.stringify(prices),
+    PADDLE_LIVE_PRICE_IDS: JSON.stringify(prices),
     PADDLE_CHECKOUT_URL: "https://example.test/checkout",
     ...options.env,
   };

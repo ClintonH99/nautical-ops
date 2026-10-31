@@ -1,4 +1,5 @@
-// Public display only. Checkout and tax confirmation remain in Vessel Plans.
+// Exact Paddle live prices approved 29 October 2026. Public display only.
+// Checkout and tax confirmation remain in Vessel Plans.
 (() => {
   'use strict';
   const data = {
@@ -12,30 +13,30 @@
       period: 'per month',
     },
     '3months': {
-      a: '$227.97',
-      b: '$256.47',
-      c: '$341.97',
-      d: '$427.47',
-      e: '$569.97',
-      f: '$712.47',
+      a: '$229.99',
+      b: '$259.99',
+      c: '$349.99',
+      d: '$429.99',
+      e: '$569.99',
+      f: '$719.99',
       period: 'per 3 months',
     },
     '6months': {
-      a: '$441.54',
-      b: '$496.74',
-      c: '$662.34',
-      d: '$827.94',
-      e: '$1103.94',
-      f: '$1379.94',
+      a: '$449.99',
+      b: '$499.99',
+      c: '$669.99',
+      d: '$829.99',
+      e: '$1109.99',
+      f: '$1379.99',
       period: 'per 6 months',
     },
     yearly: {
-      a: '$863.89',
-      b: '$971.89',
-      c: '$1295.89',
-      d: '$1619.89',
-      e: '$2159.89',
-      f: '$2699.89',
+      a: '$869.99',
+      b: '$979.99',
+      c: '$1299.99',
+      d: '$1619.99',
+      e: '$2159.99',
+      f: '$2699.99',
       period: 'per year',
     },
   };

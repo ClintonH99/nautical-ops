@@ -24,6 +24,7 @@ const env = {
   PADDLE_SANDBOX_TEST_USER_IDS: "captain",
   PADDLE_SANDBOX_API_KEY: "test",
   PADDLE_PRICE_IDS: JSON.stringify(prices),
+  PADDLE_LIVE_PRICE_IDS: JSON.stringify(prices),
   PADDLE_CHECKOUT_URL: "https://example.test/checkout",
   PADDLE_WEBHOOK_SECRET: "test-secret",
 };

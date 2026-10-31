@@ -1,0 +1,40 @@
+# Upload only the files needed to build the web application.
+# Database functions, local credentials, historical snapshots and business
+# documents are not part of the Vercel release.
+/*
+!/.vercelignore
+!/vercel.json
+!/package.json
+!/package-lock.json
+!/api
+!/api/**
+!/server
+/server/*
+!/server/pdf.mjs
+!/yachy-app
+/yachy-app/*
+!/yachy-app/App.tsx
+!/yachy-app/index.ts
+!/yachy-app/polyfillLocation.ts
+!/yachy-app/app.config.js
+!/yachy-app/app.json
+!/yachy-app/metro.config.js
+!/yachy-app/tsconfig.json
+!/yachy-app/package.json
+!/yachy-app/package-lock.json
+!/yachy-app/assets
+!/yachy-app/assets/**
+!/yachy-app/public
+!/yachy-app/public/**
+!/yachy-app/scripts
+!/yachy-app/scripts/**
+!/yachy-app/src
+!/yachy-app/src/**
+**/.env*
+**/CREDENTIALS.md
+**/*.pem
+**/*.key
+**/*.p12
+**/*.p8
+**/node_modules/**
+**/.DS_Store

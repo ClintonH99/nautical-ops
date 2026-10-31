@@ -12,6 +12,7 @@ const mockNavigate = jest.fn();
 const mockStartTrial = jest.fn();
 const mockPreparePayment = jest.fn();
 const mockRecoverPayment = jest.fn();
+const mockReactivate = jest.fn();
 const mockManagementStatus = jest.fn();
 const mockCancelRenewal = jest.fn();
 const mockKeepSubscription = jest.fn();
@@ -22,6 +23,7 @@ let mockAccessState: string | null = null;
 const mockFocusListeners = new Set<() => void>();
 const originalAddEventListener = window.addEventListener;
 const originalRemoveEventListener = window.removeEventListener;
+const originalLocation = window.location;
 beforeAll(() => {
   // The React Native Jest environment supplies window but no browser events.
   window.addEventListener = jest.fn((event: string, listener: any) => {
@@ -34,6 +36,7 @@ beforeAll(() => {
 afterAll(() => {
   window.addEventListener = originalAddEventListener;
   window.removeEventListener = originalRemoveEventListener;
+  Object.defineProperty(window, 'location', { configurable: true, value: originalLocation });
 });
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
@@ -68,6 +71,7 @@ jest.mock('../../src/services/paddleBilling', () => ({
   startPaddleTrial: (...args: any[]) => mockStartTrial(...args),
   preparePaddleTrialPayment: (...args: any[]) => mockPreparePayment(...args),
   preparePaddlePaymentRecovery: (...args: any[]) => mockRecoverPayment(...args),
+  preparePaddleReactivation: (...args: any[]) => mockReactivate(...args),
 }));
 jest.mock('../../src/services/paddlePricing', () => ({
   previewPaddlePrices: (...args: any[]) => mockPreview(...args),
@@ -144,6 +148,7 @@ beforeEach(() => {
   mockStartTrial.mockReset().mockResolvedValue(undefined);
   mockPreparePayment.mockReset();
   mockRecoverPayment.mockReset();
+  mockReactivate.mockReset();
   mockManagementStatus.mockReset();
   mockCancelRenewal.mockReset();
   mockKeepSubscription.mockReset();
@@ -157,6 +162,92 @@ beforeEach(() => {
   mockPreview
     .mockReset()
     .mockImplementation((_v, p, l) => Promise.resolve(result(p, l.countryCode)));
+});
+test('expired-trial payment stays on Vessel Plans on failure and cannot start another trial or unlock access', async () => {
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: { origin: 'https://example.test', assign: jest.fn() },
+  });
+  mockSubscription = {
+    vesselId: 'vessel',
+    status: 'canceled',
+    paymentProvider: 'legacy_paddle',
+    planTier: '1_5',
+    billingPeriod: 'monthly',
+    currentPeriodEnd: '2020-01-01',
+  };
+  mockAccessState = 'payment_required';
+  mockSandboxTrials = true;
+  mockReactivate.mockRejectedValue(new Error('Payment pending; refresh your plan.'));
+  const screen = render(<VesselPlansScreen />);
+  expect(screen.getByTestId('expired-trial-payment')).toBeTruthy();
+  fireEvent.press(screen.getByText('Reactivate Subscription'));
+  await waitFor(() => expect(screen.getByText('Payment pending; refresh your plan.')).toBeTruthy());
+  expect(mockStartTrial).not.toHaveBeenCalled();
+  expect(mockPreparePayment).not.toHaveBeenCalled();
+  expect(mockNavigate).not.toHaveBeenCalled();
+});
+test('crew and active subscriptions cannot see the reactivation action', () => {
+  mockSubscription = {
+    vesselId: 'vessel',
+    status: 'active',
+    paymentProvider: 'legacy_paddle',
+    planTier: '1_5',
+    billingPeriod: 'monthly',
+    currentPeriodEnd: '2099-01-01',
+  };
+  const screen = render(<VesselPlansScreen />);
+  expect(screen.queryByText('Reactivate Subscription')).toBeNull();
+  mockSubscription.status = 'canceled';
+  mockAccessState = 'payment_required';
+  mockUser = { ...mockUser, role: 'CREW' };
+  screen.rerender(<VesselPlansScreen />);
+  expect(screen.queryByText('Reactivate Subscription')).toBeNull();
+});
+test('expired trial waits for provider cancellation and refreshes without starting a second checkout', () => {
+  mockSubscription = {
+    vesselId: 'vessel',
+    status: 'trialing',
+    paymentProvider: 'legacy_paddle',
+    planTier: '1_5',
+    billingPeriod: 'monthly',
+    currentPeriodEnd: '2020-01-01',
+  };
+  mockAccessState = 'payment_required';
+  mockSandboxTrials = true;
+  const screen = render(<VesselPlansScreen />);
+  expect(screen.queryByText('Choose your vessel plan')).toBeNull();
+  expect(screen.getByText(/Waiting for Paddle/)).toBeTruthy();
+  fireEvent.press(screen.getByText('Reactivate Subscription'));
+  expect(mockReactivate).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByText('Refresh Plan Status'));
+  expect(mockRefetch).toHaveBeenCalled();
+});
+test('prepared reactivation opens only checkout and never navigates directly to Home', async () => {
+  const assign = jest.fn();
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: { origin: 'https://example.test', assign },
+  });
+  mockSubscription = {
+    vesselId: 'vessel',
+    status: 'canceled',
+    paymentProvider: 'legacy_paddle',
+    planTier: '1_5',
+    billingPeriod: 'monthly',
+    currentPeriodEnd: '2020-01-01',
+  };
+  mockAccessState = 'payment_required';
+  mockSandboxTrials = true;
+  const transaction = `txn_${'1'.repeat(26)}`;
+  mockReactivate.mockResolvedValue(`https://example.test/checkout?_ptxn=${transaction}`);
+  const screen = render(<VesselPlansScreen />);
+  fireEvent.press(screen.getByText('Reactivate Subscription'));
+  await waitFor(() =>
+    expect(assign).toHaveBeenCalledWith(`https://example.test/checkout?transaction=${transaction}`)
+  );
+  expect(mockNavigate).not.toHaveBeenCalled();
+  expect(mockStartTrial).not.toHaveBeenCalled();
 });
 test('management is opt-in and cancellation needs a provider date and explicit second confirmation', async () => {
   mockSubscription = {
@@ -515,8 +606,8 @@ test.each(['CREW', 'HOD'])('payment recovery is never offered to %s', (role) => 
 test('shows exact worldwide base totals before country selection, never as final tax-inclusive prices', () => {
   const screen = render(<VesselPlansScreen />);
   fireEvent.press(screen.getByText('Yearly'));
-  expect(screen.getByText('US$1295.89 / year')).toBeTruthy();
-  expect(screen.getByText('US$2699.89 / year')).toBeTruthy();
+  expect(screen.getByText('US$1299.99 / year')).toBeTruthy();
+  expect(screen.getByText('US$2699.99 / year')).toBeTruthy();
   expect(
     screen.getAllByText('Tax/VAT is calculated at checkout based on your billing region.')
   ).toHaveLength(1);
@@ -646,6 +737,7 @@ test('existing trial opens the same optional step and payment errors stay beside
     fireEvent.press(screen.getByText('Set up new billing details'));
     expect(screen.getByText('Set up your billing details')).toBeTruthy();
     expect(screen.getByText('US$107.99 / month')).toBeTruthy();
+    fireEvent.changeText(screen.getByLabelText('Promo code (optional)'), 'VQ72100');
     fireEvent.press(screen.getByText('Set up billing details'));
     await waitFor(() =>
       expect(screen.getByText('Payment setup could not be confirmed.')).toBeTruthy()
@@ -653,7 +745,8 @@ test('existing trial opens the same optional step and payment errors stay beside
     expect(mockPreparePayment).toHaveBeenCalledWith(
       'vessel',
       'https://nautical-ops.com',
-      mockSubscription.currentPeriodEnd
+      mockSubscription.currentPeriodEnd,
+      'VQ72100'
     );
     expect(mockStartTrial).not.toHaveBeenCalled();
     expect(window.location.assign).not.toHaveBeenCalled();

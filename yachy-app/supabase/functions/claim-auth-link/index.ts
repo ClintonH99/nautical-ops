@@ -3,6 +3,9 @@
  */
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { withModernSupabaseKeys } from '../_shared/modernSupabaseKeys.mjs';
+
+const runtimeEnv = withModernSupabaseKeys((name: string) => Deno.env.get(name));
 
 const ALLOWED_ORIGINS = [
   'https://www.nautical-ops.com',
@@ -21,8 +24,8 @@ function corsHeaders(req: Request, extra: Record<string, string> = {}): Record<s
 }
 
 const supabaseAdmin = createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  runtimeEnv('SUPABASE_URL')!,
+  runtimeEnv('SUPABASE_SERVICE_ROLE_KEY')!
 );
 
 /** Must match entries in Supabase → Authentication → URL Configuration → Redirect URLs (exact string). */

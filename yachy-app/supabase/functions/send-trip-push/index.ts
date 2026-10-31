@@ -9,6 +9,9 @@
  */
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { withModernSupabaseKeys } from '../_shared/modernSupabaseKeys.mjs';
+
+const runtimeEnv = withModernSupabaseKeys((name: string) => Deno.env.get(name));
 import { isTrustedNotificationRequest } from './internal-auth.ts';
 import {
   buildChecklistNotification,
@@ -25,8 +28,8 @@ import {
 } from './notification-logic.ts';
 
 const supabase = createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  runtimeEnv('SUPABASE_URL')!,
+  runtimeEnv('SUPABASE_SERVICE_ROLE_KEY')!
 );
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -47,9 +50,9 @@ async function queueEnabled(): Promise<boolean> {
 function isTrustedInternalRequest(req: Request): boolean {
   return isTrustedNotificationRequest(
     req.headers,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
-    Deno.env.get('TRIP_WEBHOOK_SECRET')
-  );
+    undefined,
+    runtimeEnv('TRIP_WEBHOOK_SECRET')
+  ) || isTrustedNotificationRequest(req.headers, undefined, runtimeEnv('NOTIFICATION_WORKER_SECRET'));
 }
 
 interface WebhookPayload<RecordType = Record<string, unknown>> {
@@ -136,7 +139,7 @@ async function sendToExpo(messages: PushEnvelope[]) {
     'Content-Type': 'application/json',
     Accept: 'application/json',
   };
-  const accessToken = Deno.env.get('EXPO_ACCESS_TOKEN');
+  const accessToken = runtimeEnv('EXPO_ACCESS_TOKEN');
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
   let accepted = 0;
@@ -287,8 +290,8 @@ async function getAuthenticatedActor(req: Request) {
   if (error || !data.user) return null;
 
   const userClient = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_ANON_KEY')!,
+    runtimeEnv('SUPABASE_URL')!,
+    runtimeEnv('SUPABASE_ANON_KEY')!,
     { global: { headers: { Authorization: authorization } } }
   );
   const { data: deviceAllowed, error: deviceError } = await userClient.rpc(

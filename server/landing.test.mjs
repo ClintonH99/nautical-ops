@@ -60,19 +60,19 @@ test("homepage links use real app/support routes and correct icon assets", () =>
 test("24 price choices display the full period base price with tax disclosure", () => {
   const dom = page();
   const doc = dom.window.document;
-  const monthly = [7999, 8999, 11999, 14999, 19999, 24999];
+  const expected = {
+    1: [7999, 8999, 11999, 14999, 19999, 24999],
+    3: [22999, 25999, 34999, 42999, 56999, 71999],
+    6: [44999, 49999, 66999, 82999, 110999, 137999],
+    12: [86999, 97999, 129999, 161999, 215999, 269999],
+  };
   for (let tier = 0; tier < 6; tier++) {
     const select = doc.querySelector("#no-crew-size");
     select.value = String(tier);
     select.dispatchEvent(new dom.window.Event("change"));
-    for (const [months, percent] of [
-      [1, 100],
-      [3, 95],
-      [6, 92],
-      [12, 90],
-    ]) {
+    for (const months of [1, 3, 6, 12]) {
       doc.querySelector(`[data-months="${months}"]`).click();
-      const amount = Math.round((monthly[tier] * months * percent) / 100) / 100;
+      const amount = expected[months][tier] / 100;
       assert.ok(
         doc
           .querySelector("#no-price")

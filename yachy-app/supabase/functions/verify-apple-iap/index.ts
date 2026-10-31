@@ -17,6 +17,9 @@
  * this project rather than trusting client-side gates alone.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { withModernSupabaseKeys } from '../_shared/modernSupabaseKeys.mjs';
+
+const runtimeEnv = withModernSupabaseKeys((name: string) => Deno.env.get(name));
 import { SignJWT, importPKCS8, decodeJwt } from 'npm:jose@5';
 import { fetchCurrentAppleStatus } from '../_shared/appleStatus.ts';
 import { appleRenewalStatus } from '../_shared/appleRenewal.ts';
@@ -24,8 +27,8 @@ import { appleRenewalStatus } from '../_shared/appleRenewal.ts';
 const BUNDLE_ID = 'com.nauticalops.app';
 
 const supabase = createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  runtimeEnv('SUPABASE_URL')!,
+  runtimeEnv('SUPABASE_SERVICE_ROLE_KEY')!
 );
 
 // Mirrors APPLE_PRODUCT_IDS in src/constants/subscriptionPlans.ts.
@@ -58,9 +61,9 @@ const PRODUCT_ID_TO_PLAN: Record<string, { planTierId: string; billingPeriodId: 
 };
 
 async function generateAppleJWT(): Promise<string> {
-  const privateKeyPem = Deno.env.get('APPLE_PRIVATE_KEY')!;
-  const issuerId = Deno.env.get('APPLE_ISSUER_ID')!;
-  const keyId = Deno.env.get('APPLE_KEY_ID')!;
+  const privateKeyPem = runtimeEnv('APPLE_PRIVATE_KEY')!;
+  const issuerId = runtimeEnv('APPLE_ISSUER_ID')!;
+  const keyId = runtimeEnv('APPLE_KEY_ID')!;
   const privateKey = await importPKCS8(privateKeyPem, 'ES256');
   const now = Math.floor(Date.now() / 1000);
   return await new SignJWT({ bid: BUNDLE_ID })

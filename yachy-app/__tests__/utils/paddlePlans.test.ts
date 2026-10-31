@@ -4,14 +4,14 @@ import {
   PADDLE_BILLING_PERIODS,
 } from '../../src/constants/paddlePlans';
 
-test('all 24 approved web plans are available and use whole-period cent rounding', () => {
+test('all 24 web plans use the exact approved Paddle catalogue totals', () => {
   const expected = [
-    [7999, 22797, 44154, 86389],
-    [8999, 25647, 49674, 97189],
-    [11999, 34197, 66234, 129589],
-    [14999, 42747, 82794, 161989],
-    [19999, 56997, 110394, 215989],
-    [24999, 71247, 137994, 269989],
+    [7999, 22999, 44999, 86999],
+    [8999, 25999, 49999, 97999],
+    [11999, 34999, 66999, 129999],
+    [14999, 42999, 82999, 161999],
+    [19999, 56999, 110999, 215999],
+    [24999, 71999, 137999, 269999],
   ];
   PADDLE_PLAN_TIERS.forEach((tier, i) =>
     PADDLE_BILLING_PERIODS.forEach((period, j) => {

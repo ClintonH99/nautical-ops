@@ -9,6 +9,7 @@ import {
   StyleSheet,
   useWindowDimensions,
   Image,
+  TextInput,
 } from 'react-native';
 import { PageHeader, Button } from '../components';
 import { BillingCountryPicker, billingCountryName } from '../components/BillingCountryPicker.web';
@@ -24,6 +25,7 @@ import {
   startPaddleTrial,
   preparePaddleTrialPayment,
   preparePaddlePaymentRecovery,
+  preparePaddleReactivation,
   paddleManagementEnabled,
   getPaddleManagementStatus,
   preparePaddlePaymentMethod,
@@ -74,6 +76,7 @@ export const VesselPlansScreen = () => {
   const [billingStepOwner, setBillingStepOwner] = useState('');
   const [newTrialStep, setNewTrialStep] = useState(false);
   const [paymentNotice, setPaymentNotice] = useState('');
+  const [promoCode, setPromoCode] = useState('');
   const [management, setManagement] = useState<PaddleManagementStatus | null>(null);
   const [managementOwner, setManagementOwner] = useState('');
   const [confirmCancellation, setConfirmCancellation] = useState(false);
@@ -102,6 +105,7 @@ export const VesselPlansScreen = () => {
     setPendingOwner('');
     setBillingStepOwner('');
     setPaymentNotice('');
+    setPromoCode('');
     setManagement(null);
     setManagementOwner('');
     setConfirmCancellation(false);
@@ -164,6 +168,13 @@ export const VesselPlansScreen = () => {
     accessState === 'entitled' &&
     trialDays > 0 &&
     subscription?.vesselId === user?.vesselId;
+  const needsReactivation =
+    permitted &&
+    !isLoading &&
+    accessState === 'payment_required' &&
+    subscription?.vesselId === user?.vesselId &&
+    subscription?.paymentProvider === 'legacy_paddle' &&
+    ['trialing', 'canceled'].includes(subscription.status);
   const billingStep =
     billingStepOwner === owner && subscription?.vesselId === user?.vesselId && trialDays > 0;
   useEffect(() => {
@@ -278,7 +289,8 @@ export const VesselPlansScreen = () => {
       const url = await preparePaddleTrialPayment(
         vesselId,
         window.location.origin,
-        subscription.currentPeriodEnd
+        subscription.currentPeriodEnd,
+        promoCode.trim() || undefined
       );
       const current = useAuthStore.getState().user;
       if (current?.id !== userId || current.vesselId !== vesselId) return;
@@ -341,6 +353,41 @@ export const VesselPlansScreen = () => {
       if (current?.id === id && current.vesselId === vesselId)
         setPaymentNotice(
           error instanceof Error ? error.message : 'Payment recovery could not be confirmed.'
+        );
+    } finally {
+      starting.current = false;
+      setBusy(false);
+    }
+  };
+  const reactivate = async () => {
+    if (
+      starting.current ||
+      !needsReactivation ||
+      !paddleBillingEnabled ||
+      !user?.vesselId ||
+      subscription?.status !== 'canceled'
+    )
+      return;
+    starting.current = true;
+    setBusy(true);
+    setPaymentNotice('');
+    const { id, vesselId } = user;
+    try {
+      const url = await preparePaddleReactivation(vesselId, window.location.origin);
+      const current = useAuthStore.getState().user;
+      if (current?.id !== id || current.vesselId !== vesselId) return;
+      const destination = new URL(url);
+      const transaction = destination.searchParams.get('_ptxn')!;
+      destination.searchParams.delete('_ptxn');
+      destination.searchParams.set('transaction', transaction);
+      window.location.assign(destination.href);
+    } catch (error) {
+      const current = useAuthStore.getState().user;
+      if (current?.id === id && current.vesselId === vesselId)
+        setPaymentNotice(
+          error instanceof Error
+            ? error.message
+            : 'Payment could not be prepared. Refresh Plan Status.'
         );
     } finally {
       starting.current = false;
@@ -519,6 +566,22 @@ export const VesselPlansScreen = () => {
       {paddleEnvironment === 'sandbox' && (
         <Text style={text}>Sandbox test — no real payment. Use test card details only.</Text>
       )}
+      <Text style={text}>Promo code (optional)</Text>
+      <TextInput
+        accessibilityLabel="Promo code (optional)"
+        value={promoCode}
+        onChangeText={setPromoCode}
+        editable={!busy}
+        autoCapitalize="characters"
+        autoCorrect={false}
+        maxLength={32}
+        style={{ borderWidth: 1, borderColor: theme.border, borderRadius: 12, padding: 14, color: theme.textPrimary }}
+      />
+      <Text style={muted}>
+        Selecting Set up billing details applies your code to this trial if eligible, then opens
+        Paddle. The trial end date stays unchanged. Review the discounted recurring total there
+        before confirming. A code remains attached even if you close checkout.
+      </Text>
       {!!paymentNotice && (
         <Text accessibilityRole="alert" style={text}>
           {paymentNotice}
@@ -786,6 +849,45 @@ export const VesselPlansScreen = () => {
                           />
                         </>
                       )}
+                      {needsReactivation && (
+                        <View testID="expired-trial-payment">
+                          <Text style={text}>
+                            Your subscription access has ended. Pay for your current plan to restore
+                            vessel access. No new free trial will be started.
+                          </Text>
+                          <Text style={muted}>
+                            Paddle shows the final price and tax before you confirm payment. Vessel
+                            Plans remains available while payment is pending; your vessel records
+                            are retained.
+                          </Text>
+                          <Button
+                            title={busy ? 'Preparing…' : 'Reactivate Subscription'}
+                            onPress={reactivate}
+                            disabled={
+                              busy || !paddleBillingEnabled || subscription.status !== 'canceled'
+                            }
+                          />
+                          {subscription.status === 'trialing' && (
+                            <Text style={muted}>
+                              Your trial has ended. Waiting for Paddle to confirm its status before
+                              preparing payment. Select Refresh Plan Status.
+                            </Text>
+                          )}
+                          <Button
+                            title="Refresh Plan Status"
+                            variant="outline"
+                            onPress={() => {
+                              void refetch();
+                            }}
+                            disabled={busy || isLoading}
+                          />
+                          {!!paymentNotice && (
+                            <Text accessibilityRole="alert" style={text}>
+                              {paymentNotice}
+                            </Text>
+                          )}
+                        </View>
+                      )}
                       {subscription.status === 'past_due' && (
                         <>
                           <Text style={muted}>
@@ -820,7 +922,7 @@ export const VesselPlansScreen = () => {
                           )}
                         </>
                       )}
-                      {paddleManagementEnabled && !cancellationEnd && (
+                      {paddleManagementEnabled && !cancellationEnd && !needsReactivation && (
                         <>
                           <Button
                             title={busy ? 'Checking…' : 'Manage Subscription'}
@@ -902,170 +1004,175 @@ export const VesselPlansScreen = () => {
                       a duplicate subscription.
                     </Text>
                   )}
-                  <View style={[styles.columns, wide && styles.wide]} testID="billing-layout">
-                    <View style={styles.selection}>
-                      <Text accessibilityRole="header" style={heading}>
-                        {review ? 'Review your billing details' : 'Choose your vessel plan'}
-                      </Text>
-                      <View style={card}>
-                        <View style={styles.between}>
-                          <View style={styles.grow}>
-                            <Text style={muted}>Billing country</Text>
-                            <Text style={[styles.planTitle, { color: theme.textPrimary }]}>
-                              {location
-                                ? billingCountryName(location.countryCode)
-                                : 'Choose your billing country'}
-                            </Text>
-                            {!!location?.postalCode && (
-                              <Text style={muted}>{location.postalCode}</Text>
-                            )}
-                          </View>
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel="Change billing country"
-                            disabled={busy}
-                            onPress={() => setPicker(true)}
-                            style={styles.linkButton}
-                          >
-                            <Text style={{ color: theme.textPrimary, fontWeight: '600' }}>
-                              {location ? 'Change' : 'Select'}
-                            </Text>
-                          </Pressable>
-                        </View>
-                        <Text style={muted}>
-                          Use your billing address, not your vessel’s current location.
+                  {!needsReactivation && (
+                    <View style={[styles.columns, wide && styles.wide]} testID="billing-layout">
+                      <View style={styles.selection}>
+                        <Text accessibilityRole="header" style={heading}>
+                          {review ? 'Review your billing details' : 'Choose your vessel plan'}
                         </Text>
-                      </View>
-                      {!!location && (
-                        <View accessibilityLiveRegion="polite">
-                          {previewBusy ? (
-                            <Text style={muted}>Calculating regional tax…</Text>
-                          ) : previewError ? (
-                            <>
-                              <Text accessibilityRole="alert" style={text}>
-                                {previewError}
+                        <View style={card}>
+                          <View style={styles.between}>
+                            <View style={styles.grow}>
+                              <Text style={muted}>Billing country</Text>
+                              <Text style={[styles.planTitle, { color: theme.textPrimary }]}>
+                                {location
+                                  ? billingCountryName(location.countryCode)
+                                  : 'Choose your billing country'}
                               </Text>
-                              <Button
-                                title="Retry Tax Calculation"
-                                variant="outline"
-                                onPress={() => setRetry((n) => n + 1)}
-                              />
-                            </>
-                          ) : currentPreview ? (
-                            <Text style={muted}>
-                              Prices below include applicable tax for{' '}
-                              {billingCountryName(location.countryCode)}.
-                            </Text>
-                          ) : null}
-                        </View>
-                      )}
-                      {!review && (
-                        <>
-                          <Text style={[styles.label, { color: theme.textPrimary }]}>
-                            BILLING PERIOD
-                          </Text>
-                          <View style={styles.periods}>
-                            {PADDLE_BILLING_PERIODS.map((p) => (
-                              <Pressable
-                                key={p.id}
-                                accessibilityRole="radio"
-                                accessibilityState={{ checked: p.id === period }}
-                                disabled={busy}
-                                onPress={() => setPeriod(p.id)}
-                                style={[
-                                  styles.period,
-                                  {
-                                    borderColor: theme.border,
-                                    backgroundColor:
-                                      p.id === period ? theme.controlSelected : theme.surface,
-                                  },
-                                ]}
-                              >
-                                <Text
-                                  style={{
-                                    color: p.id === period ? theme.textOnAccent : theme.textPrimary,
-                                    fontSize: 16,
-                                    fontWeight: '600',
-                                  }}
-                                >
-                                  {p.label}
-                                </Text>
-                              </Pressable>
-                            ))}
+                              {!!location?.postalCode && (
+                                <Text style={muted}>{location.postalCode}</Text>
+                              )}
+                            </View>
+                            <Pressable
+                              accessibilityRole="button"
+                              accessibilityLabel="Change billing country"
+                              disabled={busy}
+                              onPress={() => setPicker(true)}
+                              style={styles.linkButton}
+                            >
+                              <Text style={{ color: theme.textPrimary, fontWeight: '600' }}>
+                                {location ? 'Change' : 'Select'}
+                              </Text>
+                            </Pressable>
                           </View>
-                          <Text style={[styles.label, { color: theme.textPrimary }]}>
-                            CREW SIZE
+                          <Text style={muted}>
+                            Use your billing address, not your vessel’s current location.
                           </Text>
-                          <Text style={[styles.taxNote, { color: theme.textSecondary }]}>
-                            Tax/VAT is calculated at checkout based on your billing region.
-                          </Text>
-                          {PADDLE_PLAN_TIERS.map((p) => {
-                            const base = getPaddlePrice(p.id, period),
-                              q = currentPreview?.quotes.find((item) => item.tier === p.id);
-                            return (
-                              <Pressable
-                                key={p.id}
-                                disabled={busy}
-                                accessibilityRole="radio"
-                                accessibilityState={{ checked: tier === p.id }}
-                                accessibilityLabel={
-                                  p.label +
-                                  ', ' +
-                                  (q
-                                    ? usd(q.totalCents) + ' including tax'
-                                    : usd(base.totalCents) + ' before tax') +
-                                  ' ' +
-                                  base.suffix
-                                }
-                                onPress={() => setTier(p.id)}
-                                style={[
-                                  ...card,
-                                  styles.plan,
-                                  {
-                                    borderColor:
-                                      tier === p.id ? theme.controlSelected : theme.border,
-                                  },
-                                ]}
-                              >
-                                <View
+                        </View>
+                        {!!location && (
+                          <View accessibilityLiveRegion="polite">
+                            {previewBusy ? (
+                              <Text style={muted}>Calculating regional tax…</Text>
+                            ) : previewError ? (
+                              <>
+                                <Text accessibilityRole="alert" style={text}>
+                                  {previewError}
+                                </Text>
+                                <Button
+                                  title="Retry Tax Calculation"
+                                  variant="outline"
+                                  onPress={() => setRetry((n) => n + 1)}
+                                />
+                              </>
+                            ) : currentPreview ? (
+                              <Text style={muted}>
+                                Prices below include applicable tax for{' '}
+                                {billingCountryName(location.countryCode)}.
+                              </Text>
+                            ) : null}
+                          </View>
+                        )}
+                        {!review && (
+                          <>
+                            <Text style={[styles.label, { color: theme.textPrimary }]}>
+                              BILLING PERIOD
+                            </Text>
+                            <View style={styles.periods}>
+                              {PADDLE_BILLING_PERIODS.map((p) => (
+                                <Pressable
+                                  key={p.id}
+                                  accessibilityRole="radio"
+                                  accessibilityState={{ checked: p.id === period }}
+                                  disabled={busy}
+                                  onPress={() => setPeriod(p.id)}
                                   style={[
-                                    styles.radio,
+                                    styles.period,
                                     {
-                                      borderColor:
-                                        tier === p.id ? theme.controlSelected : theme.textSecondary,
+                                      borderColor: theme.border,
+                                      backgroundColor:
+                                        p.id === period ? theme.controlSelected : theme.surface,
                                     },
                                   ]}
                                 >
-                                  {tier === p.id && (
-                                    <View
-                                      style={[
-                                        styles.dot,
-                                        { backgroundColor: theme.controlSelected },
-                                      ]}
-                                    />
-                                  )}
-                                </View>
-                                <View style={styles.grow}>
-                                  <Text style={[styles.planTitle, { color: theme.textPrimary }]}>
+                                  <Text
+                                    style={{
+                                      color:
+                                        p.id === period ? theme.textOnAccent : theme.textPrimary,
+                                      fontSize: 16,
+                                      fontWeight: '600',
+                                    }}
+                                  >
                                     {p.label}
                                   </Text>
-                                  <Text style={[styles.planPrice, { color: theme.accent }]}>
-                                    {q ? usd(q.totalCents) : usd(base.totalCents)}{' '}
-                                    <Text
-                                      style={[styles.planPeriod, { color: theme.textSecondary }]}
-                                    >
-                                      {base.suffix}
+                                </Pressable>
+                              ))}
+                            </View>
+                            <Text style={[styles.label, { color: theme.textPrimary }]}>
+                              CREW SIZE
+                            </Text>
+                            <Text style={[styles.taxNote, { color: theme.textSecondary }]}>
+                              Tax/VAT is calculated at checkout based on your billing region.
+                            </Text>
+                            {PADDLE_PLAN_TIERS.map((p) => {
+                              const base = getPaddlePrice(p.id, period),
+                                q = currentPreview?.quotes.find((item) => item.tier === p.id);
+                              return (
+                                <Pressable
+                                  key={p.id}
+                                  disabled={busy}
+                                  accessibilityRole="radio"
+                                  accessibilityState={{ checked: tier === p.id }}
+                                  accessibilityLabel={
+                                    p.label +
+                                    ', ' +
+                                    (q
+                                      ? usd(q.totalCents) + ' including tax'
+                                      : usd(base.totalCents) + ' before tax') +
+                                    ' ' +
+                                    base.suffix
+                                  }
+                                  onPress={() => setTier(p.id)}
+                                  style={[
+                                    ...card,
+                                    styles.plan,
+                                    {
+                                      borderColor:
+                                        tier === p.id ? theme.controlSelected : theme.border,
+                                    },
+                                  ]}
+                                >
+                                  <View
+                                    style={[
+                                      styles.radio,
+                                      {
+                                        borderColor:
+                                          tier === p.id
+                                            ? theme.controlSelected
+                                            : theme.textSecondary,
+                                      },
+                                    ]}
+                                  >
+                                    {tier === p.id && (
+                                      <View
+                                        style={[
+                                          styles.dot,
+                                          { backgroundColor: theme.controlSelected },
+                                        ]}
+                                      />
+                                    )}
+                                  </View>
+                                  <View style={styles.grow}>
+                                    <Text style={[styles.planTitle, { color: theme.textPrimary }]}>
+                                      {p.label}
                                     </Text>
-                                  </Text>
-                                </View>
-                              </Pressable>
-                            );
-                          })}
-                        </>
-                      )}
+                                    <Text style={[styles.planPrice, { color: theme.accent }]}>
+                                      {q ? usd(q.totalCents) : usd(base.totalCents)}{' '}
+                                      <Text
+                                        style={[styles.planPeriod, { color: theme.textSecondary }]}
+                                      >
+                                        {base.suffix}
+                                      </Text>
+                                    </Text>
+                                  </View>
+                                </Pressable>
+                              );
+                            })}
+                          </>
+                        )}
+                      </View>
+                      <View style={wide ? styles.summaryColumn : undefined}>{summary}</View>
                     </View>
-                    <View style={wide ? styles.summaryColumn : undefined}>{summary}</View>
-                  </View>
+                  )}
                 </>
               )}
             </>

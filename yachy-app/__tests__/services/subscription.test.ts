@@ -29,6 +29,22 @@ function row(overrides: Record<string, unknown> = {}) {
 }
 
 describe('resolveSubscriptionAccess', () => {
+  it('locks a Paddle trial at its exact deadline until confirmed payment, without renewal grace', () => {
+    const trial = row({
+      payment_provider: 'paddle',
+      status: 'trialing',
+      current_period_end: new Date(NOW).toISOString(),
+    });
+    expect(resolveSubscriptionAccess(trial, NOW - 1).state).toBe('entitled');
+    expect(resolveSubscriptionAccess(trial, NOW).state).toBe('payment_required');
+    expect(resolveSubscriptionAccess(trial, NOW + 86400000).state).toBe('payment_required');
+    expect(
+      resolveSubscriptionAccess(
+        { ...trial, status: 'active', current_period_end: new Date(NOW + 86400000).toISOString() },
+        NOW
+      ).state
+    ).toBe('entitled');
+  });
   it('does not give a first failed Paddle payment legacy grace or future paid access', () => {
     expect(
       resolveSubscriptionAccess(

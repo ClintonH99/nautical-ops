@@ -4,6 +4,7 @@
  */
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { getModernSupabaseKey } from '../_shared/modernSupabaseKeys.mjs';
 
 const ALLOWED_ORIGINS = [
   'https://www.nautical-ops.com',
@@ -20,11 +21,6 @@ function corsHeaders(req: Request, extra: Record<string, string> = {}): Record<s
   const allowOrigin = allowed && origin ? origin : ALLOWED_ORIGINS[0];
   return { 'Access-Control-Allow-Origin': allowOrigin, ...extra };
 }
-
-const supabase = createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-);
 
 // Simple in-memory rate limit: max 10 code creations per minute per key (IP or origin)
 const RATE_LIMIT_MAX = 10;
@@ -83,6 +79,11 @@ Deno.serve(async (req) => {
     });
   }
   try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      getModernSupabaseKey((key: string) => Deno.env.get(key), 'secret'),
+      { auth: { persistSession: false, autoRefreshToken: false } }
+    );
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 5);
     let code = randomCode();
@@ -105,7 +106,7 @@ Deno.serve(async (req) => {
       headers: corsHeaders(req, { 'Content-Type': 'application/json' }),
     });
   } catch (e) {
-    console.error('create-auth-code:', e);
+    console.error('create-auth-code: request failed');
     return new Response(JSON.stringify({ error: 'Could not create a sign-in code' }), {
       status: 500,
       headers: corsHeaders(req, { 'Content-Type': 'application/json' }),

@@ -28,6 +28,7 @@ function harness(options = {}) {
     PADDLE_SANDBOX_API_KEY: "sandbox-key",
     PADDLE_LIVE_API_KEY: "live-key",
     PADDLE_PRICE_IDS: JSON.stringify(prices),
+    PADDLE_LIVE_PRICE_IDS: JSON.stringify(prices),
     PADDLE_CHECKOUT_URL: "https://example.test/checkout",
     ...options.env,
   };
@@ -158,6 +159,20 @@ function harness(options = {}) {
   };
 }
 
+test("reactivated paid-only subscriptions retain management and cancellation", async () => {
+  const paid = id("pri", 100);
+  const h = harness({
+    env: {
+      PADDLE_PAID_PRICE_IDS: JSON.stringify({ "1_5": { monthly: paid } }),
+    },
+    subscription: { items: [{ quantity: 1, price: { id: paid } }] },
+  });
+  assert.equal((await h.run()).status, 200);
+  assert.equal(
+    (await h.run("cancel_renewal", { confirm: true, periodEnd: end })).status,
+    200,
+  );
+});
 test("live requires both explicit switches and never falls back to the sandbox flag", () => {
   for (const env of [
     {},

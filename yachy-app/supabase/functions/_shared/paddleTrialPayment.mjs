@@ -11,6 +11,7 @@ import {
   requirePaddleTester,
   billingEnvironmentArgs,
 } from './paddleRollout.mjs';
+import { applyTrialDiscount } from './paddleTrialDiscount.mjs';
 
 // Collect a card for an EXISTING trial. Never activate, replace or extend it.
 export function createPaddleTrialPaymentHandler({
@@ -76,6 +77,7 @@ export function createPaddleTrialPaymentHandler({
           409
         );
       validatePrice(item.price, billing.plan_tier, billing.billing_period);
+      await applyTrialDiscount(config, subscription, body.promoCode, fetcher, now);
       const transaction = await paddleRequest(
         config,
         `/subscriptions/${billing.subscription_id}/update-payment-method-transaction`,

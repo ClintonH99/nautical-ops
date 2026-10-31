@@ -28,12 +28,12 @@ const prices = Object.fromEntries(
 const config = { environment: "sandbox", prices };
 test("all 24 server prices match the approved exact totals", () => {
   const expected = [
-    [7999, 22797, 44154, 86389],
-    [8999, 25647, 49674, 97189],
-    [11999, 34197, 66234, 129589],
-    [14999, 42747, 82794, 161989],
-    [19999, 56997, 110394, 215989],
-    [24999, 71247, 137994, 269989],
+    [7999, 22999, 44999, 86999],
+    [8999, 25999, 49999, 97999],
+    [11999, 34999, 66999, 129999],
+    [14999, 42999, 82999, 161999],
+    [19999, 56999, 110999, 215999],
+    [24999, 71999, 137999, 269999],
   ];
   tiers.forEach((tier, i) =>
     periods.forEach((period, j) => {
@@ -60,13 +60,18 @@ test("configuration requires explicit environment, separate keys and 24 unique I
   env.PADDLE_ENV = "production";
   assert.throws(() => paddleConfig((key) => env[key]));
   env.PADDLE_ENV = "live";
+  assert.throws(() => paddleConfig((key) => env[key]));
+  env.PADDLE_LIVE_PRICE_IDS = JSON.stringify(prices);
+  assert.equal(paddleConfig((key) => env[key]).apiKey, "live-secret");
   env.PADDLE_PRICE_IDS = "{}";
+  assert.deepEqual(paddleConfig((key) => env[key]).prices, prices);
+  env.PADDLE_LIVE_PRICE_IDS = "{}";
   assert.throws(() => paddleConfig((key) => env[key]));
 });
 test("catalogue validation requires worldwide tax-exclusive bases and a free 30-day trial", () => {
   const price = {
     status: "active",
-    unit_price: { amount: "86389", currency_code: "USD" },
+    unit_price: { amount: "86999", currency_code: "USD" },
     billing_cycle: { interval: "year", frequency: 1 },
     trial_period: { interval: "day", frequency: 30 },
     tax_mode: "external",
@@ -76,7 +81,8 @@ test("catalogue validation requires worldwide tax-exclusive bases and a free 30-
   for (const patch of [
     { status: "archived" },
     { unit_price: { amount: "1", currency_code: "USD" } },
-    { unit_price: { amount: "86389", currency_code: "EUR" } },
+    { unit_price: { amount: "86999", currency_code: "EUR" } },
+    { unit_price: { amount: "86389", currency_code: "USD" } },
     { billing_cycle: { interval: "month", frequency: 1 } },
     { trial_period: { frequency: 1 } },
     { trial_period: null },
@@ -214,6 +220,7 @@ function harness(options = {}) {
     PADDLE_ENV: "sandbox",
     PADDLE_SANDBOX_API_KEY: "test-secret",
     PADDLE_PRICE_IDS: JSON.stringify(prices),
+    PADDLE_LIVE_PRICE_IDS: JSON.stringify(prices),
     PADDLE_CHECKOUT_ENABLED: "true",
     PADDLE_WEBHOOK_SECRET: "secret",
     PADDLE_CHECKOUT_URL: "https://checkout.example.com/checkout",
@@ -380,10 +387,10 @@ test("ambiguous, completed and failed checkouts never silently create another pu
     assert.doesNotMatch(await response.text(), /private network detail/);
   }
 });
-function webhookRequest(e, valid = true) {
+function webhookRequest(e, valid = true, secret = "secret") {
   const raw = JSON.stringify(e);
   const ts = Math.floor(Date.now() / 1000);
-  const signature = createHmac("sha256", valid ? "secret" : "forged")
+  const signature = createHmac("sha256", valid ? secret : "forged")
     .update(`${ts}:${raw}`)
     .digest("hex");
   return new Request("https://example.com/", {
@@ -402,4 +409,34 @@ test("webhook rejects forged input and returns failure on database errors so Pad
   h = harness({ databaseError: true });
   handler = createPaddleWebhookHandler(h.deps);
   assert.equal((await handler(webhookRequest(event()))).status, 503);
+});
+
+test("live webhook requires its own signing secret and never accepts sandbox signatures", async () => {
+  const h = harness({ env: {
+    PADDLE_ENV: "live",
+    PADDLE_LIVE_API_KEY: "synthetic-live-api-key",
+    PADDLE_LIVE_WEBHOOK_SECRET: "synthetic-live-signing-secret",
+  } });
+  const handler = createPaddleWebhookHandler(h.deps);
+  assert.equal((await handler(webhookRequest(event()))).status, 401);
+  assert.equal(h.calls.applied, 0);
+  assert.equal((await handler(webhookRequest(event(), true, "synthetic-live-signing-secret"))).status, 200);
+  assert.equal(h.calls.applied, 1);
+});
+
+test("missing live secret or unknown environment cannot fall back to sandbox signing", async () => {
+  for (const environment of ["live", "production", undefined]) {
+    const h = harness({ env: { PADDLE_ENV: environment, PADDLE_LIVE_API_KEY: "synthetic-live-api-key" } });
+    assert.equal((await createPaddleWebhookHandler(h.deps)(webhookRequest(event()))).status, 401);
+    assert.equal(h.calls.applied, 0);
+  }
+});
+
+test("storing a live signing secret does not change sandbox webhook verification", async () => {
+  const h = harness({ env: { PADDLE_LIVE_WEBHOOK_SECRET: "synthetic-live-signing-secret" } });
+  const handler = createPaddleWebhookHandler(h.deps);
+  assert.equal((await handler(webhookRequest(event(), true, "synthetic-live-signing-secret"))).status, 401);
+  assert.equal(h.calls.applied, 0);
+  assert.equal((await handler(webhookRequest(event()))).status, 200);
+  assert.equal(h.calls.applied, 1);
 });
