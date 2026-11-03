@@ -1,5 +1,29 @@
 # Nautical Ops — Handover
 
+## 3 November 2026 — live Paddle test outcome
+
+Release branch: `release/subscription-controls-20261103`. Application changes
+through `7e48964` include checkout return to Home, durable billing confirmation
+emails, and the approved inline vessel logo. Older billing architecture notes
+below describe historical state, not this user-approved Paddle release.
+
+Clinton completed the real-payment test on Final Test Account and reported
+receiving both the Nautical Ops payment confirmation and Paddle invoice.
+The subsequent screenshots show renewal cancelled in the app and Paddle's
+"Subscription scheduled to cancel" email, both effective 3 December 2026.
+The app displays access ending at 08:56 AM (displayed local time). Clinton
+then confirmed Home remains accessible after cancellation.
+
+Evidence is the user's live test reports and screenshots, not a fresh backend
+audit. The earlier cancellation error screenshot belonged to a different
+account, as Clinton subsequently confirmed. Do not charge either account again
+to repeat this test or infer the other account's cancellation status.
+
+Remaining: verify automatic access restriction when the paid period ends;
+finish production Backblaze backups, scheduling, alerts, and restore testing;
+review the previously noted standalone "Card" label. No refund, immediate
+access revocation, or subscription reactivation was requested.
+
 Originally written 2026-08-23 against commit `03b65eb`; production and release state was re-verified on 2026-09-18 through commit `202ae39`. Where something is unverified it says so explicitly.
 
 **This is not exhaustive.** Section 11 lists exactly what remains unread. Treat that list as the boundary of what can be trusted here.
