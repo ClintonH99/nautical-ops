@@ -82,8 +82,14 @@ export const VesselPlansScreen = () => {
   const [confirmCancellation, setConfirmCancellation] = useState(false);
   const [confirmRenewal, setConfirmRenewal] = useState(false);
   const [managementNotice, setManagementNotice] = useState('');
+  const [managementLoading, setManagementLoading] = useState(false);
+  const [managementRetry, setManagementRetry] = useState(0);
+  const managementEnabled = paddleManagementEnabled;
+  const managementKey = `${owner}:${subscription?.id}:${subscription?.status}:${subscription?.currentPeriodEnd}:${managementRetry}`;
   const currentManagement =
-    managementOwner === owner && subscription?.vesselId === user?.vesselId ? management : null;
+    managementOwner === managementKey && subscription?.vesselId === user?.vesselId
+      ? management
+      : null;
   const cancellationEnd =
     subscription?.vesselId === user?.vesselId && subscription?.status === 'canceled'
       ? subscription.currentPeriodEnd
@@ -119,6 +125,60 @@ export const VesselPlansScreen = () => {
     window.addEventListener('focus', refresh);
     return () => window.removeEventListener('focus', refresh);
   }, [refetch]);
+  // Read-only on entry/refresh. Never create a checkout or change renewal here.
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      setManagement(null);
+      setManagementLoading(false);
+      setConfirmCancellation(false);
+      setConfirmRenewal(false);
+      if (
+        !managementEnabled ||
+        !permitted ||
+        !user?.vesselId ||
+        isLoading ||
+        accessState === 'unavailable' ||
+        subscription?.vesselId !== user.vesselId ||
+        !['active', 'trialing', 'past_due'].includes(subscription.status)
+      )
+        return;
+      const id = user.id;
+      const vesselId = user.vesselId;
+      const stillCurrent = () => {
+        const current = useAuthStore.getState().user;
+        return active && current?.id === id && current.vesselId === vesselId;
+      };
+      setManagementLoading(true);
+      setManagementNotice('');
+      void (async () => {
+        try {
+          const result = await getPaddleManagementStatus(vesselId);
+          if (!stillCurrent()) return;
+          setManagement(result);
+          setManagementOwner(managementKey);
+        } catch {
+          if (stillCurrent())
+            setManagementNotice('Subscription controls could not be loaded. Please retry.');
+        } finally {
+          if (active) setManagementLoading(false);
+        }
+      })();
+      return () => {
+        active = false;
+      };
+    }, [
+      managementEnabled,
+      permitted,
+      user?.id,
+      user?.vesselId,
+      subscription?.vesselId,
+      subscription?.status,
+      managementKey,
+      isLoading,
+      accessState,
+    ])
+  );
   useEffect(() => {
     let active = true;
     setPreview(null);
@@ -404,10 +464,11 @@ export const VesselPlansScreen = () => {
     scroll.current?.scrollTo({ y: 0, animated: false });
   };
   const manageSubscription = async (
-    action: 'status' | 'payment_method' | 'cancel_renewal' | 'review_renewal' | 'keep_subscription'
+    action: 'payment_method' | 'cancel_renewal' | 'review_renewal' | 'keep_subscription'
   ) => {
     if (
       starting.current ||
+      managementLoading ||
       !paddleManagementEnabled ||
       !permitted ||
       !user?.vesselId ||
@@ -431,27 +492,25 @@ export const VesselPlansScreen = () => {
       return current?.id === id && current.vesselId === vesselId;
     };
     try {
-      if (action === 'status' || action === 'review_renewal') {
+      if (action === 'review_renewal') {
         setConfirmCancellation(false);
         setConfirmRenewal(false);
         setManagement(null);
         const result = await getPaddleManagementStatus(vesselId);
         if (!stillCurrent()) return;
         setManagement(result);
-        setManagementOwner(`${id}:${vesselId}`);
-        if (action === 'review_renewal') {
-          if (
-            result.cancellationScheduled &&
-            ['active', 'trialing'].includes(result.status) &&
-            Date.parse(result.periodEnd) > Date.now()
-          ) {
-            setConfirmRenewal(true);
-          } else {
-            setManagementNotice(
-              'Subscription status has changed. The current plan is being refreshed; no renewal change was sent.'
-            );
-            await refetch();
-          }
+        setManagementOwner(managementKey);
+        if (
+          result.cancellationScheduled &&
+          ['active', 'trialing'].includes(result.status) &&
+          Date.parse(result.periodEnd) > Date.now()
+        ) {
+          setConfirmRenewal(true);
+        } else {
+          setManagementNotice(
+            'Subscription status has changed. The current plan is being refreshed; no renewal change was sent.'
+          );
+          await refetch();
         }
       } else if (action === 'payment_method') {
         const url = await preparePaddlePaymentMethod(vesselId, window.location.origin);
@@ -575,7 +634,13 @@ export const VesselPlansScreen = () => {
         autoCapitalize="characters"
         autoCorrect={false}
         maxLength={32}
-        style={{ borderWidth: 1, borderColor: theme.border, borderRadius: 12, padding: 14, color: theme.textPrimary }}
+        style={{
+          borderWidth: 1,
+          borderColor: theme.border,
+          borderRadius: 12,
+          padding: 14,
+          color: theme.textPrimary,
+        }}
       />
       <Text style={muted}>
         Selecting Set up billing details applies your code to this trial if eligible, then opens
@@ -690,7 +755,7 @@ export const VesselPlansScreen = () => {
                 ? 'Use Set up new billing details on your current plan above. This keeps your original trial end date.'
                 : 'Payment setup for your existing trial is being connected. It is not available yet; do not start a second subscription.'
               : paddleManagementEnabled
-                ? 'Use Manage Subscription above for payment details or cancellation. Plan and billing-period changes are not available yet. Do not start a second subscription.'
+                ? 'Use the billing and renewal controls above for payment details or cancellation. Plan and billing-period changes are not available yet. Do not start a second subscription.'
                 : 'Existing subscription management is being connected. A second subscription cannot be created here.'}
         </Text>
       )}
@@ -924,14 +989,11 @@ export const VesselPlansScreen = () => {
                       )}
                       {paddleManagementEnabled && !cancellationEnd && !needsReactivation && (
                         <>
-                          <Button
-                            title={busy ? 'Checking…' : 'Manage Subscription'}
-                            variant="outline"
-                            disabled={busy || isLoading || accessState === 'unavailable'}
-                            onPress={() => {
-                              void manageSubscription('status');
-                            }}
-                          />
+                          {managementLoading && (
+                            <Text accessibilityLiveRegion="polite" style={muted}>
+                              Loading subscription controls…
+                            </Text>
+                          )}
                           {currentManagement && (
                             <>
                               {currentManagement.cancellationScheduled ? (
@@ -989,9 +1051,24 @@ export const VesselPlansScreen = () => {
                         </>
                       )}
                       {!!managementNotice && (
-                        <Text accessibilityRole="alert" style={text}>
-                          {managementNotice}
-                        </Text>
+                        <>
+                          <Text accessibilityRole="alert" style={text}>
+                            {managementNotice}
+                          </Text>
+                          {!currentManagement && !cancellationEnd && (
+                            <Button
+                              title="Retry Subscription Status"
+                              variant="outline"
+                              disabled={
+                                busy ||
+                                managementLoading ||
+                                isLoading ||
+                                accessState === 'unavailable'
+                              }
+                              onPress={() => setManagementRetry((attempt) => attempt + 1)}
+                            />
+                          )}
+                        </>
                       )}
                     </View>
                   )}
