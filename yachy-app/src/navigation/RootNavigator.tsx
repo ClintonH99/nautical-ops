@@ -172,6 +172,14 @@ export const RootNavigator = () => {
   const sessionBlocked = browserLease.userId === user?.id && browserLease.status !== 'allowed';
   const hasVessel = !!user?.vesselId;
   const navigationRef = useNavigationContainerRef();
+  // Preserve presentation intent while the existing server gate refreshes or
+  // sign-in finishes. This flag never changes an access decision.
+  const checkoutReturn = useRef(
+    Platform.OS === 'web' &&
+    typeof window !== 'undefined' &&
+    window.location?.pathname === '/app' &&
+    new URLSearchParams(window.location.search).get('crewInvite') === 'ready'
+  );
   const previousVesselProfile = useRef(user);
   useEffect(() => {
     const destination = vesselTransitionRoute(previousVesselProfile.current, user);
@@ -756,6 +764,14 @@ export const RootNavigator = () => {
       ref={navigationRef}
       theme={navTheme}
       linking={webLinking}
+      onStateChange={() => {
+        const current = navigationRef.getCurrentRoute() as
+          | { name: string; params?: { crewInvite?: string } }
+          | undefined;
+        if (current?.name === 'Home' && current.params?.crewInvite !== 'ready') {
+          checkoutReturn.current = false;
+        }
+      }}
       fallback={
         <View style={[styles.loadingContainer, { backgroundColor: themeColors.background }]}>
           <Image
@@ -893,6 +909,11 @@ export const RootNavigator = () => {
               <Stack.Screen
                 name="MainTabs"
                 component={MainTabsNavigator}
+                initialParams={
+                  checkoutReturn.current
+                    ? { screen: 'Home', params: { crewInvite: 'ready' } }
+                    : undefined
+                }
                 options={{
                   headerShown: false,
                   title: 'Home',

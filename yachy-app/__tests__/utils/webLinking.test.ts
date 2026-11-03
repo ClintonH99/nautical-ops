@@ -2,6 +2,19 @@ import { getPathFromState } from '@react-navigation/native';
 import { createWebLinkingConfig } from '../../src/navigation/webLinking';
 
 describe('web page addresses', () => {
+  it('checkout return targets Home and never bypasses the payment gate', () => {
+    const allowed = createWebLinkingConfig(true);
+    const state = allowed.getStateFromPath('/app?crewInvite=ready', allowed.config)!;
+    expect(getPathFromState(state, allowed.config)).toBe('/app?crewInvite=ready');
+    for (const [signedIn, restricted, expected] of [
+      [false, false, '/login'],
+      [true, true, '/vessel-plans'],
+    ] as const) {
+      const config = createWebLinkingConfig(signedIn, restricted);
+      const blocked = config.getStateFromPath('/app?crewInvite=ready', config.config)!;
+      expect(getPathFromState(blocked, config.config)).toBe(expected);
+    }
+  });
   it('restricts crew deep links to the lockout screen only after confirmed payment restriction', () => {
     const config = createWebLinkingConfig(true, false, true);
     for (const path of ['/login', '/app', '/crew', '/vessel-plans', '/vessel-access']) {

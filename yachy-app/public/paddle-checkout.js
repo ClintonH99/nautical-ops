@@ -338,12 +338,13 @@
             node('status-panel').hidden = true;
             node('checkout-grid').hidden = true;
             node('checkout-intro').hidden = true;
+            node('home-return').href = '/app?crewInvite=ready';
             node('success-title').textContent = paymentMethodUpdate
               ? 'Payment method updated'
               : 'Checkout completed';
             node('success-message').textContent = paymentMethodUpdate
-              ? 'Paddle has confirmed your payment details. Return to Nautical Ops to check your current plan.'
-              : 'Paddle has confirmed checkout. Return to Nautical Ops to check your server-confirmed subscription.';
+              ? 'Paddle has confirmed your payment details. Return to your vessel home page.'
+              : 'Paddle has confirmed checkout. Return to your vessel home page. Access is checked securely by Nautical Ops.';
             // Completed events use snake_case (selected/loaded use kebab-case).
             const methods = { apple_pay: 'Apple Pay', google_pay: 'Google Pay', card: 'Card' };
             const method = methods[event.data.payment?.method_details?.type];

@@ -7,10 +7,15 @@ import tripsService from '../../src/services/trips';
 import yardJobsService from '../../src/services/yardJobs';
 import crewLeaveService from '../../src/services/crewLeave';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+let mockCrewWelcomeStatus = 'ineligible';
+jest.mock('../../src/hooks/useCrewInviteWelcome', () => ({
+  useCrewInviteWelcome: () => ({ status: mockCrewWelcomeStatus, retry: jest.fn() }),
+}));
 let mockUser = { id: 'crew', role: 'CREW', vesselId: 'vessel' };
 const mockColorsLoad = jest.fn();
 const mockCalendarProps = jest.fn();
 beforeEach(() => {
+  mockCrewWelcomeStatus = 'ineligible';
   mockUser = { id: 'crew', role: 'CREW', vesselId: 'vessel' };
 });
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -34,7 +39,9 @@ jest.mock('../../src/store', () => ({
   getDepartmentColor: () => '#123456',
 }));
 jest.mock('../../src/hooks/useThemeColors', () => ({ useThemeColors: () => ({ isDark: false }) }));
-jest.mock('../../src/components', () => ({ Button: jest.requireActual('../../src/components/Button').Button }));
+jest.mock('../../src/components', () => ({
+  Button: jest.requireActual('../../src/components/Button').Button,
+}));
 jest.mock('react-native-calendars', () => ({
   Calendar: (props: CalendarProps) => {
     mockCalendarProps(props);
@@ -131,8 +138,47 @@ it('shows the welcome board per captain/vessel and See Plans opens Vessel Plans'
   await act(async () => {});
   expect(ui.getByText('Welcome to Nautical Ops!')).toBeTruthy();
   expect(ui.getByRole('button', { name: 'Continue' })).toBeTruthy();
-  await act(async () => { fireEvent.press(ui.getByRole('button', { name: 'See Plans' })); });
+  await act(async () => {
+    fireEvent.press(ui.getByRole('button', { name: 'See Plans' }));
+  });
   expect(navigation.navigate).toHaveBeenCalledWith('VesselPlans');
   expect(await AsyncStorage.getItem('has_seen_welcome_popup:new-captain:new-vessel')).toBe('true');
   expect(ui.queryByText('Welcome to Nautical Ops!')).toBeNull();
+});
+
+it('shows one confirmed-access prompt and opens the existing invite section', async () => {
+  mockUser = { id: 'return-captain', role: 'CAPTAIN_MOV', vesselId: 'return-vessel' };
+  mockCrewWelcomeStatus = 'ready';
+  jest.mocked(tripsService.getTripsByVessel).mockResolvedValue([]);
+  jest.mocked(yardJobsService.getByVessel).mockResolvedValue([]);
+  jest.mocked(crewLeaveService.getCalendarInRange).mockResolvedValue([]);
+  mockColorsLoad.mockResolvedValue(undefined);
+  const navigation = { navigate: jest.fn(), setParams: jest.fn() };
+  const ui = render(
+    <HomeScreen navigation={navigation} route={{ params: { crewInvite: 'ready' } }} />
+  );
+  await act(async () => {});
+  expect(ui.getByText('Congratulations!')).toBeTruthy();
+  expect(ui.queryByText('Welcome to Nautical Ops!')).toBeNull();
+  await act(async () => fireEvent.press(ui.getByRole('button', { name: 'View Invite Code' })));
+  expect(navigation.navigate).toHaveBeenCalledWith('VesselSettings', { section: 'invite-code' });
+  expect(navigation.setParams).toHaveBeenCalledWith({ crewInvite: undefined });
+  expect(await AsyncStorage.getItem('has_seen_welcome_popup:return-captain:return-vessel')).toBe(
+    'true'
+  );
+  ui.rerender(<HomeScreen navigation={navigation} route={{ params: {} }} />);
+  expect(ui.queryByText('Congratulations!')).toBeNull();
+});
+
+it('offers no invite button while access is still being confirmed', async () => {
+  mockCrewWelcomeStatus = 'checking';
+  jest.mocked(tripsService.getTripsByVessel).mockResolvedValue([]);
+  jest.mocked(yardJobsService.getByVessel).mockResolvedValue([]);
+  jest.mocked(crewLeaveService.getCalendarInRange).mockResolvedValue([]);
+  mockColorsLoad.mockResolvedValue(undefined);
+  const ui = render(<HomeScreen navigation={{}} route={{ params: { crewInvite: 'ready' } }} />);
+  await act(async () => {});
+  expect(ui.getByText('Confirming your vessel access')).toBeTruthy();
+  expect(ui.queryByText('Congratulations!')).toBeNull();
+  expect(ui.queryByText('View Invite Code')).toBeNull();
 });

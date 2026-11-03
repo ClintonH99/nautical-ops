@@ -9,6 +9,9 @@ let mockSubscription: any = null;
 const mockRefetch = jest.fn();
 const mockPreview = jest.fn();
 const mockNavigate = jest.fn();
+const mockGoBack = jest.fn();
+let mockCanGoBack = false;
+let mockPaymentRestricted = false;
 const mockStartTrial = jest.fn();
 const mockPreparePayment = jest.fn();
 const mockRecoverPayment = jest.fn();
@@ -44,7 +47,11 @@ jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   default: () => ({ width: mockWidth, height: 844, scale: 1, fontScale: 1 }),
 }));
 jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ navigate: mockNavigate }),
+  useNavigation: () => ({
+    navigate: mockNavigate,
+    canGoBack: () => mockCanGoBack,
+    goBack: mockGoBack,
+  }),
   useFocusEffect: (effect: () => void) => jest.requireActual('react').useEffect(effect, [effect]),
 }));
 jest.mock('../../src/hooks/useSubscriptionStatus', () => ({
@@ -79,9 +86,12 @@ jest.mock('../../src/services/paddlePricing', () => ({
   usd: (n: number) => 'US$' + (n / 100).toFixed(2),
 }));
 jest.mock('../../src/store', () => ({
-  useAuthStore: Object.assign((selector: any) => selector({ user: mockUser }), {
-    getState: () => ({ user: mockUser }),
-  }),
+  useAuthStore: Object.assign(
+    (selector: any) => selector({ user: mockUser, captainPaymentRequired: mockPaymentRestricted }),
+    {
+      getState: () => ({ user: mockUser }),
+    }
+  ),
 }));
 jest.mock('../../src/hooks/useThemeColors', () => ({
   useThemeColors: () => ({
@@ -98,7 +108,16 @@ jest.mock('../../src/hooks/useThemeColors', () => ({
 jest.mock('../../src/components', () => {
   const { Text, Pressable } = require('react-native');
   return {
-    PageHeader: ({ title }: any) => <Text>{title}</Text>,
+    PageHeader: ({ title, onBack, showBack }: any) => (
+      <>
+        <Text>{title}</Text>
+        {showBack && (
+          <Pressable onPress={onBack}>
+            <Text>Go back</Text>
+          </Pressable>
+        )}
+      </>
+    ),
     Button: ({ title, disabled, onPress }: any) => (
       <Pressable
         accessibilityRole="button"
@@ -142,10 +161,35 @@ function result(period = 'monthly', code = 'FR') {
     }),
   };
 }
+
+it('returns a directly opened plans page to Home without requiring payment', async () => {
+  const ui = render(<VesselPlansScreen />);
+  await act(async () => {});
+  fireEvent.press(ui.getByText('Go back'));
+  expect(mockNavigate).toHaveBeenCalledWith('MainTabs', { screen: 'Home' });
+});
+it('uses navigation history when plans was opened inside the app', async () => {
+  mockCanGoBack = true;
+  const ui = render(<VesselPlansScreen />);
+  await act(async () => {});
+  fireEvent.press(ui.getByText('Go back'));
+  expect(mockGoBack).toHaveBeenCalledTimes(1);
+  expect(mockNavigate).not.toHaveBeenCalled();
+});
+it('does not show a dead or bypassing back button for payment-restricted accounts', async () => {
+  mockPaymentRestricted = true;
+  const ui = render(<VesselPlansScreen />);
+  await act(async () => {});
+  expect(ui.queryByText('Go back')).toBeNull();
+  expect(mockNavigate).not.toHaveBeenCalled();
+});
 beforeEach(() => {
   mockFocusListeners.clear();
   mockRefetch.mockReset();
   mockNavigate.mockReset();
+  mockGoBack.mockReset();
+  mockCanGoBack = false;
+  mockPaymentRestricted = false;
   mockStartTrial.mockReset().mockResolvedValue(undefined);
   mockPreparePayment.mockReset();
   mockRecoverPayment.mockReset();
@@ -788,7 +832,10 @@ test('optional billing appears only after server confirmation; skip goes Home wi
   expect(screen.getByText('US$107.99 / month')).toBeTruthy();
   expect(screen.getByText('Due today: US$0.00')).toBeTruthy();
   fireEvent.press(screen.getByText('Continue without payment details'));
-  expect(mockNavigate).toHaveBeenCalledWith('MainTabs', { screen: 'Home' });
+  expect(mockNavigate).toHaveBeenCalledWith('MainTabs', {
+    screen: 'Home',
+    params: { crewInvite: 'ready' },
+  });
   expect(mockPreparePayment).not.toHaveBeenCalled();
   expect(mockStartTrial).toHaveBeenCalledTimes(1);
 });

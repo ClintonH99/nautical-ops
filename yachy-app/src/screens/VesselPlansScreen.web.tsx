@@ -49,11 +49,17 @@ import {
 
 /** Provider-calculated totals are previews, never an entitlement or a charge. */
 export const VesselPlansScreen = () => {
-  const navigation = useNavigation<NativeStackNavigationProp<{ MainTabs: { screen: 'Home' } }>>();
+  const navigation =
+    useNavigation<
+      NativeStackNavigationProp<{ MainTabs: { screen: 'Home'; params?: { crewInvite: string } } }>
+    >();
   const theme = useThemeColors();
   const { width } = useWindowDimensions();
   const wide = width >= 1000;
   const user = useAuthStore((state) => state.user);
+  const paymentRestricted = useAuthStore(
+    (state) => state.captainPaymentRequired || state.crewPaymentRequired
+  );
   const permitted = canAccessVesselManagement(user) && !!user?.vesselId;
   const { subscription, accessState, isLoading, refetch } = useSubscriptionStatus(
     user?.vesselId ?? null
@@ -668,7 +674,7 @@ export const VesselPlansScreen = () => {
         disabled={busy || !confirmedTrial}
         onPress={() => {
           setBillingStepOwner('');
-          navigation.navigate('MainTabs', { screen: 'Home' });
+          navigation.navigate('MainTabs', { screen: 'Home', params: { crewInvite: 'ready' } });
         }}
       />
       <Text style={muted}>
@@ -809,7 +815,15 @@ export const VesselPlansScreen = () => {
   );
   return (
     <View style={[styles.page, { backgroundColor: theme.background }]}>
-      <PageHeader title="Vessel Plans" />
+      <PageHeader
+        title="Vessel Plans"
+        showBack={!paymentRestricted}
+        onBack={() => {
+          if (paymentRestricted) return;
+          if (navigation.canGoBack()) navigation.goBack();
+          else navigation.navigate('MainTabs', { screen: 'Home' });
+        }}
+      />
       <ScrollView
         ref={scroll}
         keyboardShouldPersistTaps="handled"

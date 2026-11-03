@@ -3,7 +3,7 @@
  * Captain/MOV can manage vessel name, subscription plans, and invite code.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
@@ -36,7 +36,15 @@ import { usePostHog } from 'posthog-react-native';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const DEFAULT_VESSEL_BANNER = require('../../assets/default-vessel-banner.png');
 
-export const VesselSettingsScreen = ({ navigation }: any) => {
+export const VesselSettingsScreen = ({ navigation, route }: any) => {
+  const scroll = useRef<ScrollView>(null);
+  const inviteOffset = useRef<number | null>(null);
+  const scrollToInvite = useCallback(() => {
+    if (route?.params?.section === 'invite-code' && inviteOffset.current !== null) {
+      scroll.current?.scrollTo({ y: inviteOffset.current, animated: false });
+    }
+  }, [route?.params?.section]);
+  useFocusEffect(scrollToInvite);
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const posthog = usePostHog();
@@ -291,7 +299,11 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
   return (
     <View style={[styles.pageWrap, { backgroundColor: themeColors.background }]}>
       <PageHeader title="Vessel Settings" onBack={() => backFromVesselSettings(navigation)} />
-      <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <ScrollView
+        ref={scroll}
+        onContentSizeChange={scrollToInvite}
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+      >
         <View style={styles.content}>
           {/* Subscription / Vessel Plans Link */}
           <View style={styles.section}>
@@ -537,7 +549,13 @@ export const VesselSettingsScreen = ({ navigation }: any) => {
           </View>
 
           {/* Invite Code Section */}
-          <View style={[styles.section, !hasActiveSubscription && { opacity: 0.6 }]}>
+          <View
+            onLayout={(event) => {
+              inviteOffset.current = event.nativeEvent.layout.y;
+              scrollToInvite();
+            }}
+            style={[styles.section, !hasActiveSubscription && { opacity: 0.6 }]}
+          >
             <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
               Invite Code
             </Text>

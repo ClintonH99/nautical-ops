@@ -440,7 +440,9 @@ test("declined payment and completion have visible actions without granting app 
   assert.match(page.nodes.status.textContent, /could not be completed/);
   page.event("checkout.completed", eventData({ status: "completed" }));
   assert.equal(page.nodes["success-panel"].hidden, false);
-  assert.match(page.nodes["success-message"].textContent, /server-confirmed/);
+  assert.match(page.nodes["success-message"].textContent, /Access is checked securely by Nautical Ops/);
+  assert.equal(page.nodes["home-return"].getAttribute("href"), "/app?crewInvite=ready");
+  assert.equal(page.document.querySelector("#success-panel a").getAttribute("href"), "/app?crewInvite=ready");
   assert.equal(page.calls.filter((call) => call.opened).length, 0);
 });
 test("branded page has no first-party card inputs and keeps provider frame plus refund link", () => {

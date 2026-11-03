@@ -43,6 +43,7 @@ import { getActiveYardJobs } from '../utils/shipyardRecords';
 import { useTrialBillingReminder } from '../hooks/useTrialBillingReminder';
 import { paddleCheckoutEnabled } from '../services/paddleBilling';
 import { useHomeVesselName } from '../hooks/useHomeVesselName';
+import { useCrewInviteWelcome } from '../hooks/useCrewInviteWelcome';
 
 const { width } = Dimensions.get('window');
 const CATEGORY_SIZE = (width - SPACING.xl * 2 - SPACING.md * 2) / 3;
@@ -182,7 +183,7 @@ const TRIP_TYPE_LABELS: Record<string, string> = {
   DELIVERY: 'Delivery',
 };
 
-export const HomeScreen = ({ navigation }: any) => {
+export const HomeScreen = ({ navigation, route }: any) => {
   const { user } = useAuthStore();
   const themeColors = useThemeColors();
   const [vesselName, setVesselName] = useScreenState<string | null>('vesselName', null);
@@ -204,6 +205,9 @@ export const HomeScreen = ({ navigation }: any) => {
   const [tripsLoading, setTripsLoading] = useScreenState('tripsLoading', true);
   const [calendarMode, setCalendarMode] = useState<'trips' | 'yardPeriod' | 'crewLeave'>('trips');
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const crewInviteRequested = route?.params?.crewInvite === 'ready';
+  const crewWelcome = useCrewInviteWelcome(crewInviteRequested);
+  const showCrewWelcome = crewInviteRequested && crewWelcome.status !== 'ineligible';
 
   const vesselId = user?.vesselId ?? null;
   const vesselDetails = useHomeVesselName(vesselId, setVesselName);
@@ -211,7 +215,8 @@ export const HomeScreen = ({ navigation }: any) => {
   const isCaptain = user?.role === 'CAPTAIN_MOV';
   const isCaptainLike = isCaptain;
   const { reminder: trialReminder, dismiss: dismissTrialReminder } = useTrialBillingReminder({
-    enabled: Platform.OS === 'web' && paddleCheckoutEnabled && !showWelcomeModal,
+    enabled:
+      Platform.OS === 'web' && paddleCheckoutEnabled && !showWelcomeModal && !showCrewWelcome,
     userId: user?.id ?? null,
     vesselId,
     role: user?.role ?? null,
@@ -323,6 +328,11 @@ export const HomeScreen = ({ navigation }: any) => {
     setShowWelcomeModal(false);
   }, [user?.id, vesselId]);
 
+  const dismissCrewWelcome = async () => {
+    await dismissWelcomeModal();
+    navigation.setParams({ crewInvite: undefined });
+  };
+
   useEffect(() => {
     setBannerLoadFailed(false);
   }, [vesselId, bannerCacheBust]);
@@ -334,14 +344,54 @@ export const HomeScreen = ({ navigation }: any) => {
   return (
     <>
       <Modal
-        visible={showWelcomeModal || !!trialReminder}
+        visible={showCrewWelcome || showWelcomeModal || !!trialReminder}
         transparent
         animationType="fade"
-        onRequestClose={showWelcomeModal ? dismissWelcomeModal : dismissTrialReminder}
+        onRequestClose={
+          showCrewWelcome
+            ? dismissCrewWelcome
+            : showWelcomeModal
+              ? dismissWelcomeModal
+              : dismissTrialReminder
+        }
       >
         <View style={styles.welcomeModalBackdrop}>
           <View style={[styles.welcomeModalCard, { backgroundColor: themeColors.surface }]}>
-            {showWelcomeModal ? (
+            {showCrewWelcome ? (
+              <>
+                <Text style={[styles.welcomeModalTitle, { color: themeColors.textPrimary }]}>
+                  {crewWelcome.status === 'ready'
+                    ? 'Congratulations!'
+                    : 'Confirming your vessel access'}
+                </Text>
+                <Text style={[styles.welcomeModalMessage, { color: themeColors.textSecondary }]}>
+                  {crewWelcome.status === 'ready'
+                    ? 'You can now invite your crew onboard your vessel!'
+                    : crewWelcome.status === 'checking'
+                      ? 'Checking your trial or subscription securely…'
+                      : 'We could not confirm your vessel access just now. Please retry. No payment has been started.'}
+                </Text>
+                {crewWelcome.status === 'ready' ? (
+                  <Button
+                    title="View Invite Code"
+                    fullWidth
+                    onPress={async () => {
+                      await dismissCrewWelcome();
+                      navigation.navigate('VesselSettings', { section: 'invite-code' });
+                    }}
+                  />
+                ) : crewWelcome.status === 'unavailable' ? (
+                  <Button title="Retry" fullWidth onPress={crewWelcome.retry} />
+                ) : null}
+                <Button
+                  title="Continue to Home"
+                  variant="outline"
+                  fullWidth
+                  style={{ marginTop: SPACING.sm }}
+                  onPress={dismissCrewWelcome}
+                />
+              </>
+            ) : showWelcomeModal ? (
               <>
                 <Text style={[styles.welcomeModalTitle, { color: themeColors.textPrimary }]}>
                   Welcome to Nautical Ops!
