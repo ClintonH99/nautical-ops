@@ -234,6 +234,12 @@ Deno.serve(async (req) => {
     const payload = (await req.json()) as WebhookPayload;
 
     if (payload.table === 'vessel_subscriptions') {
+      if (payload.record?.payment_provider === 'paddle') {
+        const { data: emailRuntime, error: runtimeError } = await supabase
+          .from('billing_email_runtime').select('enabled').eq('id', true).single();
+        if (runtimeError) throw new Error('Billing email configuration unavailable');
+        if (emailRuntime.enabled) return Response.json({ ok: true, delegated: true });
+      }
       const becameActive =
         payload.record?.status === 'active' &&
         (payload.type === 'INSERT' || payload.old_record?.status !== 'active');
