@@ -53,6 +53,9 @@ test("trial has confirmed date, no-charge explanation and existing invite destin
   assert.match(m.message.text, /US\$0.00/);
   assert.match(m.message.html, /vessel-settings\?section=invite-code/);
   assert.doesNotMatch(m.message.subject, /paid|payment confirmed/i);
+  assert.match(m.message.html, /src="cid:nautical-vessel-logo"/);
+  assert.equal(m.message.attachments[0].content_id, 'nautical-vessel-logo');
+  assert.doesNotMatch(m.message.html, /<img[^>]+src="https?:/);
 });
 test("payment-method completion adds billing confirmation but never payment receipt", () => {
   const f = fixture();

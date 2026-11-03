@@ -1,4 +1,5 @@
 // All evidence comes from authenticated server reads, never checkout URL flags.
+import { emailLogo, emailLogoAttachments } from './emailBrand.mjs';
 const APP = 'https://www.nautical-ops.com';
 export const escapeHtml = (v) =>
   String(v ?? '').replace(
@@ -75,7 +76,7 @@ export function billingMessages({
       `${action}: ${APP}${path}`,
       'Questions? support@nautical-ops.com',
     ].join('\n\n');
-    const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;background:#eef2f6;font-family:Arial,sans-serif;color:#172744"><table role="presentation" width="100%"><tr><td align="center" style="padding:24px 12px"><table role="presentation" width="100%" style="max-width:600px;background:white;border:1px solid #e0e5ec;border-radius:18px"><tr><td style="padding:24px;border-bottom:1px solid #edf0f4"><img src="${APP}/favicon-vessel.png" alt="" width="36" height="36" style="vertical-align:middle;margin-right:10px"> <strong style="font-size:24px">Nautical Ops</strong></td></tr><tr><td style="padding:28px 24px"><h1 style="font-size:28px;line-height:1.2">${escapeHtml(title)}</h1><p>Hi ${escapeHtml(recipient.name || 'Captain')},</p>${paragraphs.map((p) => `<p style="font-size:16px;line-height:1.6;color:#526176">${escapeHtml(p)}</p>`).join('')}<table role="presentation" width="100%" style="background:#f7f9fc;padding:16px;border-radius:12px">${details.map(([k, v]) => `<tr><td style="padding:8px 4px;vertical-align:top">${escapeHtml(k)}</td><td style="padding:8px 4px;font-weight:bold">${escapeHtml(v)}</td></tr>`).join('')}</table><p style="margin:30px 0"><a href="${APP}${path}" style="display:inline-block;padding:16px 24px;background:#233d8b;color:white;text-decoration:none;border-radius:12px;font-weight:bold">${escapeHtml(action)}</a></p><p style="color:#526176;line-height:1.5">Questions? <a href="mailto:support@nautical-ops.com">Contact support</a>.</p></td></tr><tr><td align="center" style="padding:20px;color:#6b778b;font-size:12px;border-top:1px solid #edf0f4">Nautical Ops · An app for crew, from crew.</td></tr></table></td></tr></table></body></html>`;
+    const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;background:#eef2f6;font-family:Arial,sans-serif;color:#172744"><table role="presentation" width="100%"><tr><td align="center" style="padding:24px 12px"><table role="presentation" width="100%" style="max-width:600px;background:white;border:1px solid #e0e5ec;border-radius:18px"><tr><td style="padding:24px;border-bottom:1px solid #edf0f4">${emailLogo(36)} <strong style="font-size:24px">Nautical Ops</strong></td></tr><tr><td style="padding:28px 24px"><h1 style="font-size:28px;line-height:1.2">${escapeHtml(title)}</h1><p>Hi ${escapeHtml(recipient.name || 'Captain')},</p>${paragraphs.map((p) => `<p style="font-size:16px;line-height:1.6;color:#526176">${escapeHtml(p)}</p>`).join('')}<table role="presentation" width="100%" style="background:#f7f9fc;padding:16px;border-radius:12px">${details.map(([k, v]) => `<tr><td style="padding:8px 4px;vertical-align:top">${escapeHtml(k)}</td><td style="padding:8px 4px;font-weight:bold">${escapeHtml(v)}</td></tr>`).join('')}</table><p style="margin:30px 0"><a href="${APP}${path}" style="display:inline-block;padding:16px 24px;background:#233d8b;color:white;text-decoration:none;border-radius:12px;font-weight:bold">${escapeHtml(action)}</a></p><p style="color:#526176;line-height:1.5">Questions? <a href="mailto:support@nautical-ops.com">Contact support</a>.</p></td></tr><tr><td align="center" style="padding:20px;color:#6b778b;font-size:12px;border-top:1px solid #edf0f4">Nautical Ops · An app for crew, from crew.</td></tr></table></td></tr></table></body></html>`;
     messages.push({
       key: `billing-v1/${kind}/${reference}/${recipient.id}`,
       kind,
@@ -84,6 +85,7 @@ export function billingMessages({
         to: recipient.email,
         reply_to: 'support@nautical-ops.com',
         subject,
+        attachments: emailLogoAttachments(),
         html,
         text,
       },

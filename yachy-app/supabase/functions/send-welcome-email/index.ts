@@ -19,7 +19,8 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { withModernSupabaseKeys } from '../_shared/modernSupabaseKeys.mjs';
 
 const runtimeEnv = withModernSupabaseKeys((name: string) => Deno.env.get(name));
-import { Resend } from 'npm:resend@4';
+import { Resend } from 'npm:resend@6.0.0';
+import { emailLogo, emailLogoAttachments } from '../_shared/emailBrand.mjs';
 import { isTrustedNotificationRequest } from '../send-trip-push/internal-auth.ts';
 
 const supabase = createClient(
@@ -57,8 +58,6 @@ interface WebhookPayload {
   old_record: any | null;
 }
 
-const BRAND_LOGO_URL =
-  'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/a1/50/af/a150aff3-5e28-31a3-b01f-3cbfd2ee26c0/AppIcon-0-0-1x_U007epad-0-1-85-220.png/512x512bb.jpg';
 const APP_URL = 'https://www.nautical-ops.com/login';
 
 function emailButton(label: string): string {
@@ -93,7 +92,7 @@ function emailShell(kicker: string, title: string, content: string): string {
                   <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                     <tr>
                       <td style="padding-right:11px; vertical-align:middle;">
-                        <img src="${BRAND_LOGO_URL}" width="46" height="46" alt="Nautical Ops" style="display:block; width:46px; height:46px; border:0; border-radius:12px;" />
+                        ${emailLogo(46)}
                       </td>
                       <td style="vertical-align:middle; color:#10295F; font-size:22px; font-weight:800; line-height:24px; letter-spacing:-0.4px; white-space:nowrap;">Nautical Ops</td>
                     </tr>
@@ -127,6 +126,7 @@ async function sendCaptainSignupEmail(captainEmail: string, captainName: string)
     to: captainEmail,
     replyTo: 'support@nautical-ops.com',
     subject: 'Welcome aboard, Captain',
+    attachments: emailLogoAttachments(true),
     html: emailShell(
       'Captain account',
       'Welcome aboard, Captain',
@@ -168,6 +168,7 @@ async function sendCaptainSubscriptionEmail(vesselId: string) {
     to: captain.email,
     replyTo: 'support@nautical-ops.com',
     subject: "Welcome aboard \u2014 you're officially subscribed",
+    attachments: emailLogoAttachments(true),
     html: emailShell(
       'Subscription active',
       'You are officially subscribed',
@@ -190,6 +191,7 @@ async function sendCrewJoinedEmail(userRecord: any, vesselName: string) {
     to: userRecord.email,
     replyTo: 'support@nautical-ops.com',
     subject: `You're in \u2014 welcome to ${subjectVesselName}`,
+    attachments: emailLogoAttachments(true),
     html: emailShell(
       'Crew account',
       'Welcome aboard',
@@ -209,6 +211,7 @@ async function sendCrewSoloSignupEmail(userRecord: any) {
     to: userRecord.email,
     replyTo: 'support@nautical-ops.com',
     subject: 'Welcome to Nautical Ops',
+    attachments: emailLogoAttachments(true),
     html: emailShell(
       'Crew account',
       'Welcome aboard',
