@@ -121,7 +121,7 @@ function emailShell(kicker: string, title: string, content: string): string {
 
 async function sendCaptainSignupEmail(captainEmail: string, captainName: string) {
   const safeCaptainName = escapeHtml(captainName || 'Captain');
-  await resend.emails.send({
+  const { data, error } = await resend.emails.send({
     from: 'Nautical Ops <hello@nautical-ops.com>',
     to: captainEmail,
     replyTo: 'support@nautical-ops.com',
@@ -138,6 +138,7 @@ async function sendCaptainSignupEmail(captainEmail: string, captainName: string)
       `
     ),
   });
+  if (error || !data?.id) throw new Error('Welcome provider did not accept email');
 }
 
 async function sendCaptainSubscriptionEmail(vesselId: string) {
@@ -163,7 +164,7 @@ async function sendCaptainSubscriptionEmail(vesselId: string) {
   const vesselName = escapeHtml(vessel?.name || 'your vessel');
   const captainName = escapeHtml(captain.name || 'Captain');
 
-  await resend.emails.send({
+  const { data, error } = await resend.emails.send({
     from: 'Nautical Ops <hello@nautical-ops.com>',
     to: captain.email,
     replyTo: 'support@nautical-ops.com',
@@ -180,13 +181,14 @@ async function sendCaptainSubscriptionEmail(vesselId: string) {
       `
     ),
   });
+  if (error || !data?.id) throw new Error('Welcome provider did not accept email');
 }
 
 async function sendCrewJoinedEmail(userRecord: any, vesselName: string) {
   const safeName = escapeHtml(userRecord.name || 'there');
   const safeVesselName = escapeHtml(vesselName || 'your vessel');
   const subjectVesselName = safeSubjectValue(vesselName, 'your vessel');
-  await resend.emails.send({
+  const { data, error } = await resend.emails.send({
     from: 'Nautical Ops <hello@nautical-ops.com>',
     to: userRecord.email,
     replyTo: 'support@nautical-ops.com',
@@ -202,11 +204,12 @@ async function sendCrewJoinedEmail(userRecord: any, vesselName: string) {
       `
     ),
   });
+  if (error || !data?.id) throw new Error('Welcome provider did not accept email');
 }
 
 async function sendCrewSoloSignupEmail(userRecord: any) {
   const safeName = escapeHtml(userRecord.name || 'there');
-  await resend.emails.send({
+  const { data, error } = await resend.emails.send({
     from: 'Nautical Ops <hello@nautical-ops.com>',
     to: userRecord.email,
     replyTo: 'support@nautical-ops.com',
@@ -223,6 +226,7 @@ async function sendCrewSoloSignupEmail(userRecord: any) {
       `
     ),
   });
+  if (error || !data?.id) throw new Error('Welcome provider did not accept email');
 }
 
 Deno.serve(async (req) => {
@@ -254,6 +258,14 @@ Deno.serve(async (req) => {
     }
 
     if (payload.table === 'users') {
+      const { data: runtime, error: runtimeError } = await supabase
+        .from('welcome_email_runtime').select('enabled').eq('id', true).single();
+      if (runtimeError) throw new Error('Welcome queue configuration unavailable');
+      if (runtime.enabled) {
+        // The database trigger records future first-vessel events atomically.
+        // Never replay historical webhook payloads or send a second copy here.
+        return Response.json({ ok: true, delegated: true });
+      }
       const firstVesselJoin =
         payload.record?.vessel_id && (payload.type === 'INSERT' || !payload.old_record?.vessel_id);
 
@@ -277,7 +289,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ error: 'Unhandled table' }), { status: 400 });
   } catch (e) {
-    console.error('send-welcome-email error:', e);
+    console.error('send-welcome-email processing failed');
     return new Response(JSON.stringify({ error: 'Unable to process email notification' }), {
       status: 500,
     });
