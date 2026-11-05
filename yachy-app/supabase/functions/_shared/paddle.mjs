@@ -21,6 +21,15 @@ export class BillingError extends Error {
     this.status = status;
   }
 }
+// Internal evidence only. Never forward raw Paddle responses to the browser.
+export class PaddleRequestError extends BillingError {
+  constructor(status, code, requestId) {
+    super('Billing provider is temporarily unavailable', 502);
+    this.providerStatus = status;
+    this.providerCode = code;
+    this.providerRequestId = requestId;
+  }
+}
 export function approvedPrice(tier, period) {
   if (!Object.hasOwn(amounts, tier) || !Object.hasOwn(periods, period))
     throw new BillingError('Unknown plan');
@@ -170,7 +179,11 @@ export async function paddleResponse(config, path, options = {}, fetcher = fetch
         : undefined,
       operation: `${options.method || 'GET'} ${path.split('?')[0].replace(/(?:ctm|add|txn|sub|pri)_[a-z0-9]+/g, ':id')}`,
     });
-    throw new BillingError('Billing provider is temporarily unavailable', 502);
+    throw new PaddleRequestError(
+      response.status,
+      identifier(failure?.error?.code),
+      identifier(failure?.meta?.request_id)
+    );
   }
   const json = await response.json();
   if (!json.data) throw new BillingError('Incomplete billing response', 502);

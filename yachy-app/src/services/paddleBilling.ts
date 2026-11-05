@@ -19,6 +19,25 @@ export const paddleManagementEnabled =
 const trialFailure =
   'Trial could not be confirmed. Refresh Plan Status before trying again. If this continues, contact support.';
 
+const trialRecoveryMessages: Record<string, string> = {
+  trial_safe_to_retry:
+    'The trial was not started and no payment was taken. Check your billing country and ZIP/postal code, then try again. If this continues, contact support.',
+  trial_checkout_unavailable:
+    'Paddle could not create this checkout. No trial or payment was created by this request. Please contact support; the failed request will not block a fresh attempt once checkout is available.',
+  trial_confirmation_pending:
+    'Paddle may have received your request. Select Refresh Plan Status. If unchanged, contact support before retrying so we can avoid a duplicate subscription.',
+  trial_recovery_pending:
+    'The unsuccessful request still needs checking. Select Refresh Plan Status and contact support before retrying.',
+  trial_other_request_pending:
+    'A previous request uses a different plan or billing period. Select Refresh Plan Status. If unchanged, contact support before starting another checkout.',
+  trial_existing_subscription:
+    'Your vessel already has billing history. Select Refresh Plan Status and manage the existing subscription; a second free trial cannot be started.',
+  trial_access_required:
+    'Sign in as the vessel Captain/MOV on a registered device before starting the trial.',
+  trial_reservation_unavailable:
+    'Trial could not be reserved. Select Refresh Plan Status and contact support if the problem continues.',
+};
+
 async function trialErrorMessage(error: unknown): Promise<string> {
   // Supabase FunctionsHttpError carries the server response. Never display raw
   // provider diagnostics or assume a timeout means no transaction was created.
@@ -31,6 +50,12 @@ async function trialErrorMessage(error: unknown): Promise<string> {
     }
     if (context.status === 401)
       return 'Your session could not be verified. Sign in again before starting your trial.';
+    if (
+      [409, 503].includes(context.status) &&
+      typeof body?.code === 'string' &&
+      Object.hasOwn(trialRecoveryMessages, body.code)
+    )
+      return trialRecoveryMessages[body.code];
     if (context.status === 409) {
       return 'A trial could not be started because your vessel, device access or an existing billing request needs checking. Select Refresh Plan Status. If it remains unchanged, contact support before retrying.';
     }

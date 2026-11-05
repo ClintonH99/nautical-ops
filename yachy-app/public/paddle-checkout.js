@@ -343,13 +343,8 @@
               ? 'Payment method updated'
               : 'Checkout completed';
             node('success-message').textContent = paymentMethodUpdate
-              ? 'Paddle has confirmed your payment details. Return to your vessel home page.'
+              ? 'Paddle has confirmed your payment details. Saving billing details is not a subscription payment. Return to your vessel home page.'
               : 'Paddle has confirmed checkout. Return to your vessel home page. Access is checked securely by Nautical Ops.';
-            // Completed events use snake_case (selected/loaded use kebab-case).
-            const methods = { apple_pay: 'Apple Pay', google_pay: 'Google Pay', card: 'Card' };
-            const method = methods[event.data.payment?.method_details?.type];
-            node('success-method').hidden = !method;
-            node('success-method').textContent = method || '';
             node('success-panel').hidden = false;
             node('success-title').focus();
           } else if (event.name === 'checkout.closed') {

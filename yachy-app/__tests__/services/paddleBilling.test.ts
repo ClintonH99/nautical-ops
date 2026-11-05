@@ -29,6 +29,44 @@ const response = {
 };
 const invoke = supabase.functions.invoke as jest.Mock;
 beforeEach(() => jest.clearAllMocks());
+test.each([
+  ['trial_safe_to_retry', 503, /no payment was taken/],
+  ['trial_checkout_unavailable', 503, /Paddle could not create/],
+  ['trial_confirmation_pending', 409, /avoid a duplicate/],
+  ['trial_recovery_pending', 409, /still needs checking/],
+  ['trial_other_request_pending', 409, /different plan/],
+  ['trial_existing_subscription', 409, /second free trial/],
+  ['trial_access_required', 409, /registered device/],
+] as const)('safe trial recovery message for %s', async (code, status, expected) => {
+  invoke.mockResolvedValue({
+    error: {
+      context: {
+        status,
+        clone: () => ({ json: async () => ({ code, error: 'PRIVATE PROVIDER DETAILS' }) }),
+      },
+    },
+  });
+  await expect(
+    startPaddleTrial('vessel', '1_5', 'monthly', { countryCode: 'US', postalCode: '10001' })
+  ).rejects.toThrow(expected);
+  expect(invoke).toHaveBeenCalledTimes(1);
+});
+test('unknown recovery code never displays raw provider details or retries automatically', async () => {
+  invoke.mockResolvedValue({
+    error: {
+      context: {
+        status: 503,
+        clone: () => ({
+          json: async () => ({ code: 'unrecognised', error: 'PRIVATE PROVIDER DETAILS' }),
+        }),
+      },
+    },
+  });
+  await expect(
+    startPaddleTrial('vessel', '1_5', 'monthly', { countryCode: 'US', postalCode: '10001' })
+  ).rejects.toThrow('Trial could not be confirmed');
+  expect(invoke).toHaveBeenCalledTimes(1);
+});
 test('trial payment sends optional promo only to the authenticated server flow', async () => {
   const trialEnd = '2030-02-01T00:00:00.000Z';
   invoke.mockResolvedValue({ data: { ...response, purpose: 'trial_payment_method', trialEnd } });

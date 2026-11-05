@@ -110,6 +110,12 @@ function harness(options = {}) {
       },
       rpc: async (name, args) => {
         calls.push(name);
+        if (name === "release_failed_paddle_trial") {
+          assert.equal(args.p_intent_id, "intent");
+          assert.equal(args.p_vessel_id, vesselId);
+          assert.equal(args.p_user_id, options.userId || "captain");
+          return { data: options.releaseDenied ? false : true };
+        }
         if (env.PADDLE_ENV === "live") assert.equal(args.p_environment, "live");
         return {
           error: options.denied,
@@ -145,6 +151,16 @@ function harness(options = {}) {
       );
       const path = new URL(url).pathname;
       calls.push(`${init.method || "GET"} ${path}`);
+      if (options.failAt === `${init.method || "GET"} ${path}`) {
+        if (options.networkFailure) throw new Error("network interrupted");
+        return Response.json(
+          options.failureBody || {
+            error: { code: options.providerCode },
+            meta: { request_id: "test-request" },
+          },
+          { status: options.providerStatus || 400 },
+        );
+      }
       let data;
       if (path.startsWith("/prices/")) data = { ...price, ...options.price };
       else if (path === "/customers" && !init.method)
@@ -175,6 +191,82 @@ function harness(options = {}) {
     payment: createPaddleTrialPaymentHandler(deps),
   };
 }
+test("definite transaction rejection releases only the new reservation and never bills", async () => {
+  for (const providerCode of [
+    "transaction_checkout_not_enabled",
+    "transaction_creation_blocked",
+    "invalid_field",
+  ]) {
+    const h = harness({ failAt: "POST /transactions", providerCode });
+    const r = await h.trial(request());
+    assert.equal(r.status, 503);
+    assert.match(
+      (await r.json()).code,
+      /trial_checkout_unavailable|trial_safe_to_retry/,
+    );
+    assert.equal(
+      h.calls.filter((c) => c === "release_failed_paddle_trial").length,
+      1,
+    );
+    assert.equal(
+      h.calls.some((c) => c.startsWith("PATCH")),
+      false,
+    );
+  }
+});
+test("pre-transaction failure is safe to release, but failed release stays blocked", async () => {
+  for (const releaseDenied of [false, true]) {
+    const h = harness({
+      failAt: "POST /customers",
+      networkFailure: true,
+      releaseDenied,
+    });
+    const data = await (await h.trial(request())).json();
+    assert.equal(
+      data.code,
+      releaseDenied ? "trial_recovery_pending" : "trial_safe_to_retry",
+    );
+    assert.equal(h.calls.includes("POST /transactions"), false);
+  }
+});
+test("unknown outcomes never release: timeout, 5xx, 409, 429, unknown or malformed errors, malformed success and binding failure", async () => {
+  for (const options of [
+    { failAt: "POST /transactions", networkFailure: true },
+    ...[500, 409, 429].map((providerStatus) => ({
+      failAt: "POST /transactions",
+      providerStatus,
+      providerCode: "transaction_checkout_not_enabled",
+    })),
+    { failAt: "POST /transactions", providerCode: "unknown_error" },
+    { failAt: "POST /transactions", failureBody: { unexpected: true } },
+    { transaction: { id: "invalid" } },
+    { saveError: true },
+    { timeout: true },
+  ]) {
+    const h = harness(options);
+    const r = await h.trial(request());
+    assert.equal((await r.json()).code, "trial_confirmation_pending");
+    assert.equal(h.calls.includes("release_failed_paddle_trial"), false);
+  }
+});
+test("repeated in-flight request cannot create or release another transaction", async () => {
+  const h = harness({
+    intent: { id: "intent", state: "creating", created: false },
+  });
+  const r = await h.trial(request());
+  assert.equal(r.status, 409);
+  assert.equal((await r.json()).code, "trial_confirmation_pending");
+  assert.equal(h.calls.includes("POST /transactions"), false);
+  assert.equal(h.calls.includes("release_failed_paddle_trial"), false);
+});
+test("specific existing-plan conflict has a safe recovery code without raw SQL leakage", async () => {
+  const h = harness({
+    denied: { message: "Resolve the existing billing request first" },
+  });
+  const r = await h.trial(request());
+  assert.equal((await r.json()).code, "trial_other_request_pending");
+  assert.equal(h.calls.includes("release_failed_paddle_trial"), false);
+});
 test("trial saves transaction binding before billing and grants no browser entitlement", async () => {
   const h = harness();
   const r = await h.trial(request());

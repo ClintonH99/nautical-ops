@@ -7,6 +7,11 @@ import {
 } from './paddle.mjs';
 import { billingLocation } from './paddlePricing.mjs';
 import {
+  recoverNewTrialFailure,
+  recoveryError,
+  trialReservationError,
+} from './paddleTrialRecovery.mjs';
+import {
   requirePaddleBilling,
   requirePaddleTester,
   billingEnvironmentArgs,
@@ -18,6 +23,8 @@ export function createPaddleTrialHandler({ getEnv, createClient, fetcher = fetch
   return async (request) => {
     if (request.method !== 'POST')
       return Response.json({ error: 'Method not allowed' }, { status: 405 });
+    let newRequest;
+    let stage;
     try {
       const environment = requirePaddleBilling(getEnv);
       const authorization = request.headers.get('authorization');
@@ -45,17 +52,13 @@ export function createPaddleTrialHandler({ getEnv, createClient, fetcher = fetch
         p_price_id: priceId,
         ...billingEnvironmentArgs(environment),
       });
-      if (error || !intent?.id)
-        throw new BillingError(
-          'Trial could not be reserved. Check membership, device access and existing billing.',
-          409
-        );
+      if (error || !intent?.id) throw trialReservationError(error);
       let transaction;
       if (!intent.created) {
         if (intent.state !== 'ready' || !/^txn_[a-z0-9]{26}$/.test(intent.transaction_id || ''))
-          throw new BillingError(
-            'Your previous trial request is being confirmed. Contact support before retrying.',
-            409
+          throw recoveryError(
+            'trial_confirmation_pending',
+            'Your previous trial request is being confirmed. Refresh Plan Status; contact support before retrying if it remains unchanged.'
           );
         transaction = await paddleRequest(
           config,
@@ -64,8 +67,16 @@ export function createPaddleTrialHandler({ getEnv, createClient, fetcher = fetch
           fetcher
         );
       } else {
-        // Customer/address creation has no billing side effect. An ambiguous
-        // timeout leaves the reservation blocked for reconciliation, not retry.
+        newRequest = {
+          intent,
+          vesselId: body.vesselId,
+          userId: auth.user.id,
+          environment,
+          admin: createClient(getEnv('SUPABASE_URL'), getEnv('SUPABASE_SERVICE_ROLE_KEY')),
+        };
+        stage = 'before_transaction_request';
+        // No transaction has been attempted yet. A failure here may release this
+        // new reservation; after POST /transactions, only definite rejections may.
         const customers = await paddleRequest(
           config,
           `/customers?email=${encodeURIComponent(auth.user.email)}&status=active`,
@@ -102,6 +113,7 @@ export function createPaddleTrialHandler({ getEnv, createClient, fetcher = fetch
         );
         if (!/^add_[a-z0-9]{26}$/.test(billingAddress.id || ''))
           throw new BillingError('Address could not be confirmed', 502);
+        stage = 'creating_transaction';
         transaction = await paddleRequest(
           config,
           '/transactions',
@@ -118,6 +130,7 @@ export function createPaddleTrialHandler({ getEnv, createClient, fetcher = fetch
           },
           fetcher
         );
+        stage = 'transaction_received';
         verifyTrialTransaction(transaction, priceId, intent.id, body);
         if (transaction.status !== 'ready')
           throw new BillingError('Trial transaction is not ready', 502);
@@ -157,9 +170,13 @@ export function createPaddleTrialHandler({ getEnv, createClient, fetcher = fetch
           headers: { 'Cache-Control': 'no-store' },
         }
       );
-    } catch (error) {
+    } catch (caught) {
+      const error = newRequest
+        ? await recoverNewTrialFailure({ ...newRequest, stage, error: caught })
+        : caught;
       return Response.json(
         {
+          ...(error?.recoveryCode ? { code: error.recoveryCode } : {}),
           error:
             error instanceof BillingError
               ? error.message

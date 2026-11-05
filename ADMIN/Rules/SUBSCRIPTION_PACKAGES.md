@@ -85,4 +85,6 @@
 
 ## Scope
 
+**Approved 5 November 2026 checkout recovery and confirmation cleanup:** Release only a newly created cardless-trial reservation when no transaction was attempted or Paddle definitively rejected transaction creation. Keep audit history. Never release ambiguous requests, bound transactions, existing subscriptions, or reactivation checkouts; do not retry billing mutations automatically. Show clear retry/support guidance without exposing provider details. Remove the redundant payment-method box (including “Card”) from the completed checkout page, superseding the 19 October confirmation-label requirement. Preserve matching-event validation, clear separation between saving billing details and payment, and Return to Home through server-confirmed access gates. No price, trial-duration, tax, payment-method availability, or entitlement changes.
+
 Applies to Vessel Settings, vessel creation, Crew Management, the subscription service, Paddle billing functions and web access checks. Native billing code remains legacy until the web replacement and recoverable cutover are verified; retaining old migrations does not authorize new native purchases.

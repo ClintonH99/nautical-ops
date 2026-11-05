@@ -440,9 +440,18 @@ test("declined payment and completion have visible actions without granting app 
   assert.match(page.nodes.status.textContent, /could not be completed/);
   page.event("checkout.completed", eventData({ status: "completed" }));
   assert.equal(page.nodes["success-panel"].hidden, false);
-  assert.match(page.nodes["success-message"].textContent, /Access is checked securely by Nautical Ops/);
-  assert.equal(page.nodes["home-return"].getAttribute("href"), "/app?crewInvite=ready");
-  assert.equal(page.document.querySelector("#success-panel a").getAttribute("href"), "/app?crewInvite=ready");
+  assert.match(
+    page.nodes["success-message"].textContent,
+    /Access is checked securely by Nautical Ops/,
+  );
+  assert.equal(
+    page.nodes["home-return"].getAttribute("href"),
+    "/app?crewInvite=ready",
+  );
+  assert.equal(
+    page.document.querySelector("#success-panel a").getAttribute("href"),
+    "/app?crewInvite=ready",
+  );
   assert.equal(page.calls.filter((call) => call.opened).length, 0);
 });
 test("branded page has no first-party card inputs and keeps provider frame plus refund link", () => {
@@ -648,13 +657,10 @@ test("existing trial setup keeps the verified original date with supported payme
   assert.doesNotMatch(page.nodes["trial-badge"].textContent, /30/);
 });
 
-test("only matching completed events show confirmation, with actual wallet type and no access claim", () => {
-  for (const [type, label] of [
-    ["apple_pay", "Apple Pay"],
-    ["google_pay", "Google Pay"],
-    ["card", "Card"],
-    ["unknown", ""],
-  ]) {
+test("only matching completed events show confirmation, without a redundant method box or access claim", () => {
+  assert.doesNotMatch(html, /success-method/);
+  assert.doesNotMatch(source, /success-method/);
+  for (const type of ["apple_pay", "google_pay", "card", "unknown"]) {
     const page = loadedPage({
       search: `?transaction=${txn}&flow=payment-method`,
     });
@@ -679,8 +685,10 @@ test("only matching completed events show confirmation, with actual wallet type 
       page.nodes["success-title"].textContent,
       "Payment method updated",
     );
-    assert.equal(page.nodes["success-method"].textContent, label);
-    assert.equal(page.nodes["success-method"].hidden, !label);
+    assert.match(
+      page.nodes["success-message"].textContent,
+      /Saving billing details is not a subscription payment/,
+    );
     assert.doesNotMatch(
       page.nodes["success-message"].textContent,
       /remains active|access restored/,
