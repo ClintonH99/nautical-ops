@@ -46,7 +46,7 @@ test(
       await db.exec(
         readFileSync(
           new URL(
-            "../yachy-app/supabase/migrations/20261105141043_rejected_trial_recovery.sql",
+        "../yachy-app/supabase/migrations/20261105142307_rejected_trial_recovery.sql",
             import.meta.url,
           ),
           "utf8",
