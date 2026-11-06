@@ -1,0 +1,34 @@
+Paddle Sandbox follow-up — deferred by Clinton on 6 November 2026
+
+Do not continue until the user requests future sandbox testing.
+This is an incomplete, separate test environment, not a live payment fix.
+No production code, payment settings, keys or customer data changed here.
+
+Existing project: Nautical Ops Sandbox / ClintonH99
+Project reference: qgttmqelxugnyzcutlgw
+Use status.json for the reviewed migration inventory and checkpoint.
+Do not create another project or replay migrations already applied.
+The schema is billing-focused, not full production parity.
+The free project may pause during inactivity.
+
+Completed: isolated billing/device foundation; sandbox webhook deployed;
+test mode set with checkout and trials disabled; credential-free endpoint
+check returned GET 405 and unsigned POST 401. No signed delivery proven.
+
+Still to do when resumed:
+1. Verify project availability and review outstanding security warnings.
+2. Obtain approval for scoped sandbox credentials and secure storage.
+3. Configure the sandbox API key, signing secret and price mappings.
+4. Replace the old temporary Paddle Sandbox notification destination.
+5. Verify signed test notifications reach only the isolated backend.
+6. Prepare an isolated preview and synthetic test accounts.
+7. Test expiry restrictions, failed payment, and confirmed paid recovery
+   through the browser. Never change real customer dates for these tests.
+
+No payment flow or complete end-to-end test has been verified by this work.
+The checker is diagnostic only; it does not enable checkout or change state.
+Offline tests: node --test docs/sandbox-setup/check-connection.test.mjs
+Optional future network check: node docs/sandbox-setup/check-connection.mjs
+
+Canonical personal follow-up list: Desktop/Nautical Ops/To Do List.txt.
+Only credential-free setup records and tests are saved here, not secrets.
