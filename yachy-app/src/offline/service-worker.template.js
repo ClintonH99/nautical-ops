@@ -161,7 +161,12 @@ self.addEventListener('fetch', (event) => {
               )))
       );
     if (
-      (url.pathname !== '/' && !OFFLINE_ROUTES.test(url.pathname)) ||
+      // Legacy Home Screen installs launch /login. Serve only the public app
+      // shell on network failure; saved-session/access checks still run in it.
+      (url.pathname !== '/' &&
+        url.pathname !== '/login' &&
+        url.pathname !== '/login/' &&
+        !OFFLINE_ROUTES.test(url.pathname)) ||
       (url.search &&
         !noteEditQuery &&
         !historyQuery &&

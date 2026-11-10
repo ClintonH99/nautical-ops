@@ -2,7 +2,7 @@
   "id": "/",
   "name": "Nautical Ops",
   "short_name": "Nautical Ops",
-  "start_url": "/login",
+  "start_url": "/app",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",

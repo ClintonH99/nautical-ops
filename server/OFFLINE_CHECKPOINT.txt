@@ -422,3 +422,12 @@ from OfflineBoundary. Background preparation, reconnect sync, timed retries,
 access guards and explicit conflict/recovery actions remain. TypeScript and
 scoped ESLint pass. This supersedes earlier instructions to wait for the
 pending banner to clear: routine sync now runs without a global banner.
+
+10 November 2026 — Home Screen offline launch correction.
+Reproduced a regression: site.webmanifest launched /login, which the shell
+worker explicitly excluded. A bare /login or /login/ navigation can now fall
+back to the public cached app shell; auth query/fragment callbacks, API requests
+and POSTs remain excluded. New installations start at /app. Cached identity,
+signed offline permission and existing access restrictions still decide entry.
+The new regression failed before the fix; 116 shell/navigation/access checks
+pass after it. No backend, data, billing or top status banner changes.

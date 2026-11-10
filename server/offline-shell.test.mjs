@@ -143,7 +143,9 @@ for (const path of [
   "/settings/devices",
   "/join-vessel",
   "/api/export-pdf",
-  "/login",
+  "/login?code=private",
+  "/login#access_token=private",
+  "/auth/callback?code=private",
   "/app?crewInvite=ready",
   "https://example.com/app",
 ]) {
@@ -241,3 +243,18 @@ for (const path of [
   test("invalid history/correction does not intercept: " + path, () =>
     assert.equal(fixture().request(path), null),
   );
+
+// Installed Home Screen apps can retain the previous /login launch address.
+test("installed app launch URLs load the public shell offline", async () => {
+  const manifest = JSON.parse(await readFile(
+    new URL("../yachy-app/public/site.webmanifest", import.meta.url), "utf8"));
+  for (const path of new Set([manifest.start_url, "/login", "/login/", "/app"])) {
+    const response = fixture().request(path);
+    assert.ok(response, `Offline launch must be handled: ${path}`);
+    assert.equal(await (await response).text(), "synthetic app shell");
+  }
+});
+test("login API and submissions are never treated as cached navigation", () => {
+  assert.equal(fixture().request("/login", { method: "POST" }), null);
+  assert.equal(fixture().request("/login", { mode: "cors" }), null);
+});
