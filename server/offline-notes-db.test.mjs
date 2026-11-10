@@ -274,6 +274,123 @@ test("real isolated PostgreSQL offline note protocol", async (t) => {
         );
       },
     );
+    sql(
+      baseline.match(
+        /CREATE TABLE IF NOT EXISTS "public"\."contractors" \([\s\S]*?\n\);/,
+      )[0],
+    );
+    sql(`ALTER TABLE contractors ADD PRIMARY KEY(id); ALTER TABLE contractors ENABLE ROW LEVEL SECURITY;
+      CREATE POLICY active_contractors ON contractors TO authenticated USING(public.current_user_can_access_vessel(vessel_id)) WITH CHECK(public.current_user_can_access_vessel(vessel_id));
+      GRANT SELECT,INSERT,UPDATE,DELETE ON contractors TO authenticated;`);
+    sql(migration("20261110040000_web_offline_contractors.sql"));
+    await t.test(
+      "contractor contact edits are revisioned, idempotent and restricted by RLS",
+      () => {
+        const value = {
+          id: crypto.randomUUID(),
+          vessel_id: vessel,
+          department: "BRIDGE",
+          company_name: "Synthetic Marine",
+          company_address: null,
+          known_for: "Rigging",
+          description: null,
+          contacts: [
+            {
+              name: "Synthetic person",
+              mobile: "",
+              email: "synthetic@example.test",
+            },
+          ],
+          created_by: user,
+          created_at: new Date().toISOString(),
+        };
+        const op = {
+          id: crypto.randomUUID(),
+          recordId: value.id,
+          feature: "contractors",
+          kind: "create",
+          value,
+          baseRevision: null,
+        };
+        const call = (x) =>
+          JSON.parse(
+            run(
+              `SELECT sync_web_offline_contractor('${vessel}','${device}','${JSON.stringify(x).replaceAll("'", "''")}'::jsonb);`,
+            ),
+          );
+        const first = call(op);
+        assert.equal(first.status, "applied");
+        assert.deepEqual(call(op), first);
+        const edit = {
+          ...op,
+          id: crypto.randomUUID(),
+          kind: "update",
+          baseRevision: first.revision,
+          value: {
+            ...first.value,
+            contacts: [
+              {
+                name: "Updated synthetic person",
+                mobile: "",
+                email: "changed@example.test",
+              },
+            ],
+          },
+        };
+        const updated = call(edit);
+        assert.equal(updated.status, "applied");
+        assert.equal(
+          updated.value.contacts[0].name,
+          "Updated synthetic person",
+        );
+        assert.equal(
+          call({ ...edit, id: crypto.randomUUID() }).status,
+          "conflict",
+        );
+        assert.throws(() =>
+          call({
+            ...edit,
+            id: crypto.randomUUID(),
+            baseRevision: updated.revision,
+            value: {
+              ...updated.value,
+              contacts: [
+                { name: "Hidden", mobile: "", email: "", secret: "bad" },
+              ],
+            },
+          }),
+        );
+        assert.throws(() =>
+          call({
+            ...edit,
+            id: crypto.randomUUID(),
+            baseRevision: updated.revision,
+            value: { ...updated.value, created_by: vessel },
+          }),
+        );
+        sql(
+          "DROP POLICY active_contractors ON contractors; CREATE POLICY read_contractors ON contractors FOR SELECT TO authenticated USING(public.current_user_can_access_vessel(vessel_id));",
+        );
+        assert.equal(
+          call({
+            ...edit,
+            id: crypto.randomUUID(),
+            baseRevision: updated.revision,
+            value: { ...updated.value, company_name: "Denied change" },
+          }).status,
+          "forbidden",
+        );
+        sql("DROP POLICY read_contractors ON contractors;");
+        assert.deepEqual(
+          JSON.parse(
+            run(
+              `SELECT read_web_offline_contractors('${vessel}','${device}');`,
+            ),
+          ),
+          [],
+        );
+      },
+    );
     let first;
     await t.test("grant binds session and caps access at seven days", () => {
       const c = JSON.parse(

@@ -38,6 +38,8 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
   const contractorId = route?.params?.contractorId as string | undefined;
   const isEdit = !!contractorId;
 
+  const [offlineLocalVersion,setOfflineLocalVersion] = useState<number | undefined>();
+  const [loadFailed,setLoadFailed] = useState(false);
   const [companyName, setCompanyName] = useState('');
   const [companyAddress, setCompanyAddress] = useState('');
   const [department, setDepartment] = useState<Department>(user?.department ?? 'INTERIOR');
@@ -60,6 +62,8 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
       const list = await contractorsService.getByVessel(vesselId);
       const contractor = list.find((c) => c.id === contractorId);
       if (contractor) {
+        setOfflineLocalVersion(contractor.offlineLocalVersion);
+        setLoadFailed(false);
         setCompanyName(contractor.companyName);
         setCompanyAddress(contractor.companyAddress);
         setDepartment(contractor.department ?? 'INTERIOR');
@@ -67,10 +71,12 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
         setDescription(contractor.description);
         setContacts(contractor.contacts.length > 0 ? contractor.contacts : [{ ...emptyContact }]);
       } else {
+        setLoadFailed(true);
         Alert.alert('Error', 'Contractor not found.');
         navigation.goBack();
       }
     } catch (e) {
+      setLoadFailed(true);
       console.error('Load contractor error:', e);
       Alert.alert('Error', 'Could not load contractor.');
       navigation.goBack();
@@ -100,6 +106,7 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
 
   const handleSave = async () => {
     if (saving || deleting || activeOperationRef.current) return;
+    if (loadFailed) { Alert.alert('Not saved','Reopen this contractor after it has downloaded.'); return; }
     if (!companyName.trim()) {
       Alert.alert('Missing company name', 'Please enter the company name.');
       return;
@@ -117,6 +124,7 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
     try {
       if (isEdit) {
         await contractorsService.update(contractorId, {
+          offlineLocalVersion,
           companyName: companyName.trim(),
           companyAddress: companyAddress.trim(),
           department,

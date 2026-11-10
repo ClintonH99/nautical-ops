@@ -147,7 +147,8 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
 
   useFocusEffect(
     useCallback(() => {
-      loadContractors();
+      void loadContractors();
+      return contractorsService.subscribe(() => void loadContractors());
     }, [loadContractors])
   );
 

@@ -46,7 +46,10 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
   };
   useEffect(() => {
     if (!webOfflineEnabled) return;
-    void registerOfflineShell();
+    useOfflineStatus.setState({ shellState: 'preparing' });
+    void registerOfflineShell().then((ready) =>
+      useOfflineStatus.setState({ shellState: ready ? 'ready' : 'unavailable' })
+    );
     void prepareOffline(useAuthStore.getState().user);
   }, [user?.id, user?.vesselId]);
   useEffect(() => {
@@ -67,6 +70,12 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
         if (navigator.onLine) online();
       }
     };
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (useOfflineStatus.getState().saving === 0) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', beforeUnload);
     window.addEventListener('offline', offline);
     window.addEventListener('online', online);
     window.addEventListener('popstate', update);
@@ -78,6 +87,7 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
     return () => {
       clearInterval(timer);
       clearInterval(retry);
+      window.removeEventListener('beforeunload', beforeUnload);
       window.removeEventListener('offline', offline);
       window.removeEventListener('online', online);
       window.removeEventListener('popstate', update);
@@ -92,6 +102,8 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
         'Categories',
         'Notepad',
         'AddEditNote',
+        'ContractorDatabase',
+        'AddEditContractor',
         'Tasks',
         'OverdueTasks',
         'UpcomingTasks',
@@ -108,6 +120,8 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
         '/categories',
         '/notepad',
         '/notepad/edit',
+        '/contractors',
+        '/contractors/edit',
         '/tasks',
         '/tasks/overdue',
         '/tasks/upcoming',
@@ -121,7 +135,12 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
   const blocked = state.disconnected && (!state.ready || !supported);
   return (
     <View style={styles.root}>
-      {(state.disconnected || state.pending > 0 || state.issue || state.recoverable > 0) && (
+      {(state.disconnected ||
+        state.pending > 0 ||
+        state.saving > 0 ||
+        state.shellState !== 'ready' ||
+        state.issue ||
+        state.recoverable > 0) && (
         <View
           style={[styles.banner, { backgroundColor: colors.surface, borderColor: colors.border }]}
           accessibilityLiveRegion="polite"
@@ -131,6 +150,18 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
             {state.pending === 1 ? 'change' : 'changes'} saved on this device
             {state.pending ? ' · Waiting to sync' : ''}
           </Text>
+          {state.saving > 0 && (
+            <Text style={{ color: colors.textPrimary }}>
+              Saving on this device… Please keep this page open.
+            </Text>
+          )}
+          {state.shellState !== 'ready' && (
+            <Text style={{ color: colors.textSecondary }}>
+              {state.shellState === 'preparing'
+                ? 'Downloading offline pages. Keep this page open.'
+                : 'Offline page download is incomplete. Reconnect before closing the app.'}
+            </Text>
+          )}
           {state.issue && <Text style={{ color: colors.textSecondary }}>{state.issue}</Text>}
           {state.conflicts.map((conflict) => (
             <View key={conflict.id} style={{ gap: 4 }}>
@@ -192,7 +223,7 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
           <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>
             Your pending edits remain saved on this device.
             {state.ready
-              ? ' Notepad, Tasks and Shopping Lists are available offline in this test build.'
+              ? ' Notepad, Tasks, Shopping Lists and Contractors are available offline in this test build.'
               : ' Connect to the internet to verify your access.'}
           </Text>
           {state.ready && (

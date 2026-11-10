@@ -209,6 +209,23 @@ try {
       "utf8",
     ),
   );
+  sql(
+    baseline.match(
+      /CREATE TABLE IF NOT EXISTS "public"\."contractors" \([\s\S]*?\n\);/,
+    )[0],
+  );
+  sql(`ALTER TABLE contractors ADD PRIMARY KEY(id); ALTER TABLE contractors ENABLE ROW LEVEL SECURITY;
+    CREATE POLICY active_contractors ON contractors TO authenticated USING(public.current_user_can_access_vessel(vessel_id)) WITH CHECK(public.current_user_can_access_vessel(vessel_id));
+    GRANT SELECT,INSERT,UPDATE,DELETE ON contractors TO authenticated;`);
+  sql(
+    readFileSync(
+      join(
+        app,
+        "supabase/migrations/20261110040000_web_offline_contractors.sql",
+      ),
+      "utf8",
+    ),
+  );
   const env = {
     ...process.env,
     EXPO_NO_DOTENV: "1",
@@ -395,6 +412,22 @@ try {
           ),
         ),
       );
+    if (path === "/rest/v1/rpc/read_web_offline_contractors")
+      return json(
+        JSON.parse(
+          run(
+            `SELECT read_web_offline_contractors(${quote(body.p_vessel_id)},${quote(body.p_device_id)});`,
+          ),
+        ),
+      );
+    if (path === "/rest/v1/rpc/sync_web_offline_contractor")
+      return json(
+        JSON.parse(
+          run(
+            `SELECT sync_web_offline_contractor(${quote(body.p_vessel_id)},${quote(body.p_device_id)},${quote(JSON.stringify(body.p_operation))}::jsonb);`,
+          ),
+        ),
+      );
     if (path === "/rest/v1/users")
       return json(url.searchParams.has("id") ? profile : [profile]);
     if (path === "/rest/v1/vessels")
@@ -507,7 +540,7 @@ try {
     if (line === "status") {
       const report = JSON.parse(
         sql(
-          "SELECT json_build_object('notes',coalesce((SELECT json_agg(n) FROM notes n),'[]'),'shoppingLists',coalesce((SELECT json_agg(s) FROM shopping_lists s),'[]'),'tasks',coalesce((SELECT json_agg(t) FROM vessel_tasks t),'[]'),'receipts',(SELECT count(*) FROM offline_private.note_receipts)+(SELECT count(*) FROM offline_private.record_receipts));",
+          "SELECT json_build_object('notes',coalesce((SELECT json_agg(n) FROM notes n),'[]'),'shoppingLists',coalesce((SELECT json_agg(s) FROM shopping_lists s),'[]'),'tasks',coalesce((SELECT json_agg(t) FROM vessel_tasks t),'[]'),'contractors',coalesce((SELECT json_agg(c) FROM contractors c),'[]'),'receipts',(SELECT count(*) FROM offline_private.note_receipts)+(SELECT count(*) FROM offline_private.record_receipts));",
         ),
       );
       writeFileSync(join(dir, "result.json"), JSON.stringify(report, null, 2));

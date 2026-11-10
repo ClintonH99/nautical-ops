@@ -20,16 +20,24 @@ import { notesAdapter } from './notesAdapter';
 import { shoppingAdapter, shoppingDeviceCopy } from './shoppingAdapter';
 import type { OfflineFeature } from './access';
 import { tasksAdapter, taskDeviceCopy } from './tasksAdapter';
-const adapters = { notes: notesAdapter, shoppingLists: shoppingAdapter, tasks: tasksAdapter };
+import { contractorsAdapter, contractorDeviceCopy } from './contractorsAdapter';
+const adapters = {
+  notes: notesAdapter,
+  shoppingLists: shoppingAdapter,
+  tasks: tasksAdapter,
+  contractors: contractorsAdapter,
+};
 const readFunctions = {
   notes: 'read_web_offline_notes',
   shoppingLists: 'read_web_offline_shopping',
   tasks: 'read_web_offline_tasks',
+  contractors: 'read_web_offline_contractors',
 };
 const syncFunctions = {
   notes: 'sync_web_offline_note',
   shoppingLists: 'sync_web_offline_shopping',
   tasks: 'sync_web_offline_task',
+  contractors: 'sync_web_offline_contractor',
 };
 type SupportedFeature = keyof typeof adapters;
 
@@ -37,6 +45,8 @@ export const webOfflineEnabled = process.env.EXPO_PUBLIC_WEB_OFFLINE === 'true';
 export const useOfflineStatus = create<OfflineStatus>(() => ({
   enabled: webOfflineEnabled,
   ready: false,
+  saving: 0,
+  shellState: 'preparing',
   disconnected: typeof navigator !== 'undefined' && !navigator.onLine,
   pending: 0,
   issue: null,
@@ -44,6 +54,17 @@ export const useOfflineStatus = create<OfflineStatus>(() => ({
   conflicts: [],
   recoverable: 0,
 }));
+// Synchronous start lets callers show saving before their first storage await.
+export function beginDeviceSave(): () => void {
+  if (!webOfflineEnabled) return () => {};
+  useOfflineStatus.setState((s) => ({ saving: s.saving + 1 }));
+  let finished = false;
+  return () => {
+    if (finished) return;
+    finished = true;
+    useOfflineStatus.setState((s) => ({ saving: Math.max(0, s.saving - 1) }));
+  };
+}
 type Active = {
   scope: OfflineScope;
   permit: VerifiedOfflinePermit | null;
@@ -130,7 +151,10 @@ export async function checkOfflineAccess(): Promise<boolean> {
       recoverable,
       conflicts: state.changes
         .filter((change) => change.state === 'conflict')
-        .map((change) => ({ id: change.id, title: String(change.value.title) })),
+        .map((change) => ({
+          id: change.id,
+          title: String(change.value.title ?? change.value.company_name ?? 'Saved record'),
+        })),
     });
     return true;
   } catch {
@@ -309,8 +333,13 @@ async function initializeOffline(user: User | null): Promise<void> {
       }
     }
     if (current !== generation) return;
-    await checkOfflineAccess();
-    if (navigator.onLine) await syncOffline();
+    const cachedReady = await checkOfflineAccess();
+    if (navigator.onLine) {
+      // A device may have Wi-Fi without internet. Cached access must not wait
+      // for a stalled token refresh or network request to render saved records.
+      if (cachedReady) void syncOffline();
+      else await syncOffline();
+    }
   } catch {
     if (current === generation)
       useOfflineStatus.setState({
@@ -367,18 +396,23 @@ export async function saveOfflineRecord(
   kind: 'create' | 'update',
   expectedLocalVersion: number
 ) {
-  const a = await offlineNotesContext();
-  const result = await a.box.save({
-    feature,
-    recordId: value.id as string,
-    value,
-    kind,
-    expectedLocalVersion,
-  });
-  notifyNotes();
-  await checkOfflineAccess();
-  if (navigator.onLine) void syncOffline();
-  return { ...value, offlineLocalVersion: result.localVersion };
+  const finish = beginDeviceSave();
+  try {
+    const a = await offlineNotesContext();
+    const result = await a.box.save({
+      feature,
+      recordId: value.id as string,
+      value,
+      kind,
+      expectedLocalVersion,
+    });
+    notifyNotes();
+    await checkOfflineAccess();
+    if (navigator.onLine) void syncOffline();
+    return { ...value, offlineLocalVersion: result.localVersion };
+  } finally {
+    finish();
+  }
 }
 export async function keepBothNoteCopies(operationId: string): Promise<void> {
   const a = await offlineNotesContext();
@@ -401,7 +435,9 @@ export async function keepBothNoteCopies(operationId: string): Promise<void> {
         }
       : change.feature === 'tasks'
         ? taskDeviceCopy(latest.value, id, a.scope.userId)
-        : shoppingDeviceCopy(latest.value, id, a.scope.userId);
+        : change.feature === 'contractors'
+          ? contractorDeviceCopy(latest.value, id, a.scope.userId)
+          : shoppingDeviceCopy(latest.value, id, a.scope.userId);
   await a.box.forkConflict(operationId, id, copy);
   notifyNotes();
   await checkOfflineAccess();

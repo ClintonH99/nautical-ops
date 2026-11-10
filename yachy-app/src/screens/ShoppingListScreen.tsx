@@ -1,3 +1,4 @@
+import { beginDeviceSave } from '../offline/runtime';
 import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
 import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
@@ -136,6 +137,7 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
     async (listId: string) => {
       if (savingListIdsRef.current.has(listId)) return;
       savingListIdsRef.current.add(listId);
+      const finishDeviceSave = beginDeviceSave();
 
       try {
         while (pendingItemsRef.current.has(listId)) {
@@ -174,6 +176,7 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
         }
       } finally {
         savingListIdsRef.current.delete(listId);
+        finishDeviceSave();
       }
     },
     [updateListItemsLocally, replaceLists]

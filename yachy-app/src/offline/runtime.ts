@@ -3,6 +3,8 @@ import type { User } from '../types';
 export type OfflineStatus = {
   enabled: boolean;
   ready: boolean;
+  saving: number;
+  shellState: 'preparing' | 'ready' | 'unavailable';
   disconnected: boolean;
   pending: number;
   issue: string | null;
@@ -13,6 +15,8 @@ export type OfflineStatus = {
 export const useOfflineStatus = create<OfflineStatus>(() => ({
   enabled: false,
   ready: false,
+  saving: 0,
+  shellState: 'unavailable',
   disconnected: false,
   pending: 0,
   issue: null,
@@ -27,3 +31,7 @@ export async function checkOfflineAccess(): Promise<boolean> {
 }
 export const useOfflineRoute = create<{ name: string | null }>(() => ({ name: null }));
 export function setOfflineRoute(_name: string | null): void {}
+
+export function beginDeviceSave(): () => void {
+  return () => {};
+}

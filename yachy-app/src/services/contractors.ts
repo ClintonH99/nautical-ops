@@ -2,6 +2,8 @@
  * Contractors Service
  */
 
+import { offlineContractors } from '../offline/contractorsService';
+import type { RecordValue } from '../offline/outbox';
 import { supabase } from './supabase';
 import { requireAffectedRows } from './mutationResult';
 import { Department } from '../types';
@@ -13,6 +15,7 @@ export interface ContractorContact {
 }
 
 export interface Contractor {
+  offlineLocalVersion?: number;
   id: string;
   vesselId: string;
   department: Department;
@@ -52,7 +55,12 @@ function normalizeContacts(raw: unknown): ContractorContact[] {
 }
 
 class ContractorsService {
+  subscribe = offlineContractors.subscribe;
   async getByVessel(vesselId: string): Promise<Contractor[]> {
+    if (offlineContractors.enabled())
+      return (await offlineContractors.list(vesselId))
+        .map(this.mapRow)
+        .sort((a, b) => a.companyName.localeCompare(b.companyName));
     try {
       const { data, error } = await supabase
         .from('contractors')
@@ -73,6 +81,18 @@ class ContractorsService {
       .filter((c) => c.name.trim() || c.mobile.trim() || c.email.trim())
       .map((c) => ({ name: c.name.trim(), mobile: c.mobile.trim(), email: c.email.trim() }));
 
+    if (offlineContractors.enabled())
+      return this.mapRow(
+        await offlineContractors.create({
+          vessel_id: input.vesselId,
+          department: input.department,
+          company_name: input.companyName.trim(),
+          company_address: input.companyAddress.trim() || null,
+          known_for: input.knownFor.trim() || null,
+          description: input.description.trim() || null,
+          contacts,
+        })
+      );
     const { data, error } = await supabase
       .from('contractors')
       .insert([
@@ -97,6 +117,7 @@ class ContractorsService {
   async update(
     id: string,
     updates: {
+      offlineLocalVersion?: number;
       department?: Department;
       companyName?: string;
       companyAddress?: string;
@@ -118,6 +139,10 @@ class ContractorsService {
         .map((c) => ({ name: c.name.trim(), mobile: c.mobile.trim(), email: c.email.trim() }));
     }
 
+    if (offlineContractors.enabled())
+      return this.mapRow(
+        await offlineContractors.update(id, payload as RecordValue, updates.offlineLocalVersion)
+      );
     const { data, error } = await supabase
       .from('contractors')
       .update(payload)
@@ -130,13 +155,16 @@ class ContractorsService {
   }
 
   async delete(id: string): Promise<void> {
+    if (offlineContractors.enabled()) await offlineContractors.beforeDelete(id);
     const { data, error } = await supabase.from('contractors').delete().eq('id', id).select('id');
     requireAffectedRows(data, error, 'Deleting the contractor');
+    if (offlineContractors.enabled()) await offlineContractors.refresh();
   }
 
   private mapRow(row: Record<string, unknown>): Contractor {
     const dept = row.department as string;
     return {
+      offlineLocalVersion: row.offlineLocalVersion as number | undefined,
       id: row.id as string,
       vesselId: row.vessel_id as string,
       department: (['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'].includes(dept)
