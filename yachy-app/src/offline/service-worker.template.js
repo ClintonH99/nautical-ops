@@ -49,6 +49,17 @@ self.addEventListener('fetch', (event) => {
             (key === 'asMasterList' && ['true', 'false'].includes(url.searchParams.get(key))) ||
             (key === 'presetTitle' && url.searchParams.get(key) === 'Trip Shopping'))
       );
+    const publicationId = {
+      '/rules/create': 'ruleId',
+      '/safety/equipment/create': 'equipmentId',
+      '/safety/muster/create': 'musterStationId',
+    }[url.pathname];
+    const publicationQuery =
+      publicationId &&
+      [...url.searchParams.keys()].length === 1 &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        url.searchParams.get(publicationId) || ''
+      );
     const contractorQuery =
       url.pathname === '/contractors/edit' &&
       [...url.searchParams.keys()].length === 1 &&
@@ -69,7 +80,12 @@ self.addEventListener('fetch', (event) => {
       );
     if (
       (url.pathname !== '/' && !OFFLINE_ROUTES.test(url.pathname)) ||
-      (url.search && !noteEditQuery && !shoppingQuery && !taskQuery && !contractorQuery) ||
+      (url.search &&
+        !noteEditQuery &&
+        !shoppingQuery &&
+        !taskQuery &&
+        !contractorQuery &&
+        !publicationQuery) ||
       url.hash
     )
       return;

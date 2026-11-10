@@ -1,4 +1,5 @@
 import test from "node:test";
+import { installPublications } from "./offline-publications-fixture.mjs";
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -391,6 +392,39 @@ test("real isolated PostgreSQL offline note protocol", async (t) => {
         );
       },
     );
+    installPublications(sql, baseline, migration);
+    await t.test('publication roles, revisions, retries and downgrade enforcement', () => {
+      const context = () => JSON.parse(run(`SELECT get_web_offline_context('${vessel}','${device}');`)).permissions;
+      assert.deepEqual(context().rules, ['read']);
+      assert.deepEqual(context().musterStations, ['read']);
+      assert.deepEqual(context().safetyEquipment, ['read','create','update']);
+      for (const [feature,table] of [['rules','rules'],['safetyEquipment','safety_equipment'],['musterStations','muster_stations']]) {
+        const value = {id:crypto.randomUUID(),vessel_id:vessel,title:'Synthetic publication',data:{title:'Synthetic publication',rules:['Wear shoes']},created_by:user,created_at:'2026-11-09T00:00:00Z'};
+        const operation = {id:crypto.randomUUID(),recordId:value.id,feature,kind:'create',value,baseRevision:null};
+        const request = op => `SELECT sync_web_offline_${table}('${vessel}','${device}','${JSON.stringify(op).replaceAll("'","''")}'::jsonb);`;
+        if(feature !== 'safetyEquipment') assert.throws(() => run(request(operation)));
+        sql(`UPDATE users SET role='CAPTAIN_MOV' WHERE id='${user}';`);
+        const first = JSON.parse(run(request(operation)));
+        assert.equal(first.status,'applied');
+        assert.deepEqual(JSON.parse(run(request(operation))),first);
+        const changed = {...operation,id:crypto.randomUUID(),kind:'update',baseRevision:first.revision,value:{...first.value,title:'Changed on device'}};
+        const second = JSON.parse(run(request(changed)));
+        assert.equal(second.status,'applied');
+        assert.equal(JSON.parse(run(request({...changed,id:crypto.randomUUID()}))).status,'conflict');
+        assert.throws(() => run(request({...changed,value:{...changed.value,title:'Reused ID'}})));
+        sql(`UPDATE users SET role='CREW' WHERE id='${user}';`);
+        assert.equal(JSON.parse(run(`SELECT read_web_offline_${table}('${vessel}','${device}');`)).length,1);
+        const downgrade = {...changed,id:crypto.randomUUID(),baseRevision:second.revision,value:{...second.value,title:'Crew edit'}};
+        if(feature === 'safetyEquipment') assert.equal(JSON.parse(run(request(downgrade))).status,'applied');
+        else {
+          assert.equal(JSON.parse(run(request(downgrade))).status,'forbidden');
+          assert.equal(sql(`SELECT title FROM ${table} WHERE id='${value.id}';`),'Changed on device');
+        }
+        // No receipt may be created by a denied operation.
+        assert.equal(sql(`SELECT count(*) FROM offline_private.record_receipts WHERE operation_id='${downgrade.id}';`),feature === 'safetyEquipment' ? '1':'0');
+        assert.throws(() => run(request({...operation,id:crypto.randomUUID(),recordId:crypto.randomUUID(),value:{...value,vessel_id:crypto.randomUUID()}})));
+      }
+    });
     let first;
     await t.test("grant binds session and caps access at seven days", () => {
       const c = JSON.parse(

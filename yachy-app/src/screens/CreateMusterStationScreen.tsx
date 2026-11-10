@@ -22,7 +22,6 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import musterStationsService, { getMusterStationLocations } from '../services/musterStations';
-import vesselService from '../services/vessel';
 import { Button, LoadingSpinner, PageHeader, ExportButton } from '../components';
 import { generateMusterStationPdf } from '../utils/musterStationPdf';
 import type { MusterStationData } from '../services/musterStations';
@@ -77,6 +76,8 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
   const musterStationId = route.params?.musterStationId as string | undefined;
   const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
   const isEdit = !!musterStationId;
+  const [localVersion, setLocalVersion] = useState<number | undefined>();
+  const [loadFailed, setLoadFailed] = useState(false);
   const actionColor = themeColors.isDark ? themeColors.textPrimary : COLORS.primary;
 
   const [title, setTitle] = useState('');
@@ -94,15 +95,20 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
   }, [navigation, isEdit]);
 
   useEffect(() => {
-    if (!vesselId) return;
-    vesselService.getVessel(vesselId).then((vessel) => {
-      if (vessel?.name) {
-        setVesselName(vessel.name);
-        if (!isEdit) {
-          setTitle((current) => current || `${vessel.name} Muster Station and Duties`);
+    if (!vesselId || isEdit) return;
+    musterStationsService
+      .getVesselName(vesselId)
+      .then((name) => {
+        if (name) {
+          setVesselName(name);
+          if (!isEdit) {
+            setTitle((current) => current || `${name} Muster Station and Duties`);
+          }
         }
-      }
-    });
+      })
+      .catch(() => {
+        /* Existing records retain their saved vessel name. */
+      });
   }, [isEdit, vesselId]);
 
   useEffect(() => {
@@ -113,6 +119,8 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
     (async () => {
       try {
         const item = await musterStationsService.getById(musterStationId);
+        if (!item) throw new Error('Record not available on this device');
+        setLocalVersion(item.offlineLocalVersion);
         if (item?.data) {
           const d = item.data;
           setTitle(item.title?.trim() || `${d.vesselName || 'Vessel'} Muster Station and Duties`);
@@ -138,6 +146,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
           );
         }
       } catch (e) {
+        setLoadFailed(true);
         console.error('Load muster station error:', e);
       } finally {
         setLoading(false);
@@ -298,6 +307,13 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
   };
 
   const onPublish = async () => {
+    if (loadFailed) {
+      Alert.alert(
+        'Record unavailable',
+        'Reopen this record after reconnecting. Your saved data has not been changed.'
+      );
+      return;
+    }
     if (!vesselId || !isHOD || savingRef.current) return;
     const publishedTitle = title.trim();
     if (!publishedTitle) {
@@ -313,7 +329,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
     setSaving(true);
     try {
       if (isEdit && musterStationId) {
-        await musterStationsService.update(musterStationId, publishedTitle, data);
+        await musterStationsService.update(musterStationId, publishedTitle, data, localVersion);
       } else {
         await musterStationsService.create(vesselId, publishedTitle, data, user?.id);
       }
@@ -360,6 +376,13 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
   if (loading) {
     return <ScreenLoading title={isEdit ? 'Edit Muster Station' : 'Create Muster Station'} />;
   }
+
+  if (loadFailed)
+    return (
+      <View style={styles.center}>
+        <Text>Reconnect and reopen this record. It could not be loaded safely.</Text>
+      </View>
+    );
 
   return (
     <KeyboardAvoidingView
@@ -746,7 +769,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
             onPress={onPublish}
             variant="primary"
             loading={saving}
-            disabled={saving}
+            disabled={saving || loadFailed}
             fullWidth
             style={styles.btn}
           />

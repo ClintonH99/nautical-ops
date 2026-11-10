@@ -3,7 +3,7 @@ import { ScreenLoading } from '../components/ScreenLoading';
  * Create Safety Equipment Screen
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -24,7 +24,6 @@ import safetyEquipmentService, {
   normalizeSafetyItem,
 } from '../services/safetyEquipment';
 import type { SafetyEquipmentData, SafetyItem } from '../services/safetyEquipment';
-import vesselService from '../services/vessel';
 import { Button, DateOnlyPicker, LoadingSpinner, PageHeader, ExportButton } from '../components';
 import { generateSafetyEquipmentPdf } from '../utils/safetyEquipmentPdf';
 import { canEditSafetyEquipment } from '../utils/access';
@@ -83,6 +82,10 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
   const canManage = canEditSafetyEquipment(user);
   const equipmentId = route.params?.equipmentId as string | undefined;
   const isEdit = !!equipmentId;
+  const savingRef = useRef(false);
+  const [saving, setSaving] = useState(false);
+  const [localVersion, setLocalVersion] = useState<number | undefined>();
+  const [loadFailed, setLoadFailed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [vesselName, setVesselName] = useState('');
   const [title, setTitle] = useState('');
@@ -98,11 +101,16 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
   }, [navigation, isEdit]);
 
   useEffect(() => {
-    if (!vesselId) return;
-    vesselService.getVessel(vesselId).then((vessel) => {
-      if (vessel?.name) setVesselName(vessel.name);
-    });
-  }, [vesselId]);
+    if (!vesselId || isEdit) return;
+    safetyEquipmentService
+      .getVesselName(vesselId)
+      .then((name) => {
+        if (name) setVesselName(name);
+      })
+      .catch(() => {
+        /* Existing records retain their saved vessel name. */
+      });
+  }, [vesselId, isEdit]);
 
   useEffect(() => {
     if (!vesselId) {
@@ -123,9 +131,12 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
         }
 
         const item = await safetyEquipmentService.getById(equipmentId);
+        if (!item) throw new Error('Record not available on this device');
+        setLocalVersion(item.offlineLocalVersion);
         if (item && !cancelled) {
           setTitle(item.title ?? '');
           const raw = item.data || {};
+          setVesselName(raw.vesselName ?? '');
           const labels = (raw.customLabels as Record<string, string>) || {};
           setCustomLabels(labels);
           const order = getSafetyEquipmentCategoryOrder(raw, DEFAULT_CATEGORIES);
@@ -141,6 +152,7 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
           setData(next);
         }
       } catch (e) {
+        setLoadFailed(true);
         console.error('Load safety equipment error:', e);
       } finally {
         if (!cancelled) setLoading(false);
@@ -243,18 +255,30 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
   };
 
   const onPublish = async () => {
-    if (!vesselId || !canManage) return;
+    if (loadFailed) {
+      Alert.alert(
+        'Record unavailable',
+        'Reopen this record after reconnecting. Your saved data has not been changed.'
+      );
+      return;
+    }
+    if (!vesselId || !canManage || savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
     try {
       const payload = build();
       const planTitle = title || vesselName || 'Safety Equipment';
       if (isEdit && equipmentId) {
-        await safetyEquipmentService.update(equipmentId, planTitle, payload);
+        await safetyEquipmentService.update(equipmentId, planTitle, payload, localVersion);
       } else {
         await safetyEquipmentService.create(vesselId, planTitle, payload, user?.id);
       }
       navigation.goBack();
     } catch (e) {
       Alert.alert('Error', 'Could not publish');
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
   };
 
@@ -274,6 +298,13 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
     );
   if (loading)
     return <ScreenLoading title={isEdit ? 'Edit Safety Equipment' : 'Create Safety Equipment'} />;
+
+  if (loadFailed)
+    return (
+      <View style={styles.center}>
+        <Text>Reconnect and reopen this record. It could not be loaded safely.</Text>
+      </View>
+    );
 
   return (
     <KeyboardAvoidingView
@@ -468,6 +499,8 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
           <Button
             title={isEdit ? 'Save Changes' : 'Publish Safety Equipment'}
             onPress={onPublish}
+            loading={saving}
+            disabled={saving || loadFailed}
             variant="primary"
             fullWidth
             style={styles.btn}

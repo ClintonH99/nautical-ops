@@ -131,6 +131,9 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
   useFocusEffect(
     useCallback(() => {
       load();
+      return safetyEquipmentService.subscribe(() => {
+        void load();
+      });
     }, [load])
   );
 

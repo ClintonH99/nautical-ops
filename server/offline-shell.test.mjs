@@ -64,6 +64,9 @@ test("normal app route reload has cached shell while offline", async () => {
 for (const path of [
   "/",
   "/shopping/list?listType=trip",
+  "/rules/create?ruleId=00000000-0000-0000-0000-000000000001",
+  "/safety/equipment/create?equipmentId=00000000-0000-0000-0000-000000000001",
+  "/safety/muster/create?musterStationId=00000000-0000-0000-0000-000000000001",
   "/tasks/list?category=WEEKLY",
   "/contractors/edit?contractorId=00000000-0000-0000-0000-000000000001",
   "/tasks/edit?category=DAILY&taskId=00000000-0000-0000-0000-000000000001",
@@ -80,6 +83,9 @@ for (const path of [
 for (const path of [
   "/shopping/edit?token=private",
   "/tasks/edit?category=WEEKLY&category=DAILY",
+  "/rules/create?ruleId=invalid",
+  "/rules/create?ruleId=00000000-0000-0000-0000-000000000001&token=private",
+  "/safety/muster/create?equipmentId=00000000-0000-0000-0000-000000000001",
   "/tasks/edit?taskId=invalid",
   "/contractors/edit?contractorId=invalid",
   "/contractors/edit?contractorId=00000000-0000-0000-0000-000000000001&token=private",

@@ -3,6 +3,8 @@
  * Published muster station plans for vessels
  */
 
+import { offlinePublications } from '../offline/publicationsService';
+const offline = offlinePublications('musterStations');
 import { supabase } from './supabase';
 
 export interface MusterStationData {
@@ -52,6 +54,7 @@ export interface MusterStation {
   title: string;
   data: MusterStationData;
   createdAt: string;
+  offlineLocalVersion?: number;
 }
 
 class MusterStationsService {
@@ -68,10 +71,23 @@ class MusterStationsService {
         musterStationLocations,
       } as MusterStationData,
       createdAt: row.created_at,
+      offlineLocalVersion: row.offlineLocalVersion,
     };
   }
 
+  subscribe = offline.subscribe;
+  async getVesselName(vesselId: string): Promise<string> {
+    if (offline.enabled()) return offline.vesselName(vesselId);
+    const { data, error } = await supabase
+      .from('vessels')
+      .select('id,name')
+      .eq('id', vesselId)
+      .single();
+    if (error) throw error;
+    return typeof data?.name === 'string' ? data.name : '';
+  }
   async getByVessel(vesselId: string): Promise<MusterStation[]> {
+    if (offline.enabled()) return (await offline.list(vesselId)).map((row) => this.mapRow(row));
     const { data, error } = await supabase
       .from('muster_stations')
       .select('*')
@@ -83,6 +99,10 @@ class MusterStationsService {
   }
 
   async getById(id: string): Promise<MusterStation | null> {
+    if (offline.enabled()) {
+      const row = await offline.read(id);
+      return row ? this.mapRow(row) : null;
+    }
     const { data, error } = await supabase
       .from('muster_stations')
       .select('*')
@@ -99,6 +119,10 @@ class MusterStationsService {
     data: MusterStationData,
     createdBy?: string
   ): Promise<MusterStation> {
+    if (offline.enabled())
+      return this.mapRow(
+        await offline.create({ vessel_id: vesselId, title, data: JSON.parse(JSON.stringify(data)) })
+      );
     const { data: row, error } = await supabase
       .from('muster_stations')
       .insert([{ vessel_id: vesselId, title, data, created_by: createdBy || null }])
@@ -109,7 +133,16 @@ class MusterStationsService {
     return this.mapRow(row);
   }
 
-  async update(id: string, title: string, data: MusterStationData): Promise<MusterStation> {
+  async update(
+    id: string,
+    title: string,
+    data: MusterStationData,
+    version?: number
+  ): Promise<MusterStation> {
+    if (offline.enabled())
+      return this.mapRow(
+        await offline.update(id, { title, data: JSON.parse(JSON.stringify(data)) }, version)
+      );
     const { data: row, error } = await supabase
       .from('muster_stations')
       .update({ title, data })
@@ -122,6 +155,7 @@ class MusterStationsService {
   }
 
   async delete(id: string): Promise<void> {
+    if (offline.enabled()) await offline.beforeDelete(id);
     const { data, error } = await supabase
       .from('muster_stations')
       .delete()
@@ -130,6 +164,7 @@ class MusterStationsService {
 
     if (error) throw error;
     if (!data?.length) throw new Error('Muster station not found or you do not have permission.');
+    if (offline.enabled()) await offline.refresh();
   }
 }
 

@@ -26,6 +26,7 @@ export type PendingChange = OfflineMutation & {
   claimUntil: number;
 };
 export type Partition = {
+  vesselLabel?: string;
   snapshots?: Partial<Record<OfflineFeature, boolean>>;
   schema: 1;
   highestObservedMs: number;

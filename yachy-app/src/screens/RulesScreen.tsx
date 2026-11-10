@@ -93,6 +93,9 @@ export const RulesScreen = ({ navigation }: any) => {
   useFocusEffect(
     useCallback(() => {
       load();
+      return rulesService.subscribe(() => {
+        void load();
+      });
     }, [load])
   );
 

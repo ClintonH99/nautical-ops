@@ -3,7 +3,8 @@ WEB OFFLINE — LOCAL CHECKPOINT, 9 November 2026
 Requested: everyday vessel features; add/edit offline; sync later; max 168h
 since verified access, shortened by known access end. Billing/invites stay online.
 
-Implemented locally: Notepad, Shopping Lists, everyday Tasks and Contractors. NOT a whole-app offline
+Implemented locally: Notepad, Shopping Lists, everyday Tasks, Contractors,
+Rules, Safety Equipment and Muster Stations. NOT a whole-app offline
 release. Production unchanged. No hosted migrations, real signing credentials,
 deployment or activation performed. EXPO_PUBLIC_WEB_OFFLINE defaults off.
 
@@ -20,7 +21,7 @@ Reads use RLS. Sync functions run under a non-login, non-owner, non-bypass role
 inheriting authenticated permissions. Receipt and record writes commit together.
 
 Checks from repository root:
-  node --test server/offline-access.test.mjs server/offline-outbox.test.mjs server/offline-recovery.test.mjs server/offline-issuer.test.mjs server/offline-shell.test.mjs server/offline-dependent-edits.test.mjs server/offline-tasks.test.mjs server/offline-contractors.test.mjs
+  node --test server/offline-access.test.mjs server/offline-outbox.test.mjs server/offline-recovery.test.mjs server/offline-issuer.test.mjs server/offline-shell.test.mjs server/offline-dependent-edits.test.mjs server/offline-tasks.test.mjs server/offline-contractors.test.mjs server/offline-publications.test.mjs
   node --test server/offline-notes-db.test.mjs
   node server/run-offline-browser-check.mjs
   node server/offline-app-check.mjs
@@ -31,12 +32,12 @@ Database uses a local Unix socket; the app uses loopback and connect-src self.
 App runner commands: offline, online, change-online-note, lose-next-reply, status, stop.
 
 Evidence:
-- 141 access/outbox/recovery/issuer/shell/dependent-edit/feature tests passed.
-- 14 local PostgreSQL tests passed: retry deduplication, changed payload rejection,
+- 150 access/outbox/recovery/issuer/shell/dependent-edit/feature tests passed.
+- 15 local PostgreSQL tests passed: retry deduplication, changed payload rejection,
   private receipts, stale revisions, session/access expiry, and existing row
   policies tightened after function creation. Not a hosted-policy audit.
 - Full app TypeScript passed; scoped ESLint zero errors, four existing any
-  warnings on screen props. Isolated full web export passed.
+  warnings in existing service/screen types and unused imports. Isolated full web export passed.
 - Real browser, HTTP server stopped: Notes reload/create/edit/reload, reconnect:
   exactly one final note/receipt. Separate conflict journey preserved the online
   note and explicit device copy: two records/two receipts.
@@ -53,11 +54,17 @@ Evidence:
   Evidence: /private/tmp/nautical-offline-task-synced.png
 - Real browser Contractors: stopped server, create and reload, reconnect: one
   contractor/contact and one receipt. /private/tmp/nautical-offline-contractor-synced.png
+- Real browser publications: stopped server, create rules/safety/muster, reload
+  each, edit the saved muster location, reconnect: exactly three records and
+  three receipts. Cached vessel label excludes invite information.
+  /private/tmp/nautical-offline-muster-synced.png
+  Local DB checks apply shipped rules/muster/safety RLS, including crew safety
+  editing and manager downgrade. Evidence: nautical-offline-app-yZ5cFX/result.json.
 - Real IndexedDB harness: reload persistence, atomic rollback, separate accounts,
   concurrent storage connections, expiry retention, denied sync, session recovery.
 
 Remaining before whole-app release:
-1. Integrate inventory, trips, watches/rest, safety, maintenance, logs,
+1. Integrate inventory, trips, watches/rest, pre-departure, maintenance, logs,
    uniforms, leave and other normal modules with exact permissions.
 2. Completed: dependent edits after ambiguous uploads retain immutable attempted
    requests and merge only local changes onto acknowledged server versions.

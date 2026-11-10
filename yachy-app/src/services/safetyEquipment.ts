@@ -3,6 +3,8 @@
  * Published safety equipment location plans for vessels
  */
 
+import { offlinePublications } from '../offline/publicationsService';
+const offline = offlinePublications('safetyEquipment');
 import { supabase } from './supabase';
 import { requireAffectedRows } from './mutationResult';
 
@@ -91,6 +93,7 @@ export interface SafetyEquipment {
   title: string;
   data: SafetyEquipmentData;
   createdAt: string;
+  offlineLocalVersion?: number;
 }
 
 class SafetyEquipmentService {
@@ -101,10 +104,23 @@ class SafetyEquipmentService {
       title: row.title,
       data: row.data || {},
       createdAt: row.created_at,
+      offlineLocalVersion: row.offlineLocalVersion,
     };
   }
 
+  subscribe = offline.subscribe;
+  async getVesselName(vesselId: string): Promise<string> {
+    if (offline.enabled()) return offline.vesselName(vesselId);
+    const { data, error } = await supabase
+      .from('vessels')
+      .select('id,name')
+      .eq('id', vesselId)
+      .single();
+    if (error) throw error;
+    return typeof data?.name === 'string' ? data.name : '';
+  }
   async getByVessel(vesselId: string): Promise<SafetyEquipment[]> {
+    if (offline.enabled()) return (await offline.list(vesselId)).map((row) => this.mapRow(row));
     const { data, error } = await supabase
       .from('safety_equipment')
       .select('*')
@@ -116,6 +132,10 @@ class SafetyEquipmentService {
   }
 
   async getById(id: string): Promise<SafetyEquipment | null> {
+    if (offline.enabled()) {
+      const row = await offline.read(id);
+      return row ? this.mapRow(row) : null;
+    }
     const { data, error } = await supabase
       .from('safety_equipment')
       .select('*')
@@ -132,6 +152,10 @@ class SafetyEquipmentService {
     data: SafetyEquipmentData,
     createdBy?: string
   ): Promise<SafetyEquipment> {
+    if (offline.enabled())
+      return this.mapRow(
+        await offline.create({ vessel_id: vesselId, title, data: JSON.parse(JSON.stringify(data)) })
+      );
     const { data: row, error } = await supabase
       .from('safety_equipment')
       .insert([{ vessel_id: vesselId, title, data, created_by: createdBy || null }])
@@ -142,7 +166,16 @@ class SafetyEquipmentService {
     return this.mapRow(row);
   }
 
-  async update(id: string, title: string, data: SafetyEquipmentData): Promise<SafetyEquipment> {
+  async update(
+    id: string,
+    title: string,
+    data: SafetyEquipmentData,
+    version?: number
+  ): Promise<SafetyEquipment> {
+    if (offline.enabled())
+      return this.mapRow(
+        await offline.update(id, { title, data: JSON.parse(JSON.stringify(data)) }, version)
+      );
     const { data: row, error } = await supabase
       .from('safety_equipment')
       .update({ title, data })
@@ -155,12 +188,14 @@ class SafetyEquipmentService {
   }
 
   async delete(id: string): Promise<void> {
+    if (offline.enabled()) await offline.beforeDelete(id);
     const { data, error } = await supabase
       .from('safety_equipment')
       .delete()
       .eq('id', id)
       .select('id');
     requireAffectedRows(data, error, 'Deleting the safety equipment record');
+    if (offline.enabled()) await offline.refresh();
   }
 }
 

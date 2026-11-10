@@ -1,3 +1,4 @@
+import { installPublications } from "./offline-publications-fixture.mjs";
 // Isolated browser verification. No production API, credentials or data.
 // Run from the snapshot root. Commands on stdin: offline, online, status, stop.
 import { createServer } from "node:http";
@@ -226,6 +227,8 @@ try {
       "utf8",
     ),
   );
+  installPublications(sql, baseline, name => readFileSync(join(app,'supabase/migrations',name),'utf8'));
+  sql(`UPDATE users SET role='CAPTAIN_MOV';`);
   const env = {
     ...process.env,
     EXPO_NO_DOTENV: "1",
@@ -428,6 +431,10 @@ try {
           ),
         ),
       );
+    for(const table of ['rules','safety_equipment','muster_stations']) {
+      if(path === '/rest/v1/rpc/read_web_offline_'+table) return json(JSON.parse(run(`SELECT read_web_offline_${table}(${quote(body.p_vessel_id)},${quote(body.p_device_id)});`)));
+      if(path === '/rest/v1/rpc/sync_web_offline_'+table) return json(JSON.parse(run(`SELECT sync_web_offline_${table}(${quote(body.p_vessel_id)},${quote(body.p_device_id)},${quote(JSON.stringify(body.p_operation))}::jsonb);`)));
+    }
     if (path === "/rest/v1/users")
       return json(url.searchParams.has("id") ? profile : [profile]);
     if (path === "/rest/v1/vessels")
@@ -540,7 +547,7 @@ try {
     if (line === "status") {
       const report = JSON.parse(
         sql(
-          "SELECT json_build_object('notes',coalesce((SELECT json_agg(n) FROM notes n),'[]'),'shoppingLists',coalesce((SELECT json_agg(s) FROM shopping_lists s),'[]'),'tasks',coalesce((SELECT json_agg(t) FROM vessel_tasks t),'[]'),'contractors',coalesce((SELECT json_agg(c) FROM contractors c),'[]'),'receipts',(SELECT count(*) FROM offline_private.note_receipts)+(SELECT count(*) FROM offline_private.record_receipts));",
+          "SELECT json_build_object('notes',coalesce((SELECT json_agg(n) FROM notes n),'[]'),'shoppingLists',coalesce((SELECT json_agg(s) FROM shopping_lists s),'[]'),'tasks',coalesce((SELECT json_agg(t) FROM vessel_tasks t),'[]'),'contractors',coalesce((SELECT json_agg(c) FROM contractors c),'[]'),'rules',coalesce((SELECT json_agg(r) FROM rules r),'[]'),'safetyEquipment',coalesce((SELECT json_agg(e) FROM safety_equipment e),'[]'),'musterStations',coalesce((SELECT json_agg(m) FROM muster_stations m),'[]'),'receipts',(SELECT count(*) FROM offline_private.note_receipts)+(SELECT count(*) FROM offline_private.record_receipts));",
         ),
       );
       writeFileSync(join(dir, "result.json"), JSON.stringify(report, null, 2));

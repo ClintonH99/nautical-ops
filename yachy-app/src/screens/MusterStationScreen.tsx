@@ -124,6 +124,9 @@ export const MusterStationScreen = ({ navigation }: any) => {
   useFocusEffect(
     useCallback(() => {
       load();
+      return musterStationsService.subscribe(() => {
+        void load();
+      });
     }, [load])
   );
 

@@ -20,24 +20,34 @@ import { notesAdapter } from './notesAdapter';
 import { shoppingAdapter, shoppingDeviceCopy } from './shoppingAdapter';
 import type { OfflineFeature } from './access';
 import { tasksAdapter, taskDeviceCopy } from './tasksAdapter';
+import { publicationsAdapter, publicationDeviceCopy } from './publicationsAdapter';
 import { contractorsAdapter, contractorDeviceCopy } from './contractorsAdapter';
 const adapters = {
   notes: notesAdapter,
   shoppingLists: shoppingAdapter,
   tasks: tasksAdapter,
   contractors: contractorsAdapter,
+  rules: publicationsAdapter,
+  safetyEquipment: publicationsAdapter,
+  musterStations: publicationsAdapter,
 };
 const readFunctions = {
   notes: 'read_web_offline_notes',
   shoppingLists: 'read_web_offline_shopping',
   tasks: 'read_web_offline_tasks',
   contractors: 'read_web_offline_contractors',
+  musterStations: 'read_web_offline_muster_stations',
+  safetyEquipment: 'read_web_offline_safety_equipment',
+  rules: 'read_web_offline_rules',
 };
 const syncFunctions = {
   notes: 'sync_web_offline_note',
   shoppingLists: 'sync_web_offline_shopping',
   tasks: 'sync_web_offline_task',
   contractors: 'sync_web_offline_contractor',
+  musterStations: 'sync_web_offline_muster_stations',
+  safetyEquipment: 'sync_web_offline_safety_equipment',
+  rules: 'sync_web_offline_rules',
 };
 type SupportedFeature = keyof typeof adapters;
 
@@ -205,6 +215,21 @@ async function refreshPermit(a: Active) {
   localStorage.setItem(grantKey(a.scope), token);
 }
 async function refreshNotes(a: Active) {
+  sameActive(a);
+  // Only the display name is cached. Invite codes and vessel administration stay online.
+  const label = await supabase
+    .from('vessels')
+    .select('id,name')
+    .eq('id', a.scope.vesselId)
+    .single();
+  sameActive(a);
+  if (label.error) throw label.error;
+  if (label.data?.id !== a.scope.vesselId || typeof label.data.name !== 'string')
+    throw new OfflineError('INVALID_SNAPSHOT');
+  await a.store.update(a.scope, (state) => {
+    sameActive(a);
+    state.vesselLabel = label.data.name;
+  });
   for (const feature of Object.keys(adapters) as SupportedFeature[]) {
     if (!a.permit?.claims.permissions[feature]?.includes('read')) continue;
     sameActive(a);
@@ -437,7 +462,9 @@ export async function keepBothNoteCopies(operationId: string): Promise<void> {
         ? taskDeviceCopy(latest.value, id, a.scope.userId)
         : change.feature === 'contractors'
           ? contractorDeviceCopy(latest.value, id, a.scope.userId)
-          : shoppingDeviceCopy(latest.value, id, a.scope.userId);
+          : change.feature === 'shoppingLists'
+            ? shoppingDeviceCopy(latest.value, id, a.scope.userId)
+            : publicationDeviceCopy(latest.value, id, a.scope.userId);
   await a.box.forkConflict(operationId, id, copy);
   notifyNotes();
   await checkOfflineAccess();

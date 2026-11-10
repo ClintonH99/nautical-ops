@@ -32,6 +32,10 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
   const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
   const ruleId = route.params?.ruleId as string | undefined;
   const isEdit = !!ruleId;
+  const savingRef = useRef(false);
+  const [saving, setSaving] = useState(false);
+  const [localVersion, setLocalVersion] = useState<number | undefined>();
+  const [loadFailed, setLoadFailed] = useState(false);
   const [loading, setLoading] = useState(isEdit);
   const [title, setTitle] = useState('');
   const [rules, setRules] = useState<string[]>(['']);
@@ -50,12 +54,15 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
     (async () => {
       try {
         const item = await rulesService.getById(ruleId);
+        if (!item) throw new Error('Record not available on this device');
+        setLocalVersion(item.offlineLocalVersion);
         if (item) {
           setTitle(item.data?.title ?? item.title ?? '');
           const r = item.data?.rules ?? [];
           setRules(r.length ? r : ['']);
         }
       } catch (e) {
+        setLoadFailed(true);
         console.error('Load rules error:', e);
       } finally {
         setLoading(false);
@@ -100,11 +107,20 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
   };
 
   const onPublish = async () => {
-    if (!vesselId || !isHOD) return;
+    if (loadFailed) {
+      Alert.alert(
+        'Record unavailable',
+        'Reopen this record after reconnecting. Your saved data has not been changed.'
+      );
+      return;
+    }
+    if (!vesselId || !isHOD || savingRef.current) return;
     const t = title || 'General Rules';
+    savingRef.current = true;
+    setSaving(true);
     try {
       if (isEdit && ruleId) {
-        await rulesService.update(ruleId, t, filteredRules);
+        await rulesService.update(ruleId, t, filteredRules, localVersion);
       } else {
         await rulesService.create(vesselId, t, filteredRules, user?.id);
       }
@@ -112,6 +128,9 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
     } catch (e) {
       console.error('Publish error:', e);
       Alert.alert('Error', 'Could not publish');
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
   };
 
@@ -136,6 +155,13 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
   if (loading) {
     return <ScreenLoading title={isEdit ? 'Edit Rules' : 'Create Rules'} />;
   }
+
+  if (loadFailed)
+    return (
+      <View style={styles.center}>
+        <Text>Reconnect and reopen this record. It could not be loaded safely.</Text>
+      </View>
+    );
 
   return (
     <KeyboardAvoidingView
@@ -230,6 +256,8 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
           <Button
             title={isEdit ? 'Save Changes' : 'Publish Rules'}
             onPress={onPublish}
+            loading={saving}
+            disabled={saving || loadFailed}
             variant="primary"
             fullWidth
             style={styles.btn}
