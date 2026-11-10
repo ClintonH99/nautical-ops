@@ -1,0 +1,74 @@
+[
+  {
+    "file": "20261110003026_web_offline_notes.sql",
+    "sha256": "3b57258aada50014b085b8b328765bae4e7b781ed560c25041ea6ecc243fbbfb"
+  },
+  {
+    "file": "20261110020000_web_offline_shopping.sql",
+    "sha256": "beddca921893362956c9d931b515da2bc42ed027210af7811b7eaa802d15dc6e"
+  },
+  {
+    "file": "20261110030000_web_offline_tasks.sql",
+    "sha256": "f09f892dbf4daad6d9bc10e70cb3e338d6aa9f08fc657d66537240e4e28c914b"
+  },
+  {
+    "file": "20261110040000_web_offline_contractors.sql",
+    "sha256": "ab52fdd0ef8956c4ce636c649e40b2d364ca707f99192ef4d43b5d38f2cdd6af"
+  },
+  {
+    "file": "20261110050000_web_offline_publications.sql",
+    "sha256": "bdafe72fcf6b026aec19e1246e1bbe112edeeaac035ac92bdd8837a05c311cfc"
+  },
+  {
+    "file": "20261110060000_web_offline_trips.sql",
+    "sha256": "8b957007ce9295225de3a77c145386611cca7a481afc8846554ba74de6a48b7c"
+  },
+  {
+    "file": "20261110070000_web_offline_yard_jobs.sql",
+    "sha256": "4ffc05b843ecdf480f6fdf2bbdbcd936444d146b9811c636aa337921688fb922"
+  },
+  {
+    "file": "20261110080000_web_offline_maintenance.sql",
+    "sha256": "83ef023cb820d7452d77587c9a9784a74d7ad479ca999e2bc9a74de29d130abc"
+  },
+  {
+    "file": "20261110090000_web_offline_vessel_records.sql",
+    "sha256": "2762dccda42d6051dba0c00c0788f1a4947145c94cef18c4235433db19916585"
+  },
+  {
+    "file": "20261110100000_web_offline_inventory.sql",
+    "sha256": "593110961b0376576d7a799164621250228722220144de6a5c73df3adcb79872"
+  },
+  {
+    "file": "20261110110000_web_offline_checklists.sql",
+    "sha256": "0da32dc60b96d91df6805546c11d79e9b3ea1046049bd39ef036289853b7b789"
+  },
+  {
+    "file": "20261110120000_web_offline_crew_leave.sql",
+    "sha256": "c591a8e37b20aaca75adb16f2115e7b730b5a088c426015b9367fec31c63ce6e"
+  },
+  {
+    "file": "20261110130000_web_offline_watch_keeping.sql",
+    "sha256": "67b8f186f670f863c7f4b24c225a5ef1799c6bfa702cc45ca08d6b2d97433f4b"
+  },
+  {
+    "file": "20261110140000_web_offline_rest_entries.sql",
+    "sha256": "4ea203fa64575b8285b11df210ad2ff3f5a8bdc8b76484a59a31c72c03378ce5"
+  },
+  {
+    "file": "20261110150000_web_offline_watch_duties.sql",
+    "sha256": "507b6961df550d111b6129ab2045485ead9569c0dd9adf3161e553a9ede301d2"
+  },
+  {
+    "file": "20261110160000_web_offline_sea_miles.sql",
+    "sha256": "410205f40d6d1dfd4bce090739f33c76d5a15f0ba6f8cea520add8557c8edeb9"
+  },
+  {
+    "file": "20261110170000_web_offline_fuel.sql",
+    "sha256": "5ce7287921fa19d8ab76043413f5a56504f6ef8b2b754cd0d9fe07c318af5c44"
+  },
+  {
+    "file": "20261110180000_web_offline_documents.sql",
+    "sha256": "0abb7e6d2d5dc62702330bfcaa6d352114d8e8a0df76f2abaaec38e1c3a7edb3"
+  }
+]

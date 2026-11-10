@@ -348,3 +348,70 @@ source recovery checkpoint remains separate and intact.
 No hosted database backups are listed. Approval is pending for an encrypted
 one-time production database recovery copy before migrations. Frontend build
 will be staged without assigning live domains. This is not a live activation.
+
+LIVE OFFLINE RELEASE — 10 November 2026 (supersedes preflight status above)
+Approved by Clinton; promoted and verified at https://www.nautical-ops.com.
+Source: 2e3e7e48c85a9fa0dd2873ddf4c1e6f451acd250.
+GitHub branch: feature/web-offline-seven-days (explicit GitHub remote; origin
+in this isolated checkout is the local canonical repository).
+Vercel deployment: dpl_Dr9YaLFoLdTCWAf3pBeMUSHH9xRK.
+Previous production rollback: dpl_FiNJ2ZjiebS1UPifsWBHNN2B6qxd.
+Worker build: 86eee9c42c5c644238d15454.
+
+Supabase grtrcjgsvfsknpnlarxv: applied the 18 offline source migrations as one
+transaction, hosted version 20261110224016 / web_offline_release_20261110.
+The release manifest records each source migration hash. These 18 filenames
+are NOT individual hosted migration-history entries. Do not replay them or
+run a bulk database push; reconcile the recorded mapping before future changes.
+65 new public offline functions; existing public functions and all 146 public
+policies compared unchanged. Sync owner is a restricted NOLOGIN/NOBYPASSRLS
+role. Private receipt tables deny direct authenticated access; anonymous users
+cannot execute offline functions. 27 added advisor entries flag the deliberately
+authenticated security-definer functions; they are not anonymous grants.
+New web-offline-access issuer deployed; own auth.getUser verification plus
+server vessel/device/session/subscription checks. Private signing material is
+server-only. Production frontend contains the public verifier key only.
+
+Recovery decision: a broad production customer-data export was rejected by
+automatic review and was NOT performed. Instead, this release adds new objects
+transactionally, preserves existing policies/functions, and retains the prior
+web deployment for rollback. Hosted backups list was empty. The existing code
+checkpoint is not a database backup. Automated Backblaze backups remain a
+separate unfinished task. The earlier export approval question is no longer
+needed for this release. No existing customer data was modified by migration.
+
+Verification: 316 offline Node/database checks passed, including 59 isolated
+PostgreSQL checks. Production schema metadata was rehearsed locally with
+synthetic records, no customer-row export. All offline reads passed there.
+Staged production build passed; checkout.html matched the prior live page
+byte-for-byte. Issuer rejected missing/invalid sign-in and untrusted origin.
+Live alias confirmed. Final Test Account completed offline preparation without
+an error. A clearly labelled Notepad record saved on-device, synced once
+(one physical note / one server receipt), and survived refresh. Fuel loaded
+its expected no-tanks state; no tank configuration was changed.
+Live test note: d39ecbf8-14af-4d8d-86da-6eb8f0b53c63.
+Disconnected browser testing covered 64 paths locally before release. The live
+browser's actual network was not disconnected in this check; no claim that
+every role/device/button was retested on production. PDFs/media and Fuel
+mutations were verified locally as documented above.
+
+Recovery artifacts (outside Git): Recovery Checkpoints/offline-live-release_2026-11-10.
+Includes credential-free release report, migration manifest, public key,
+checks and live screenshot. The signing configuration is encrypted with the
+existing recovery recipient; decrypt round-trip verified, temporary plaintext
+and temporary database-connection script removed. No customer database dump.
+Original before-offline-release_2026-11-10_182055 checkpoint remains intact.
+
+If rollback is needed, restore the recorded prior Vercel deployment. Preserve
+the additive database objects and any pending browser changes. Do not drop
+receipts/tables or clear site data as routine rollback. A browser already
+holding the offline worker may need an online refresh to receive rollback;
+verify this in the affected browser rather than assuming alias change suffices.
+
+USER TEST: open the live app online in the same browser/account, refresh,
+and let download warnings finish. Then turn off Wi-Fi, add/edit a test note,
+refresh and confirm it remains. Reconnect with the app open and wait for the
+pending-change banner to clear. Initial login/preparation requires internet.
+Offline access lasts up to seven days from verification, shortened by a known
+access end. Plans/payments/invites/account and vessel setup remain online-only.
+Do not clear browser data or sign out while unsynced changes remain.
