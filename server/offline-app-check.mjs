@@ -174,6 +174,41 @@ try {
       "utf8",
     ),
   );
+  sql(
+    baseline.match(
+      /CREATE TABLE IF NOT EXISTS "public"\."vessel_tasks" \([\s\S]*?\n\);/,
+    )[0],
+  );
+  sql(`ALTER TABLE vessel_tasks ADD PRIMARY KEY(id); ALTER TABLE vessel_tasks ENABLE ROW LEVEL SECURITY;
+    CREATE POLICY active_tasks ON vessel_tasks TO authenticated USING(public.current_user_can_access_vessel(vessel_id)) WITH CHECK(public.current_user_can_access_vessel(vessel_id));
+    GRANT SELECT,INSERT,UPDATE,DELETE ON vessel_tasks TO authenticated;
+    CREATE FUNCTION public.current_user_can_manage_vessel(v uuid) RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT false $$;`);
+  sql(
+    readFileSync(
+      join(app, "supabase/migrations/20260904120000_TASK_RECURRENCE_MODEL.sql"),
+      "utf8",
+    ),
+  );
+  const shipyard = readFileSync(
+    join(app, "supabase/migrations/20260912120000_ADD_SHIPYARD_RECORDS.sql"),
+    "utf8",
+  );
+  sql(
+    shipyard.slice(
+      shipyard.indexOf(
+        "CREATE OR REPLACE FUNCTION public.enforce_completed_task_unmark_role()",
+      ),
+      shipyard.indexOf(
+        "CREATE OR REPLACE FUNCTION public.unmark_yard_job_complete",
+      ),
+    ),
+  );
+  sql(
+    readFileSync(
+      join(app, "supabase/migrations/20261110030000_web_offline_tasks.sql"),
+      "utf8",
+    ),
+  );
   const env = {
     ...process.env,
     EXPO_NO_DOTENV: "1",
@@ -344,6 +379,22 @@ try {
           ),
         ),
       );
+    if (path === "/rest/v1/rpc/read_web_offline_tasks")
+      return json(
+        JSON.parse(
+          run(
+            `SELECT read_web_offline_tasks(${quote(body.p_vessel_id)},${quote(body.p_device_id)});`,
+          ),
+        ),
+      );
+    if (path === "/rest/v1/rpc/sync_web_offline_task")
+      return json(
+        JSON.parse(
+          run(
+            `SELECT sync_web_offline_task(${quote(body.p_vessel_id)},${quote(body.p_device_id)},${quote(JSON.stringify(body.p_operation))}::jsonb);`,
+          ),
+        ),
+      );
     if (path === "/rest/v1/users")
       return json(url.searchParams.has("id") ? profile : [profile]);
     if (path === "/rest/v1/vessels")
@@ -456,7 +507,7 @@ try {
     if (line === "status") {
       const report = JSON.parse(
         sql(
-          "SELECT json_build_object('notes',coalesce((SELECT json_agg(n) FROM notes n),'[]'),'shoppingLists',coalesce((SELECT json_agg(s) FROM shopping_lists s),'[]'),'receipts',(SELECT count(*) FROM offline_private.note_receipts)+(SELECT count(*) FROM offline_private.record_receipts));",
+          "SELECT json_build_object('notes',coalesce((SELECT json_agg(n) FROM notes n),'[]'),'shoppingLists',coalesce((SELECT json_agg(s) FROM shopping_lists s),'[]'),'tasks',coalesce((SELECT json_agg(t) FROM vessel_tasks t),'[]'),'receipts',(SELECT count(*) FROM offline_private.note_receipts)+(SELECT count(*) FROM offline_private.record_receipts));",
         ),
       );
       writeFileSync(join(dir, "result.json"), JSON.stringify(report, null, 2));

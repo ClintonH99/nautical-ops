@@ -49,9 +49,21 @@ self.addEventListener('fetch', (event) => {
             (key === 'asMasterList' && ['true', 'false'].includes(url.searchParams.get(key))) ||
             (key === 'presetTitle' && url.searchParams.get(key) === 'Trip Shopping'))
       );
+    const taskQuery =
+      ['/tasks/list', '/tasks/edit'].includes(url.pathname) &&
+      [...url.searchParams.keys()].every(
+        (key, index, keys) =>
+          keys.indexOf(key) === index &&
+          ((key === 'category' &&
+            ['DAILY', 'WEEKLY', 'MONTHLY'].includes(url.searchParams.get(key))) ||
+            (key === 'taskId' &&
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+                url.searchParams.get(key) || ''
+              )))
+      );
     if (
       (url.pathname !== '/' && !OFFLINE_ROUTES.test(url.pathname)) ||
-      (url.search && !noteEditQuery && !shoppingQuery) ||
+      (url.search && !noteEditQuery && !shoppingQuery && !taskQuery) ||
       url.hash
     )
       return;

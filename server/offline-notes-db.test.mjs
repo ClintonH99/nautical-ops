@@ -114,6 +114,166 @@ test("real isolated PostgreSQL offline note protocol", async (t) => {
         "utf8",
       ),
     );
+    sql(
+      baseline.match(
+        /CREATE TABLE IF NOT EXISTS "public"\."vessel_tasks" \([\s\S]*?\n\);/,
+      )[0],
+    );
+    sql(`ALTER TABLE vessel_tasks ADD PRIMARY KEY(id); ALTER TABLE vessel_tasks ENABLE ROW LEVEL SECURITY;
+      CREATE POLICY active_tasks ON vessel_tasks TO authenticated USING(public.current_user_can_access_vessel(vessel_id)) WITH CHECK(public.current_user_can_access_vessel(vessel_id));
+      GRANT SELECT,INSERT,UPDATE,DELETE ON vessel_tasks TO authenticated;
+      CREATE FUNCTION public.current_user_can_manage_vessel(v uuid) RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT false $$;`);
+    const migration = (name) =>
+      readFileSync(
+        new URL("../yachy-app/supabase/migrations/" + name, import.meta.url),
+        "utf8",
+      );
+    sql(migration("20260904120000_TASK_RECURRENCE_MODEL.sql"));
+    const shipyard = migration("20260912120000_ADD_SHIPYARD_RECORDS.sql");
+    sql(
+      shipyard.slice(
+        shipyard.indexOf(
+          "CREATE OR REPLACE FUNCTION public.enforce_completed_task_unmark_role()",
+        ),
+        shipyard.indexOf(
+          "CREATE OR REPLACE FUNCTION public.unmark_yard_job_complete",
+        ),
+      ),
+    );
+    sql(migration("20261110030000_web_offline_tasks.sql"));
+    await t.test(
+      "offline task create/edit/complete retries and current RLS",
+      () => {
+        const value = {
+          id: crypto.randomUUID(),
+          vessel_id: vessel,
+          category: "WEEKLY",
+          department: "INTERIOR",
+          title: "Inspect lines",
+          notes: null,
+          done_by_date: "2026-11-09",
+          recurring: "7_DAYS",
+          status: "NOT_STARTED",
+          created_by: user,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          completed_by: null,
+          completed_at: null,
+          completed_by_name: null,
+        };
+        const call = (op) =>
+          JSON.parse(
+            run(
+              `SELECT sync_web_offline_task('${vessel}','${device}','${JSON.stringify(op).replaceAll("'", "''")}'::jsonb);`,
+            ),
+          );
+        const create = {
+          id: crypto.randomUUID(),
+          recordId: value.id,
+          feature: "tasks",
+          kind: "create",
+          value,
+          baseRevision: null,
+        };
+        const first = call(create);
+        assert.equal(first.status, "applied");
+        assert.deepEqual(call(create), first);
+        const advance = {
+          ...create,
+          id: crypto.randomUUID(),
+          kind: "update",
+          baseRevision: first.revision,
+          value: { ...first.value, done_by_date: "2026-11-16" },
+        };
+        const advanced = call(advance);
+        assert.equal(advanced.status, "applied");
+        assert.equal(call(advance).value.done_by_date, "2026-11-16");
+        assert.equal(
+          call({
+            ...advance,
+            id: crypto.randomUUID(),
+            value: { ...advance.value, title: "Stale edit" },
+          }).status,
+          "conflict",
+        );
+        assert.throws(() =>
+          call({
+            ...advance,
+            id: crypto.randomUUID(),
+            baseRevision: advanced.revision,
+            value: { ...advanced.value, created_by: vessel },
+          }),
+        );
+        assert.throws(() =>
+          call({
+            ...advance,
+            id: crypto.randomUUID(),
+            baseRevision: advanced.revision,
+            value: { ...advanced.value, recurring: null },
+          }),
+        );
+        const complete = {
+          ...advance,
+          id: crypto.randomUUID(),
+          baseRevision: advanced.revision,
+          value: {
+            ...advanced.value,
+            status: "COMPLETED",
+            completed_by: user,
+            completed_at: new Date().toISOString(),
+            completed_by_name: "Synthetic crew",
+          },
+        };
+        const completed = call(complete);
+        assert.equal(completed.status, "applied");
+        assert.throws(() =>
+          call({
+            ...complete,
+            id: crypto.randomUUID(),
+            baseRevision: completed.revision,
+            value: {
+              ...completed.value,
+              status: "NOT_STARTED",
+              completed_by: null,
+              completed_at: null,
+              completed_by_name: null,
+            },
+          }),
+        );
+        // Create then complete before first upload coalesces into one permitted create.
+        const localId = crypto.randomUUID();
+        const coalesced = {
+          ...create,
+          id: crypto.randomUUID(),
+          recordId: localId,
+          value: { ...complete.value, id: localId },
+        };
+        assert.equal(call(coalesced).status, "applied");
+        sql(
+          "DROP POLICY active_tasks ON vessel_tasks; CREATE POLICY read_tasks ON vessel_tasks FOR SELECT TO authenticated USING(public.current_user_can_access_vessel(vessel_id));",
+        );
+        assert.equal(
+          call({
+            ...advance,
+            id: crypto.randomUUID(),
+            baseRevision: completed.revision,
+            value: { ...completed.value, title: "Denied edit" },
+          }).status,
+          "forbidden",
+        );
+        assert.equal(
+          sql(`SELECT title FROM vessel_tasks WHERE id='${value.id}';`),
+          "Inspect lines",
+        );
+        sql("DROP POLICY read_tasks ON vessel_tasks;");
+        assert.deepEqual(
+          JSON.parse(
+            run(`SELECT read_web_offline_tasks('${vessel}','${device}');`),
+          ),
+          [],
+        );
+      },
+    );
     let first;
     await t.test("grant binds session and caps access at seven days", () => {
       const c = JSON.parse(
@@ -245,7 +405,9 @@ test("real isolated PostgreSQL offline note protocol", async (t) => {
         assert.deepEqual(JSON.parse(run(shopping(change))), created);
         assert.equal(sql("SELECT count(*) FROM shopping_lists;"), "1");
         assert.equal(
-          sql("SELECT count(*) FROM offline_private.record_receipts;"),
+          sql(
+            "SELECT count(*) FROM offline_private.record_receipts WHERE feature='shoppingLists';",
+          ),
           "1",
         );
         assert.throws(() =>
@@ -294,7 +456,9 @@ test("real isolated PostgreSQL offline note protocol", async (t) => {
           "Edited supplies",
         );
         assert.equal(
-          sql("SELECT count(*) FROM offline_private.record_receipts;"),
+          sql(
+            "SELECT count(*) FROM offline_private.record_receipts WHERE feature='shoppingLists';",
+          ),
           "2",
         );
         sql("DROP POLICY no_shopping_edits ON shopping_lists;");

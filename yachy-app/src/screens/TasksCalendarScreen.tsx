@@ -150,7 +150,8 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
 
   useFocusEffect(
     useCallback(() => {
-      loadTasks();
+      void loadTasks();
+      return vesselTasksService.subscribe(() => void loadTasks());
     }, [loadTasks])
   );
 
@@ -246,7 +247,7 @@ export const TasksCalendarScreen = ({ navigation }: any) => {
       return;
     }
     vesselTasksService
-      .markComplete(task.id, user.id, user.name)
+      .markComplete(task.id, user.id, user.name, task.offlineLocalVersion)
       .then(() => loadTasks())
       .catch(() => Alert.alert('Error', 'Could not update task'));
   };

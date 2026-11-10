@@ -62,6 +62,8 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
   const [recurring, setRecurring] = useState<TaskRecurring>(null);
   const [recurringExpanded, setRecurringExpanded] = useState(false);
   const [loading, setLoading] = useState(!!taskId);
+  const [offlineLocalVersion, setOfflineLocalVersion] = useState<number | undefined>();
+  const [loadFailed, setLoadFailed] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const vesselId = user?.vesselId ?? null;
@@ -88,7 +90,9 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
     (async () => {
       try {
         const task = await vesselTasksService.getById(taskId);
+        if (!task) throw new Error('Task not available');
         if (task) {
+          setOfflineLocalVersion(task.offlineLocalVersion);
           setTitle(task.title);
           setNotes(task.notes ?? '');
           setDoneByDate(task.doneByDate ?? null);
@@ -97,6 +101,7 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
           setRecurring(task.recurring ?? null);
         }
       } catch (e) {
+        setLoadFailed(true);
         console.error('Load task error:', e);
         Alert.alert('Error', 'Could not load task');
       } finally {
@@ -120,6 +125,10 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
   };
 
   const handleSave = async () => {
+    if (loadFailed) {
+      Alert.alert('Cannot save', 'Reopen this task after it has downloaded.');
+      return;
+    }
     const trimmed = title.trim();
     if (!trimmed) {
       Alert.alert('Missing title', 'Please enter a task title.');
@@ -146,9 +155,10 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
     try {
       if (isEdit) {
         await vesselTasksService.update(taskId, {
+          offlineLocalVersion,
           category,
           title: trimmed,
-          notes: notes.trim() || undefined,
+          notes: notes.trim(),
           department,
           doneByDate: resolvedDoneByDate || null,
           recurring: resolvedRecurring,
@@ -169,7 +179,7 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
           category,
           department,
           title: trimmed,
-          notes: notes.trim() || undefined,
+          notes: notes.trim(),
           doneByDate: resolvedDoneByDate || null,
           recurring: resolvedRecurring,
         });

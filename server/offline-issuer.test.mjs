@@ -107,6 +107,7 @@ test("permissions come from verified server context and never expand beyond impl
       permissions: {
         notes: ["read"],
         shoppingLists: ["read", "update"],
+        tasks: ["read", "create", "update"],
         payments: ["create"],
       },
     },
@@ -116,6 +117,7 @@ test("permissions come from verified server context and never expand beyond impl
   assert.deepEqual(permit.claims.permissions, {
     notes: ["read"],
     shoppingLists: ["read", "update"],
+    tasks: ["read", "create", "update"],
   });
   const missing = fixture({ data: { ...context, permissions: null } });
   assert.equal((await missing.handler(missing.request())).status, 503);

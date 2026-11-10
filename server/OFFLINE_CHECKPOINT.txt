@@ -3,7 +3,7 @@ WEB OFFLINE — LOCAL CHECKPOINT, 9 November 2026
 Requested: everyday vessel features; add/edit offline; sync later; max 168h
 since verified access, shortened by known access end. Billing/invites stay online.
 
-Implemented locally: Notepad and Shopping Lists. NOT a whole-app offline
+Implemented locally: Notepad, Shopping Lists and everyday Tasks. NOT a whole-app offline
 release. Production unchanged. No hosted migrations, real signing credentials,
 deployment or activation performed. EXPO_PUBLIC_WEB_OFFLINE defaults off.
 
@@ -14,13 +14,13 @@ source saved in the separate nautical-ops-offline checkout.
 Implemented: signed browser/session/user/vessel-bound access; durable IndexedDB
 records/outbox; cross-tab claims; immutable attempted writes; atomic server
 receipts and revision checks; offline shell with allowlisted routes/assets;
-Notes/Shopping services/forms; explicit keep-both conflict handling; same-user
+Notes/Shopping/Tasks services/forms; explicit keep-both conflict handling; same-user
 and browser recovery after a fresh online access check. Expiry preserves edits.
 Reads use RLS. Sync functions run under a non-login, non-owner, non-bypass role
 inheriting authenticated permissions. Receipt and record writes commit together.
 
 Checks from repository root:
-  node --test server/offline-access.test.mjs server/offline-outbox.test.mjs server/offline-recovery.test.mjs server/offline-issuer.test.mjs server/offline-shell.test.mjs server/offline-dependent-edits.test.mjs
+  node --test server/offline-access.test.mjs server/offline-outbox.test.mjs server/offline-recovery.test.mjs server/offline-issuer.test.mjs server/offline-shell.test.mjs server/offline-dependent-edits.test.mjs server/offline-tasks.test.mjs
   node --test server/offline-notes-db.test.mjs
   node server/run-offline-browser-check.mjs
   node server/offline-app-check.mjs
@@ -31,8 +31,8 @@ Database uses a local Unix socket; the app uses loopback and connect-src self.
 App runner commands: offline, online, change-online-note, lose-next-reply, status, stop.
 
 Evidence:
-- 125 access/outbox/recovery/issuer/shell/dependent-edit tests passed.
-- 12 local PostgreSQL tests passed: retry deduplication, changed payload rejection,
+- 135 access/outbox/recovery/issuer/shell/dependent-edit/task tests passed.
+- 13 local PostgreSQL tests passed: retry deduplication, changed payload rejection,
   private receipts, stale revisions, session/access expiry, and existing row
   policies tightened after function creation. Not a hosted-policy audit.
 - Full app TypeScript passed; scoped ESLint zero errors, four existing any
@@ -46,11 +46,16 @@ Evidence:
   newer edit and reload retained two pending operations. Reconnect produced
   exactly one note with the latest text and two receipts. Evidence:
   /private/tmp/nautical-offline-interrupted-save.png
+- Real browser Tasks: server stopped, create, reload, mark complete, reopen
+  Completed Tasks, reconnect: one completed task and one receipt. Recurring
+  deadline replay, stale versions, completion identity and RLS tested in PG.
+  Calendar still requires Yard Jobs integration. Unmark/delete stay online.
+  Evidence: /private/tmp/nautical-offline-task-synced.png
 - Real IndexedDB harness: reload persistence, atomic rollback, separate accounts,
   concurrent storage connections, expiry retention, denied sync, session recovery.
 
 Remaining before whole-app release:
-1. Integrate tasks, inventory, trips, watches/rest, safety, maintenance, logs,
+1. Integrate inventory, trips, watches/rest, safety, maintenance, logs,
    contractors, uniforms, leave and other normal modules with exact permissions.
 2. Completed: dependent edits after ambiguous uploads retain immutable attempted
    requests and merge only local changes onto acknowledged server versions.

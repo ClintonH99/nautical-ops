@@ -88,6 +88,7 @@ export type TaskCategory = 'DAILY' | 'WEEKLY' | 'MONTHLY';
 export type TaskRecurring = '7_DAYS' | '14_DAYS' | '30_DAYS' | null;
 
 export interface VesselTask {
+  offlineLocalVersion?: number;
   id: string;
   vesselId: string;
   category: TaskCategory;

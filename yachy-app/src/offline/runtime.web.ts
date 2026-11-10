@@ -19,7 +19,18 @@ import type { BrowserOfflineStore } from './indexedDb.web';
 import { notesAdapter } from './notesAdapter';
 import { shoppingAdapter, shoppingDeviceCopy } from './shoppingAdapter';
 import type { OfflineFeature } from './access';
-const adapters = { notes: notesAdapter, shoppingLists: shoppingAdapter };
+import { tasksAdapter, taskDeviceCopy } from './tasksAdapter';
+const adapters = { notes: notesAdapter, shoppingLists: shoppingAdapter, tasks: tasksAdapter };
+const readFunctions = {
+  notes: 'read_web_offline_notes',
+  shoppingLists: 'read_web_offline_shopping',
+  tasks: 'read_web_offline_tasks',
+};
+const syncFunctions = {
+  notes: 'sync_web_offline_note',
+  shoppingLists: 'sync_web_offline_shopping',
+  tasks: 'sync_web_offline_task',
+};
 type SupportedFeature = keyof typeof adapters;
 
 export const webOfflineEnabled = process.env.EXPO_PUBLIC_WEB_OFFLINE === 'true';
@@ -173,10 +184,10 @@ async function refreshNotes(a: Active) {
   for (const feature of Object.keys(adapters) as SupportedFeature[]) {
     if (!a.permit?.claims.permissions[feature]?.includes('read')) continue;
     sameActive(a);
-    const { data, error } = await supabase.rpc(
-      feature === 'notes' ? 'read_web_offline_notes' : 'read_web_offline_shopping',
-      { p_vessel_id: a.scope.vesselId, p_device_id: a.scope.deviceId }
-    );
+    const { data, error } = await supabase.rpc(readFunctions[feature], {
+      p_vessel_id: a.scope.vesselId,
+      p_device_id: a.scope.deviceId,
+    });
     sameActive(a);
     if (error) {
       if (error.code === '42501') a.revoked = true;
@@ -207,7 +218,7 @@ export async function syncOffline(): Promise<void> {
         apply: async (scope, operation) => {
           if (!(operation.feature in adapters)) return { status: 'forbidden' };
           const { data, error } = await supabase.rpc(
-            operation.feature === 'notes' ? 'sync_web_offline_note' : 'sync_web_offline_shopping',
+            syncFunctions[operation.feature as SupportedFeature],
             { p_vessel_id: scope.vesselId, p_device_id: scope.deviceId, p_operation: operation }
           );
           if (error) return { status: error.code === '42501' ? 'forbidden' : 'retry' };
@@ -388,7 +399,9 @@ export async function keepBothNoteCopies(operationId: string): Promise<void> {
           created_at: now,
           updated_at: now,
         }
-      : shoppingDeviceCopy(latest.value, id, a.scope.userId);
+      : change.feature === 'tasks'
+        ? taskDeviceCopy(latest.value, id, a.scope.userId)
+        : shoppingDeviceCopy(latest.value, id, a.scope.userId);
   await a.box.forkConflict(operationId, id, copy);
   notifyNotes();
   await checkOfflineAccess();

@@ -92,6 +92,12 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
         'Categories',
         'Notepad',
         'AddEditNote',
+        'Tasks',
+        'OverdueTasks',
+        'UpcomingTasks',
+        'TasksList',
+        'AddEditTask',
+        'CompletedTasks',
         'ShoppingListCategory',
         'ShoppingList',
         'AddEditShoppingList',
@@ -102,6 +108,12 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
         '/categories',
         '/notepad',
         '/notepad/edit',
+        '/tasks',
+        '/tasks/overdue',
+        '/tasks/upcoming',
+        '/tasks/list',
+        '/tasks/edit',
+        '/tasks/completed',
         '/shopping',
         '/shopping/list',
         '/shopping/edit',
@@ -180,7 +192,7 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
           <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>
             Your pending edits remain saved on this device.
             {state.ready
-              ? ' Notepad and Shopping Lists are available offline in this test build.'
+              ? ' Notepad, Tasks and Shopping Lists are available offline in this test build.'
               : ' Connect to the internet to verify your access.'}
           </Text>
           {state.ready && (

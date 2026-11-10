@@ -73,6 +73,7 @@ export const CompletedTasksScreen = ({ navigation }: any) => {
         }
       };
       runMonthlyCleanup().then(() => loadTasks());
+      return vesselTasksService.subscribe(() => void loadTasks());
     }, [vesselId, loadTasks])
   );
 

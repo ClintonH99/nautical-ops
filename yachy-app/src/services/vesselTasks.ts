@@ -3,6 +3,7 @@
  * Handles Daily, Weekly, Monthly tasks for a vessel
  */
 
+import { offlineTasks } from '../offline/tasksService';
 import { supabase } from './supabase';
 import { requireAffectedRows } from './mutationResult';
 import { VesselTask, TaskCategory, TaskRecurring, Department } from '../types';
@@ -24,6 +25,7 @@ export interface CreateVesselTaskData {
 }
 
 export interface UpdateVesselTaskData {
+  offlineLocalVersion?: number;
   category?: TaskCategory;
   title?: string;
   notes?: string;
@@ -37,7 +39,15 @@ export interface UpdateVesselTaskData {
 }
 
 class VesselTasksService {
+  subscribe = offlineTasks.subscribe;
+  private async offlineList(vesselId: string): Promise<VesselTask[]> {
+    return (await offlineTasks.list(vesselId)).map(this.mapRowToTask);
+  }
   async getByVesselAndCategory(vesselId: string, category: TaskCategory): Promise<VesselTask[]> {
+    if (offlineTasks.enabled())
+      return (await this.offlineList(vesselId))
+        .filter((t) => t.category === category && t.status !== 'COMPLETED')
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     try {
       const { data, error } = await supabase
         .from('vessel_tasks')
@@ -71,6 +81,22 @@ class VesselTasksService {
         ? input.doneByDate || calculateRecurringTaskDueDate(recurring)
         : input.doneByDate || null;
 
+      if (offlineTasks.enabled())
+        return this.mapRowToTask(
+          await offlineTasks.create({
+            vessel_id: input.vesselId,
+            category: input.category,
+            department: input.department,
+            title: input.title.trim(),
+            notes: input.notes?.trim() || null,
+            done_by_date: doneByDate,
+            recurring: recurring ?? null,
+            status: 'NOT_STARTED',
+            completed_by: null,
+            completed_at: null,
+            completed_by_name: null,
+          })
+        );
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -118,6 +144,14 @@ class VesselTasksService {
       if (input.completedByName !== undefined)
         payload.completed_by_name = input.completedByName || null;
 
+      if (offlineTasks.enabled()) {
+        await offlineTasks.update(
+          taskId,
+          payload as import('../offline/outbox').RecordValue,
+          input.offlineLocalVersion
+        );
+        return;
+      }
       const { data, error } = await supabase
         .from('vessel_tasks')
         .update(payload)
@@ -131,6 +165,7 @@ class VesselTasksService {
   }
 
   async delete(taskId: string): Promise<void> {
+    if (offlineTasks.enabled()) await offlineTasks.beforeDelete(taskId);
     try {
       const { data, error } = await supabase
         .from('vessel_tasks')
@@ -138,6 +173,7 @@ class VesselTasksService {
         .eq('id', taskId)
         .select('id');
       requireAffectedRows(data, error, 'Deleting the task');
+      if (offlineTasks.enabled()) await offlineTasks.refresh();
     } catch (error) {
       console.error('Delete vessel task error:', error);
       throw error;
@@ -147,16 +183,23 @@ class VesselTasksService {
   async markComplete(
     taskId: string,
     completedBy: string,
-    completedByName: string
+    completedByName: string,
+    expectedVersion?: number
   ): Promise<{ createdNext?: VesselTask }> {
     const task = await this.getById(taskId);
     if (!task) throw new Error('Task not found');
+    if (
+      offlineTasks.enabled() &&
+      (expectedVersion === undefined || task.offlineLocalVersion !== expectedVersion)
+    )
+      throw new Error('This task changed. Reload it before completing it.');
 
     // Recurring: advance exactly one cycle from the task's current due date and keep it active.
     // This preserves missed cycles instead of silently skipping them based on today's date.
     if (task.recurring) {
       const nextDue = calculateRecurringTaskDueDate(task.recurring, task.doneByDate || new Date());
       await this.update(taskId, {
+        offlineLocalVersion: expectedVersion,
         status: 'NOT_STARTED',
         doneByDate: nextDue,
         recurring: task.recurring,
@@ -170,6 +213,7 @@ class VesselTasksService {
     // Non-recurring: mark as completed
     const completedAt = new Date().toISOString();
     await this.update(taskId, {
+      offlineLocalVersion: expectedVersion,
       status: 'COMPLETED',
       completedBy,
       completedAt,
@@ -179,13 +223,21 @@ class VesselTasksService {
   }
 
   async unmarkComplete(taskId: string): Promise<void> {
+    if (offlineTasks.enabled()) await offlineTasks.beforeDelete(taskId);
     const { data, error } = await supabase.rpc('unmark_vessel_task_complete', {
       target_task_id: taskId,
     });
     requireAffectedRows(data, error, 'Returning the task to the active list');
+    if (offlineTasks.enabled()) await offlineTasks.refresh();
   }
 
   async getOverdueTasks(vesselId: string): Promise<VesselTask[]> {
+    if (offlineTasks.enabled())
+      return (await this.offlineList(vesselId))
+        .filter(
+          (t) => t.doneByDate && t.doneByDate < toYYYYMMDD(new Date()) && t.status !== 'COMPLETED'
+        )
+        .sort((a, b) => a.doneByDate!.localeCompare(b.doneByDate!));
     try {
       const today = toYYYYMMDD(new Date());
       const { data, error } = await supabase
@@ -217,6 +269,10 @@ class VesselTasksService {
     startDate: string,
     endDate: string
   ): Promise<VesselTask[]> {
+    if (offlineTasks.enabled())
+      return (await this.offlineList(vesselId))
+        .filter((t) => t.doneByDate && t.doneByDate >= startDate && t.doneByDate <= endDate)
+        .sort((a, b) => a.doneByDate!.localeCompare(b.doneByDate!));
     try {
       const { data, error } = await supabase
         .from('vessel_tasks')
@@ -236,6 +292,10 @@ class VesselTasksService {
   }
 
   async getCompletedTasks(vesselId: string): Promise<VesselTask[]> {
+    if (offlineTasks.enabled())
+      return (await this.offlineList(vesselId))
+        .filter((t) => t.status === 'COMPLETED')
+        .sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? ''));
     try {
       const { data, error } = await supabase
         .from('vessel_tasks')
@@ -253,6 +313,14 @@ class VesselTasksService {
   }
 
   async getUpcomingTasks(vesselId: string, withinDays: number = 3): Promise<VesselTask[]> {
+    if (offlineTasks.enabled()) {
+      const start = new Date(),
+        end = new Date(start);
+      end.setDate(end.getDate() + withinDays);
+      return (await this.getTasksInDateRange(vesselId, toYYYYMMDD(start), toYYYYMMDD(end))).filter(
+        (t) => t.status !== 'COMPLETED'
+      );
+    }
     try {
       const today = new Date();
       const startDate = toYYYYMMDD(today);
@@ -280,6 +348,8 @@ class VesselTasksService {
   }
 
   async deleteCompletedTasksBefore(vesselId: string, beforeDate: string): Promise<number> {
+    // Do not run automatic deletion against records with device edits.
+    if (offlineTasks.enabled()) return 0;
     try {
       const { data, error } = await supabase
         .from('vessel_tasks')
@@ -298,6 +368,10 @@ class VesselTasksService {
   }
 
   async getById(taskId: string): Promise<VesselTask | null> {
+    if (offlineTasks.enabled()) {
+      const row = await offlineTasks.read(taskId);
+      return row ? this.mapRowToTask(row) : null;
+    }
     try {
       const { data, error } = await supabase
         .from('vessel_tasks')
@@ -330,6 +404,7 @@ class VesselTasksService {
     }
 
     return {
+      offlineLocalVersion: row.offlineLocalVersion as number | undefined,
       id: row.id as string,
       vesselId: row.vessel_id as string,
       category,
