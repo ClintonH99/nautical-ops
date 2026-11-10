@@ -1,3 +1,5 @@
+import { offlineDocuments } from '../offline/documentService';
+import { offlineFuel } from '../offline/fuelService';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
 import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 import { useVesselLogPeriod } from '../hooks/useVesselLogPeriod';
@@ -200,7 +202,11 @@ export const FuelLogScreen = ({ navigation, route }: any) => {
   useFocusEffect(
     useCallback(() => {
       loadLogs();
+      const unsubscribe = offlineFuel.subscribe(() => {
+        void loadLogs();
+      });
       return () => {
+        unsubscribe();
         loadGeneration.current += 1;
       };
     }, [loadLogs])
@@ -279,8 +285,16 @@ export const FuelLogScreen = ({ navigation, route }: any) => {
     try {
       let vesselName = 'Vessel';
       if (vesselId) {
-        const vessel = await vesselService.getVessel(vesselId);
-        if (vessel?.name) vesselName = vessel.name;
+        const vessel = offlineDocuments.enabled()
+          ? (await offlineDocuments.context()).vessel
+          : await vesselService.getVessel(vesselId);
+        if (
+          vessel &&
+          typeof vessel === 'object' &&
+          !Array.isArray(vessel) &&
+          typeof vessel.name === 'string'
+        )
+          vesselName = vessel.name;
       }
       await exportFuelLogPdf(toExport, vesselName);
     } catch (e) {
@@ -496,7 +510,13 @@ export const FuelLogScreen = ({ navigation, route }: any) => {
                         ? () => confirmDelete(log)
                         : undefined
                     }
-                    footer={log.createdByName ? `Logged by ${log.createdByName}` : undefined}
+                    footer={
+                      log.offlinePending
+                        ? 'Saved on this device · waiting to sync'
+                        : log.createdByName
+                          ? `Logged by ${log.createdByName}`
+                          : undefined
+                    }
                     collapsible={!exportMode}
                     expanded={expandedId === log.id}
                     onToggleExpand={() => setExpandedId(expandedId === log.id ? null : log.id)}

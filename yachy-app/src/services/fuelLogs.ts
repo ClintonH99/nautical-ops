@@ -1,3 +1,5 @@
+import { offlineFuel } from '../offline/fuelService';
+import { flattenFuel } from '../offline/fuelProjection';
 /**
  * Fuel Logs Service
  * CRUD for vessel fuel log entries
@@ -49,11 +51,15 @@ function normalizeCurrencyCode(value: string | undefined): string {
 
 class FuelLogsService {
   async getByVesselMonth(vesselId: string, month: string): Promise<FuelLog[]> {
+    if (offlineFuel.enabled())
+      return (await this.getByVessel(vesselId)).filter((r) => r.logDate.startsWith(month));
     return (await getVesselLogMonthRows('fuel_logs', vesselId, month)).map(this.mapRow);
   }
 
   private mapRow(row: any): FuelLog {
     return {
+      offlineLocalVersion: row.offlineLocalVersion,
+      offlinePending: row.offlinePending === true,
       id: row.id,
       vesselId: row.vessel_id,
       locationOfRefueling: row.location_of_refueling ?? '',
@@ -80,6 +86,11 @@ class FuelLogsService {
   }
 
   async getByVessel(vesselId: string): Promise<FuelLog[]> {
+    if (offlineFuel.enabled())
+      return (await offlineFuel.list('fuelLogs', vesselId))
+        .map(flattenFuel)
+        .map(this.mapRow)
+        .sort((a, b) => b.logDate.localeCompare(a.logDate));
     const { data, error } = await supabase
       .from('fuel_logs')
       .select('*')
@@ -92,6 +103,10 @@ class FuelLogsService {
   }
 
   async getById(id: string): Promise<FuelLog | null> {
+    if (offlineFuel.enabled()) {
+      const r = await offlineFuel.read('fuelLogs', id);
+      return r ? this.mapRow(flattenFuel(r)) : null;
+    }
     const { data, error } = await supabase
       .from('fuel_logs')
       .select('*')
@@ -109,6 +124,7 @@ class FuelLogsService {
    * rollout compatibility before a vessel activates the inventory ledger.
    */
   async create(input: CreateFuelLogData): Promise<FuelLog> {
+    if (offlineFuel.enabled()) throw new Error('Use Fuel Receipts to save or amend this record.');
     const currencyCode = normalizeCurrencyCode(input.currencyCode);
     const { data, error } = await supabase
       .from('fuel_logs')
@@ -141,6 +157,7 @@ class FuelLogsService {
    * compatibility before a vessel activates the inventory ledger.
    */
   async update(id: string, input: UpdateFuelLogData): Promise<void> {
+    if (offlineFuel.enabled()) throw new Error('Use Fuel Receipts to save or amend this record.');
     const patch: Record<string, any> = {};
     if (input.locationOfRefueling !== undefined)
       patch.location_of_refueling = input.locationOfRefueling.trim() || null;
@@ -169,6 +186,7 @@ class FuelLogsService {
    * already-released clients before inventory activation.
    */
   async delete(id: string): Promise<void> {
+    if (offlineFuel.enabled()) throw new Error('Use Fuel Receipts to save or amend this record.');
     const { data, error } = await supabase.from('fuel_logs').delete().eq('id', id).select('id');
     requireAffectedRows(data, error, 'Deleting the fuel log');
   }

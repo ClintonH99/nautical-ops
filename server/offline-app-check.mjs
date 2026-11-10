@@ -1,3 +1,5 @@
+import { installDocuments } from "./offline-documents-fixture.mjs";
+import { installFuel } from "./offline-fuel-fixture.mjs";
 import { installSeaMiles } from "./offline-sea-fixture.mjs";
 import { startOfflineTestControls } from "./offline-test-controls.mjs";
 import { installDuties } from "./offline-duties-fixture.mjs";
@@ -307,6 +309,24 @@ try {
     (name) => readFileSync(join(app, "supabase/migrations", name), "utf8"),
     user,
   );
+  installDocuments(sql, (name) =>
+    readFileSync(join(app, "supabase/migrations", name), "utf8"),
+  );
+  installFuel(sql, baseline, (name) =>
+    readFileSync(join(app, "supabase/migrations", name), "utf8"),
+  );
+  sql(
+    `SET request.jwt.claim.sub='${user}'; INSERT INTO fuel_tanks(id,vessel_id,name,capacity_litres,created_at) VALUES('00000000-0000-0000-0000-000000000040','${vessel}','Port',1000,now()-interval '2 days'),('00000000-0000-0000-0000-000000000041','${vessel}','Starboard',1000,now()-interval '2 days'); INSERT INTO vessel_fuel_settings(vessel_id,volume_unit) VALUES('${vessel}','LITRES');`,
+  );
+  sql(
+    `UPDATE users SET role='CAPTAIN_MOV' WHERE id='${user}'; INSERT INTO user_devices VALUES('${user}','${session}','synthetic-fixture-setup',null,'web');`,
+  );
+  run(
+    `SELECT activate_vessel_fuel_inventory('${vessel}',now()-interval '1 day',0::smallint,'[{"fuel_tank_id":"00000000-0000-0000-0000-000000000040","amount_litres":200},{"fuel_tank_id":"00000000-0000-0000-0000-000000000041","amount_litres":0}]'::jsonb,'Synthetic opening balances','${crypto.randomUUID()}');`,
+  );
+  sql(
+    `DELETE FROM user_devices WHERE device_fingerprint='synthetic-fixture-setup'`,
+  );
   if (process.env.OFFLINE_APP_WATCH_SEED === "true") {
     const other = "00000000-0000-0000-0000-000000000009";
     sql(
@@ -348,7 +368,9 @@ try {
       `INSERT INTO watch_keeping_timetables(id,vessel_id,watch_title,start_time,for_date,slots,created_by) VALUES('00000000-0000-0000-0000-000000000010','${vessel}','Synthetic rotation preservation','06:00','2026-11-10',${quote(JSON.stringify(slots))}::jsonb,'${user}');`,
     );
   }
+  const webRoot = join(dir, "web");
   const env = {
+    OFFLINE_TEST_DIST_DIR: webRoot,
     ...process.env,
     EXPO_NO_DOTENV: "1",
     EXPO_NO_TELEMETRY: "1",
@@ -374,6 +396,8 @@ try {
       "--platform",
       "web",
       "--clear",
+      "--output-dir",
+      webRoot,
     ],
     { cwd: app, env, stdio: ["ignore", "pipe", "pipe"] },
   );
@@ -398,7 +422,7 @@ try {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader(
       "Content-Security-Policy",
-      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; frame-src 'none'",
+      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; frame-src 'self'",
     );
     const url = new URL(req.url, origin),
       path = url.pathname;
@@ -406,6 +430,15 @@ try {
       res.writeHead(status, { "Content-Type": "application/json" });
       res.end(JSON.stringify(data));
     };
+    if (
+      path === `/storage/v1/object/public/vessel-banners/${vessel}/banner.jpg`
+    ) {
+      const embedded = JSON.parse(
+        readFileSync(join(app, "src/utils/pdfEmbeddedAssets.json"), "utf8"),
+      );
+      res.writeHead(200, { "Content-Type": "image/png" });
+      return res.end(Buffer.from(embedded.logo, "base64"));
+    }
     let body = {};
     if (req.method === "POST") {
       let text = "";
@@ -497,6 +530,38 @@ try {
       }
       return json(result);
     }
+    if (path === "/rest/v1/rpc/read_web_offline_fuel")
+      return json(
+        JSON.parse(
+          run(
+            `SELECT read_web_offline_fuel(${quote(body.p_vessel_id)},${quote(body.p_device_id)},${quote(body.p_feature)});`,
+          ),
+        ),
+      );
+    if (path === "/rest/v1/rpc/sync_web_offline_fuel")
+      return json(
+        JSON.parse(
+          run(
+            `SELECT sync_web_offline_fuel(${quote(body.p_vessel_id)},${quote(body.p_device_id)},${quote(JSON.stringify(body.p_operation))}::jsonb);`,
+          ),
+        ),
+      );
+    if (path === "/rest/v1/rpc/read_web_offline_document_context")
+      return json(
+        JSON.parse(
+          run(
+            `SELECT read_web_offline_document_context(${quote(body.p_vessel_id)},${quote(body.p_device_id)});`,
+          ),
+        ),
+      );
+    if (path === "/rest/v1/rpc/read_web_offline_fuel_context")
+      return json(
+        JSON.parse(
+          run(
+            `SELECT read_web_offline_fuel_context(${quote(body.p_vessel_id)},${quote(body.p_device_id)});`,
+          ),
+        ),
+      );
     if (path === "/rest/v1/rpc/read_web_offline_shopping")
       return json(
         JSON.parse(
@@ -697,11 +762,9 @@ try {
     }
     if (req.method !== "GET")
       return json({ message: "Method not allowed" }, 405);
-    let file = resolve(app, "dist", "." + decodeURIComponent(path));
-    if (!file.startsWith(join(app, "dist") + "/"))
-      file = join(app, "dist/index.html");
-    if (!existsSync(file) || !extname(file))
-      file = join(app, "dist/index.html");
+    let file = resolve(webRoot, "." + decodeURIComponent(path));
+    if (!file.startsWith(webRoot + "/")) file = join(webRoot, "index.html");
+    if (!existsSync(file) || !extname(file)) file = join(webRoot, "index.html");
     if (
       ![
         ".html",
@@ -747,7 +810,7 @@ try {
           res.end(JSON.stringify({ message: "Synthetic request failed" }));
         }),
       );
-      server.once('error', reject);
+      server.once("error", reject);
       server.listen(port, "127.0.0.1", resolve);
     });
   await online();

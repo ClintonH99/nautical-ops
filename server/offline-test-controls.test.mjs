@@ -29,10 +29,6 @@ test("local controls stop/restart only their test server and reject cross-site r
     );
     const html = await page.text(),
       token = html.match(/'X-Offline-Test-Key':'([a-f0-9]+)'/)[1];
-    assert.match(
-      html,
-      /Fuel, offline photos\/attachments and PDF exports are still being completed/,
-    );
     const post = (body, headers = {}) =>
       fetch(control.origin + "/connection", {
         method: "POST",

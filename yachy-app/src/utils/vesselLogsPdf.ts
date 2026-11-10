@@ -142,7 +142,7 @@ function fuelReceiptDate(value: string): string {
   return match && month ? `${Number(match[3])} ${month} ${match[1]}` : value;
 }
 
-export async function exportFuelLogPdf(logs: FuelLog[], vesselName: string): Promise<void> {
+export function buildFuelLogHtml(logs: FuelLog[]): string {
   const receiptCards = logs.length
     ? logs
         .map(
@@ -227,9 +227,15 @@ export async function exportFuelLogPdf(logs: FuelLog[], vesselName: string): Pro
     </style>
     </head><body>
     <h1>Fuel Receipts</h1>
+    ${logs.some((l) => l.offlinePending) ? '<p>Device copy — includes changes waiting to sync.</p>' : ''}
     ${receiptCards}
   </body></html>`;
 
+  return html;
+}
+
+export async function exportFuelLogPdf(logs: FuelLog[], vesselName: string): Promise<void> {
+  const html = buildFuelLogHtml(logs);
   const safeName = vesselName.replace(/[^\w]/g, '_') || 'Vessel';
   await printAndShare(html, `${safeName}_${dateStr()}_Fuel_Log.pdf`, 'Fuel Receipts');
 }

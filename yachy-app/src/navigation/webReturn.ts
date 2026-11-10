@@ -1,6 +1,12 @@
 import type { ReturnNavigation } from './returnToPreviousPage';
 const parents: Readonly<Record<string, string>> = {
   AddEditNote: 'Notepad',
+  AddEditFuelLog: 'FuelLog',
+  FuelTransfer: 'FuelTransfers',
+  FuelTankEntry: 'FuelInventory',
+  FuelLog: 'FuelHistory',
+  FuelTransfers: 'FuelHistory',
+  FuelHistory: 'FuelInventory',
   AddEditPumpOutLog: 'PumpOutLog',
   AddEditGeneralWasteLog: 'GeneralWasteLog',
   AddEditUniform: 'Uniforms',

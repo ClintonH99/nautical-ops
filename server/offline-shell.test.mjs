@@ -62,6 +62,8 @@ test("normal app route reload has cached shell while offline", async () => {
   );
 });
 for (const path of [
+  "/logs/fuel/edit?logId=00000000-0000-0000-0000-000000000001",
+  "/logs/fuel/transfers/edit?transferId=00000000-0000-0000-0000-000000000001",
   "/",
   "/crew/sea-miles",
   "/safety/sea-miles/edit?entryId=00000000-0000-0000-0000-000000000001&reviewMode=true",

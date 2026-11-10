@@ -1,0 +1,12 @@
+{
+  "purpose": "Offline PDF generation; bundled locally, never loaded from a CDN.",
+  "packages": {
+    "pdfmake": "0.3.14",
+    "html-to-pdfmake": "2.5.36"
+  },
+  "sha256": {
+    "pdfmake-0.3.14.min.js": "e095e5b991dce0eb84f1989c42a2dbf7d0672fb8510ea3fe1c958920d6d3751d",
+    "pdfmake-fonts-0.3.14.js": "f3db5ac36ce8c9a6a3f55d5d00c2a0e21a3d7698db149dff22f4e670ffcfd5c4",
+    "html-to-pdfmake-2.5.36.js": "4ee2d5a7e4824b2b3bcfdf9a4fc59a3316fbdbd99c3b97010308a518641de261"
+  }
+}

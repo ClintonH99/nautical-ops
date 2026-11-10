@@ -1,3 +1,7 @@
+import { offlineFuel } from '../offline/fuelService';
+import { flattenFuel, entryProjection } from '../offline/fuelProjection';
+import { fuelSnapshot } from '../offline/fuelSnapshot';
+import type { RecordValue } from '../offline/outbox';
 /**
  * Shared fuel-management data service.
  *
@@ -72,6 +76,7 @@ export interface CreateFuelLogWithTankEntriesInput {
 }
 
 export interface UpdateFuelLogWithTankEntriesInput {
+  offlineLocalVersion?: number;
   vesselId: string;
   log: UpdateFuelLogData;
   entries: FuelLogTankEntryInput[];
@@ -381,6 +386,9 @@ function mapFuelLog(row: DatabaseRow): FuelLog {
   const pricePerVolumeUnit = asNumber(row.price_per_gallon);
   const volumeUnit = (row.volume_unit as FuelVolumeUnit | null | undefined) ?? null;
   return {
+    offlineLocalVersion:
+      typeof row.offlineLocalVersion === 'number' ? row.offlineLocalVersion : undefined,
+    offlinePending: row.offlinePending === true,
     id: asString(row.id),
     vesselId: asString(row.vessel_id),
     locationOfRefueling: asString(row.location_of_refueling),
@@ -460,6 +468,9 @@ function mapLogTankAllocation(row: DatabaseRow): FuelLogTankAllocation {
 
 function mapTransfer(row: DatabaseRow): FuelTransfer {
   return {
+    offlineLocalVersion:
+      typeof row.offlineLocalVersion === 'number' ? row.offlineLocalVersion : undefined,
+    offlinePending: row.offlinePending === true,
     id: asString(row.id),
     vesselId: asString(row.vessel_id),
     sourceTankId: asString(row.source_tank_id),
@@ -547,6 +558,7 @@ function mapInventorySnapshot(value: unknown): FuelInventorySnapshot {
   const status = INVENTORY_STATUS_VALUES.has(suppliedStatus) ? suppliedStatus : derivedStatus;
 
   return {
+    offlineDownloadedAt: asString(row.offlineDownloadedAt) || undefined,
     vesselId: asString(rowValue(row, 'vessel_id', 'vesselId')),
     status,
     activatedAt:
@@ -589,6 +601,9 @@ function mapInventoryOperation(value: unknown): FuelInventoryOperation {
       : 'VOIDED';
 
   return {
+    offlineLocalVersion:
+      typeof row.offlineLocalVersion === 'number' ? row.offlineLocalVersion : undefined,
+    offlinePending: row.offlinePending === true,
     id: asString(row.id),
     logicalOperationId: asString(rowValue(row, 'logical_operation_id', 'logicalOperationId')),
     revisionNo: asNumber(rowValue(row, 'revision_no', 'revisionNo')),
@@ -774,6 +789,11 @@ function rpcResultRow(value: unknown, nestedKey: string): DatabaseRow {
 
 class FuelManagementService {
   async getSettings(vesselId: string): Promise<VesselFuelSettings | null> {
+    if (offlineFuel.enabled()) {
+      const c = await offlineFuel.context(vesselId),
+        r = (c.setup as RecordValue).settings;
+      return r ? mapSettings(r as DatabaseRow) : null;
+    }
     const { data, error } = await supabase
       .from('vessel_fuel_settings')
       .select('*')
@@ -784,6 +804,10 @@ class FuelManagementService {
   }
 
   async getTanks(vesselId: string): Promise<FuelTank[]> {
+    if (offlineFuel.enabled())
+      return ((await offlineFuel.context(vesselId)).tanks as RecordValue[])
+        .filter((t) => !t.archived_at)
+        .map(mapTank);
     const { data, error } = await supabase
       .from('fuel_tanks')
       .select('*')
@@ -795,6 +819,10 @@ class FuelManagementService {
   }
 
   async getSetup(vesselId: string): Promise<FuelSetup> {
+    if (offlineFuel.enabled()) {
+      const c = (await offlineFuel.context(vesselId)).setup as unknown as FuelSetupRpcResult;
+      return setupFromRows(c.settings, c.tanks ?? []);
+    }
     const { data, error } = await supabase.rpc('get_vessel_fuel_setup', {
       p_vessel_id: vesselId,
     });
@@ -804,6 +832,8 @@ class FuelManagementService {
   }
 
   async getInventorySnapshot(vesselId: string, asOf?: string): Promise<FuelInventorySnapshot> {
+    if (offlineFuel.enabled())
+      return mapInventorySnapshot(fuelSnapshot(await offlineFuel.context(vesselId), asOf));
     const args: Record<string, unknown> = { p_vessel_id: vesselId };
     if (asOf) {
       const parsed = new Date(asOf);
@@ -831,6 +861,38 @@ class FuelManagementService {
       throw new Error('Fuel inventory history cursor is invalid.');
     }
 
+    if (offlineFuel.enabled()) {
+      const c = await offlineFuel.context(vesselId),
+        records = await offlineFuel.list('fuelEntries', vesselId);
+      const operations = (c.operations as RecordValue[]).map((o) => {
+        const r = records.find((r) => r.source_id === o.id);
+        return r ? entryProjection(r) : o;
+      });
+      const filtered = operations
+        .filter(
+          (o) =>
+            (!options.tankId ||
+              (o.postings as RecordValue[]).some((p) => p.fuel_tank_id === options.tankId)) &&
+            (!options.beforeRecordedSequence ||
+              Number(o.recorded_sequence) < options.beforeRecordedSequence)
+        )
+        .sort((a, b) => Number(b.recorded_sequence) - Number(a.recorded_sequence));
+      const page = filtered.slice(0, limit);
+      const pending = !options.beforeRecordedSequence
+        ? records
+            .filter((r) => !r.source_id)
+            .map(entryProjection)
+            .filter(
+              (o) =>
+                !options.tankId ||
+                (o.postings as RecordValue[]).some((p) => p.fuel_tank_id === options.tankId)
+            )
+        : [];
+      return {
+        operations: [...pending, ...page].map(mapInventoryOperation),
+        nextBeforeSequence: filtered.length > limit ? Number(page.at(-1)?.recorded_sequence) : null,
+      };
+    }
     const { data, error } = await supabase.rpc('get_fuel_inventory_history', {
       p_vessel_id: vesselId,
       p_tank_id: options.tankId ?? null,
@@ -860,6 +922,30 @@ class FuelManagementService {
       }
     }
 
+    if (offlineFuel.enabled()) {
+      const c = await offlineFuel.context(vesselId);
+      const audits = (c.legacy_audits as RecordValue[])
+        .filter(
+          (r) =>
+            (!options.sourceType || r.source_type === options.sourceType) &&
+            (!options.sourceId || r.source_id === options.sourceId) &&
+            (!before ||
+              String(r.recorded_at) < before.recordedAt ||
+              (r.recorded_at === before.recordedAt && String(r.id) < before.id))
+        )
+        .sort(
+          (a, b) =>
+            String(b.recorded_at).localeCompare(String(a.recorded_at)) ||
+            String(b.id).localeCompare(String(a.id))
+        );
+      const page = audits.slice(0, limit),
+        last = page.at(-1);
+      return mapLegacyAuditHistory({
+        audits: page,
+        next_cursor:
+          audits.length > limit && last ? { recorded_at: last.recorded_at, id: last.id } : null,
+      });
+    }
     const { data, error } = await supabase.rpc('get_fuel_inventory_legacy_audits', {
       p_vessel_id: vesselId,
       p_source_type: options.sourceType ?? null,
@@ -873,6 +959,13 @@ class FuelManagementService {
   }
 
   async getInventoryOperation(operationId: string): Promise<FuelInventoryOperation | null> {
+    if (offlineFuel.enabled()) {
+      const r = await offlineFuel.read('fuelEntries', operationId);
+      if (r) return mapInventoryOperation(entryProjection(r));
+      const c = await offlineFuel.context(),
+        o = (c.operations as RecordValue[]).find((o) => o.id === operationId);
+      return o ? mapInventoryOperation(o) : null;
+    }
     const { data, error } = await supabase.rpc('get_fuel_inventory_operation', {
       p_operation_id: operationId,
     });
@@ -881,6 +974,7 @@ class FuelManagementService {
   }
 
   async activateInventory(input: FuelInventoryActivationInput): Promise<FuelInventorySnapshot> {
+    if (offlineFuel.enabled()) await offlineFuel.beforeOnline();
     const effective = effectiveContext({
       effectiveAt: input.occurredAt,
       utcOffsetMinutes: input.utcOffsetMinutes,
@@ -910,6 +1004,7 @@ class FuelManagementService {
   async amendOpeningInventory(
     input: FuelInventoryOpeningAmendmentInput
   ): Promise<FuelInventoryOperation> {
+    if (offlineFuel.enabled()) await offlineFuel.beforeOnline();
     if (!Number.isInteger(input.expectedRevision) || input.expectedRevision < 1) {
       throw new Error('Fuel opening revision must be a positive integer.');
     }
@@ -961,6 +1056,26 @@ class FuelManagementService {
       p_reason: input.reason?.trim() || '',
       p_notes: input.notes?.trim() || '',
     };
+    if (offlineFuel.enabled())
+      return mapInventoryOperation(
+        entryProjection(
+          await offlineFuel.save(
+            'fuelEntries',
+            input.vesselId,
+            {
+              operation_type: input.kind,
+              effective_at: effective.effectiveAt,
+              utc_offset_minutes: effective.utcOffsetMinutes,
+              fuel_tank_id: input.fuelTankId,
+              amount_litres: payload.p_amount_litres,
+              location: payload.p_location,
+              reason: payload.p_reason,
+              notes: payload.p_notes,
+            },
+            []
+          )
+        )
+      );
     return idempotentFuelWrite(
       `entry:${input.vesselId}:${input.kind}:${input.fuelTankId}`,
       payload,
@@ -998,6 +1113,29 @@ class FuelManagementService {
       p_notes: input.notes?.trim() || '',
       p_amendment_reason: input.amendmentReason.trim(),
     };
+    if (offlineFuel.enabled())
+      return mapInventoryOperation(
+        entryProjection(
+          await offlineFuel.save(
+            'fuelEntries',
+            input.vesselId,
+            {
+              operation_type: input.kind,
+              effective_at: effective.effectiveAt,
+              utc_offset_minutes: effective.utcOffsetMinutes,
+              fuel_tank_id: input.fuelTankId,
+              amount_litres: payload.p_amount_litres,
+              location: payload.p_location,
+              reason: payload.p_entry_reason,
+              notes: payload.p_notes,
+            },
+            [],
+            input.operationId,
+            input.offlineLocalVersion,
+            input.amendmentReason
+          )
+        )
+      );
     return idempotentFuelWrite(
       `entry:amend:${input.operationId}`,
       payload,
@@ -1014,6 +1152,12 @@ class FuelManagementService {
   }
 
   async voidInventoryEntry(input: FuelInventoryEntryVoidInput): Promise<FuelInventoryOperation> {
+    if (offlineFuel.enabled())
+      input = {
+        ...input,
+        operationId:
+          (await offlineFuel.beforeOnline('fuelEntries', input.operationId)) ?? input.operationId,
+      };
     if (!Number.isInteger(input.expectedRevision) || input.expectedRevision < 1) {
       throw new Error('Fuel inventory revision must be a positive integer.');
     }
@@ -1039,6 +1183,7 @@ class FuelManagementService {
   }
 
   async saveSetup(input: SaveFuelSetupInput): Promise<FuelSetup> {
+    if (offlineFuel.enabled()) await offlineFuel.beforeOnline();
     if (!Number.isInteger(input.expectedRevision) || input.expectedRevision < 0) {
       throw new Error('Fuel setup revision is invalid. Refresh the setup and try again.');
     }
@@ -1082,6 +1227,12 @@ class FuelManagementService {
 
   /** Read one retained tank row, including archived tanks needed by audit corrections. */
   async getTankById(id: string, vesselId: string): Promise<FuelTank | null> {
+    if (offlineFuel.enabled()) {
+      const r = ((await offlineFuel.context(vesselId)).tanks as RecordValue[]).find(
+        (t) => t.id === id
+      );
+      return r ? mapTank(r) : null;
+    }
     const { data, error } = await supabase
       .from('fuel_tanks')
       .select('*')
@@ -1093,6 +1244,12 @@ class FuelManagementService {
   }
 
   async getLogTankEntries(fuelLogId: string): Promise<FuelLogTankEntry[]> {
+    if (offlineFuel.enabled()) {
+      const r = await offlineFuel.read('fuelLogs', fuelLogId);
+      return ((r?.entries ?? []) as RecordValue[]).map((e) =>
+        mapLogTankEntry({ ...e, fuel_log_id: fuelLogId, vessel_id: r?.vessel_id })
+      );
+    }
     const { data, error } = await supabase
       .from('fuel_log_tank_entries')
       .select('*')
@@ -1111,6 +1268,35 @@ class FuelManagementService {
     vesselId: string,
     fuelLogIds: readonly string[]
   ): Promise<FuelLogAllocationSnapshot> {
+    if (offlineFuel.enabled()) {
+      const c = await offlineFuel.context(vesselId),
+        records = await offlineFuel.list('fuelLogs', vesselId),
+        tanks = c.tanks as RecordValue[];
+      const allocationsByLogId: FuelLogAllocationSnapshot['allocationsByLogId'] = {};
+      for (const id of fuelLogIds) {
+        const r = records.find((r) => r.id === id || r.source_id === id);
+        if (!r) continue;
+        const retained = ((c.allocations as RecordValue[]) ?? []).filter(
+          (e) => e.fuel_log_id === r.source_id
+        );
+        allocationsByLogId[id] = (r.offlinePending ? (r.entries as RecordValue[]) : retained).map(
+          (e) =>
+            mapLogTankAllocation({
+              ...e,
+              fuel_log_id: id,
+              tank_name:
+                e.tank_name ??
+                retained.find((a) => a.fuel_tank_id === e.fuel_tank_id)?.tank_name ??
+                tanks.find((t) => t.id === e.fuel_tank_id)?.name ??
+                '',
+            })
+        );
+      }
+      return {
+        displayUnit: (await this.getSettings(vesselId))?.volumeUnit ?? 'LITRES',
+        allocationsByLogId,
+      };
+    }
     const uniqueLogIds = [...new Set(fuelLogIds.filter(Boolean))];
     const batches: string[][] = [];
     for (let index = 0; index < uniqueLogIds.length; index += 100) {
@@ -1213,6 +1399,18 @@ class FuelManagementService {
       p_new_tanks: newTanks,
       p_expected_setup_revision: newTanks.length > 0 ? input.expectedSetupRevision : null,
     };
+    if (offlineFuel.enabled() && newTanks.length === 0)
+      return mapFuelLog(
+        flattenFuel(
+          await offlineFuel.save(
+            'fuelLogs',
+            input.log.vesselId,
+            payload.p_log,
+            entries as RecordValue[]
+          )
+        )
+      );
+    if (offlineFuel.enabled()) await offlineFuel.beforeOnline();
     return idempotentFuelWrite(
       `receipt:create:${input.log.vesselId}`,
       payload,
@@ -1290,6 +1488,19 @@ class FuelManagementService {
       // pre-ledger receipt. Ledger-aware records still require allocations.
       p_entries: toLogEntries(input.entries, true),
     };
+    if (offlineFuel.enabled()) {
+      const { amendment_reason: _, expected_revision: __, ...fields } = patch;
+      await offlineFuel.save(
+        'fuelLogs',
+        input.vesselId,
+        fields as RecordValue,
+        payload.p_entries as RecordValue[],
+        id,
+        input.offlineLocalVersion,
+        input.amendmentReason
+      );
+      return;
+    }
     await idempotentFuelWrite(
       `receipt:amend:${id}`,
       payload,
@@ -1305,6 +1516,7 @@ class FuelManagementService {
   }
 
   async voidFuelLog(id: string, options: VoidFuelLogOptions): Promise<void> {
+    if (offlineFuel.enabled()) id = (await offlineFuel.beforeOnline('fuelLogs', id)) ?? id;
     const expectedRevision = options.expectedRevision;
     if (!Number.isInteger(expectedRevision) || expectedRevision < 0) {
       throw new Error('Fuel log revision is invalid.');
@@ -1331,6 +1543,8 @@ class FuelManagementService {
   }
 
   async getTransfersByVessel(vesselId: string): Promise<FuelTransfer[]> {
+    if (offlineFuel.enabled())
+      return (await offlineFuel.list('fuelTransfers', vesselId)).map(flattenFuel).map(mapTransfer);
     const { data, error } = await supabase.rpc('get_fuel_transfers_with_snapshots', {
       p_vessel_id: vesselId,
     });
@@ -1342,6 +1556,10 @@ class FuelManagementService {
   }
 
   async getTransferById(id: string): Promise<FuelTransfer | null> {
+    if (offlineFuel.enabled()) {
+      const r = await offlineFuel.read('fuelTransfers', id);
+      return r ? mapTransfer(flattenFuel(r)) : null;
+    }
     const { data, error } = await supabase
       .from('fuel_transfers')
       .select(FUEL_TRANSFER_READ_SELECT)
@@ -1354,6 +1572,17 @@ class FuelManagementService {
 
   async createTransfer(input: FuelTransferInput): Promise<FuelTransfer> {
     const payload = { p_transfer: transferPayload(input) };
+    if (offlineFuel.enabled())
+      return mapTransfer(
+        flattenFuel(
+          await offlineFuel.save(
+            'fuelTransfers',
+            input.vesselId,
+            payload.p_transfer as RecordValue,
+            []
+          )
+        )
+      );
     return idempotentFuelWrite(
       `transfer:create:${input.vesselId}`,
       payload,
@@ -1389,6 +1618,18 @@ class FuelManagementService {
       p_transfer: transferPayload(input),
       p_reason: reason,
     };
+    if (offlineFuel.enabled()) {
+      await offlineFuel.save(
+        'fuelTransfers',
+        input.vesselId,
+        payload.p_transfer as RecordValue,
+        [],
+        id,
+        input.offlineLocalVersion,
+        reason
+      );
+      return;
+    }
     await idempotentFuelWrite(
       `transfer:amend:${id}`,
       payload,
@@ -1404,6 +1645,7 @@ class FuelManagementService {
   }
 
   async deleteTransfer(id: string, options: VoidFuelTransferOptions): Promise<void> {
+    if (offlineFuel.enabled()) id = (await offlineFuel.beforeOnline('fuelTransfers', id)) ?? id;
     const expectedRevision = options.expectedRevision;
     if (!Number.isInteger(expectedRevision) || expectedRevision < 0) {
       throw new Error('Fuel transfer revision is invalid.');

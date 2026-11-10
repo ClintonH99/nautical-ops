@@ -273,3 +273,48 @@ MORNING USER TEST checkpoint — 10 November 2026 (local only)
   Tests do not use actual users, payments or hosted credentials. Twenty areas
   are available; remaining Fuel/attachments/PDF and release work is not hidden.
   This is a reviewable test build, not the completed production offline release.
+
+FUEL / MEDIA / PDF checkpoint — 10 November 2026 (local only)
+- Fuel receipts, transfers and existing inventory-entry service support local
+  create/edit, immutable retry, revision checks and server aliases. Confirmed
+  tank balances exclude pending operations and carry a download timestamp.
+  Existing Fuel RPCs enforce capacity, allocation, ordering and amendments.
+  Setup, opening balances, voiding and deletion remain online. Manual tank
+  entry UI is not newly exposed: the original navigation does not register it.
+- Downloaded vessel images, public own avatar and RLS-visible saved signatures
+  are partitioned with the current signed user/vessel/session. Optional image
+  failures do not block record downloads; MIME/size/time limits apply. There is
+  no general record-attachment uploader in the existing app; none was added.
+- Pinned, licensed pdfmake/html-to-pdfmake engines and fonts are in the offline
+  app shell. PDFs flow across actual pages, use the approved logo/page numbers,
+  and generate on device. Remote document images fail clearly rather than
+  silently disappearing. Account/access are rechecked before returning a PDF.
+  Pending Rest edits export as drafts without a Master approval signature.
+- Incomplete record downloads are visible. Device storage failure cannot report
+  a successful save; pending data is retained, with instructions not to clear it.
+- 239 offline Node tests passed (237 unaffected + 2 control tests rerun after
+  removing an obsolete unfinished-feature copy assertion). 59 isolated PG
+  tests passed. TypeScript and full isolated web export pass; scoped ESLint
+  has zero errors and 19 existing any/unused warnings.
+- Browser ph0IXb: HTTP server stopped, receipt create/reload/edit/reload/PDF
+  download; reconnect one physical receipt/one receipt with latest comment.
+  Transfer create/reload/reconnect: one transfer/one receipt, ledger -20/+20 L.
+- Final browser 81YbTd: offline Home reload uses an embedded downloaded banner;
+  HoursOfRest_Synthetic_crew_2026-11.pdf downloaded while server stopped, one
+  page with cached identity and saved signature. Fuel editor direct URL saved
+  offline and returned to Fuel Receipts; reconnect automatically removed the
+  pending label. One physical receipt/one idempotency receipt verified in SQL.
+- PDF browser fixture generated Fuel, Rest, Sea Miles, Inventory, Rules and a
+  120-row long-table document. Rendered pages inspected. Text extraction verified
+  7 receipts (all 75 repeated long-comment phrases), all 30 Rest dates plus both
+  signature captions on one page, all 70 inventory rows/repeated headings,
+  40 Sea Miles entries, 30 rules, and all 120 long-table rows.
+  Synthetic artifacts: /private/tmp/nautical-offline-pdf-check.
+- Current test controls: http://127.0.0.1:55913. Detached launcher uses a new
+  state directory and preserves the older test. Latest app: port 61371.
+- Source saved locally only. No hosted migration, signing secret, account,
+  deployment or activation changed. Before live: compare current production
+  schema/RLS/auth against this checkout, resolve canonical branch changes,
+  configure the server signing key privately, stage and verify real roles,
+  then deploy/enable only on the user's instruction. Test success is not a
+  claim that these migrations have run in production.

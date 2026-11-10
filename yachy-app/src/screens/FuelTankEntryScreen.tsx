@@ -1,3 +1,4 @@
+import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as Crypto from 'expo-crypto';
 import {
@@ -467,6 +468,7 @@ export const FuelTankEntryScreen = ({ navigation, route }: any) => {
         await fuelManagementService.amendInventoryEntry({
           ...input,
           operationId: correction.id,
+          offlineLocalVersion: correction.offlineLocalVersion,
           expectedRevision: correction.revisionNo,
           amendmentReason: amendmentReason.trim(),
           idempotencyKey: requestRef.current.id,
@@ -485,7 +487,7 @@ export const FuelTankEntryScreen = ({ navigation, route }: any) => {
             ? 'Consumption recorded'
             : 'Adjustment recorded';
       Alert.alert(successTitle, 'The append-only fuel inventory ledger has been updated.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
+        { text: 'OK', onPress: () => returnToPreviousPage(navigation) },
       ]);
     } catch (error) {
       console.error('Save fuel inventory entry error:', error);

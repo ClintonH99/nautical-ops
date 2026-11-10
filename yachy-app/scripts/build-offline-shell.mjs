@@ -14,7 +14,7 @@ export async function buildOfflineShell(dist) {
         assets.push('/' + path);
     }
   }
-  for (const folder of ['assets', '_expo']) {
+  for (const folder of ['assets', '_expo', 'offline-pdf']) {
     try {
       if ((await stat(join(dist, folder))).isDirectory()) await walk(folder);
     } catch (error) {

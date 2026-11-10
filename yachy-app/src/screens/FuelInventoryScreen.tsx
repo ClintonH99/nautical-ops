@@ -1,3 +1,4 @@
+import { offlineFuel } from '../offline/fuelService';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -153,7 +154,9 @@ function HistoryCard({
         <View style={styles.historyHeading}>
           <View style={styles.historyHeadingCopy}>
             <Text style={[styles.historyKind, { color: themeColors.accent }]}>
-              {fuelOperationAuditLabel(record)}
+              {record.offlinePending
+                ? 'Saved on this device — awaiting sync'
+                : fuelOperationAuditLabel(record)}
             </Text>
             <Text style={[styles.historyTitle, { color: themeColors.textPrimary }]}>
               {historyTitle(record)}
@@ -346,7 +349,11 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
   useFocusEffect(
     useCallback(() => {
       load();
+      const unsubscribe = offlineFuel.subscribe(() => {
+        void load();
+      });
       return () => {
+        unsubscribe();
         loadGeneration.current += 1;
       };
     }, [load])
@@ -627,6 +634,12 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
                 <Text style={[styles.loadErrorAction, { color: themeColors.accent }]}>Retry</Text>
               </TouchableOpacity>
             </View>
+          ) : null}
+          {snapshot.offlineDownloadedAt ? (
+            <Text style={{ color: themeColors.textSecondary }}>
+              Confirmed levels downloaded {new Date(snapshot.offlineDownloadedAt).toLocaleString()}.
+              Pending edits are excluded until synced.
+            </Text>
           ) : null}
           <View style={[styles.totalCard, { backgroundColor: themeColors.surface }]}>
             <Text style={[styles.eyebrow, { color: themeColors.textSecondary }]}>

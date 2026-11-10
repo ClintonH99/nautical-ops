@@ -1,3 +1,5 @@
+import { offlineDocuments } from '../offline/documentService';
+import type { RecordValue } from '../offline/outbox';
 /**
  * E-signatures
  * One signature per user (drawn or typed), stored once via ProfileScreen
@@ -18,19 +20,22 @@ export interface UserSignature {
 }
 
 export async function getSignatureForUser(userId: string): Promise<UserSignature | null> {
-  const { data } = await supabase
-    .from('user_signatures')
-    .select('user_id, signature_type, signature_image, typed_name')
-    .eq('user_id', userId)
-    .maybeSingle();
+  const cached = offlineDocuments.enabled() ? await offlineDocuments.context() : null;
+  const { data } = cached
+    ? { data: (cached.signatures as RecordValue[]).find((s) => s.user_id === userId) ?? null }
+    : await supabase
+        .from('user_signatures')
+        .select('user_id, signature_type, signature_image, typed_name')
+        .eq('user_id', userId)
+        .maybeSingle();
 
   if (!data) return null;
 
   return {
-    userId: data.user_id,
-    signatureType: data.signature_type,
-    signatureImage: data.signature_image,
-    typedName: data.typed_name,
+    userId: String(data.user_id),
+    signatureType: data.signature_type as SignatureType,
+    signatureImage: data.signature_image as string | null,
+    typedName: data.typed_name as string | null,
   };
 }
 
@@ -40,17 +45,15 @@ export async function saveSignature(
   signatureImage: string | null,
   typedName: string | null
 ): Promise<void> {
-  const { error } = await supabase
-    .from('user_signatures')
-    .upsert(
-      {
-        user_id: userId,
-        signature_type: signatureType,
-        signature_image: signatureImage,
-        typed_name: typedName,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id' }
-    );
+  const { error } = await supabase.from('user_signatures').upsert(
+    {
+      user_id: userId,
+      signature_type: signatureType,
+      signature_image: signatureImage,
+      typed_name: typedName,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'user_id' }
+  );
   if (error) throw error;
 }

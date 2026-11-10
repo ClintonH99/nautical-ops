@@ -40,6 +40,9 @@ export type Partition = {
   crewRoster?: RecordValue[];
   restSignature?: boolean;
   seaMileContext?: RecordValue;
+  fuelContext?: RecordValue;
+  documentContext?: RecordValue;
+  media?: Record<string, string>;
   tripColors?: RecordValue | null;
   shipyardFolders?: { folders: RecordValue[]; assignments: RecordValue[] };
   snapshots?: Partial<Record<OfflineFeature, boolean>>;

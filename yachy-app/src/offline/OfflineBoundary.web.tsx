@@ -165,6 +165,7 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
         state.pending > 0 ||
         state.saving > 0 ||
         state.shellState !== 'ready' ||
+        !state.recordsReady ||
         state.issue ||
         state.recoverable > 0 ||
         (state.recoveryCopies ?? 0) > 0 ||
@@ -188,6 +189,11 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
               {state.shellState === 'preparing'
                 ? 'Downloading offline pages. Keep this page open.'
                 : 'Offline page download is incomplete. Reconnect before closing the app.'}
+            </Text>
+          )}
+          {!state.recordsReady && (
+            <Text style={{ color: colors.textSecondary }}>
+              Record download is incomplete. Keep connected and use Retry sync before going offline.
             </Text>
           )}
           {state.issue && <Text style={{ color: colors.textSecondary }}>{state.issue}</Text>}
@@ -327,8 +333,8 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
           <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>
             Your pending edits remain saved on this device.
             {state.ready
-              ? ' Open a downloaded page such as Notepad. This test build does not yet support every page offline.'
-              : ' Connect to the internet to verify your access.'}
+              ? ' Open a downloaded vessel page such as Notepad. Account changes, billing, invitations and vessel setup need a connection.'
+              : ` ${state.issue ?? 'Connect to the internet to verify your access.'}`}
           </Text>
           {state.ready && (
             <TouchableOpacity accessibilityRole="link" onPress={() => location.assign('/notepad')}>

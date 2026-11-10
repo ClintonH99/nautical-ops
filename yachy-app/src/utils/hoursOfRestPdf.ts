@@ -140,6 +140,9 @@ export function buildHoursOfRestPdfHtml(
     '</tr></thead><tbody>' +
     dayRows +
     '</tbody></table>' +
+    (data.offlinePending
+      ? '<p>Draft device copy — includes changes waiting to sync. Master approval is not included.</p>'
+      : '') +
     '<div class="legend">X = recorded work &nbsp;&middot;&nbsp; blank = recorded rest &nbsp;&middot;&nbsp; &mdash; = no rest record / unknown</div>' +
     '<div class="footer">*Not to be completed by the seafarer &mdash; office use only, calculated per the Seafarers&rsquo; Hours of Work and the Manning of Ships Convention, 1996 (No. 180) and the STCW Convention as amended.</div>' +
     '<div class="sigrow">' +

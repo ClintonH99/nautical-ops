@@ -1,3 +1,5 @@
+import { offlineDocuments } from '../offline/documentService';
+import { renderOfflinePdf } from './offlinePdf.web';
 import { supabase } from '../services/supabase';
 import assets from './pdfEmbeddedAssets.json';
 import { PdfExportError } from './pdfErrors';
@@ -20,6 +22,20 @@ export async function printStandardPdf({
   orientation?: PdfOrientation;
   headerInContent?: boolean;
 }): Promise<{ uri: string }> {
+  if (offlineDocuments.enabled()) {
+    const scope = await offlineDocuments.scope();
+    const source = await renderOfflinePdf(html, title, orientation, headerInContent);
+    const branded = await brandPdf(source, title, await getPdfLogoBase64(), headerInContent);
+    if ((await offlineDocuments.scope()) !== scope)
+      throw new PdfExportError(
+        'Your account changed while exporting. Open this document again in the correct account.'
+      );
+    return {
+      uri: URL.createObjectURL(
+        new Blob([new Uint8Array(toByteArray(branded))], { type: 'application/pdf' })
+      ),
+    };
+  }
   const {
     data: { session },
   } = await supabase.auth.getSession();

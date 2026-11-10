@@ -529,6 +529,8 @@ export interface PumpOutLog {
 }
 
 export interface FuelLog {
+  offlineLocalVersion?: number;
+  offlinePending?: boolean;
   id: string;
   vesselId: string;
   locationOfRefueling: string;
@@ -666,6 +668,8 @@ export interface FuelLogAllocationSnapshot {
 }
 
 export interface FuelTransfer {
+  offlineLocalVersion?: number;
+  offlinePending?: boolean;
   id: string;
   vesselId: string;
   sourceTankId: string;
@@ -695,6 +699,7 @@ export interface FuelTransfer {
 }
 
 export interface FuelTransferInput {
+  offlineLocalVersion?: number;
   vesselId: string;
   sourceTankId: string;
   destinationTankId: string;
@@ -757,6 +762,7 @@ export interface FuelInventoryEntryInput {
 }
 
 export interface FuelInventoryEntryAmendmentInput extends FuelInventoryEntryInput {
+  offlineLocalVersion?: number;
   operationId: string;
   expectedRevision: number;
   /** Required audit explanation; distinct from the operational entry reason. */
@@ -786,6 +792,7 @@ export interface FuelInventoryTankSnapshot {
 export type FuelTankInventoryState = FuelInventoryTankSnapshot;
 
 export interface FuelInventorySnapshot {
+  offlineDownloadedAt?: string;
   vesselId: string;
   status: FuelInventoryActivationStatus;
   activatedAt: string | null;
@@ -812,6 +819,8 @@ export interface FuelInventoryLedgerPosting {
 export type FuelInventoryLedgerLine = FuelInventoryLedgerPosting;
 
 export interface FuelInventoryOperation {
+  offlineLocalVersion?: number;
+  offlinePending?: boolean;
   id: string;
   logicalOperationId: string;
   revisionNo: number;

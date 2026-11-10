@@ -1,3 +1,4 @@
+import { offlineDocuments } from '../offline/documentService';
 import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
 import { useScreenState } from '../hooks/useScreenState';
 /**
@@ -287,7 +288,9 @@ export const HomeScreen = ({ navigation, route }: any) => {
   useFocusEffect(
     useCallback(() => {
       if (hasVessel) loadTrips();
-      return tripsService.subscribe(() => { if (hasVessel) void loadTrips(); });
+      return tripsService.subscribe(() => {
+        if (hasVessel) void loadTrips();
+      });
     }, [hasVessel, loadTrips])
   );
 
@@ -341,6 +344,22 @@ export const HomeScreen = ({ navigation, route }: any) => {
   const bannerImageUrl = vesselId
     ? vesselService.getBannerPublicUrl(vesselId, bannerCacheBust ?? undefined)
     : null;
+
+  const [cachedBanner, setCachedBanner] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    setCachedBanner(null);
+    if (offlineDocuments.enabled() && bannerImageUrl)
+      void offlineDocuments
+        .image(bannerImageUrl)
+        .then((value) => {
+          if (!cancelled) setCachedBanner(value);
+        })
+        .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [bannerImageUrl, user?.id]);
 
   return (
     <>
@@ -470,8 +489,8 @@ export const HomeScreen = ({ navigation, route }: any) => {
               <VesselBanner
                 name={vesselName || ''}
                 source={
-                  !bannerLoadFailed && bannerImageUrl
-                    ? { uri: bannerImageUrl }
+                  cachedBanner || (!bannerLoadFailed && bannerImageUrl)
+                    ? { uri: cachedBanner || bannerImageUrl! }
                     : DEFAULT_BANNER_IMAGE
                 }
                 onError={() => {

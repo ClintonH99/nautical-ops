@@ -1,3 +1,4 @@
+import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
@@ -581,6 +582,7 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
       utcOffsetMinutes,
       location: location.trim(),
       notes: notes.trim(),
+      offlineLocalVersion: originalTransfer?.offlineLocalVersion,
       expectedRevision: transferId
         ? (correction?.revisionNo ?? originalTransfer?.inventoryRevision ?? 0)
         : undefined,
@@ -596,11 +598,11 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
       }
       if (!transferId) {
         Alert.alert('Successfully created a fuel transfer.', undefined, [
-          { text: 'OK', onPress: () => navigation.goBack() },
+          { text: 'OK', onPress: () => returnToPreviousPage(navigation) },
         ]);
       } else {
         Alert.alert('Fuel transfer updated.', undefined, [
-          { text: 'OK', onPress: () => navigation.goBack() },
+          { text: 'OK', onPress: () => returnToPreviousPage(navigation) },
         ]);
       }
     } catch (error) {
@@ -661,7 +663,7 @@ export const FuelTransferScreen = ({ navigation, route }: any) => {
           </Text>
           <Button
             title="Back to Transfers"
-            onPress={() => navigation.goBack()}
+            onPress={() => returnToPreviousPage(navigation)}
             style={styles.emptyAction}
           />
         </View>

@@ -1,7 +1,10 @@
-import { installSeaMiles } from './offline-sea-fixture.mjs';
-import { runSeaChecks } from './offline-sea-db-cases.mjs';
-import { installDuties } from './offline-duties-fixture.mjs';
-import { runDutiesChecks } from './offline-duties-db-cases.mjs';
+import { installDocuments } from "./offline-documents-fixture.mjs";
+import { runFuelChecks } from "./offline-fuel-db-cases.mjs";
+import { installFuel } from "./offline-fuel-fixture.mjs";
+import { installSeaMiles } from "./offline-sea-fixture.mjs";
+import { runSeaChecks } from "./offline-sea-db-cases.mjs";
+import { installDuties } from "./offline-duties-fixture.mjs";
+import { runDutiesChecks } from "./offline-duties-db-cases.mjs";
 import { runRestChecks } from "./offline-rest-db-cases.mjs";
 import { installRest } from "./offline-rest-fixture.mjs";
 import { installWatch } from "./offline-watch-fixture.mjs";
@@ -1104,9 +1107,30 @@ test("real isolated PostgreSQL offline note protocol", async (t) => {
     installRest(sql, baseline, migration, user);
     await runRestChecks(t, { sql, run, user, vessel, device });
     installDuties(sql, baseline, migration);
-    await runDutiesChecks(t,{sql,run,user,vessel,device});
-    installSeaMiles(sql,migration,user);
-    await runSeaChecks(t,{sql,run,user,vessel,device});
+    await runDutiesChecks(t, { sql, run, user, vessel, device });
+    installSeaMiles(sql, migration, user);
+    await runSeaChecks(t, { sql, run, user, vessel, device });
+    installFuel(sql, baseline, migration);
+    installDocuments(sql, migration);
+    await t.test(
+      "documents: verified scope returns only current vessel profiles and authorized signatures",
+      () => {
+        const d = JSON.parse(
+          run(
+            `SELECT read_web_offline_document_context('${vessel}','${device}')`,
+          ),
+        );
+        assert.equal(d.vessel.id, vessel);
+        assert.ok(d.profiles.every((p) => p.vessel_id === vessel));
+        assert.ok(d.signatures.some((s) => s.user_id === user));
+        assert.throws(() =>
+          run(
+            `SELECT read_web_offline_document_context('${crypto.randomUUID()}','${device}')`,
+          ),
+        );
+      },
+    );
+    await runFuelChecks(t, { sql, run, user, vessel, device });
     let first;
     await t.test("grant binds session and caps access at seven days", () => {
       const c = JSON.parse(

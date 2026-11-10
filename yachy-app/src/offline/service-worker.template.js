@@ -53,6 +53,8 @@ self.addEventListener('fetch', (event) => {
       '/rules/create': 'ruleId',
       '/maintenance/edit': 'logId',
       '/logs/pump-out/edit': 'logId',
+      '/logs/fuel/edit': 'logId',
+      '/logs/fuel/transfers/edit': 'transferId',
       '/logs/general-waste/edit': 'logId',
       '/uniforms/edit': 'uniformId',
       '/inventory/edit': 'itemId',

@@ -13,7 +13,7 @@ import { buildOfflineShell } from './build-offline-shell.mjs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.join(__dirname, '..');
 const publicDir = path.join(appRoot, 'public');
-const distDir = path.join(appRoot, 'dist');
+const distDir = process.env.OFFLINE_TEST_DIST_DIR || path.join(appRoot, 'dist');
 
 const FILES = [
   'landing.html',
@@ -37,6 +37,10 @@ if (!fs.existsSync(distDir)) {
   console.error('[copy-public-to-dist] dist/ missing — run expo export first');
   process.exit(1);
 }
+
+fs.cpSync(path.join(publicDir, 'offline-pdf'), path.join(distDir, 'offline-pdf'), {
+  recursive: true,
+});
 
 let copied = 0;
 for (const name of FILES) {

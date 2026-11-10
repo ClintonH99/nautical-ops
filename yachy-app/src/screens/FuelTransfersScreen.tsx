@@ -1,3 +1,4 @@
+import { offlineFuel } from '../offline/fuelService';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
 import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
@@ -111,7 +112,11 @@ export const FuelTransfersScreen = ({ navigation }: any) => {
   useFocusEffect(
     useCallback(() => {
       load();
+      const unsubscribe = offlineFuel.subscribe(() => {
+        void load();
+      });
       return () => {
+        unsubscribe();
         loadGeneration.current += 1;
       };
     }, [load])
@@ -324,7 +329,11 @@ export const FuelTransfersScreen = ({ navigation }: any) => {
                       : undefined
                   }
                   footer={
-                    transfer.createdByName ? `Logged by ${transfer.createdByName}` : undefined
+                    transfer.offlinePending
+                      ? 'Saved on this device · waiting to sync'
+                      : transfer.createdByName
+                        ? `Logged by ${transfer.createdByName}`
+                        : undefined
                   }
                   summary={
                     <View style={[styles.statsRow, { backgroundColor: themeColors.background }]}>

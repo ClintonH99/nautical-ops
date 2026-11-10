@@ -4,6 +4,7 @@ export type OfflineStatus = {
   enabled: boolean;
   partitionKey?: string;
   ready: boolean;
+  recordsReady?: boolean;
   saving: number;
   shellState: 'preparing' | 'ready' | 'unavailable';
   disconnected: boolean;

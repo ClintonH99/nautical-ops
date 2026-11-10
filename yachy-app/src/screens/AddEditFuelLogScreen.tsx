@@ -1,3 +1,4 @@
+import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 /**
  * Tank-aware vessel fuel log entry.
  *
@@ -779,6 +780,7 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
               comment: comment.trim(),
             },
             entries: [],
+            offlineLocalVersion: originalLog?.offlineLocalVersion,
             expectedRevision: correction?.revisionNo ?? originalLog?.inventoryRevision ?? 0,
             amendmentReason: 'Edited by user',
           });
@@ -790,6 +792,7 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
             entries,
             effectiveAt: eventAt.toISOString(),
             utcOffsetMinutes,
+            offlineLocalVersion: originalLog?.offlineLocalVersion,
             expectedRevision: correction?.revisionNo ?? originalLog?.inventoryRevision ?? 0,
             amendmentReason: 'Edited by user',
           });
@@ -821,7 +824,7 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
             ? 'The earlier receipt was updated without adding missing timing or tank-allocation data.'
             : 'The fuel receipt and its tank allocations were updated.'
           : 'The receipt and its tank allocations were saved as a standalone refuelling record. Previous receipt quantities were not carried forward.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
+        [{ text: 'OK', onPress: () => returnToPreviousPage(navigation) }]
       );
     } catch (error) {
       const rawMessage = messageFromError(error);
@@ -893,7 +896,7 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
           </Text>
           <Button
             title="Back to Fuel Receipts"
-            onPress={() => navigation.goBack()}
+            onPress={() => returnToPreviousPage(navigation)}
             style={styles.emptyAction}
           />
         </View>

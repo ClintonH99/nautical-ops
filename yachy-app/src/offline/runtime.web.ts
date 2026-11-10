@@ -1,3 +1,6 @@
+import { offlineRecordsReady, isOfflineStorageFailure, OFFLINE_STORAGE_MESSAGE } from './readiness';
+import { downloadOfflineImage } from './mediaCache.web';
+import { fuelAdapter } from './fuelAdapter';
 import { seaMilesAdapter } from './seaMilesAdapter';
 import { watchDutiesAdapter } from './watchDutiesAdapter';
 import { restAdapter } from './restAdapter';
@@ -35,6 +38,9 @@ import { yardJobsAdapter, yardJobDeviceCopy } from './yardJobsAdapter';
 import { tripsAdapter, tripDeviceCopy } from './tripsAdapter';
 import { contractorsAdapter, contractorDeviceCopy } from './contractorsAdapter';
 const adapters = {
+  fuelLogs: fuelAdapter('fuelLogs'),
+  fuelTransfers: fuelAdapter('fuelTransfers'),
+  fuelEntries: fuelAdapter('fuelEntries'),
   seaMiles: seaMilesAdapter(),
   seaMilesReview: seaMilesAdapter(true),
   watchDuties: watchDutiesAdapter('watchDuties'),
@@ -65,6 +71,9 @@ const adapters = {
   musterStations: publicationsAdapter,
 };
 const readFunctions = {
+  fuelLogs: 'read_web_offline_fuel',
+  fuelTransfers: 'read_web_offline_fuel',
+  fuelEntries: 'read_web_offline_fuel',
   seaMiles: 'read_web_offline_sea_miles',
   seaMilesReview: 'read_web_offline_sea_miles_review',
   watchDuties: 'read_web_offline_watch_duties',
@@ -95,6 +104,9 @@ const readFunctions = {
   rules: 'read_web_offline_rules',
 };
 const syncFunctions = {
+  fuelLogs: 'sync_web_offline_fuel',
+  fuelTransfers: 'sync_web_offline_fuel',
+  fuelEntries: 'sync_web_offline_fuel',
   seaMiles: 'sync_web_offline_sea_miles',
   seaMilesReview: 'sync_web_offline_sea_miles',
   watchDuties: 'sync_web_offline_watch_duties',
@@ -231,6 +243,11 @@ export async function checkOfflineAccess(): Promise<boolean> {
     sameActive(a);
     useOfflineStatus.setState({
       ready: true,
+      recordsReady: offlineRecordsReady(
+        state,
+        a.permit!.claims.permissions,
+        Object.keys(adapters) as SupportedFeature[]
+      ),
       expiresAt: a.permit!.claims.exp * 1000,
       pending: state.changes.length,
       recoverable,
@@ -255,6 +272,9 @@ export async function checkOfflineAccess(): Promise<boolean> {
             'watchAssignments',
             'seaMiles',
             'seaMilesReview',
+            'fuelLogs',
+            'fuelTransfers',
+            'fuelEntries',
           ].includes(change.feature),
           title: String(
             change.value.title ??
@@ -270,13 +290,15 @@ export async function checkOfflineAccess(): Promise<boolean> {
         })),
     });
     return true;
-  } catch {
+  } catch (error) {
     if (active === a)
       useOfflineStatus.setState({
         ready: false,
         conflicts: [],
         recoverable: 0,
-        issue: 'Reconnect to verify offline access. Your pending edits are kept on this device.',
+        issue: isOfflineStorageFailure(error)
+          ? OFFLINE_STORAGE_MESSAGE
+          : 'Reconnect to verify offline access. Your pending edits are kept on this device.',
       });
     return false;
   }
@@ -413,10 +435,43 @@ async function refreshNotes(a: Active) {
     sameActive(a);
     state.seaMileContext = sc;
   });
+  const documents = await supabase.rpc('read_web_offline_document_context', {
+    p_vessel_id: a.scope.vesselId,
+    p_device_id: a.scope.deviceId,
+  });
+  sameActive(a);
+  if (documents.error) throw documents.error;
+  if (
+    documents.data?.vessel_id !== a.scope.vesselId ||
+    !Array.isArray(documents.data.signatures) ||
+    !Array.isArray(documents.data.profiles)
+  )
+    throw new OfflineError('INVALID_SNAPSHOT');
+  await a.store.update(a.scope, (s) => {
+    sameActive(a);
+    s.documentContext = documents.data;
+  });
+  const fuel = await supabase.rpc('read_web_offline_fuel_context', {
+    p_vessel_id: a.scope.vesselId,
+    p_device_id: a.scope.deviceId,
+  });
+  sameActive(a);
+  if (fuel.error) throw fuel.error;
+  if (
+    fuel.data?.vessel_id !== a.scope.vesselId ||
+    !Array.isArray(fuel.data.operations) ||
+    !Array.isArray(fuel.data.tanks)
+  )
+    throw new OfflineError('INVALID_SNAPSHOT');
+  await a.store.update(a.scope, (s) => {
+    sameActive(a);
+    s.fuelContext = fuel.data;
+  });
   for (const feature of Object.keys(adapters) as SupportedFeature[]) {
     if (!a.permit?.claims.permissions[feature]?.includes('read')) continue;
     sameActive(a);
     const { data, error } = await supabase.rpc(readFunctions[feature], {
+      ...(feature.startsWith('fuel') ? { p_feature: feature } : {}),
       p_vessel_id: a.scope.vesselId,
       p_device_id: a.scope.deviceId,
     });
@@ -430,6 +485,25 @@ async function refreshNotes(a: Active) {
       feature,
       data.map((row) => ({ recordId: row.value.id, value: row.value, revision: row.revision }))
     );
+  }
+  // Optional photos must never prevent records from finishing their download.
+  for (const path of [
+    `vessel-banners/${a.scope.vesselId}/banner.jpg`,
+    `profile-photos/${a.scope.userId}/avatar.jpg`,
+  ]) {
+    const url = `${SUPABASE_URL}/storage/v1/object/public/${path}`;
+    try {
+      const data = await downloadOfflineImage(url);
+      sameActive(a);
+      await a.store.update(a.scope, (s) => {
+        sameActive(a);
+        s.media ??= {};
+        if (data) s.media[url] = data;
+        else delete s.media[url];
+      });
+    } catch {
+      sameActive(a);
+    }
   }
   sameActive(a);
   notifyNotes();
@@ -473,11 +547,13 @@ export async function syncOffline(): Promise<void> {
       if (active === a)
         useOfflineStatus.setState({
           disconnected: true,
-          issue: a.revoked
-            ? 'Access could not be verified. Reconnect and sign in again.'
-            : error instanceof OfflineError && error.code === 'INVALID_PUBLIC_KEYS'
-              ? 'Offline configuration is unavailable.'
-              : 'Offline. Changes stay on this device until they can sync.',
+          issue: isOfflineStorageFailure(error)
+            ? OFFLINE_STORAGE_MESSAGE
+            : a.revoked
+              ? 'Access could not be verified. Reconnect and sign in again.'
+              : error instanceof OfflineError && error.code === 'INVALID_PUBLIC_KEYS'
+                ? 'Offline configuration is unavailable.'
+                : 'Offline. Changes stay on this device until they can sync.',
         });
     } finally {
       if (active === a) await checkOfflineAccess();
@@ -498,6 +574,7 @@ async function initializeOffline(user: User | null): Promise<void> {
   useOfflineStatus.setState({ partitionKey: undefined });
   useOfflineStatus.setState({
     ready: false,
+    recordsReady: false,
     pending: 0,
     expiresAt: null,
     issue: null,
@@ -622,6 +699,10 @@ export async function saveOfflineRecord(
     await checkOfflineAccess();
     if (navigator.onLine) void syncOffline();
     return { ...value, offlineLocalVersion: result.localVersion };
+  } catch (error) {
+    if (isOfflineStorageFailure(error))
+      useOfflineStatus.setState({ issue: OFFLINE_STORAGE_MESSAGE });
+    throw error;
   } finally {
     finish();
   }
@@ -643,6 +724,9 @@ export async function keepBothNoteCopies(operationId: string): Promise<void> {
       'watchAssignments',
       'seaMiles',
       'seaMilesReview',
+      'fuelLogs',
+      'fuelTransfers',
+      'fuelEntries',
     ].includes(change.feature)
   )
     throw new OfflineError('RECONCILE_FIRST');
@@ -758,6 +842,7 @@ async function onlineConflictRow(a: Active, feature: SupportedFeature, recordId:
   requireOfflineAccess(context(a), feature, 'read');
   const { data, error } = await boundedCheck(
     supabase.rpc(readFunctions[feature], {
+      ...(feature.startsWith('fuel') ? { p_feature: feature } : {}),
       p_vessel_id: a.scope.vesselId,
       p_device_id: a.scope.deviceId,
     })

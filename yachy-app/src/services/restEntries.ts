@@ -1,3 +1,4 @@
+import { offlineDocuments } from '../offline/documentService';
 /**
  * Hours of Rest service
  * Handles fetching, saving, and submitting weekly rest/work/lunch entries,
@@ -602,6 +603,7 @@ export interface PdfDayRow {
 }
 
 export interface PdfMonthData {
+  offlinePending?: boolean;
   seafarerName: string;
   rank: string;
   vesselName: string;
@@ -727,19 +729,26 @@ export async function getMonthDataForPdf(
   year: number,
   month: number
 ): Promise<PdfMonthData | null> {
-  const { data: user } = await supabase
-    .from('users')
-    .select('name, position, vessel_id')
-    .eq('id', userId)
-    .single();
+  const documents = offlineDocuments.enabled() ? await offlineDocuments.context() : null;
+  const { data: user } = documents
+    ? {
+        data:
+          (
+            documents.profiles as {
+              id: string;
+              name: string;
+              position: string;
+              vessel_id: string;
+            }[]
+          ).find((u) => u.id === userId) ?? null,
+      }
+    : await supabase.from('users').select('name, position, vessel_id').eq('id', userId).single();
 
   if (!user || !user.vessel_id) return null;
 
-  const { data: vessel } = await supabase
-    .from('vessels')
-    .select('name, imo_number')
-    .eq('id', user.vessel_id)
-    .single();
+  const { data: vessel } = documents
+    ? { data: documents.vessel as { name: string; imo_number: string } }
+    : await supabase.from('vessels').select('name, imo_number').eq('id', user.vessel_id).single();
 
   const monthStart = new Date(year, month - 1, 1);
   // Hours of Rest compliance follows the seafarer, not the vessel - always
@@ -754,6 +763,7 @@ export async function getMonthDataForPdf(
 
   if (effectiveStart > effectiveEnd) {
     return {
+      offlinePending: false,
       seafarerName: user.name,
       rank: user.position ?? '',
       vesselName: vessel?.name ?? '',
@@ -768,14 +778,36 @@ export async function getMonthDataForPdf(
   const paddedStart = new Date(effectiveStart);
   paddedStart.setDate(paddedStart.getDate() - 7);
 
-  const { data: entries } = await supabase
-    .from('rest_entries')
-    .select(
-      'date, rest_periods, work_start, work_end, lunch_start, lunch_end, status, confirmed_by, comment'
-    )
-    .eq('user_id', userId)
-    .gte('date', toDateStr(paddedStart))
-    .lte('date', toDateStr(effectiveEnd));
+  const { data: entries } = offlineRest.enabled()
+    ? {
+        data: (await offlineRest.list(userId))
+          .filter(
+            (e) =>
+              String(e.date) >= toDateStr(paddedStart) && String(e.date) <= toDateStr(effectiveEnd)
+          )
+          .map((e) => ({
+            ...e,
+            status: e.offlinePending && e.status === 'confirmed' ? 'draft' : e.status,
+          })) as unknown as {
+          date: string;
+          rest_periods: RestPeriod[];
+          work_start: string | null;
+          work_end: string | null;
+          lunch_start: string | null;
+          lunch_end: string | null;
+          status: string;
+          confirmed_by: string | null;
+          comment: string | null;
+        }[],
+      }
+    : await supabase
+        .from('rest_entries')
+        .select(
+          'date, rest_periods, work_start, work_end, lunch_start, lunch_end, status, confirmed_by, comment'
+        )
+        .eq('user_id', userId)
+        .gte('date', toDateStr(paddedStart))
+        .lte('date', toDateStr(effectiveEnd));
 
   const entryMap = new Map((entries ?? []).map((e) => [e.date, e]));
   const historyForRolling = (entries ?? []).map((e) => ({
@@ -808,10 +840,20 @@ export async function getMonthDataForPdf(
     );
   }
 
+  const pending =
+    offlineRest.enabled() &&
+    (await offlineRest.list(userId)).some(
+      (e) =>
+        e.offlinePending &&
+        String(e.date) >= toDateStr(paddedStart) &&
+        String(e.date) <= toDateStr(effectiveEnd)
+    );
   const seafarerSignature = await getSignatureForUser(userId);
-  const masterSignature = lastConfirmedBy ? await getSignatureForUser(lastConfirmedBy) : null;
+  const masterSignature =
+    !pending && lastConfirmedBy ? await getSignatureForUser(lastConfirmedBy) : null;
 
   return {
+    offlinePending: pending,
     seafarerName: user.name,
     rank: user.position ?? '',
     vesselName: vessel?.name ?? '',
