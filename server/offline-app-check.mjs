@@ -1,3 +1,4 @@
+import { installVesselRecords } from "./offline-vessel-records-fixture.mjs";
 import { installMaintenance } from "./offline-maintenance-fixture.mjs";
 import { installYard } from "./offline-yard-fixture.mjs";
 import { installTrips } from "./offline-trips-fixture.mjs";
@@ -56,21 +57,44 @@ const subscription = {
 };
 const authSecret = randomBytes(32);
 const b64 = (value) => Buffer.from(JSON.stringify(value)).toString("base64url");
-const input =
-  b64({ alg: "HS256", typ: "JWT" }) +
-  "." +
-  b64({
-    sub: user,
-    aud: "authenticated",
-    role: "authenticated",
-    session_id: session,
-    iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + 86400,
-  });
-const token =
-  input +
-  "." +
-  createHmac("sha256", authSecret).update(input).digest("base64url");
+const authLifetime = Number(process.env.OFFLINE_APP_AUTH_TTL_SECONDS || 86400);
+if (
+  !Number.isInteger(authLifetime) ||
+  authLifetime < 120 ||
+  authLifetime > 86400
+)
+  throw new Error("Synthetic auth lifetime must be 120–86400 seconds");
+const issuedTokens = new Map();
+function issueSession() {
+  const expires = Math.floor(Date.now() / 1000) + authLifetime;
+  const input =
+    b64({ alg: "HS256", typ: "JWT" }) +
+    "." +
+    b64({
+      sub: user,
+      aud: "authenticated",
+      role: "authenticated",
+      session_id: session,
+      iat: Math.floor(Date.now() / 1000),
+      exp: expires,
+    });
+  const token =
+    input +
+    "." +
+    createHmac("sha256", authSecret).update(input).digest("base64url");
+  issuedTokens.set(token, expires);
+  console.log(
+    `Synthetic auth issued; expires at ${new Date(expires * 1000).toISOString()}`,
+  );
+  return {
+    access_token: token,
+    refresh_token: "local-refresh-only",
+    token_type: "bearer",
+    expires_in: authLifetime,
+    expires_at: expires,
+    user: authUser,
+  };
+}
 const pair = await crypto.subtle.generateKey(
   { name: "ECDSA", namedCurve: "P-256" },
   true,
@@ -230,11 +254,22 @@ try {
       "utf8",
     ),
   );
-  installPublications(sql, baseline, name => readFileSync(join(app,'supabase/migrations',name),'utf8'));
+  installPublications(sql, baseline, (name) =>
+    readFileSync(join(app, "supabase/migrations", name), "utf8"),
+  );
   sql(`UPDATE users SET role='CAPTAIN_MOV';`);
-  installTrips(sql,baseline,name=>readFileSync(join(app,'supabase/migrations',name),'utf8'));
-  installYard(sql,baseline,name=>readFileSync(join(app,'supabase/migrations',name),'utf8'));
-  installMaintenance(sql,baseline,name=>readFileSync(join(app,'supabase/migrations',name),'utf8'));
+  installTrips(sql, baseline, (name) =>
+    readFileSync(join(app, "supabase/migrations", name), "utf8"),
+  );
+  installYard(sql, baseline, (name) =>
+    readFileSync(join(app, "supabase/migrations", name), "utf8"),
+  );
+  installMaintenance(sql, baseline, (name) =>
+    readFileSync(join(app, "supabase/migrations", name), "utf8"),
+  );
+  installVesselRecords(sql, baseline, (name) =>
+    readFileSync(join(app, "supabase/migrations", name), "utf8"),
+  );
   const env = {
     ...process.env,
     EXPO_NO_DOTENV: "1",
@@ -303,23 +338,18 @@ try {
       body = JSON.parse(text || "{}");
     }
     if (path === "/auth/v1/token") {
-      if (
-        body.email !== "offline@example.test" ||
-        body.password !== "synthetic-offline-check"
-      )
-        return json({ error: "Invalid synthetic login" }, 401);
-      return json({
-        access_token: token,
-        refresh_token: "local-refresh-only",
-        token_type: "bearer",
-        expires_in: 86400,
-        expires_at: Math.floor(Date.now() / 1000) + 86400,
-        user: authUser,
-      });
+      const valid =
+        url.searchParams.get("grant_type") === "refresh_token"
+          ? body.refresh_token === "local-refresh-only"
+          : body.email === "offline@example.test" &&
+            body.password === "synthetic-offline-check";
+      if (!valid) return json({ error: "Invalid synthetic login" }, 401);
+      return json(issueSession());
     }
     const api = /^\/(auth|rest|functions)\//.test(path);
-    if (api && req.headers.authorization !== `Bearer ${token}`)
-      return json({ message: "Synthetic session required" }, 401);
+    const supplied = (req.headers.authorization || "").replace(/^Bearer /, "");
+    if (api && (issuedTokens.get(supplied) || 0) <= Date.now() / 1000)
+      return json({ message: "Valid synthetic session required" }, 401);
     if (path === "/auth/v1/user") return json(authUser);
     if (path === "/rest/v1/rpc/register_user_device") {
       if (!/^[a-f0-9]{64}$/.test(body.p_device_fingerprint))
@@ -437,19 +467,100 @@ try {
           ),
         ),
       );
-    for(const table of ['rules','safety_equipment','muster_stations']) {
-      if(path === '/rest/v1/rpc/read_web_offline_'+table) return json(JSON.parse(run(`SELECT read_web_offline_${table}(${quote(body.p_vessel_id)},${quote(body.p_device_id)});`)));
-      if(path === '/rest/v1/rpc/sync_web_offline_'+table) return json(JSON.parse(run(`SELECT sync_web_offline_${table}(${quote(body.p_vessel_id)},${quote(body.p_device_id)},${quote(JSON.stringify(body.p_operation))}::jsonb);`)));
+    for (const table of ["rules", "safety_equipment", "muster_stations"]) {
+      if (path === "/rest/v1/rpc/read_web_offline_" + table)
+        return json(
+          JSON.parse(
+            run(
+              `SELECT read_web_offline_${table}(${quote(body.p_vessel_id)},${quote(body.p_device_id)});`,
+            ),
+          ),
+        );
+      if (path === "/rest/v1/rpc/sync_web_offline_" + table)
+        return json(
+          JSON.parse(
+            run(
+              `SELECT sync_web_offline_${table}(${quote(body.p_vessel_id)},${quote(body.p_device_id)},${quote(JSON.stringify(body.p_operation))}::jsonb);`,
+            ),
+          ),
+        );
     }
-    if(path==='/rest/v1/rpc/read_web_offline_trips') return json(JSON.parse(run(`SELECT read_web_offline_trips(${quote(body.p_vessel_id)},${quote(body.p_device_id)});`)));
-    if(path==='/rest/v1/rpc/sync_web_offline_trip') return json(JSON.parse(run(`SELECT sync_web_offline_trip(${quote(body.p_vessel_id)},${quote(body.p_device_id)},${quote(JSON.stringify(body.p_operation))}::jsonb);`)));
-    for (const name of ['read_web_offline_yard_jobs','read_web_offline_shipyard_folders']) {
-      if(path==='/rest/v1/rpc/'+name) return json(JSON.parse(run(`SELECT ${name}(${quote(body.p_vessel_id)},${quote(body.p_device_id)});`)));
+    if (path === "/rest/v1/rpc/read_web_offline_trips")
+      return json(
+        JSON.parse(
+          run(
+            `SELECT read_web_offline_trips(${quote(body.p_vessel_id)},${quote(body.p_device_id)});`,
+          ),
+        ),
+      );
+    if (path === "/rest/v1/rpc/sync_web_offline_trip")
+      return json(
+        JSON.parse(
+          run(
+            `SELECT sync_web_offline_trip(${quote(body.p_vessel_id)},${quote(body.p_device_id)},${quote(JSON.stringify(body.p_operation))}::jsonb);`,
+          ),
+        ),
+      );
+    for (const name of [
+      "read_web_offline_yard_jobs",
+      "read_web_offline_shipyard_folders",
+    ]) {
+      if (path === "/rest/v1/rpc/" + name)
+        return json(
+          JSON.parse(
+            run(
+              `SELECT ${name}(${quote(body.p_vessel_id)},${quote(body.p_device_id)});`,
+            ),
+          ),
+        );
     }
-    if(path==='/rest/v1/rpc/sync_web_offline_yard_job') return json(JSON.parse(run(`SELECT sync_web_offline_yard_job(${quote(body.p_vessel_id)},${quote(body.p_device_id)},${quote(JSON.stringify(body.p_operation))}::jsonb);`)));
-    if(path==='/rest/v1/rpc/read_web_offline_maintenance_logs') return json(JSON.parse(run(`SELECT read_web_offline_maintenance_logs(${quote(body.p_vessel_id)},${quote(body.p_device_id)});`)));
-    if(path==='/rest/v1/rpc/sync_web_offline_maintenance_log') return json(JSON.parse(run(`SELECT sync_web_offline_maintenance_log(${quote(body.p_vessel_id)},${quote(body.p_device_id)},${quote(JSON.stringify(body.p_operation))}::jsonb);`)));
-    if(path==='/rest/v1/vessel_trip_colors') return json(null);
+    if (path === "/rest/v1/rpc/sync_web_offline_yard_job")
+      return json(
+        JSON.parse(
+          run(
+            `SELECT sync_web_offline_yard_job(${quote(body.p_vessel_id)},${quote(body.p_device_id)},${quote(JSON.stringify(body.p_operation))}::jsonb);`,
+          ),
+        ),
+      );
+    for (const [table, rpc] of [
+      ["pump_out_logs", "pump_out_log"],
+      ["general_waste_logs", "general_waste_log"],
+      ["uniforms", "uniform"],
+    ]) {
+      if (path === "/rest/v1/rpc/read_web_offline_" + table)
+        return json(
+          JSON.parse(
+            run(
+              `SELECT read_web_offline_${table}(${quote(body.p_vessel_id)},${quote(body.p_device_id)});`,
+            ),
+          ),
+        );
+      if (path === "/rest/v1/rpc/sync_web_offline_" + rpc)
+        return json(
+          JSON.parse(
+            run(
+              `SELECT sync_web_offline_${rpc}(${quote(body.p_vessel_id)},${quote(body.p_device_id)},${quote(JSON.stringify(body.p_operation))}::jsonb);`,
+            ),
+          ),
+        );
+    }
+    if (path === "/rest/v1/rpc/read_web_offline_maintenance_logs")
+      return json(
+        JSON.parse(
+          run(
+            `SELECT read_web_offline_maintenance_logs(${quote(body.p_vessel_id)},${quote(body.p_device_id)});`,
+          ),
+        ),
+      );
+    if (path === "/rest/v1/rpc/sync_web_offline_maintenance_log")
+      return json(
+        JSON.parse(
+          run(
+            `SELECT sync_web_offline_maintenance_log(${quote(body.p_vessel_id)},${quote(body.p_device_id)},${quote(JSON.stringify(body.p_operation))}::jsonb);`,
+          ),
+        ),
+      );
+    if (path === "/rest/v1/vessel_trip_colors") return json(null);
     if (path === "/rest/v1/users")
       return json(url.searchParams.has("id") ? profile : [profile]);
     if (path === "/rest/v1/vessels")
@@ -562,7 +673,7 @@ try {
     if (line === "status") {
       const report = JSON.parse(
         sql(
-          "SELECT json_build_object('notes',coalesce((SELECT json_agg(n) FROM notes n),'[]'),'shoppingLists',coalesce((SELECT json_agg(s) FROM shopping_lists s),'[]'),'tasks',coalesce((SELECT json_agg(t) FROM vessel_tasks t),'[]'),'contractors',coalesce((SELECT json_agg(c) FROM contractors c),'[]'),'rules',coalesce((SELECT json_agg(r) FROM rules r),'[]'),'safetyEquipment',coalesce((SELECT json_agg(e) FROM safety_equipment e),'[]'),'musterStations',coalesce((SELECT json_agg(m) FROM muster_stations m),'[]'),'trips',coalesce((SELECT json_agg(t) FROM trips t),'[]'),'yardJobs',coalesce((SELECT json_agg(y) FROM yard_period_jobs y),'[]'),'maintenanceLogs',coalesce((SELECT json_agg(m) FROM maintenance_logs m),'[]'),'notificationEnqueues',(SELECT count(*) FROM synthetic_notification_capture),'receipts',(SELECT count(*) FROM offline_private.note_receipts)+(SELECT count(*) FROM offline_private.record_receipts));",
+          "SELECT json_build_object('notes',coalesce((SELECT json_agg(n) FROM notes n),'[]'),'shoppingLists',coalesce((SELECT json_agg(s) FROM shopping_lists s),'[]'),'tasks',coalesce((SELECT json_agg(t) FROM vessel_tasks t),'[]'),'contractors',coalesce((SELECT json_agg(c) FROM contractors c),'[]'),'rules',coalesce((SELECT json_agg(r) FROM rules r),'[]'),'safetyEquipment',coalesce((SELECT json_agg(e) FROM safety_equipment e),'[]'),'musterStations',coalesce((SELECT json_agg(m) FROM muster_stations m),'[]'),'trips',coalesce((SELECT json_agg(t) FROM trips t),'[]'),'yardJobs',coalesce((SELECT json_agg(y) FROM yard_period_jobs y),'[]'),'maintenanceLogs',coalesce((SELECT json_agg(m) FROM maintenance_logs m),'[]'),'pumpOutLogs',coalesce((SELECT json_agg(p) FROM pump_out_logs p),'[]'),'generalWasteLogs',coalesce((SELECT json_agg(w) FROM general_waste_logs w),'[]'),'uniforms',coalesce((SELECT json_agg(u) FROM uniforms u),'[]'),'notificationEnqueues',(SELECT count(*) FROM synthetic_notification_capture),'receipts',(SELECT count(*) FROM offline_private.note_receipts)+(SELECT count(*) FROM offline_private.record_receipts));",
         ),
       );
       writeFileSync(join(dir, "result.json"), JSON.stringify(report, null, 2));

@@ -75,7 +75,7 @@ export function createOfflineAccessHandler({ getEnv, createClient }) {
         return reply(503, { error: 'Access verification unavailable' });
       }
       const permissions = {};
-      for (const feature of ['notes', 'shoppingLists', 'tasks', 'maintenanceLogs', 'yardJobs', 'shipyardRecords', 'trips', 'contractors', 'rules', 'safetyEquipment', 'musterStations']) {
+      for (const feature of ['notes', 'shoppingLists', 'tasks', 'pumpOutLogs', 'generalWasteLogs', 'uniforms', 'maintenanceLogs', 'yardJobs', 'shipyardRecords', 'trips', 'contractors', 'rules', 'safetyEquipment', 'musterStations']) {
         const actions = c.permissions?.[feature];
         if (
           Array.isArray(actions) &&

@@ -2,6 +2,8 @@ import { useCallback, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import vesselService from '../services/vessel';
+import { offlinePublications } from '../offline/publicationsService';
+const offlineVessel = offlinePublications('rules');
 
 /** Retry transient startup failures without clearing a previously loaded name. */
 export function useHomeVesselName(vesselId: string | null, onName: (name: string) => void) {
@@ -20,7 +22,10 @@ export function useHomeVesselName(vesselId: string | null, onName: (name: string
         clearTimeout(timer);
         pending = true;
         try {
-          const vessel = await vesselService.getVessel(vesselId);
+          // Offline storage contains only the display name, never invite codes.
+          const vessel = offlineVessel.enabled()
+            ? { name: await offlineVessel.vesselName(vesselId) }
+            : await vesselService.getVessel(vesselId);
           if (disposed) return;
           if (!vessel?.name?.trim()) throw new Error('Vessel name unavailable');
           onName(vessel.name);
@@ -42,6 +47,7 @@ export function useHomeVesselName(vesselId: string | null, onName: (name: string
       };
       refreshRef.current = refresh;
       refresh();
+      const unsubscribe = offlineVessel.subscribe(refresh);
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         window.addEventListener('online', refresh);
         window.addEventListener('pageshow', refresh);
@@ -49,6 +55,7 @@ export function useHomeVesselName(vesselId: string | null, onName: (name: string
       }
       return () => {
         disposed = true;
+        unsubscribe();
         clearTimeout(timer);
         refreshRef.current = () => {};
         if (Platform.OS === 'web' && typeof window !== 'undefined') {

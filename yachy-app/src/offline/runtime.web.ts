@@ -1,3 +1,5 @@
+import { vesselRecordAdapter, vesselRecordDeviceCopy } from './vesselRecordAdapter';
+import { boundedCheck } from './boundedCheck';
 import { maintenanceAdapter, maintenanceDeviceCopy } from './maintenanceAdapter';
 import { create } from 'zustand';
 import type { User } from '../types';
@@ -26,6 +28,10 @@ import { yardJobsAdapter, yardJobDeviceCopy } from './yardJobsAdapter';
 import { tripsAdapter, tripDeviceCopy } from './tripsAdapter';
 import { contractorsAdapter, contractorDeviceCopy } from './contractorsAdapter';
 const adapters = {
+  pumpOutLogs: vesselRecordAdapter('pumpOutLogs'),
+  generalWasteLogs: vesselRecordAdapter('generalWasteLogs'),
+  uniforms: vesselRecordAdapter('uniforms'),
+
   notes: notesAdapter,
   shoppingLists: shoppingAdapter,
   tasks: tasksAdapter,
@@ -38,6 +44,10 @@ const adapters = {
   musterStations: publicationsAdapter,
 };
 const readFunctions = {
+  pumpOutLogs: 'read_web_offline_pump_out_logs',
+  generalWasteLogs: 'read_web_offline_general_waste_logs',
+  uniforms: 'read_web_offline_uniforms',
+
   notes: 'read_web_offline_notes',
   shoppingLists: 'read_web_offline_shopping',
   tasks: 'read_web_offline_tasks',
@@ -50,6 +60,10 @@ const readFunctions = {
   rules: 'read_web_offline_rules',
 };
 const syncFunctions = {
+  pumpOutLogs: 'sync_web_offline_pump_out_log',
+  generalWasteLogs: 'sync_web_offline_general_waste_log',
+  uniforms: 'sync_web_offline_uniform',
+
   notes: 'sync_web_offline_note',
   shoppingLists: 'sync_web_offline_shopping',
   tasks: 'sync_web_offline_task',
@@ -180,6 +194,9 @@ export async function checkOfflineAccess(): Promise<boolean> {
               change.value.company_name ??
               change.value.job_title ??
               change.value.equipment ??
+              change.value.label ??
+              change.value.description_of_garbage ??
+              change.value.description ??
               'Saved record'
           ),
         })),
@@ -198,10 +215,10 @@ export async function checkOfflineAccess(): Promise<boolean> {
 }
 async function refreshPermit(a: Active) {
   sameActive(a);
-  const { data, error } = await supabase.auth.getSession();
+  const { data, error } = await boundedCheck(supabase.auth.getSession());
   sameActive(a);
   if (error || !data.session?.access_token) throw new OfflineError('ONLINE_CHECK_REQUIRED');
-  const device = await registerCurrentDevice();
+  const device = await boundedCheck(registerCurrentDevice());
   sameActive(a);
   if (device.state === 'session_revoked' || device.state === 'limit_reached') {
     a.revoked = true;
@@ -503,19 +520,29 @@ export async function keepBothNoteCopies(operationId: string): Promise<void> {
           created_at: now,
           updated_at: now,
         }
-      : change.feature === 'maintenanceLogs'
-        ? maintenanceDeviceCopy(latest.value, id)
-        : change.feature === 'tasks'
-          ? taskDeviceCopy(latest.value, id, a.scope.userId)
-          : change.feature === 'yardJobs'
-            ? yardJobDeviceCopy(latest.value, id, a.scope.userId)
-            : change.feature === 'trips'
-              ? tripDeviceCopy(latest.value, id, a.scope.userId)
-              : change.feature === 'contractors'
-                ? contractorDeviceCopy(latest.value, id, a.scope.userId)
-                : change.feature === 'shoppingLists'
-                  ? shoppingDeviceCopy(latest.value, id, a.scope.userId)
-                  : publicationDeviceCopy(latest.value, id, a.scope.userId);
+      : change.feature === 'uniforms' ||
+          change.feature === 'pumpOutLogs' ||
+          change.feature === 'generalWasteLogs'
+        ? vesselRecordDeviceCopy(
+            change.feature,
+            latest.value,
+            id,
+            a.scope.userId,
+            useAuthStore.getState().user?.name ?? ''
+          )
+        : change.feature === 'maintenanceLogs'
+          ? maintenanceDeviceCopy(latest.value, id)
+          : change.feature === 'tasks'
+            ? taskDeviceCopy(latest.value, id, a.scope.userId)
+            : change.feature === 'yardJobs'
+              ? yardJobDeviceCopy(latest.value, id, a.scope.userId)
+              : change.feature === 'trips'
+                ? tripDeviceCopy(latest.value, id, a.scope.userId)
+                : change.feature === 'contractors'
+                  ? contractorDeviceCopy(latest.value, id, a.scope.userId)
+                  : change.feature === 'shoppingLists'
+                    ? shoppingDeviceCopy(latest.value, id, a.scope.userId)
+                    : publicationDeviceCopy(latest.value, id, a.scope.userId);
   await a.box.forkConflict(operationId, id, copy);
   notifyNotes();
   await checkOfflineAccess();

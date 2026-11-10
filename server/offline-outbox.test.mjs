@@ -486,3 +486,34 @@ test("ambiguous pending requests cannot be forked as confirmed conflicts", async
     denied("CONFLICT_CHANGED"),
   );
 });
+
+test("equivalent JSON refreshes preserve open forms but changed content invalidates them", async () => {
+  const f = await fixture();
+  await f.box.cache("notes", "note-1", note, "r1");
+  const first = await f.box.read("notes", "note-1");
+  const reordered = Object.fromEntries(Object.entries(note).reverse());
+  await f.box.cache("notes", "note-1", reordered, "r1");
+  await f.box.replaceSnapshot("notes", [
+    { recordId: "note-1", value: note, revision: "r1" },
+  ]);
+  assert.equal(
+    (await f.box.read("notes", "note-1")).localVersion,
+    first.localVersion,
+  );
+  await f.box.cache(
+    "notes",
+    "note-1",
+    { ...note, title: "Changed online" },
+    "r2",
+  );
+  await assert.rejects(
+    f.box.save({
+      feature: "notes",
+      recordId: "note-1",
+      kind: "update",
+      value: { ...note, title: "Old form" },
+      expectedLocalVersion: first.localVersion,
+    }),
+    denied("LOCAL_CONFLICT"),
+  );
+});

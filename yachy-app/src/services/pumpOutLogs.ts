@@ -1,3 +1,6 @@
+import { offlineVesselRecords } from '../offline/vesselRecordService';
+import { createdInLogMonth } from '../utils/vesselLogHistory';
+const offline = offlineVesselRecords('pumpOutLogs');
 /**
  * Pump Out Logs Service
  * CRUD for vessel pump out log entries
@@ -31,12 +34,18 @@ export interface UpdatePumpOutLogData {
 }
 
 class PumpOutLogsService {
+  subscribe = offline.subscribe;
   async getByVesselMonth(vesselId: string, month: string): Promise<PumpOutLog[]> {
+    if (offline.enabled())
+      return (await offline.list(vesselId))
+        .filter((row) => createdInLogMonth(String(row.created_at), month))
+        .map(this.mapRow);
     return (await getVesselLogMonthRows('pump_out_logs', vesselId, month)).map(this.mapRow);
   }
 
   private mapRow(row: any): PumpOutLog {
     return {
+      offlineLocalVersion: row.offlineLocalVersion,
       id: row.id,
       vesselId: row.vessel_id,
       dischargeType: row.discharge_type as DischargeType,
@@ -52,6 +61,10 @@ class PumpOutLogsService {
   }
 
   async getByVessel(vesselId: string): Promise<PumpOutLog[]> {
+    if (offline.enabled())
+      return (await offline.list(vesselId))
+        .map(this.mapRow)
+        .sort((a, b) => b.logDate.localeCompare(a.logDate));
     try {
       const { data, error } = await supabase
         .from('pump_out_logs')
@@ -68,6 +81,10 @@ class PumpOutLogsService {
   }
 
   async getById(id: string): Promise<PumpOutLog | null> {
+    if (offline.enabled()) {
+      const row = await offline.read(id);
+      return row ? this.mapRow(row) : null;
+    }
     try {
       const { data, error } = await supabase
         .from('pump_out_logs')
@@ -84,6 +101,20 @@ class PumpOutLogsService {
   }
 
   async create(input: CreatePumpOutLogData): Promise<PumpOutLog> {
+    if (offline.enabled())
+      return this.mapRow(
+        await offline.create({
+          vessel_id: input.vesselId,
+          discharge_type: input.dischargeType,
+          pumpout_service_name: input.pumpoutServiceName.trim() || null,
+          location: input.location.trim() || null,
+          amount_in_gallons: input.amountInGallons,
+          description: input.description.trim() || null,
+          log_date: input.logDate,
+          log_time: input.logTime,
+          created_by_name: input.createdByName,
+        })
+      );
     const { data, error } = await supabase
       .from('pump_out_logs')
       .insert([
@@ -106,7 +137,7 @@ class PumpOutLogsService {
     return this.mapRow(data);
   }
 
-  async update(id: string, input: UpdatePumpOutLogData): Promise<void> {
+  async update(id: string, input: UpdatePumpOutLogData, version?: number): Promise<void> {
     const patch: Record<string, any> = {};
     if (input.dischargeType !== undefined) patch.discharge_type = input.dischargeType;
     if (input.pumpoutServiceName !== undefined)
@@ -117,6 +148,10 @@ class PumpOutLogsService {
     if (input.logDate !== undefined) patch.log_date = input.logDate;
     if (input.logTime !== undefined) patch.log_time = input.logTime;
 
+    if (offline.enabled()) {
+      await offline.update(id, patch, version);
+      return;
+    }
     const { data, error } = await supabase
       .from('pump_out_logs')
       .update(patch)
@@ -126,8 +161,10 @@ class PumpOutLogsService {
   }
 
   async delete(id: string): Promise<void> {
+    if (offline.enabled()) await offline.beforeDelete(id);
     const { data, error } = await supabase.from('pump_out_logs').delete().eq('id', id).select('id');
     requireAffectedRows(data, error, 'Deleting the pump-out log');
+    if (offline.enabled()) await offline.refresh();
   }
 }
 

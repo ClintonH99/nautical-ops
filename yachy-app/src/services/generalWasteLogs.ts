@@ -1,3 +1,6 @@
+import { offlineVesselRecords } from '../offline/vesselRecordService';
+import { createdInLogMonth } from '../utils/vesselLogHistory';
+const offline = offlineVesselRecords('generalWasteLogs');
 /**
  * General Waste Logs Service
  * CRUD for general waste log entries
@@ -29,12 +32,18 @@ export interface UpdateGeneralWasteLogData {
 }
 
 class GeneralWasteLogsService {
+  subscribe = offline.subscribe;
   async getByVesselMonth(vesselId: string, month: string): Promise<GeneralWasteLog[]> {
+    if (offline.enabled())
+      return (await offline.list(vesselId))
+        .filter((row) => createdInLogMonth(String(row.created_at), month))
+        .map(this.mapRow);
     return (await getVesselLogMonthRows('general_waste_logs', vesselId, month)).map(this.mapRow);
   }
 
   private mapRow(row: any): GeneralWasteLog {
     return {
+      offlineLocalVersion: row.offlineLocalVersion,
       id: row.id,
       vesselId: row.vessel_id,
       logDate: row.log_date,
@@ -49,6 +58,10 @@ class GeneralWasteLogsService {
   }
 
   async getByVessel(vesselId: string): Promise<GeneralWasteLog[]> {
+    if (offline.enabled())
+      return (await offline.list(vesselId))
+        .map(this.mapRow)
+        .sort((a, b) => b.logDate.localeCompare(a.logDate));
     try {
       const { data, error } = await supabase
         .from('general_waste_logs')
@@ -65,6 +78,10 @@ class GeneralWasteLogsService {
   }
 
   async getById(id: string): Promise<GeneralWasteLog | null> {
+    if (offline.enabled()) {
+      const row = await offline.read(id);
+      return row ? this.mapRow(row) : null;
+    }
     try {
       const { data, error } = await supabase
         .from('general_waste_logs')
@@ -81,6 +98,19 @@ class GeneralWasteLogsService {
   }
 
   async create(input: CreateGeneralWasteLogData): Promise<GeneralWasteLog> {
+    if (offline.enabled())
+      return this.mapRow(
+        await offline.create({
+          vessel_id: input.vesselId,
+          log_date: input.logDate,
+          log_time: input.logTime,
+          position_location: input.positionLocation.trim() || null,
+          description_of_garbage: input.descriptionOfGarbage.trim() || null,
+          weight: input.weight ?? null,
+          weight_unit: input.weightUnit ?? 'kgs',
+          created_by_name: input.createdByName?.trim() || null,
+        })
+      );
     const { data, error } = await supabase
       .from('general_waste_logs')
       .insert([
@@ -103,7 +133,7 @@ class GeneralWasteLogsService {
     return this.mapRow(row);
   }
 
-  async update(id: string, input: UpdateGeneralWasteLogData): Promise<void> {
+  async update(id: string, input: UpdateGeneralWasteLogData, version?: number): Promise<void> {
     const patch: Record<string, any> = {};
     if (input.logDate !== undefined) patch.log_date = input.logDate;
     if (input.logTime !== undefined) patch.log_time = input.logTime;
@@ -114,6 +144,10 @@ class GeneralWasteLogsService {
     if (input.weight !== undefined) patch.weight = input.weight;
     if (input.weightUnit !== undefined) patch.weight_unit = input.weightUnit;
 
+    if (offline.enabled()) {
+      await offline.update(id, patch, version);
+      return;
+    }
     const { data, error } = await supabase
       .from('general_waste_logs')
       .update(patch)
@@ -123,12 +157,14 @@ class GeneralWasteLogsService {
   }
 
   async delete(id: string): Promise<void> {
+    if (offline.enabled()) await offline.beforeDelete(id);
     const { data, error } = await supabase
       .from('general_waste_logs')
       .delete()
       .eq('id', id)
       .select('id');
     requireAffectedRows(data, error, 'Deleting the waste log');
+    if (offline.enabled()) await offline.refresh();
   }
 }
 

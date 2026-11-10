@@ -151,6 +151,9 @@ export const UniformsScreen = ({ navigation }: any) => {
   useFocusEffect(
     useCallback(() => {
       loadUniforms();
+      return uniformsService.subscribe(() => {
+        void loadUniforms();
+      });
     }, [loadUniforms])
   );
 

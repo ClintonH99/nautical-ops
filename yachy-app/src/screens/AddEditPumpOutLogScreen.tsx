@@ -1,3 +1,4 @@
+import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * Add / Edit Discharge Log Screen
@@ -66,6 +67,8 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
   const [time, setTime] = useState<Date>(now);
   const [loading, setLoading] = useState(!!logId);
   const [saving, setSaving] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [offlineVersion, setOfflineVersion] = useState<number | undefined>();
   const savingRef = useRef(false);
 
   const vesselId = user?.vesselId ?? null;
@@ -81,6 +84,8 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
     (async () => {
       try {
         const log = await pumpOutLogsService.getById(logId);
+        if (!log) throw new Error('Record unavailable');
+        setOfflineVersion(log.offlineLocalVersion);
         if (log) {
           setDischargeType(log.dischargeType);
           setPumpoutServiceName(log.pumpoutServiceName);
@@ -94,6 +99,7 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
           setTime(t);
         }
       } catch {
+        setLoadFailed(true);
         Alert.alert('Error', 'Could not load entry.');
       } finally {
         setLoading(false);
@@ -102,7 +108,7 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
   }, [logId]);
 
   const handleSave = async () => {
-    if (savingRef.current) return;
+    if (loadFailed || savingRef.current) return;
     if (!vesselId) {
       Alert.alert('Error', 'You must be in a vessel to add log entries.');
       return;
@@ -121,17 +127,21 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
     setSaving(true);
     try {
       if (isEdit) {
-        await pumpOutLogsService.update(logId!, {
-          dischargeType,
-          pumpoutServiceName: dischargeType === 'PUMPOUT_SERVICE' ? pumpoutServiceName : '',
-          location: location.trim(),
-          amountInGallons: parsedAmount,
-          description: description.trim(),
-          logDate: formatDate(date),
-          logTime: formatTime(time),
-        });
+        await pumpOutLogsService.update(
+          logId!,
+          {
+            dischargeType,
+            pumpoutServiceName: dischargeType === 'PUMPOUT_SERVICE' ? pumpoutServiceName : '',
+            location: location.trim(),
+            amountInGallons: parsedAmount,
+            description: description.trim(),
+            logDate: formatDate(date),
+            logTime: formatTime(time),
+          },
+          offlineVersion
+        );
         Alert.alert('Updated', 'Entry updated.', [
-          { text: 'OK', onPress: () => navigation.goBack() },
+          { text: 'OK', onPress: () => returnToPreviousPage(navigation) },
         ]);
       } else {
         await pumpOutLogsService.create({
@@ -145,7 +155,9 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
           logTime: formatTime(time),
           createdByName: user?.name ?? '',
         });
-        Alert.alert('Saved', 'Entry added.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+        Alert.alert('Saved', 'Entry added.', [
+          { text: 'OK', onPress: () => returnToPreviousPage(navigation) },
+        ]);
       }
     } catch {
       Alert.alert('Error', 'Could not save entry.');
@@ -319,7 +331,7 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
             onPress={handleSave}
             variant="primary"
             loading={saving}
-            disabled={saving}
+            disabled={saving || loadFailed}
             fullWidth
           />
           <TouchableOpacity
@@ -327,7 +339,7 @@ export const AddEditPumpOutLogScreen = ({ navigation, route }: any) => {
               styles.cancelBtn,
               { borderColor: themeColors.isDark ? COLORS.white : COLORS.primary },
             ]}
-            onPress={() => navigation.goBack()}
+            onPress={() => returnToPreviousPage(navigation)}
             disabled={saving}
           >
             <Text

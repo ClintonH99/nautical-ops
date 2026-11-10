@@ -58,7 +58,8 @@ export const PumpOutLogScreen = ({ navigation, route }: any) => {
   const { logs, setLogs, loading, refreshing, error, onRefresh, loadLogs } = useMonthlyVesselLogs(
     vesselId,
     month,
-    fetchMonth
+    fetchMonth,
+    pumpOutLogsService.subscribe
   );
 
   useEffect(() => {

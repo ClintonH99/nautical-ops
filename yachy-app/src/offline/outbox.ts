@@ -77,6 +77,22 @@ export type OfflineAdapter = {
 };
 const keyFor = (feature: OfflineFeature, id: string) => JSON.stringify([feature, id]);
 const validId = (id: string) => typeof id === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(id);
+function sameJson(a: Json, b: Json): boolean {
+  if (a === b) return true;
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+  if (Array.isArray(a) || Array.isArray(b))
+    return (
+      Array.isArray(a) &&
+      Array.isArray(b) &&
+      a.length === b.length &&
+      a.every((value, index) => sameJson(value, b[index]))
+    );
+  const keys = Object.keys(a);
+  return (
+    keys.length === Object.keys(b).length &&
+    keys.every((key) => Object.hasOwn(b, key) && sameJson(a[key], b[key]))
+  );
+}
 function snapshot(value: RecordValue): RecordValue {
   function visit(x: unknown, depth: number): void {
     if (depth > 20) throw new OfflineError('INVALID_RECORD');
@@ -169,7 +185,7 @@ export class OfflineOutbox {
         const key = keyFor(feature, row.recordId);
         if (
           state.records[key]?.serverRevision === row.revision &&
-          JSON.stringify(state.records[key]?.value) === JSON.stringify(row.value)
+          sameJson(state.records[key].value, row.value)
         )
           continue;
         state.records[key] = {
@@ -268,6 +284,8 @@ export class OfflineOutbox {
       // An online refresh must never erase offline work, including conflicts.
       if (state.changes.some((c) => c.feature === feature && c.recordId === recordId)) return false;
       const k = keyFor(feature, recordId);
+      if (state.records[k]?.serverRevision === revision && sameJson(state.records[k].value, data))
+        return true;
       state.records[k] = {
         value: data,
         serverRevision: revision,

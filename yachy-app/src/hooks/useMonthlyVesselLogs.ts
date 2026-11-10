@@ -7,7 +7,8 @@ import { createdInLogMonth } from '../utils/vesselLogHistory';
 export function useMonthlyVesselLogs<T extends { vesselId: string; createdAt: string }>(
   vesselId: string | null,
   month: string,
-  fetchLogs: (vesselId: string, month: string) => Promise<T[]>
+  fetchLogs: (vesselId: string, month: string) => Promise<T[]>,
+  subscribe?: (listener: () => void) => () => void
 ) {
   const [storedLogs, setLogs] = useScreenState<T[]>(`logs:${month}`, []);
   const [loaded, setLoaded] = useScreenState(`loaded:${month}`, false);
@@ -36,10 +37,14 @@ export function useMonthlyVesselLogs<T extends { vesselId: string; createdAt: st
   useFocusEffect(
     useCallback(() => {
       loadLogs();
+      const unsubscribe = subscribe?.(() => {
+        void loadLogs();
+      });
       return () => {
+        unsubscribe?.();
         generation.current += 1;
       };
-    }, [loadLogs])
+    }, [loadLogs, subscribe])
   );
   const error = failure === scope;
   return {

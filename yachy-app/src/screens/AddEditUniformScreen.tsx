@@ -1,3 +1,4 @@
+import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * Add / Edit Uniform Screen
@@ -50,8 +51,11 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
   const [department, setDepartment] = useState<Department>(user?.department ?? 'INTERIOR');
   const [label, setLabel] = useState('');
   const [entries, setEntries] = useState<UniformEntry[]>([emptyEntry()]);
+  const savingRef = useRef(false);
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [offlineVersion, setOfflineVersion] = useState<number | undefined>();
 
   const amountRefs = useRef<Array<TextInput | null>>([]);
   const sizeRefs = useRef<Array<TextInput | null>>([]);
@@ -67,12 +71,15 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
     (async () => {
       try {
         const u = await uniformsService.getById(uniformId);
+        if (!u) throw new Error('Record unavailable');
+        setOfflineVersion(u.offlineLocalVersion);
         if (u) {
           setLabel(u.label);
           setDepartment(u.department);
           setEntries(u.entries.length ? u.entries : [emptyEntry()]);
         }
       } catch (e) {
+        setLoadFailed(true);
         console.error('Load uniform error:', e);
       } finally {
         setLoading(false);
@@ -100,6 +107,7 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
   };
 
   const handleSave = async () => {
+    if (loadFailed || savingRef.current) return;
     const trimmedLabel = label.trim();
     if (!trimmedLabel) {
       Alert.alert('Missing label', 'Please enter a label name.');
@@ -114,14 +122,19 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
         e.gender.trim() ||
         (e.dayNight ?? '').trim()
     );
+    savingRef.current = true;
     setSaving(true);
     try {
       if (isEdit) {
-        await uniformsService.update(uniformId!, {
-          label: trimmedLabel,
-          department,
-          entries: trimmedEntries,
-        });
+        await uniformsService.update(
+          uniformId!,
+          {
+            label: trimmedLabel,
+            department,
+            entries: trimmedEntries,
+          },
+          offlineVersion
+        );
       } else {
         await uniformsService.create({
           vesselId,
@@ -131,11 +144,12 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
           createdBy: user?.id,
         });
       }
-      navigation.goBack();
+      returnToPreviousPage(navigation);
     } catch (e) {
       console.error('Save uniform error:', e);
       Alert.alert('Error', 'Could not save. Please try again.');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -150,7 +164,7 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
         onPress: async () => {
           try {
             await uniformsService.delete(uniformId);
-            navigation.goBack();
+            returnToPreviousPage(navigation);
           } catch {
             Alert.alert('Error', 'Could not delete.');
           }
@@ -419,7 +433,7 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
             onPress={handleSave}
             variant="primary"
             loading={saving}
-            disabled={saving}
+            disabled={saving || loadFailed}
             fullWidth
           />
           {isEdit && <PreviewActionButtons onDelete={handleDelete} />}

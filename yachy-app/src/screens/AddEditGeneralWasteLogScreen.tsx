@@ -1,10 +1,11 @@
+import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * Add / Edit General Waste Log Screen
  * Fields: Date, Time, Position / Location, Description of Garbage
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -62,8 +63,11 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
   const [descriptionOfGarbage, setDescriptionOfGarbage] = useState('');
   const [weight, setWeight] = useState('');
   const [weightUnit, setWeightUnit] = useState<WeightUnit>('kgs');
+  const savingRef = useRef(false);
   const [loading, setLoading] = useState(!!logId);
   const [saving, setSaving] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [offlineVersion, setOfflineVersion] = useState<number | undefined>();
 
   const vesselId = user?.vesselId ?? null;
 
@@ -78,6 +82,8 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
     (async () => {
       try {
         const log = await generalWasteLogsService.getById(logId);
+        if (!log) throw new Error('Record unavailable');
+        setOfflineVersion(log.offlineLocalVersion);
         if (log) {
           setDate(parseLocalDate(log.logDate));
           const [hh, mm] = log.logTime.split(':').map(Number);
@@ -90,6 +96,7 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
           setWeightUnit((log.weightUnit as WeightUnit) ?? 'kgs');
         }
       } catch {
+        setLoadFailed(true);
         Alert.alert('Error', 'Could not load entry.');
       } finally {
         setLoading(false);
@@ -98,6 +105,7 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
   }, [logId]);
 
   const handleSave = async () => {
+    if (loadFailed || savingRef.current) return;
     if (!vesselId) {
       Alert.alert('Error', 'You must be in a vessel to add log entries.');
       return;
@@ -111,20 +119,25 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
       return;
     }
 
+    savingRef.current = true;
     setSaving(true);
     try {
       if (isEdit) {
         const parsedWeight = parseWeightInput(weight);
-        await generalWasteLogsService.update(logId!, {
-          logDate: formatDate(date),
-          logTime: formatTime(time),
-          positionLocation: positionLocation.trim(),
-          descriptionOfGarbage: descriptionOfGarbage.trim(),
-          weight: parsedWeight != null && !isNaN(parsedWeight) ? parsedWeight : null,
-          weightUnit,
-        });
+        await generalWasteLogsService.update(
+          logId!,
+          {
+            logDate: formatDate(date),
+            logTime: formatTime(time),
+            positionLocation: positionLocation.trim(),
+            descriptionOfGarbage: descriptionOfGarbage.trim(),
+            weight: parsedWeight != null && !isNaN(parsedWeight) ? parsedWeight : null,
+            weightUnit,
+          },
+          offlineVersion
+        );
         Alert.alert('Updated', 'Entry updated.', [
-          { text: 'OK', onPress: () => navigation.goBack() },
+          { text: 'OK', onPress: () => returnToPreviousPage(navigation) },
         ]);
       } else {
         const parsedWeight = parseWeightInput(weight);
@@ -138,7 +151,9 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
           weightUnit,
           createdByName: user?.name ?? '',
         });
-        Alert.alert('Saved', 'Entry added.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+        Alert.alert('Saved', 'Entry added.', [
+          { text: 'OK', onPress: () => returnToPreviousPage(navigation) },
+        ]);
       }
     } catch (err: unknown) {
       const message =
@@ -150,6 +165,7 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
           : 'Could not save entry.';
       Alert.alert('Error', message);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -304,7 +320,7 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
             onPress={handleSave}
             variant="primary"
             loading={saving}
-            disabled={saving}
+            disabled={saving || loadFailed}
             fullWidth
           />
           <TouchableOpacity
@@ -312,7 +328,7 @@ export const AddEditGeneralWasteLogScreen = ({ navigation, route }: any) => {
               styles.cancelBtn,
               { borderColor: themeColors.isDark ? COLORS.white : COLORS.primary },
             ]}
-            onPress={() => navigation.goBack()}
+            onPress={() => returnToPreviousPage(navigation)}
             disabled={saving}
           >
             <Text

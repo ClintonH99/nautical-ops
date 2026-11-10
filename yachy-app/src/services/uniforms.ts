@@ -1,3 +1,5 @@
+import { offlineVesselRecords } from '../offline/vesselRecordService';
+const offline = offlineVesselRecords('uniforms');
 /**
  * Uniforms Service
  * Each row is one label (e.g. "Swimwear", "Boss uniform") with its own
@@ -17,6 +19,7 @@ export interface UniformEntry {
 }
 
 export interface Uniform {
+  offlineLocalVersion?: number;
   id: string;
   vesselId: string;
   label: string;
@@ -29,6 +32,7 @@ export interface Uniform {
 
 function mapRow(row: any): Uniform {
   return {
+    offlineLocalVersion: row.offlineLocalVersion,
     id: row.id,
     vesselId: row.vessel_id,
     label: row.label,
@@ -41,7 +45,9 @@ function mapRow(row: any): Uniform {
 }
 
 const uniformsService = {
+  subscribe: offline.subscribe,
   async getByVessel(vesselId: string): Promise<Uniform[]> {
+    if (offline.enabled()) return (await offline.list(vesselId)).map(mapRow);
     const { data, error } = await supabase
       .from('uniforms')
       .select('*')
@@ -52,6 +58,10 @@ const uniformsService = {
   },
 
   async getById(id: string): Promise<Uniform | null> {
+    if (offline.enabled()) {
+      const row = await offline.read(id);
+      return row ? mapRow(row) : null;
+    }
     const { data, error } = await supabase.from('uniforms').select('*').eq('id', id).maybeSingle();
     if (error) throw error;
     return data ? mapRow(data) : null;
@@ -64,6 +74,15 @@ const uniformsService = {
     entries: UniformEntry[];
     createdBy?: string;
   }): Promise<Uniform> {
+    if (offline.enabled())
+      return mapRow(
+        await offline.create({
+          vessel_id: input.vesselId,
+          label: input.label,
+          department: input.department,
+          entries: input.entries.map((e) => ({ ...e })),
+        })
+      );
     const { data, error } = await supabase
       .from('uniforms')
       .insert([
@@ -87,8 +106,21 @@ const uniformsService = {
       label: string;
       department: Department;
       entries: UniformEntry[];
-    }
+    },
+    version?: number
   ): Promise<Uniform> {
+    if (offline.enabled())
+      return mapRow(
+        await offline.update(
+          id,
+          {
+            label: input.label,
+            department: input.department,
+            entries: input.entries.map((e) => ({ ...e })),
+          },
+          version
+        )
+      );
     const { data, error } = await supabase
       .from('uniforms')
       .update({
@@ -105,8 +137,10 @@ const uniformsService = {
   },
 
   async delete(id: string): Promise<void> {
+    if (offline.enabled()) await offline.beforeDelete(id);
     const { data, error } = await supabase.from('uniforms').delete().eq('id', id).select('id');
     requireAffectedRows(data, error, 'Deleting the uniform record');
+    if (offline.enabled()) await offline.refresh();
   },
 };
 

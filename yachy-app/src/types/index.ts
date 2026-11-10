@@ -493,6 +493,7 @@ export interface SavedChat {
 export type WeightUnit = 'kgs' | 'lbs';
 
 export interface GeneralWasteLog {
+  offlineLocalVersion?: number;
   id: string;
   vesselId: string;
   logDate: string;
@@ -508,6 +509,7 @@ export interface GeneralWasteLog {
 export type DischargeType = 'DIRECT_DISCHARGE' | 'TREATMENT_PLANT' | 'PUMPOUT_SERVICE';
 
 export interface PumpOutLog {
+  offlineLocalVersion?: number;
   id: string;
   vesselId: string;
   dischargeType: DischargeType;

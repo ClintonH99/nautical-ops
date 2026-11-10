@@ -1,3 +1,4 @@
+import { installVesselRecords } from "./offline-vessel-records-fixture.mjs";
 import { installMaintenance } from "./offline-maintenance-fixture.mjs";
 import { installYard } from "./offline-yard-fixture.mjs";
 import test from "node:test";
@@ -396,111 +397,592 @@ test("real isolated PostgreSQL offline note protocol", async (t) => {
       },
     );
     installPublications(sql, baseline, migration);
-    await t.test('publication roles, revisions, retries and downgrade enforcement', () => {
-      const context = () => JSON.parse(run(`SELECT get_web_offline_context('${vessel}','${device}');`)).permissions;
-      assert.deepEqual(context().rules, ['read']);
-      assert.deepEqual(context().musterStations, ['read']);
-      assert.deepEqual(context().safetyEquipment, ['read','create','update']);
-      for (const [feature,table] of [['rules','rules'],['safetyEquipment','safety_equipment'],['musterStations','muster_stations']]) {
-        const value = {id:crypto.randomUUID(),vessel_id:vessel,title:'Synthetic publication',data:{title:'Synthetic publication',rules:['Wear shoes']},created_by:user,created_at:'2026-11-09T00:00:00Z'};
-        const operation = {id:crypto.randomUUID(),recordId:value.id,feature,kind:'create',value,baseRevision:null};
-        const request = op => `SELECT sync_web_offline_${table}('${vessel}','${device}','${JSON.stringify(op).replaceAll("'","''")}'::jsonb);`;
-        if(feature !== 'safetyEquipment') assert.throws(() => run(request(operation)));
-        sql(`UPDATE users SET role='CAPTAIN_MOV' WHERE id='${user}';`);
-        const first = JSON.parse(run(request(operation)));
-        assert.equal(first.status,'applied');
-        assert.deepEqual(JSON.parse(run(request(operation))),first);
-        const changed = {...operation,id:crypto.randomUUID(),kind:'update',baseRevision:first.revision,value:{...first.value,title:'Changed on device'}};
-        const second = JSON.parse(run(request(changed)));
-        assert.equal(second.status,'applied');
-        assert.equal(JSON.parse(run(request({...changed,id:crypto.randomUUID()}))).status,'conflict');
-        assert.throws(() => run(request({...changed,value:{...changed.value,title:'Reused ID'}})));
-        sql(`UPDATE users SET role='CREW' WHERE id='${user}';`);
-        assert.equal(JSON.parse(run(`SELECT read_web_offline_${table}('${vessel}','${device}');`)).length,1);
-        const downgrade = {...changed,id:crypto.randomUUID(),baseRevision:second.revision,value:{...second.value,title:'Crew edit'}};
-        if(feature === 'safetyEquipment') assert.equal(JSON.parse(run(request(downgrade))).status,'applied');
-        else {
-          assert.equal(JSON.parse(run(request(downgrade))).status,'forbidden');
-          assert.equal(sql(`SELECT title FROM ${table} WHERE id='${value.id}';`),'Changed on device');
+    await t.test(
+      "publication roles, revisions, retries and downgrade enforcement",
+      () => {
+        const context = () =>
+          JSON.parse(
+            run(`SELECT get_web_offline_context('${vessel}','${device}');`),
+          ).permissions;
+        assert.deepEqual(context().rules, ["read"]);
+        assert.deepEqual(context().musterStations, ["read"]);
+        assert.deepEqual(context().safetyEquipment, [
+          "read",
+          "create",
+          "update",
+        ]);
+        for (const [feature, table] of [
+          ["rules", "rules"],
+          ["safetyEquipment", "safety_equipment"],
+          ["musterStations", "muster_stations"],
+        ]) {
+          const value = {
+            id: crypto.randomUUID(),
+            vessel_id: vessel,
+            title: "Synthetic publication",
+            data: { title: "Synthetic publication", rules: ["Wear shoes"] },
+            created_by: user,
+            created_at: "2026-11-09T00:00:00Z",
+          };
+          const operation = {
+            id: crypto.randomUUID(),
+            recordId: value.id,
+            feature,
+            kind: "create",
+            value,
+            baseRevision: null,
+          };
+          const request = (op) =>
+            `SELECT sync_web_offline_${table}('${vessel}','${device}','${JSON.stringify(op).replaceAll("'", "''")}'::jsonb);`;
+          if (feature !== "safetyEquipment")
+            assert.throws(() => run(request(operation)));
+          sql(`UPDATE users SET role='CAPTAIN_MOV' WHERE id='${user}';`);
+          const first = JSON.parse(run(request(operation)));
+          assert.equal(first.status, "applied");
+          assert.deepEqual(JSON.parse(run(request(operation))), first);
+          const changed = {
+            ...operation,
+            id: crypto.randomUUID(),
+            kind: "update",
+            baseRevision: first.revision,
+            value: { ...first.value, title: "Changed on device" },
+          };
+          const second = JSON.parse(run(request(changed)));
+          assert.equal(second.status, "applied");
+          assert.equal(
+            JSON.parse(run(request({ ...changed, id: crypto.randomUUID() })))
+              .status,
+            "conflict",
+          );
+          assert.throws(() =>
+            run(
+              request({
+                ...changed,
+                value: { ...changed.value, title: "Reused ID" },
+              }),
+            ),
+          );
+          sql(`UPDATE users SET role='CREW' WHERE id='${user}';`);
+          assert.equal(
+            JSON.parse(
+              run(`SELECT read_web_offline_${table}('${vessel}','${device}');`),
+            ).length,
+            1,
+          );
+          const downgrade = {
+            ...changed,
+            id: crypto.randomUUID(),
+            baseRevision: second.revision,
+            value: { ...second.value, title: "Crew edit" },
+          };
+          if (feature === "safetyEquipment")
+            assert.equal(JSON.parse(run(request(downgrade))).status, "applied");
+          else {
+            assert.equal(
+              JSON.parse(run(request(downgrade))).status,
+              "forbidden",
+            );
+            assert.equal(
+              sql(`SELECT title FROM ${table} WHERE id='${value.id}';`),
+              "Changed on device",
+            );
+          }
+          // No receipt may be created by a denied operation.
+          assert.equal(
+            sql(
+              `SELECT count(*) FROM offline_private.record_receipts WHERE operation_id='${downgrade.id}';`,
+            ),
+            feature === "safetyEquipment" ? "1" : "0",
+          );
+          assert.throws(() =>
+            run(
+              request({
+                ...operation,
+                id: crypto.randomUUID(),
+                recordId: crypto.randomUUID(),
+                value: { ...value, vessel_id: crypto.randomUUID() },
+              }),
+            ),
+          );
         }
-        // No receipt may be created by a denied operation.
-        assert.equal(sql(`SELECT count(*) FROM offline_private.record_receipts WHERE operation_id='${downgrade.id}';`),feature === 'safetyEquipment' ? '1':'0');
-        assert.throws(() => run(request({...operation,id:crypto.randomUUID(),recordId:crypto.randomUUID(),value:{...value,vessel_id:crypto.randomUUID()}})));
-      }
-    });
+      },
+    );
     installTrips(sql, baseline, migration);
-    await t.test('trip dates, immutable type, atomic retry and current policy enforcement', () => {
-      const value = {id:crypto.randomUUID(),vessel_id:vessel,type:'GUEST',title:'Offline crossing',start_date:'2026-11-09',end_date:'2026-11-12',notes:'Initial',department:null,yard_location:null,contractor_company_name:null,contact_details:null,created_by:user,created_at:'2026-11-09T00:00:00Z',updated_at:'2026-11-09T00:00:00Z'};
-      const operation = {id:crypto.randomUUID(),recordId:value.id,feature:'trips',kind:'create',value,baseRevision:null};
-      const request = op => `SELECT sync_web_offline_trip('${vessel}','${device}','${JSON.stringify(op).replaceAll("'","''")}'::jsonb);`;
-      const first = JSON.parse(run(request(operation)));
-      assert.equal(first.status,'applied');
-      assert.deepEqual(JSON.parse(run(request(operation))),first);
-      const update = {...operation,id:crypto.randomUUID(),kind:'update',baseRevision:first.revision,value:{...first.value,notes:null,end_date:'2026-11-14'}};
-      const second = JSON.parse(run(request(update)));
-      assert.equal(second.status,'applied'); assert.equal(second.value.notes,null);
-      assert.equal(JSON.parse(run(request({...update,id:crypto.randomUUID()}))).status,'conflict');
-      assert.throws(()=>run(request({...update,id:crypto.randomUUID(),baseRevision:second.revision,value:{...second.value,type:'BOSS'}})));
-      for(const dates of [{start_date:'2026-11-20',end_date:'2026-11-14'},{start_date:'2026-02-30',end_date:'2026-11-14'}]) {
-        const id=crypto.randomUUID();
-        assert.throws(()=>run(request({...operation,id:crypto.randomUUID(),recordId:id,value:{...value,...dates,id}})));
-      }
-      sql(`DROP POLICY "Active vessel members can manage trips" ON trips;
+    await t.test(
+      "trip dates, immutable type, atomic retry and current policy enforcement",
+      () => {
+        const value = {
+          id: crypto.randomUUID(),
+          vessel_id: vessel,
+          type: "GUEST",
+          title: "Offline crossing",
+          start_date: "2026-11-09",
+          end_date: "2026-11-12",
+          notes: "Initial",
+          department: null,
+          yard_location: null,
+          contractor_company_name: null,
+          contact_details: null,
+          created_by: user,
+          created_at: "2026-11-09T00:00:00Z",
+          updated_at: "2026-11-09T00:00:00Z",
+        };
+        const operation = {
+          id: crypto.randomUUID(),
+          recordId: value.id,
+          feature: "trips",
+          kind: "create",
+          value,
+          baseRevision: null,
+        };
+        const request = (op) =>
+          `SELECT sync_web_offline_trip('${vessel}','${device}','${JSON.stringify(op).replaceAll("'", "''")}'::jsonb);`;
+        const first = JSON.parse(run(request(operation)));
+        assert.equal(first.status, "applied");
+        assert.deepEqual(JSON.parse(run(request(operation))), first);
+        const update = {
+          ...operation,
+          id: crypto.randomUUID(),
+          kind: "update",
+          baseRevision: first.revision,
+          value: { ...first.value, notes: null, end_date: "2026-11-14" },
+        };
+        const second = JSON.parse(run(request(update)));
+        assert.equal(second.status, "applied");
+        assert.equal(second.value.notes, null);
+        assert.equal(
+          JSON.parse(run(request({ ...update, id: crypto.randomUUID() })))
+            .status,
+          "conflict",
+        );
+        assert.throws(() =>
+          run(
+            request({
+              ...update,
+              id: crypto.randomUUID(),
+              baseRevision: second.revision,
+              value: { ...second.value, type: "BOSS" },
+            }),
+          ),
+        );
+        for (const dates of [
+          { start_date: "2026-11-20", end_date: "2026-11-14" },
+          { start_date: "2026-02-30", end_date: "2026-11-14" },
+        ]) {
+          const id = crypto.randomUUID();
+          assert.throws(() =>
+            run(
+              request({
+                ...operation,
+                id: crypto.randomUUID(),
+                recordId: id,
+                value: { ...value, ...dates, id },
+              }),
+            ),
+          );
+        }
+        sql(`DROP POLICY "Active vessel members can manage trips" ON trips;
         CREATE POLICY trips_read ON trips FOR SELECT TO authenticated USING(public.current_user_can_access_vessel(vessel_id));`);
-      assert.equal(JSON.parse(run(request({...update,id:crypto.randomUUID(),baseRevision:second.revision}))).status,'forbidden');
-      assert.equal(sql("SELECT count(*) FROM offline_private.record_receipts WHERE feature='trips';"),'2');
-      assert.equal(sql('SELECT count(*) FROM trips;'),'1');
-      sql('DROP POLICY trips_read ON trips;');
-      assert.deepEqual(JSON.parse(run(`SELECT read_web_offline_trips('${vessel}','${device}');`)),[]);
-    });
-    installYard(sql,baseline,migration);
-    await t.test('yard completion identity, Captain-only record edits, retries and folder scope',()=>{
-      sql(`UPDATE users SET role='CREW' WHERE id='${user}';`);
-      const value={id:crypto.randomUUID(),vessel_id:vessel,job_title:'Check passerelle',job_description:null,yard_location:null,contractor_company_name:null,contact_details:null,done_by_date:null,status:'NOT_STARTED',completed_by:null,completed_at:null,completed_by_name:null,created_by:user,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),department:'BRIDGE',priority:'GREEN',trip_id:null,defect_details:null,defect_location:null,equipment_serial:null,start_date:'2026-11-10',end_date:'2026-11-12'};
-      const op={id:crypto.randomUUID(),recordId:value.id,feature:'yardJobs',kind:'create',value,baseRevision:null};
-      const request=op=>`SELECT sync_web_offline_yard_job('${vessel}','${device}','${JSON.stringify(op).replaceAll("'","''")}'::jsonb);`;
-      const call=op=>JSON.parse(run(request(op)));
-      const first=call(op); assert.equal(first.status,'applied'); assert.deepEqual(call(op),first);
-      const complete={...op,id:crypto.randomUUID(),kind:'update',baseRevision:first.revision,value:{...first.value,status:'COMPLETED',completed_by:user,completed_at:new Date().toISOString(),completed_by_name:'Synthetic crew'}};
-      assert.throws(()=>call({...complete,value:{...complete.value,completed_by:crypto.randomUUID()}}));
-      const done=call(complete); assert.equal(done.status,'applied'); assert.deepEqual(call(complete),done);
-      const change={...complete,id:crypto.randomUUID(),baseRevision:done.revision,value:{...done.value,job_title:'Captain correction'}};
-      assert.throws(()=>call(change));
-      sql(`UPDATE users SET role='HOD' WHERE id='${user}';`); assert.throws(()=>call(change));
-      sql(`UPDATE users SET role='CAPTAIN_MOV' WHERE id='${user}';`);
-      const corrected=call(change); assert.equal(corrected.status,'applied');
-      assert.equal(call({...change,id:crypto.randomUUID()}).status,'conflict');
-      const otherVessel=crypto.randomUUID(),otherFolder=crypto.randomUUID(),folder=crypto.randomUUID();
-      sql(`INSERT INTO vessels VALUES('${otherVessel}'); INSERT INTO shipyard_record_folders(id,vessel_id,name) VALUES('${otherFolder}','${otherVessel}','Private other vessel'),('${folder}','${vessel}','Electrical');`);
-      assert.throws(()=>run(`INSERT INTO shipyard_record_folder_items(job_id,folder_id) VALUES('${value.id}','${otherFolder}');`));
-      run(`INSERT INTO shipyard_record_folder_items(job_id,folder_id) VALUES('${value.id}','${folder}');`);
-      const folders=JSON.parse(run(`SELECT read_web_offline_shipyard_folders('${vessel}','${device}');`));
-      assert.deepEqual(folders.folders.map(f=>f.id),[folder]);
-      assert.deepEqual(folders.assignments,[{job_id:value.id,folder_id:folder}]);
-      for(const patch of [{trip_id:crypto.randomUUID()},{start_date:'2026-02-30'},{status:'COMPLETED',completed_by:crypto.randomUUID(),completed_at:new Date().toISOString(),completed_by_name:'Forged'}]) {
-        const id=crypto.randomUUID(); assert.throws(()=>call({...op,id:crypto.randomUUID(),recordId:id,value:{...value,...patch,id}}));
-      }
-      assert.equal(sql("SELECT count(*) FROM offline_private.record_receipts WHERE feature='yardJobs';"),'3');
-      assert.equal(sql('SELECT count(*) FROM yard_period_jobs;'),'1');
-    });
-    installMaintenance(sql,baseline,migration);
-    await t.test('maintenance edits clear fields and retries cannot duplicate notifications',()=>{
-      const value={id:crypto.randomUUID(),vessel_id:vessel,equipment:'Generator',serial_number:'synthetic-01',hours_of_service:'100',hours_at_next_service:'200',what_service_done:'Filter change',notes:'Before',service_done_by:'Synthetic crew',created_at:new Date().toISOString(),updated_at:new Date().toISOString(),port_starboard_na:'Port'};
-      const op={id:crypto.randomUUID(),recordId:value.id,feature:'maintenanceLogs',kind:'create',value,baseRevision:null};
-      const call=op=>JSON.parse(run(`SELECT sync_web_offline_maintenance_log('${vessel}','${device}','${JSON.stringify(op).replaceAll("'","''")}'::jsonb);`));
-      const first=call(op);assert.equal(first.status,'applied');assert.deepEqual(call(op),first);
-      const edit={...op,id:crypto.randomUUID(),kind:'update',baseRevision:first.revision,value:{...first.value,notes:null,serial_number:null}};
-      const second=call(edit);assert.equal(second.status,'applied');assert.equal(second.value.notes,null);assert.equal(second.value.serial_number,null);assert.deepEqual(call(edit),second);
-      assert.equal(call({...edit,id:crypto.randomUUID()}).status,'conflict');
-      assert.throws(()=>call({...edit,value:{...edit.value,equipment:'Changed reused id'}}));
-      sql(`DROP POLICY "Active vessel members can manage maintenance_logs" ON maintenance_logs;
+        assert.equal(
+          JSON.parse(
+            run(
+              request({
+                ...update,
+                id: crypto.randomUUID(),
+                baseRevision: second.revision,
+              }),
+            ),
+          ).status,
+          "forbidden",
+        );
+        assert.equal(
+          sql(
+            "SELECT count(*) FROM offline_private.record_receipts WHERE feature='trips';",
+          ),
+          "2",
+        );
+        assert.equal(sql("SELECT count(*) FROM trips;"), "1");
+        sql("DROP POLICY trips_read ON trips;");
+        assert.deepEqual(
+          JSON.parse(
+            run(`SELECT read_web_offline_trips('${vessel}','${device}');`),
+          ),
+          [],
+        );
+      },
+    );
+    installYard(sql, baseline, migration);
+    await t.test(
+      "yard completion identity, Captain-only record edits, retries and folder scope",
+      () => {
+        sql(`UPDATE users SET role='CREW' WHERE id='${user}';`);
+        const value = {
+          id: crypto.randomUUID(),
+          vessel_id: vessel,
+          job_title: "Check passerelle",
+          job_description: null,
+          yard_location: null,
+          contractor_company_name: null,
+          contact_details: null,
+          done_by_date: null,
+          status: "NOT_STARTED",
+          completed_by: null,
+          completed_at: null,
+          completed_by_name: null,
+          created_by: user,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          department: "BRIDGE",
+          priority: "GREEN",
+          trip_id: null,
+          defect_details: null,
+          defect_location: null,
+          equipment_serial: null,
+          start_date: "2026-11-10",
+          end_date: "2026-11-12",
+        };
+        const op = {
+          id: crypto.randomUUID(),
+          recordId: value.id,
+          feature: "yardJobs",
+          kind: "create",
+          value,
+          baseRevision: null,
+        };
+        const request = (op) =>
+          `SELECT sync_web_offline_yard_job('${vessel}','${device}','${JSON.stringify(op).replaceAll("'", "''")}'::jsonb);`;
+        const call = (op) => JSON.parse(run(request(op)));
+        const first = call(op);
+        assert.equal(first.status, "applied");
+        assert.deepEqual(call(op), first);
+        const complete = {
+          ...op,
+          id: crypto.randomUUID(),
+          kind: "update",
+          baseRevision: first.revision,
+          value: {
+            ...first.value,
+            status: "COMPLETED",
+            completed_by: user,
+            completed_at: new Date().toISOString(),
+            completed_by_name: "Synthetic crew",
+          },
+        };
+        assert.throws(() =>
+          call({
+            ...complete,
+            value: { ...complete.value, completed_by: crypto.randomUUID() },
+          }),
+        );
+        const done = call(complete);
+        assert.equal(done.status, "applied");
+        assert.deepEqual(call(complete), done);
+        const change = {
+          ...complete,
+          id: crypto.randomUUID(),
+          baseRevision: done.revision,
+          value: { ...done.value, job_title: "Captain correction" },
+        };
+        assert.throws(() => call(change));
+        sql(`UPDATE users SET role='HOD' WHERE id='${user}';`);
+        assert.throws(() => call(change));
+        sql(`UPDATE users SET role='CAPTAIN_MOV' WHERE id='${user}';`);
+        const corrected = call(change);
+        assert.equal(corrected.status, "applied");
+        assert.equal(
+          call({ ...change, id: crypto.randomUUID() }).status,
+          "conflict",
+        );
+        const otherVessel = crypto.randomUUID(),
+          otherFolder = crypto.randomUUID(),
+          folder = crypto.randomUUID();
+        sql(
+          `INSERT INTO vessels VALUES('${otherVessel}'); INSERT INTO shipyard_record_folders(id,vessel_id,name) VALUES('${otherFolder}','${otherVessel}','Private other vessel'),('${folder}','${vessel}','Electrical');`,
+        );
+        assert.throws(() =>
+          run(
+            `INSERT INTO shipyard_record_folder_items(job_id,folder_id) VALUES('${value.id}','${otherFolder}');`,
+          ),
+        );
+        run(
+          `INSERT INTO shipyard_record_folder_items(job_id,folder_id) VALUES('${value.id}','${folder}');`,
+        );
+        const folders = JSON.parse(
+          run(
+            `SELECT read_web_offline_shipyard_folders('${vessel}','${device}');`,
+          ),
+        );
+        assert.deepEqual(
+          folders.folders.map((f) => f.id),
+          [folder],
+        );
+        assert.deepEqual(folders.assignments, [
+          { job_id: value.id, folder_id: folder },
+        ]);
+        for (const patch of [
+          { trip_id: crypto.randomUUID() },
+          { start_date: "2026-02-30" },
+          {
+            status: "COMPLETED",
+            completed_by: crypto.randomUUID(),
+            completed_at: new Date().toISOString(),
+            completed_by_name: "Forged",
+          },
+        ]) {
+          const id = crypto.randomUUID();
+          assert.throws(() =>
+            call({
+              ...op,
+              id: crypto.randomUUID(),
+              recordId: id,
+              value: { ...value, ...patch, id },
+            }),
+          );
+        }
+        assert.equal(
+          sql(
+            "SELECT count(*) FROM offline_private.record_receipts WHERE feature='yardJobs';",
+          ),
+          "3",
+        );
+        assert.equal(sql("SELECT count(*) FROM yard_period_jobs;"), "1");
+      },
+    );
+    installMaintenance(sql, baseline, migration);
+    await t.test(
+      "maintenance edits clear fields and retries cannot duplicate notifications",
+      () => {
+        const value = {
+          id: crypto.randomUUID(),
+          vessel_id: vessel,
+          equipment: "Generator",
+          serial_number: "synthetic-01",
+          hours_of_service: "100",
+          hours_at_next_service: "200",
+          what_service_done: "Filter change",
+          notes: "Before",
+          service_done_by: "Synthetic crew",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          port_starboard_na: "Port",
+        };
+        const op = {
+          id: crypto.randomUUID(),
+          recordId: value.id,
+          feature: "maintenanceLogs",
+          kind: "create",
+          value,
+          baseRevision: null,
+        };
+        const call = (op) =>
+          JSON.parse(
+            run(
+              `SELECT sync_web_offline_maintenance_log('${vessel}','${device}','${JSON.stringify(op).replaceAll("'", "''")}'::jsonb);`,
+            ),
+          );
+        const first = call(op);
+        assert.equal(first.status, "applied");
+        assert.deepEqual(call(op), first);
+        const edit = {
+          ...op,
+          id: crypto.randomUUID(),
+          kind: "update",
+          baseRevision: first.revision,
+          value: { ...first.value, notes: null, serial_number: null },
+        };
+        const second = call(edit);
+        assert.equal(second.status, "applied");
+        assert.equal(second.value.notes, null);
+        assert.equal(second.value.serial_number, null);
+        assert.deepEqual(call(edit), second);
+        assert.equal(
+          call({ ...edit, id: crypto.randomUUID() }).status,
+          "conflict",
+        );
+        assert.throws(() =>
+          call({
+            ...edit,
+            value: { ...edit.value, equipment: "Changed reused id" },
+          }),
+        );
+        sql(`DROP POLICY "Active vessel members can manage maintenance_logs" ON maintenance_logs;
         CREATE POLICY maintenance_read ON maintenance_logs FOR SELECT TO authenticated USING(public.current_user_can_access_vessel(vessel_id));`);
-      assert.equal(call({...edit,id:crypto.randomUUID(),baseRevision:second.revision}).status,'forbidden');
-      assert.equal(sql("SELECT count(*) FROM offline_private.record_receipts WHERE feature='maintenanceLogs';"),'2');
-      assert.equal(sql('SELECT count(*) FROM synthetic_notification_capture;'),'2');
-      assert.equal(sql('SELECT count(*) FROM maintenance_logs;'),'1');
-      assert.throws(()=>call({...op,id:crypto.randomUUID(),recordId:crypto.randomUUID(),value:{...value,vessel_id:crypto.randomUUID()}}));
-    });
+        assert.equal(
+          call({
+            ...edit,
+            id: crypto.randomUUID(),
+            baseRevision: second.revision,
+          }).status,
+          "forbidden",
+        );
+        assert.equal(
+          sql(
+            "SELECT count(*) FROM offline_private.record_receipts WHERE feature='maintenanceLogs';",
+          ),
+          "2",
+        );
+        assert.equal(
+          sql("SELECT count(*) FROM synthetic_notification_capture;"),
+          "2",
+        );
+        assert.equal(sql("SELECT count(*) FROM maintenance_logs;"), "1");
+        assert.throws(() =>
+          call({
+            ...op,
+            id: crypto.randomUUID(),
+            recordId: crypto.randomUUID(),
+            value: { ...value, vessel_id: crypto.randomUUID() },
+          }),
+        );
+      },
+    );
+    installVesselRecords(sql, baseline, migration);
+    for (const [feature, table, rpc, fields] of [
+      [
+        "pumpOutLogs",
+        "pump_out_logs",
+        "pump_out_log",
+        {
+          log_date: "2026-11-09",
+          log_time: "12:00",
+          created_by_name: "Synthetic crew",
+          discharge_type: "PUMPOUT_SERVICE",
+          pumpout_service_name: null,
+          location: "Dock",
+          amount_in_gallons: 100,
+          description: "Before",
+        },
+      ],
+      [
+        "generalWasteLogs",
+        "general_waste_logs",
+        "general_waste_log",
+        {
+          log_date: "2026-11-09",
+          log_time: "12:00",
+          created_by_name: "Synthetic crew",
+          position_location: "Dock",
+          description_of_garbage: "Before",
+          weight: 10,
+          weight_unit: "kgs",
+        },
+      ],
+      [
+        "uniforms",
+        "uniforms",
+        "uniform",
+        {
+          label: "Test uniforms",
+          department: "INTERIOR",
+          entries: [
+            {
+              amount: "2",
+              size: "M",
+              color: "Navy",
+              gender: "",
+              dayNight: "Day",
+            },
+          ],
+          created_by: user,
+          updated_at: new Date().toISOString(),
+        },
+      ],
+    ])
+      await t.test(
+        feature +
+          ": scoped RLS, atomic retries, clear fields and stale revision",
+        () => {
+          const value = {
+            id: crypto.randomUUID(),
+            vessel_id: vessel,
+            created_at: new Date().toISOString(),
+            ...fields,
+          };
+          const op = {
+            id: crypto.randomUUID(),
+            recordId: value.id,
+            feature,
+            kind: "create",
+            value,
+            baseRevision: null,
+          };
+          const call = (op) =>
+            JSON.parse(
+              run(
+                `SELECT sync_web_offline_${rpc}('${vessel}','${device}','${JSON.stringify(op).replaceAll("'", "''")}'::jsonb);`,
+              ),
+            );
+          const first = call(op);
+          assert.equal(first.status, "applied");
+          assert.deepEqual(call(op), first);
+          const patch =
+            feature === "uniforms"
+              ? { entries: [] }
+              : feature === "pumpOutLogs"
+                ? { description: null }
+                : { weight: null };
+          const edit = {
+            ...op,
+            id: crypto.randomUUID(),
+            kind: "update",
+            baseRevision: first.revision,
+            value: { ...first.value, ...patch },
+          };
+          const second = call(edit);
+          assert.equal(second.status, "applied");
+          for (const [k, v] of Object.entries(patch))
+            assert.deepEqual(second.value[k], v);
+          assert.deepEqual(call(edit), second);
+          assert.equal(
+            call({ ...edit, id: crypto.randomUUID() }).status,
+            "conflict",
+          );
+          assert.throws(() =>
+            call({ ...edit, value: { ...edit.value, unknown: true } }),
+          );
+          const fresh = (patch) => {
+            const id = crypto.randomUUID();
+            return {
+              ...op,
+              id: crypto.randomUUID(),
+              recordId: id,
+              value: { ...value, id, ...patch },
+            };
+          };
+          assert.throws(() => call(fresh({ vessel_id: crypto.randomUUID() })));
+          for (const patch of feature === "uniforms"
+            ? [
+                { entries: [{ amount: "2" }] },
+                { created_by: crypto.randomUUID() },
+              ]
+            : [
+                { log_date: "2026-02-30" },
+                { log_time: "25:00" },
+                feature === "pumpOutLogs"
+                  ? { amount_in_gallons: -1 }
+                  : { weight: -1 },
+              ])
+            assert.throws(() => call(fresh(patch)));
+          sql(
+            `DROP POLICY "Active vessel members can manage ${table}" ON ${table}; CREATE POLICY record_read ON ${table} FOR SELECT TO authenticated USING(public.current_user_can_access_vessel(vessel_id));`,
+          );
+          assert.equal(
+            call({
+              ...edit,
+              id: crypto.randomUUID(),
+              baseRevision: second.revision,
+            }).status,
+            "forbidden",
+          );
+          assert.equal(sql(`SELECT count(*) FROM ${table};`), "1");
+          assert.equal(
+            sql(
+              `SELECT count(*) FROM offline_private.record_receipts WHERE feature='${feature}';`,
+            ),
+            "2",
+          );
+        },
+      );
     let first;
     await t.test("grant binds session and caps access at seven days", () => {
       const c = JSON.parse(
