@@ -1,3 +1,4 @@
+import { restAdapter } from './restAdapter';
 import { watchKeepingAdapter, watchRulesAdapter, watchDeviceCopy } from './watchKeepingAdapter';
 import { crewLeaveAdapter, crewLeaveDeviceCopy } from './crewLeaveAdapter';
 import { checklistsAdapter, checklistDeviceCopy } from './checklistsAdapter';
@@ -32,6 +33,8 @@ import { yardJobsAdapter, yardJobDeviceCopy } from './yardJobsAdapter';
 import { tripsAdapter, tripDeviceCopy } from './tripsAdapter';
 import { contractorsAdapter, contractorDeviceCopy } from './contractorsAdapter';
 const adapters = {
+  restEntries: restAdapter(false),
+  restReview: restAdapter(true),
   watchKeeping: watchKeepingAdapter,
   watchKeepingRules: watchRulesAdapter,
   crewLeave: crewLeaveAdapter,
@@ -53,6 +56,8 @@ const adapters = {
   musterStations: publicationsAdapter,
 };
 const readFunctions = {
+  restEntries: 'read_web_offline_rest_entries',
+  restReview: 'read_web_offline_rest_review',
   watchKeeping: 'read_web_offline_watch_keeping',
   watchKeepingRules: 'read_web_offline_watch_rules',
   crewLeave: 'read_web_offline_crew_leave',
@@ -74,6 +79,8 @@ const readFunctions = {
   rules: 'read_web_offline_rules',
 };
 const syncFunctions = {
+  restEntries: 'sync_web_offline_rest_entries',
+  restReview: 'sync_web_offline_rest_entries',
   watchKeeping: 'sync_web_offline_watch_keeping',
   watchKeepingRules: 'sync_web_offline_watch_rules',
   crewLeave: 'sync_web_offline_crew_leave',
@@ -208,7 +215,7 @@ export async function checkOfflineAccess(): Promise<boolean> {
         .filter((change) => change.state === 'conflict')
         .map((change) => ({
           id: change.id,
-          canFork: change.feature !== 'watchKeepingRules',
+          canFork: !['watchKeepingRules', 'restEntries', 'restReview'].includes(change.feature),
           title: String(
             change.value.title ??
               change.value.watch_title ??
@@ -333,6 +340,18 @@ async function refreshNotes(a: Active) {
   await a.store.update(a.scope, (state) => {
     sameActive(a);
     state.crewRoster = roster.data;
+  });
+  const restContext = await supabase.rpc('read_web_offline_rest_context', {
+    p_vessel_id: a.scope.vesselId,
+    p_device_id: a.scope.deviceId,
+  });
+  sameActive(a);
+  if (restContext.error) throw restContext.error;
+  if (typeof restContext.data?.hasSignature !== 'boolean')
+    throw new OfflineError('INVALID_SNAPSHOT');
+  await a.store.update(a.scope, (state) => {
+    sameActive(a);
+    state.restSignature = restContext.data.hasSignature;
   });
   for (const feature of Object.keys(adapters) as SupportedFeature[]) {
     if (!a.permit?.claims.permissions[feature]?.includes('read')) continue;
@@ -551,7 +570,8 @@ export async function keepBothNoteCopies(operationId: string): Promise<void> {
     (item) => item.id === operationId && item.state === 'conflict'
   );
   if (!change) throw new OfflineError('CONFLICT_CHANGED');
-  if (change.feature === 'watchKeepingRules') throw new OfflineError('RECONCILE_FIRST');
+  if (['watchKeepingRules', 'restEntries', 'restReview'].includes(change.feature))
+    throw new OfflineError('RECONCILE_FIRST');
   const latest = await a.box.read(change.feature, change.recordId);
   if (!latest) throw new OfflineError('CONFLICT_CHANGED');
   const id = crypto.randomUUID(),

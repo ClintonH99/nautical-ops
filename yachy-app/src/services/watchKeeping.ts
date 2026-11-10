@@ -436,7 +436,7 @@ class WatchKeepingService {
     return getWatchPeriodsFromTimetables(timetables, userId, startDate, endDate);
   }
 
-  private mapRow(row: Record<string, unknown>): PublishedWatchTimetable {
+  mapRow(row: Record<string, unknown>): PublishedWatchTimetable {
     return {
       offlineLocalVersion: row.offlineLocalVersion as number | undefined,
       id: row.id as string,

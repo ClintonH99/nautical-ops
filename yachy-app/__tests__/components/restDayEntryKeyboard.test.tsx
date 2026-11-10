@@ -5,7 +5,7 @@ import { RestDayEntryScreen } from '../../src/screens/RestDayEntryScreen';
 import {
   canManageRestFor,
   confirmEntryForUser,
-  getWeekEntries,
+  getRestEditor,
   saveEntry,
 } from '../../src/services/restEntries';
 
@@ -41,7 +41,9 @@ jest.mock('../../src/components', () => {
   };
 });
 jest.mock('../../src/services/restEntries', () => ({
-  getWeekEntries: jest.fn(async () => []),
+  getRestEditor: jest.fn(async () => ({ entry: null, watchPeriods: [], watchPending: false })),
+  hasRestSignature: jest.fn(async () => true),
+  restOfflineEnabled: () => false,
   canManageRestFor: jest.fn(async () => false),
   checkCompliance: () => ({ compliant: true, totalRestHours: 10, violations: [] }),
   saveEntry: jest.fn(async () => undefined),
@@ -103,13 +105,67 @@ describe('Create Rest Entry keyboard', () => {
       '12:00',
       '13:00',
       'crew',
-      null
+      null,
+      undefined,
+      undefined
+    );
+  });
+
+  it('labels a local confirmation as awaiting sync', async () => {
+    mockUser.role = 'CAPTAIN_MOV';
+    jest.mocked(canManageRestFor).mockResolvedValue(true);
+    jest
+      .mocked(getRestEditor)
+      .mockResolvedValueOnce({
+        entry: {
+          id: 'rest',
+          user_id: 'crew',
+          vessel_id: 'vessel',
+          date: '2026-10-21',
+          rest_periods: [],
+          work_start: null,
+          work_end: null,
+          lunch_start: null,
+          lunch_end: null,
+          status: 'confirmed',
+          offlinePending: true,
+        },
+        watchPeriods: [],
+        watchPending: false,
+      });
+    const ui = render(
+      <RestDayEntryScreen
+        navigation={{ goBack: jest.fn() }}
+        route={{ params: { date: '2026-10-21' } }}
+      />
+    );
+    await act(async () => {});
+    expect(ui.getByText('Saved on device — awaiting sync')).toBeTruthy();
+    expect(ui.queryByText('Confirmed')).toBeNull();
+  });
+  it('preserves draft work for the reviewed crew member while watch changes await sync', async () => {
+    mockUser.role = 'CAPTAIN_MOV';
+    jest.mocked(canManageRestFor).mockResolvedValue(true);
+    jest
+      .mocked(getRestEditor)
+      .mockResolvedValueOnce({ entry: null, watchPeriods: [], watchPending: true });
+    const ui = render(
+      <RestDayEntryScreen
+        navigation={{ goBack: jest.fn() }}
+        route={{ params: { date: '2026-10-21', targetUserId: 'other-crew' } }}
+      />
+    );
+    await act(async () => {});
+    expect(ui.queryByText('Confirm Rest Entry')).toBeNull();
+    await act(async () => fireEvent.press(ui.getByText('Save Draft')));
+    expect(saveEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: 'other-crew', status: 'draft' })
     );
   });
 
   it('displays the saved comment when reopening an entry', async () => {
-    jest.mocked(getWeekEntries).mockResolvedValueOnce([
-      {
+    jest.mocked(getRestEditor).mockResolvedValueOnce({
+      entry: {
         user_id: 'crew',
         vessel_id: 'vessel',
         date: '2026-09-26',
@@ -121,7 +177,9 @@ describe('Create Rest Entry keyboard', () => {
         comment: 'Night watch',
         status: 'draft',
       },
-    ]);
+      watchPeriods: [],
+      watchPending: false,
+    });
     const ui = render(
       <RestDayEntryScreen
         navigation={{ goBack: jest.fn() }}

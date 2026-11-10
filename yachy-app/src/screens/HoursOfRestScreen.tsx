@@ -6,7 +6,7 @@ import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinne
  * are flagged completed (green) or not completed (red).
  */
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { Calendar } from 'react-native-calendars';
@@ -15,9 +15,14 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { Button, PageHeader, ExportButton } from '../components';
-import { RestEntry, getMonthDataForPdf } from '../services/restEntries';
+import {
+  RestEntry,
+  getMonthDataForPdf,
+  getRestRange,
+  subscribeRest,
+} from '../services/restEntries';
 import { generateHoursOfRestPdf } from '../utils/hoursOfRestPdf';
-import { supabase } from '../services/supabase';
+
 import { toYYYYMMDD } from '../utils';
 
 function daysAgo(n: number): Date {
@@ -65,13 +70,7 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
       paddedStart.setDate(paddedStart.getDate() - 7);
       const since = toYYYYMMDD(paddedStart);
       const until = toYYYYMMDD(lastOfMonth);
-      const { data: rows, error } = await supabase
-        .from('rest_entries')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('date', since)
-        .lte('date', until);
-      if (error) throw error;
+      const rows = await getRestRange(user.id, since, until);
       if (currentRequest !== requestId.current) return;
 
       const byDate: Record<string, RestEntry> = {};
@@ -93,6 +92,14 @@ export const HoursOfRestScreen = ({ navigation }: any) => {
     useCallback(() => {
       loadData();
     }, [loadData])
+  );
+
+  useEffect(
+    () =>
+      subscribeRest(() => {
+        void loadData();
+      }),
+    [loadData]
   );
 
   // Build calendar bar markers (matching the Home screen's calendar style)

@@ -1,3 +1,5 @@
+import { runRestChecks } from "./offline-rest-db-cases.mjs";
+import { installRest } from "./offline-rest-fixture.mjs";
 import { installWatch } from "./offline-watch-fixture.mjs";
 import { runWatchChecks } from "./offline-watch-db-cases.mjs";
 import { runCrewLeaveChecks } from "./offline-crew-leave-db-cases.mjs";
@@ -1095,6 +1097,8 @@ test("real isolated PostgreSQL offline note protocol", async (t) => {
     await runCrewLeaveChecks(t, { sql, run, user, vessel, device });
     installWatch(sql, baseline, migration);
     await runWatchChecks(t, { sql, run, user, vessel, device });
+    installRest(sql, baseline, migration, user);
+    await runRestChecks(t, { sql, run, user, vessel, device });
     let first;
     await t.test("grant binds session and caps access at seven days", () => {
       const c = JSON.parse(

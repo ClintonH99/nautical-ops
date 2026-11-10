@@ -29,6 +29,7 @@ export type Partition = {
   drafts?: Partial<Record<OfflineFeature, { value: RecordValue; version: number }>>;
   vesselLabel?: string;
   crewRoster?: RecordValue[];
+  restSignature?: boolean;
   tripColors?: RecordValue | null;
   shipyardFolders?: { folders: RecordValue[]; assignments: RecordValue[] };
   snapshots?: Partial<Record<OfflineFeature, boolean>>;
@@ -158,23 +159,47 @@ export class OfflineOutbox {
   }
 
   async list(feature: OfflineFeature): Promise<LocalRecord[]> {
+    return (await this.bundle([feature])).records[feature]!;
+  }
+  /** Consistent editable records and related watches from one durable transaction. */
+  async bundle(features: OfflineFeature[]): Promise<{
+    records: Partial<Record<OfflineFeature, LocalRecord[]>>;
+    pending: OfflineFeature[];
+    pendingRecords: { feature: OfflineFeature; recordId: string }[];
+    restSignature?: boolean;
+  }> {
     const scope = { ...this.context().scope };
     await this.checkpoint(scope);
     return this.store.update(scope, (state) => {
-      this.check(scope, state, feature, 'read');
-      if (!state.snapshots?.[feature]) throw new OfflineError('NOT_DOWNLOADED');
-      const adapter = this.adapters[feature];
-      if (!adapter) throw new OfflineError('FEATURE_NOT_READY');
-      const records = Object.entries(state.records)
-        .filter(([key]) => JSON.parse(key)[0] === feature)
-        .map(([, record]) => record);
-      if (
-        records.some(
-          (record) => !adapter.validate(record.value) || !adapter.authorizeRead(scope, record.value)
+      const result: Partial<Record<OfflineFeature, LocalRecord[]>> = {};
+      for (const feature of features) {
+        this.check(scope, state, feature, 'read');
+        if (!state.snapshots?.[feature]) throw new OfflineError('NOT_DOWNLOADED');
+        const adapter = this.adapters[feature];
+        if (!adapter) throw new OfflineError('FEATURE_NOT_READY');
+        const records = Object.entries(state.records)
+          .filter(([key]) => JSON.parse(key)[0] === feature)
+          .map(([, row]) => row);
+        if (
+          records.some(
+            (row) => !adapter.validate(row.value) || !adapter.authorizeRead(scope, row.value)
+          )
         )
-      )
-        throw new OfflineError('ACTION_NOT_ALLOWED');
-      return structuredClone(records);
+          throw new OfflineError('ACTION_NOT_ALLOWED');
+        result[feature] = structuredClone(records);
+      }
+      return {
+        records: result,
+        pendingRecords: state.changes
+          .filter((c) => features.includes(c.feature))
+          .map((c) => ({ feature: c.feature, recordId: c.recordId })),
+        pending: [
+          ...new Set(
+            state.changes.filter((c) => features.includes(c.feature)).map((c) => c.feature)
+          ),
+        ],
+        restSignature: features.includes('restEntries') ? state.restSignature : undefined,
+      };
     });
   }
   /** A complete permission-filtered snapshot, not a partial/paginated result. */

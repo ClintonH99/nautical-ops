@@ -5,7 +5,7 @@ since verified access, shortened by known access end. Billing/invites stay onlin
 
 Implemented locally: Notepad, Shopping Lists, everyday Tasks, Contractors,
 Rules, Safety Equipment, Muster Stations, Trips, Yard Jobs, Maintenance Logs, Discharge/Pump-out Logs,
-General Waste Logs, Uniforms, Inventory, Pre-Departure Checklists and Crew Leave. NOT a whole-app offline
+General Waste Logs, Uniforms, Inventory, Pre-Departure Checklists, Crew Leave, Watch Keeping and Hours of Rest. NOT a whole-app offline
 release. Production unchanged. No hosted migrations, real signing credentials,
 deployment or activation performed. EXPO_PUBLIC_WEB_OFFLINE defaults off.
 
@@ -107,8 +107,9 @@ Evidence:
   concurrent storage connections, expiry retention, denied sync, session recovery.
 
 Remaining before whole-app release:
-1. Integrate watches/rest, pre-departure, fuel,
-   leave and other normal modules with exact permissions.
+1. Integrate Watch Duties, Sea Miles, modern Fuel Management and remaining normal
+   routes/attachments/PDFs with exact permissions. Rest/rules singleton conflicts
+   still need a safe manual reconciliation flow.
 2. Completed: dependent edits after ambiguous uploads retain immutable attempted
    requests and merge only local changes onto acknowledged server versions.
 3. Shell download readiness and local saving indication added; browser unload
@@ -161,3 +162,32 @@ background sync after closing the browser. Paddle Sandbox remains deferred.
   Watch rule conflicts retain pending text; singleton manual reconciliation UI
   is still required before activation. Hours of Rest and remaining areas follow.
   No hosted migration, signing key, push, deployment or activation performed.
+
+
+HOURS OF REST checkpoint — 10 November 2026 (local only)
+- Own entries and Captain-only reviews use separate signed capabilities and
+  scoped caches. HOD/crew cannot confirm or change pending/confirmed entries.
+- Rest rows and related watches load together from one IndexedDB transaction.
+  Confirmations carry the exact displayed watch revisions. Server checks them
+  while locking watches before rest rows, preserving the existing reconfirmation
+  trigger and rejecting stale reviews. Pending watches allow draft saving.
+- Own signature existence is cached (no signature image copied); server verifies
+  it again. Confirmation actor/time are stamped on the server. Historical long
+  comments remain saveable unchanged; new limits match UTF-16 character counting.
+- Local confirmations explicitly show awaiting sync in editor and Captain review.
+  Loaded revisions protect concurrent edits, deterministic new-day IDs protect
+  parallel tabs, atomic receipts protect retries. No compliance formula changed.
+- 204 combined Node checks, 42 isolated PostgreSQL checks, 30 Rest regression tests,
+  TypeScript/scoped ESLint (zero errors; four existing any warnings), full web
+  export passed. Review included signer checks, current roles/membership, immutable
+  owners/dates, malformed times, no duplicate receipt, stale watch/row versions.
+- Browser vawldt: stopped HTTP server, save/reload/edit/reconnect yielded one rest
+  entry/receipt. Final DVACiK with seeded watches: own+other-crew confirmations,
+  offline editor/review reload, pending wording, reconnect with explicit Retry Sync;
+  two final rest entries/two receipts. No real email or notification sent.
+  Evidence /private/tmp/nautical-offline-rest-review-pending.png and
+  /private/tmp/nautical-offline-rest-review-synced.png; result.json under the matching
+  nautical-offline-app-* directories in the macOS temporary directory.
+- Unresolved conflicts remain intact, never auto-copied into another rest day.
+  Manual reconciliation, offline PDF/signature export and whole-app release gate
+  remain. No hosted migrations, push, deployment or activation performed.

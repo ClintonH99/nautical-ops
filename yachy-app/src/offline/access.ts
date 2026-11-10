@@ -10,6 +10,7 @@ export const OFFLINE_FEATURES = [
   'watchKeepingRules',
   'watchDuties',
   'restEntries',
+  'restReview',
   'maintenanceLogs',
   'safetyEquipment',
   'musterStations',

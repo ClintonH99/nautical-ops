@@ -63,6 +63,8 @@ test("normal app route reload has cached shell while offline", async () => {
 });
 for (const path of [
   "/",
+  "/hours-of-rest/entry?date=2026-11-10",
+  "/hours-of-rest/entry?date=2026-11-10&targetUserId=00000000-0000-0000-0000-000000000001&targetUserName=Synthetic%20Crew&isManagerEditing=true",
   "/watch-schedule/create?timetableId=00000000-0000-0000-0000-000000000001",
   "/pre-departure/view?checklistId=00000000-0000-0000-0000-000000000001",
   "/pre-departure/edit?tripId=00000000-0000-0000-0000-000000000001",
@@ -86,6 +88,9 @@ for (const path of [
   );
 }
 for (const path of [
+  "/hours-of-rest/entry?date=2026-11-10&token=private",
+  "/hours-of-rest/entry?date=2026-11-10&date=2026-11-11",
+  "/hours-of-rest/entry?date=invalid",
   "/pre-departure/edit?tripId=invalid",
   "/pre-departure/view?checklistId=00000000-0000-0000-0000-000000000001&token=private",
   "/shopping/edit?token=private",
@@ -151,16 +156,25 @@ test("only explicitly listed static assets are cached", async () => {
 });
 
 // Prevent named navigation and a reopened URL disagreeing on offline support.
-test('implemented screen names and reopened paths share one offline route map',async()=>{
- const {OFFLINE_ROUTE_PATHS,supportsOfflineRoute}=await import('../yachy-app/src/offline/routes.ts');
- const linking=await readFile(new URL('../yachy-app/src/navigation/webLinking.ts',import.meta.url),'utf8');
- for(const [name,path] of Object.entries(OFFLINE_ROUTE_PATHS)) {
-   assert.ok(linking.includes(`${name}: '${path.slice(1)}'`),name);
-   assert.equal(supportsOfflineRoute(name,path),true);
-   assert.equal(supportsOfflineRoute(null,path),true);
- }
- for(const [name,path] of [['VesselPlans','/vessel-plans'],['VesselSettings','/vessel-settings'],['CrewManagement','/crew'],['Login','/login']]) {
-   assert.equal(supportsOfflineRoute(name,path),false);
-   assert.equal(supportsOfflineRoute(null,path),false);
- }
+test("implemented screen names and reopened paths share one offline route map", async () => {
+  const { OFFLINE_ROUTE_PATHS, supportsOfflineRoute } =
+    await import("../yachy-app/src/offline/routes.ts");
+  const linking = await readFile(
+    new URL("../yachy-app/src/navigation/webLinking.ts", import.meta.url),
+    "utf8",
+  );
+  for (const [name, path] of Object.entries(OFFLINE_ROUTE_PATHS)) {
+    assert.ok(linking.includes(`${name}: '${path.slice(1)}'`), name);
+    assert.equal(supportsOfflineRoute(name, path), true);
+    assert.equal(supportsOfflineRoute(null, path), true);
+  }
+  for (const [name, path] of [
+    ["VesselPlans", "/vessel-plans"],
+    ["VesselSettings", "/vessel-settings"],
+    ["CrewManagement", "/crew"],
+    ["Login", "/login"],
+  ]) {
+    assert.equal(supportsOfflineRoute(name, path), false);
+    assert.equal(supportsOfflineRoute(null, path), false);
+  }
 });

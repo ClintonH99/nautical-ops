@@ -33,21 +33,20 @@ import {
   RestEntry,
   saveEntry,
   checkCompliance,
-  getWeekEntries,
+  getRestEditor,
+  hasRestSignature,
+  restOfflineEnabled,
   confirmEntryForUser,
   canManageRestFor,
   RestEntryStatus,
 } from '../services/restEntries';
-import { getSignatureForUser } from '../services/signatures';
+import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 import {
   REST_COMMENT_MAX_LENGTH,
   updateRestComment,
   isRestCommentValid,
 } from '../utils/restComment';
-import watchKeepingService, {
-  getRestWatchConflicts,
-  WatchWorkPeriod,
-} from '../services/watchKeeping';
+import { getRestWatchConflicts, WatchWorkPeriod } from '../services/watchKeeping';
 
 function timeStringToDate(t: string | null): Date {
   const d = new Date();
@@ -99,6 +98,12 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   const isManager = user?.role === 'CAPTAIN_MOV' && reviewAccess;
   const [hasExistingEntry, setHasExistingEntry] = useState(false);
   const [loadingEntry, setLoadingEntry] = useState(true);
+  const loadedEntry = useRef<RestEntry | null>(null);
+  const loadedWatches = useRef<Record<string, string> | undefined>(undefined);
+  const saveInFlight = useRef(false);
+  const [loadError, setLoadError] = useState(false);
+  const [pendingSync, setPendingSync] = useState(false);
+  const [watchPending, setWatchPending] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const commentRef = useRef<TextInput>(null);
   const commentTop = useRef(0);
@@ -124,19 +129,17 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   const loadExisting = useCallback(async () => {
     if (!effectiveUserId) return;
 
-    const [rows, linkedWatchPeriods] = await Promise.all([
-      getWeekEntries(effectiveUserId, date),
-      user?.vesselId
-        ? watchKeepingService.getWorkPeriodsForUser(user.vesselId, effectiveUserId, date, date)
-        : Promise.resolve([]),
-    ]);
-    setWatchPeriods(linkedWatchPeriods);
-    const existing = rows.find((r) => r.date === date);
+    if (!user?.vesselId) throw new Error('Vessel unavailable');
+    const data = await getRestEditor(effectiveUserId, user.vesselId, date);
+    setWatchPeriods(data.watchPeriods);
+    setWatchPending(data.watchPending);
+    loadedWatches.current = data.watchVersions;
+    const existing = data.entry;
+    loadedEntry.current = existing;
+    setPendingSync(existing?.offlinePending === true);
     setHasExistingEntry(Boolean(existing));
     if (existing) {
-      setRestPeriods(
-        existing.rest_periods?.length ? existing.rest_periods : [{ start: '22:00', end: '08:00' }]
-      );
+      setRestPeriods(existing.rest_periods ?? []);
       setWorkStart(existing.work_start);
       setWorkEnd(existing.work_end);
       setLunchStart(existing.lunch_start);
@@ -156,7 +159,10 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   useFocusEffect(
     useCallback(() => {
       setLoadingEntry(true);
-      loadExisting().finally(() => setLoadingEntry(false));
+      setLoadError(false);
+      loadExisting()
+        .catch(() => setLoadError(true))
+        .finally(() => setLoadingEntry(false));
     }, [loadExisting])
   );
 
@@ -171,6 +177,15 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
     );
   }
 
+  if (loadError)
+    return (
+      <View style={[styles.pageWrap, { backgroundColor: themeColors.background }]}>
+        <PageHeader title="Rest Entry" />
+        <Text style={{ color: themeColors.textPrimary, padding: 24 }}>
+          This entry could not be loaded. Reopen it after the offline download finishes.
+        </Text>
+      </View>
+    );
   const isLocked = !isManager && (status === 'pending_confirmation' || status === 'confirmed');
   const compliance = checkCompliance(restPeriods);
   const watchRestConflicts = getRestWatchConflicts(restPeriods, watchPeriods);
@@ -217,10 +232,12 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   const saveOwnEntry = async () => {
     if (!user?.id || !user?.vesselId) return;
     if (!validateComment()) return;
+    if (saveInFlight.current) return;
+    saveInFlight.current = true;
     setSaving(true);
     try {
       const entry: RestEntry = {
-        user_id: user.id,
+        user_id: isManager ? effectiveUserId! : user.id,
         vessel_id: user.vesselId,
         date,
         rest_periods: restPeriods,
@@ -230,12 +247,27 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
         lunch_end: lunchEnd,
         comment: comment.trim() || null,
         status: 'draft',
+        ...(restOfflineEnabled()
+          ? {
+              offlineLocalVersion: loadedEntry.current?.offlineLocalVersion ?? 0,
+              offlineWatchVersions: loadedWatches.current,
+            }
+          : {}),
       };
       await saveEntry(entry);
-      navigation.goBack();
-    } catch {
-      Alert.alert('Error', 'Failed to save. Please try again.');
+      if (restOfflineEnabled())
+        Alert.alert(
+          'Saved on this device',
+          'Your changes will be checked and synced when connected.'
+        );
+      returnToPreviousPage(navigation);
+    } catch (e) {
+      Alert.alert(
+        'Not saved',
+        e instanceof Error ? e.message : 'Failed to save. Your entered times remain here.'
+      );
     } finally {
+      saveInFlight.current = false;
       setSaving(false);
     }
   };
@@ -243,7 +275,13 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   const handleSave = async () => {
     if (!user?.id || !user?.vesselId) return;
     if (!validateComment()) return;
-    const signature = await getSignatureForUser(user.id);
+    let signature = false;
+    try {
+      signature = await hasRestSignature(user.id);
+    } catch {
+      Alert.alert('Unavailable', 'Signature status has not been downloaded. Reconnect and retry.');
+      return;
+    }
     if (!signature) {
       Alert.alert(
         'Set up your E-Signature',
@@ -274,6 +312,8 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   const confirmManagedEntry = async () => {
     if (!isManager || !effectiveUserId || !user?.vesselId || !user?.id) return;
     if (!validateComment()) return;
+    if (saveInFlight.current) return;
+    saveInFlight.current = true;
     setSaving(true);
     try {
       await confirmEntryForUser(
@@ -286,12 +326,23 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
         lunchStart,
         lunchEnd,
         user.id,
-        comment.trim() || null
+        comment.trim() || null,
+        restOfflineEnabled() ? (loadedEntry.current?.offlineLocalVersion ?? 0) : undefined,
+        loadedWatches.current
       );
-      navigation.goBack();
-    } catch {
-      Alert.alert('Error', 'Failed to confirm. Please try again.');
+      if (restOfflineEnabled())
+        Alert.alert(
+          'Saved on this device',
+          'Your changes will be checked and synced when connected.'
+        );
+      returnToPreviousPage(navigation);
+    } catch (e) {
+      Alert.alert(
+        'Not confirmed',
+        e instanceof Error ? e.message : 'Failed to confirm. Your entered times remain here.'
+      );
     } finally {
+      saveInFlight.current = false;
       setSaving(false);
     }
   };
@@ -299,7 +350,13 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
   const handleConfirm = async () => {
     if (!isManager || !effectiveUserId || !user?.vesselId || !user?.id) return;
     if (!validateComment()) return;
-    const signature = await getSignatureForUser(user.id);
+    let signature = false;
+    try {
+      signature = await hasRestSignature(user.id);
+    } catch {
+      Alert.alert('Unavailable', 'Signature status has not been downloaded. Reconnect and retry.');
+      return;
+    }
     if (!signature) {
       Alert.alert(
         'Set up your E-Signature',
@@ -352,6 +409,12 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
       >
+        {watchPending && (
+          <Text style={{ color: themeColors.textPrimary, marginBottom: 16 }}>
+            A watch schedule is waiting to sync. Any affected confirmations need review after it
+            syncs.
+          </Text>
+        )}
         <View style={styles.dateHeading}>
           <Text style={[styles.dateTitle, { color: themeColors.textPrimary }]}>
             {formatDateDisplay(date)}
@@ -382,13 +445,15 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
                 },
               ]}
             >
-              {status === 'confirmed'
-                ? 'Confirmed'
-                : status === 'needs_reconfirmation'
-                  ? 'Needs reconfirmation'
-                  : status === 'pending_confirmation'
-                    ? 'Pending confirmation'
-                    : 'Draft'}
+              {pendingSync
+                ? 'Saved on device — awaiting sync'
+                : status === 'confirmed'
+                  ? 'Confirmed'
+                  : status === 'needs_reconfirmation'
+                    ? 'Needs reconfirmation'
+                    : status === 'pending_confirmation'
+                      ? 'Pending confirmation'
+                      : 'Draft'}
             </Text>
           </View>
         </View>
@@ -611,8 +676,8 @@ export const RestDayEntryScreen = ({ navigation, route }: any) => {
 
         {isManager ? (
           <Button
-            title="Confirm Rest Entry"
-            onPress={handleConfirm}
+            title={watchPending ? 'Save Draft' : 'Confirm Rest Entry'}
+            onPress={watchPending ? handleSave : handleConfirm}
             loading={saving}
             variant="primary"
             fullWidth

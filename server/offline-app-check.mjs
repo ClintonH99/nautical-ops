@@ -1,3 +1,4 @@
+import { installRest } from "./offline-rest-fixture.mjs";
 import { installWatch } from "./offline-watch-fixture.mjs";
 import { installCrewLeave } from "./offline-crew-leave-fixture.mjs";
 import { installChecklists } from "./offline-checklists-fixture.mjs";
@@ -285,6 +286,13 @@ try {
   );
   installWatch(sql, baseline, (name) =>
     readFileSync(join(app, "supabase/migrations", name), "utf8"),
+  );
+  installRest(
+    sql,
+    baseline,
+    (name) =>
+      readFileSync(join(root, "yachy-app/supabase/migrations", name), "utf8"),
+    user,
   );
   if (process.env.OFFLINE_APP_WATCH_SEED === "true") {
     const other = "00000000-0000-0000-0000-000000000009";
@@ -579,6 +587,14 @@ try {
           ),
         ),
       );
+    if (path === "/rest/v1/rpc/read_web_offline_rest_context")
+      return json(
+        JSON.parse(
+          run(
+            `SELECT read_web_offline_rest_context(${quote(body.p_vessel_id)},${quote(body.p_device_id)});`,
+          ),
+        ),
+      );
     if (path === "/rest/v1/rpc/read_web_offline_crew_roster")
       return json(
         JSON.parse(
@@ -596,6 +612,8 @@ try {
       ["crew_leave", "crew_leave"],
       ["watch_keeping", "watch_keeping"],
       ["watch_rules", "watch_rules"],
+      ["rest_entries", "rest_entries"],
+      ["rest_review", "unused"],
     ]) {
       if (path === "/rest/v1/rpc/read_web_offline_" + table)
         return json(
@@ -743,7 +761,7 @@ try {
     if (line === "status") {
       const report = JSON.parse(
         sql(
-          "SELECT json_build_object('notes',coalesce((SELECT json_agg(n) FROM notes n),'[]'),'shoppingLists',coalesce((SELECT json_agg(s) FROM shopping_lists s),'[]'),'tasks',coalesce((SELECT json_agg(t) FROM vessel_tasks t),'[]'),'contractors',coalesce((SELECT json_agg(c) FROM contractors c),'[]'),'rules',coalesce((SELECT json_agg(r) FROM rules r),'[]'),'safetyEquipment',coalesce((SELECT json_agg(e) FROM safety_equipment e),'[]'),'musterStations',coalesce((SELECT json_agg(m) FROM muster_stations m),'[]'),'trips',coalesce((SELECT json_agg(t) FROM trips t),'[]'),'yardJobs',coalesce((SELECT json_agg(y) FROM yard_period_jobs y),'[]'),'maintenanceLogs',coalesce((SELECT json_agg(m) FROM maintenance_logs m),'[]'),'pumpOutLogs',coalesce((SELECT json_agg(p) FROM pump_out_logs p),'[]'),'generalWasteLogs',coalesce((SELECT json_agg(w) FROM general_waste_logs w),'[]'),'uniforms',coalesce((SELECT json_agg(u) FROM uniforms u),'[]'),'inventory',coalesce((SELECT json_agg(i) FROM inventory_items i),'[]'),'checklists',coalesce((SELECT json_agg(web_offline_checklist_record(id)) FROM pre_departure_checklists),'[]'),'crewLeave',coalesce((SELECT json_agg(c) FROM crew_leave c),'[]'),'watchKeeping',coalesce((SELECT json_agg(w) FROM watch_keeping_timetables w),'[]'),'watchRules',coalesce((SELECT json_agg(w) FROM watch_keeping_rules w),'[]'),'notificationEnqueues',(SELECT count(*) FROM synthetic_notification_capture),'receipts',(SELECT count(*) FROM offline_private.note_receipts)+(SELECT count(*) FROM offline_private.record_receipts));",
+          "SELECT json_build_object('notes',coalesce((SELECT json_agg(n) FROM notes n),'[]'),'shoppingLists',coalesce((SELECT json_agg(s) FROM shopping_lists s),'[]'),'tasks',coalesce((SELECT json_agg(t) FROM vessel_tasks t),'[]'),'contractors',coalesce((SELECT json_agg(c) FROM contractors c),'[]'),'rules',coalesce((SELECT json_agg(r) FROM rules r),'[]'),'safetyEquipment',coalesce((SELECT json_agg(e) FROM safety_equipment e),'[]'),'musterStations',coalesce((SELECT json_agg(m) FROM muster_stations m),'[]'),'trips',coalesce((SELECT json_agg(t) FROM trips t),'[]'),'yardJobs',coalesce((SELECT json_agg(y) FROM yard_period_jobs y),'[]'),'maintenanceLogs',coalesce((SELECT json_agg(m) FROM maintenance_logs m),'[]'),'pumpOutLogs',coalesce((SELECT json_agg(p) FROM pump_out_logs p),'[]'),'generalWasteLogs',coalesce((SELECT json_agg(w) FROM general_waste_logs w),'[]'),'uniforms',coalesce((SELECT json_agg(u) FROM uniforms u),'[]'),'inventory',coalesce((SELECT json_agg(i) FROM inventory_items i),'[]'),'checklists',coalesce((SELECT json_agg(web_offline_checklist_record(id)) FROM pre_departure_checklists),'[]'),'crewLeave',coalesce((SELECT json_agg(c) FROM crew_leave c),'[]'),'restEntries',coalesce((SELECT json_agg(r) FROM rest_entries r),'[]'),'watchKeeping',coalesce((SELECT json_agg(w) FROM watch_keeping_timetables w),'[]'),'watchRules',coalesce((SELECT json_agg(w) FROM watch_keeping_rules w),'[]'),'notificationEnqueues',(SELECT count(*) FROM synthetic_notification_capture),'receipts',(SELECT count(*) FROM offline_private.note_receipts)+(SELECT count(*) FROM offline_private.record_receipts));",
         ),
       );
       writeFileSync(join(dir, "result.json"), JSON.stringify(report, null, 2));

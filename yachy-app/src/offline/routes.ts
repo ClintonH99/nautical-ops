@@ -1,6 +1,9 @@
 /** Only integrated and tested device-storage routes are available offline. */
 export const OFFLINE_ROUTE_PATHS: Readonly<Record<string, string>> = {
   Home: '/app',
+  HoursOfRest: '/hours-of-rest',
+  RestDayEntry: '/hours-of-rest/entry',
+  RestToBeConfirmed: '/hours-of-rest/review',
   WatchKeeping: '/watch-keeping',
   WatchSchedule: '/watch-schedule',
   CreateWatchTimetable: '/watch-schedule/create',

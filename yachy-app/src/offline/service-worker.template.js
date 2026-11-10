@@ -101,6 +101,17 @@ self.addEventListener('fetch', (event) => {
                 url.searchParams.get(key) || ''
               )))
       );
+    const restQuery =
+      url.pathname === '/hours-of-rest/entry' &&
+      /^\d{4}-\d{2}-\d{2}$/.test(url.searchParams.get('date') || '') &&
+      [...url.searchParams.keys()].every(
+        (key, index, keys) =>
+          keys.indexOf(key) === index &&
+          (key === 'date' ||
+            (key === 'targetUserId' && /^[0-9a-f-]{36}$/i.test(url.searchParams.get(key) || '')) ||
+            (key === 'targetUserName' && (url.searchParams.get(key) || '').length <= 200) ||
+            (key === 'isManagerEditing' && ['true', 'false'].includes(url.searchParams.get(key))))
+      );
     const taskQuery =
       ['/tasks/list', '/tasks/edit'].includes(url.pathname) &&
       [...url.searchParams.keys()].every(
@@ -119,6 +130,7 @@ self.addEventListener('fetch', (event) => {
         !noteEditQuery &&
         !shoppingQuery &&
         !taskQuery &&
+        !restQuery &&
         !contractorQuery &&
         !publicationQuery &&
         !tripQuery &&

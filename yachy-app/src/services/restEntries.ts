@@ -5,6 +5,9 @@
  * periods, one period >= 6 continuous hours).
  */
 
+import { offlineRest } from '../offline/restService';
+import { getWatchPeriodsFromTimetables } from './watchKeeping';
+import type { RecordValue } from '../offline/outbox';
 import { supabase } from './supabase';
 import { requireAffectedRows } from './mutationResult';
 import { getSignatureForUser, UserSignature } from './signatures';
@@ -17,6 +20,9 @@ export interface RestPeriod {
 
 export interface RestEntry {
   id?: string;
+  offlineLocalVersion?: number;
+  offlinePending?: boolean;
+  offlineWatchVersions?: Record<string, string>;
   user_id: string;
   vessel_id: string;
   date: string; // "YYYY-MM-DD"
@@ -253,7 +259,67 @@ export function checkRollingCompliance(
   };
 }
 
+export const restOfflineEnabled = () => offlineRest.enabled();
+export const subscribeRest = offlineRest.subscribe;
+export async function hasRestSignature(userId: string): Promise<boolean> {
+  return offlineRest.enabled()
+    ? offlineRest.hasSignature(userId)
+    : !!(await getSignatureForUser(userId));
+}
+export async function getRestEditor(
+  userId: string,
+  vesselId: string,
+  date: string
+): Promise<{
+  entry: RestEntry | null;
+  watchPeriods: WatchWorkPeriod[];
+  watchVersions?: Record<string, string>;
+  watchPending: boolean;
+}> {
+  if (offlineRest.enabled()) {
+    const data = await offlineRest.editor(userId, date);
+    return {
+      entry: data.entry as unknown as RestEntry | null,
+      watchPeriods: getWatchPeriodsFromTimetables(
+        data.watchRows.map((row) => watchKeepingService.mapRow(row)),
+        userId,
+        date,
+        date
+      ),
+      watchVersions: data.watchVersions,
+      watchPending: data.watchPending,
+    };
+  }
+  const [entries, watchPeriods] = await Promise.all([
+    getWeekEntries(userId, date),
+    watchKeepingService.getWorkPeriodsForUser(vesselId, userId, date, date),
+  ]);
+  return { entry: entries.find((e) => e.date === date) ?? null, watchPeriods, watchPending: false };
+}
+export async function getRestRange(
+  userId: string,
+  since: string,
+  until: string
+): Promise<RestEntry[]> {
+  if (offlineRest.enabled())
+    return (await offlineRest.list(userId)).filter(
+      (r) => String(r.date) >= since && String(r.date) <= until
+    ) as unknown as RestEntry[];
+  const { data, error } = await supabase
+    .from('rest_entries')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('date', since)
+    .lte('date', until);
+  if (error) throw error;
+  return data ?? [];
+}
 export async function getWeekEntries(userId: string, weekStartDate: string): Promise<RestEntry[]> {
+  if (offlineRest.enabled()) {
+    const end = new Date(weekStartDate + 'T00:00:00Z');
+    end.setUTCDate(end.getUTCDate() + 6);
+    return getRestRange(userId, weekStartDate, end.toISOString().slice(0, 10));
+  }
   const start = new Date(weekStartDate);
   const dates: string[] = [];
   for (let i = 0; i < 7; i++) {
@@ -273,6 +339,16 @@ export async function getWeekEntries(userId: string, weekStartDate: string): Pro
 }
 
 export async function saveEntry(entry: RestEntry): Promise<RestEntry> {
+  if (offlineRest.enabled()) {
+    const { offlineLocalVersion, offlineWatchVersions, offlinePending: _pending, ...value } = entry;
+    if (offlineLocalVersion === undefined || !offlineWatchVersions)
+      throw new Error('Reopen the entry before saving.');
+    return (await offlineRest.save(
+      value as unknown as RecordValue,
+      offlineLocalVersion,
+      offlineWatchVersions
+    )) as unknown as RestEntry;
+  }
   const { data, error } = await supabase
     .from('rest_entries')
     .upsert(entry, { onConflict: 'user_id,date' })
@@ -284,6 +360,7 @@ export async function saveEntry(entry: RestEntry): Promise<RestEntry> {
 }
 
 export async function submitWeekForConfirmation(userId: string, dates: string[]): Promise<void> {
+  if (offlineRest.enabled()) throw new Error('Open each rest entry to review and save it.');
   const { error, data } = await supabase
     .from('rest_entries')
     .update({ status: 'pending_confirmation' })
@@ -295,6 +372,7 @@ export async function submitWeekForConfirmation(userId: string, dates: string[])
 }
 
 export async function confirmEntry(entryId: string, confirmedByUserId: string): Promise<void> {
+  if (offlineRest.enabled()) throw new Error('Open the rest entry to review and confirm it.');
   const { data, error } = await supabase
     .from('rest_entries')
     .update({
@@ -315,6 +393,7 @@ export interface DayReviewEntry {
   userName: string;
   department: Department;
   status: 'missing' | RestEntryStatus;
+  pendingSync?: boolean;
   compliant?: boolean;
   violations?: string[];
 }
@@ -343,10 +422,13 @@ export async function getMonthReview(
   today.setHours(0, 0, 0, 0);
   const effectiveEnd = lastDayOfMonth < today ? lastDayOfMonth : today;
 
-  const { data: crew } = await supabase
-    .from('users')
-    .select('id, name, department')
-    .eq('vessel_id', vesselId);
+  const crew = offlineRest.enabled()
+    ? ((await offlineRest.roster(vesselId)) as unknown as {
+        id: string;
+        name: string;
+        department: Department;
+      }[])
+    : (await supabase.from('users').select('id, name, department').eq('vessel_id', vesselId)).data;
 
   // Fetch with 7 days of padding before the month starts, so the rolling
   // 7-day compliance check has enough context for the first days shown.
@@ -355,12 +437,18 @@ export async function getMonthReview(
   const startStr = toDateStr(paddedStart);
   const endStr = toDateStr(effectiveEnd);
 
-  const { data: entries } = await supabase
-    .from('rest_entries')
-    .select('id, user_id, date, status, rest_periods')
-    .eq('vessel_id', vesselId)
-    .gte('date', startStr)
-    .lte('date', endStr);
+  const entries = offlineRest.enabled()
+    ? ((await offlineRest.list()).filter(
+        (e) => String(e.date) >= startStr && String(e.date) <= endStr
+      ) as unknown as RestEntry[])
+    : (
+        await supabase
+          .from('rest_entries')
+          .select('id, user_id, date, status, rest_periods')
+          .eq('vessel_id', vesselId)
+          .gte('date', startStr)
+          .lte('date', endStr)
+      ).data;
 
   const entriesByUser = new Map<string, { date: string; rest_periods: RestPeriod[] }[]>();
   (entries ?? []).forEach((e) => {
@@ -368,6 +456,11 @@ export async function getMonthReview(
     entriesByUser.get(e.user_id)!.push({ date: e.date, rest_periods: e.rest_periods || [] });
   });
 
+  const pendingIds = new Set(
+    ((entries as RestEntry[]) ?? [])
+      .filter((e) => e.offlinePending)
+      .map((e) => `${e.date}|${e.user_id}`)
+  );
   const statusMap = new Map<string, string>();
   (entries ?? []).forEach((e) => statusMap.set(`${e.date}|${e.user_id}`, e.status));
 
@@ -389,6 +482,7 @@ export async function getMonthReview(
       }
       return {
         userId: c.id,
+        pendingSync: pendingIds.has(`${dateStr}|${c.id}`),
         userName: c.name,
         department: c.department as Department,
         status,
@@ -454,7 +548,9 @@ export async function confirmEntryForUser(
   lunchStart: string | null,
   lunchEnd: string | null,
   confirmedByUserId: string,
-  comment?: string | null
+  comment?: string | null,
+  offlineLocalVersion?: number,
+  offlineWatchVersions?: Record<string, string>
 ): Promise<void> {
   const entry: RestEntry = {
     user_id: targetUserId,
@@ -466,6 +562,7 @@ export async function confirmEntryForUser(
     lunch_start: lunchStart,
     lunch_end: lunchEnd,
     comment: comment ?? null,
+    ...(offlineRest.enabled() ? { offlineLocalVersion, offlineWatchVersions } : {}),
     status: 'confirmed',
     confirmed_by: confirmedByUserId,
     confirmed_at: new Date().toISOString(),
@@ -481,6 +578,7 @@ export async function canManageRestFor(
   targetUserId: string,
   vesselId: string
 ): Promise<boolean> {
+  if (offlineRest.enabled()) return offlineRest.canManage(targetUserId, vesselId);
   if (viewerRole !== 'CAPTAIN_MOV' || !viewerUserId || !targetUserId || !vesselId) return false;
   try {
     const { data, error } = await supabase.rpc('current_user_can_manage_rest_entry', {

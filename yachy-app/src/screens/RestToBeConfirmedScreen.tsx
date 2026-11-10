@@ -1,3 +1,4 @@
+import { subscribeRest } from '../services/restEntries';
 import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
 /**
  * Rest to be Confirmed Screen
@@ -9,7 +10,7 @@ import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinne
  * month for any number of crew.
  */
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -48,7 +49,9 @@ const STATUS_LABEL: Record<string, string> = {
 type DayCategory = 'not_complete' | 'complete' | 'confirmed';
 
 function categorizeDay(entries: DayReviewEntry[]): DayCategory {
-  const hasIncomplete = entries.some((e) => e.status === 'missing' || e.status === 'draft');
+  const hasIncomplete = entries.some(
+    (e) => e.pendingSync || e.status === 'missing' || e.status === 'draft'
+  );
   if (hasIncomplete) return 'not_complete';
   const hasPending = entries.some(
     (e) => e.status === 'pending_confirmation' || e.status === 'needs_reconfirmation'
@@ -92,18 +95,26 @@ export const RestToBeConfirmedScreen = () => {
       setDays([]);
       setLoading(true);
     }
-    const result = await getMonthReview(user.vesselId, now.getFullYear(), now.getMonth() + 1);
-    setDays(result);
-    setLoading(false);
+    try {
+      setDays(await getMonthReview(user.vesselId, now.getFullYear(), now.getMonth() + 1));
+    } catch {
+      Alert.alert('Unavailable', 'Rest review could not be loaded. Reconnect to download it.');
+    } finally {
+      setLoading(false);
+    }
   }, [user?.vesselId]);
 
   const loadMonth = useCallback(
     async (year: number, month: number) => {
       if (!user?.vesselId) return;
       setLoading(true);
-      const result = await getMonthReview(user.vesselId, year, month);
-      setDays(result);
-      setLoading(false);
+      try {
+        setDays(await getMonthReview(user.vesselId, year, month));
+      } catch {
+        Alert.alert('Unavailable', 'Rest review could not be loaded. Reconnect to download it.');
+      } finally {
+        setLoading(false);
+      }
     },
     [user?.vesselId]
   );
@@ -116,6 +127,15 @@ export const RestToBeConfirmedScreen = () => {
       }
       if (tab === 'current') loadCurrent();
     }, [user, navigation, tab, loadCurrent])
+  );
+
+  useEffect(
+    () =>
+      subscribeRest(() => {
+        if (tab === 'current') void loadCurrent();
+        else if (selectedMonth) void loadMonth(selectedMonth.year, selectedMonth.month);
+      }),
+    [tab, loadCurrent, selectedMonth, loadMonth]
   );
 
   const filteredDays: DayReview[] = days
@@ -217,12 +237,14 @@ export const RestToBeConfirmedScreen = () => {
                 style={styles.crewRow}
                 onPress={() => openDay(day.date, e.userId, e.userName)}
                 accessibilityRole="button"
-                accessibilityLabel={`Review ${e.userName}, ${STATUS_LABEL[e.status]}`}
+                accessibilityLabel={`Review ${e.userName}, ${e.pendingSync ? 'Saved on device — awaiting sync' : STATUS_LABEL[e.status]}`}
               >
                 <Text style={[styles.crewName, { color: themeColors.textPrimary }]}>
                   {e.userName}
                 </Text>
-                <Text style={[styles.crewStatus, { color }]}>{STATUS_LABEL[e.status]}</Text>
+                <Text style={[styles.crewStatus, { color }]}>
+                  {e.pendingSync ? 'Saved on device — awaiting sync' : STATUS_LABEL[e.status]}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
