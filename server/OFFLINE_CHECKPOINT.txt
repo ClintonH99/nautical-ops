@@ -431,3 +431,9 @@ and POSTs remain excluded. New installations start at /app. Cached identity,
 signed offline permission and existing access restrictions still decide entry.
 The new regression failed before the fix; 116 shell/navigation/access checks
 pass after it. No backend, data, billing or top status banner changes.
+Browser verification: synthetic app signed in online; HTTP server stopped;
+closed its tab and opened a fresh tab at /login. Home loaded from cache. Created
+an offline note and reloaded successfully while the server remained stopped.
+After restoring the server and reloading, the database contained exactly one
+note and one sync receipt. This verifies cold browser navigation, persistence,
+and reconnect sync. Physical iPhone Home Screen retest remains user-side.
