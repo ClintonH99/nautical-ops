@@ -1,6 +1,8 @@
 /** Only integrated and tested device-storage routes are available offline. */
 export const OFFLINE_ROUTE_PATHS: Readonly<Record<string, string>> = {
   Home: '/app',
+  CrewLeave: '/crew-leave',
+  AddEditCrewLeave: '/crew-leave/edit',
   UpcomingTrips: '/trips/upcoming',
   PreDepartureChecklist: '/pre-departure',
   AddEditPreDepartureChecklist: '/pre-departure/edit',

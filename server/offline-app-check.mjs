@@ -1,3 +1,4 @@
+import { installCrewLeave } from "./offline-crew-leave-fixture.mjs";
 import { installChecklists } from "./offline-checklists-fixture.mjs";
 import { installInventory } from "./offline-inventory-fixture.mjs";
 import { installVesselRecords } from "./offline-vessel-records-fixture.mjs";
@@ -278,6 +279,9 @@ try {
   installChecklists(sql, baseline, (name) =>
     readFileSync(join(app, "supabase/migrations", name), "utf8"),
   );
+  installCrewLeave(sql, (name) =>
+    readFileSync(join(app, "supabase/migrations", name), "utf8"),
+  );
   const env = {
     ...process.env,
     EXPO_NO_DOTENV: "1",
@@ -530,12 +534,21 @@ try {
           ),
         ),
       );
+    if (path === "/rest/v1/rpc/read_web_offline_crew_roster")
+      return json(
+        JSON.parse(
+          run(
+            `SELECT read_web_offline_crew_roster(${quote(body.p_vessel_id)},${quote(body.p_device_id)});`,
+          ),
+        ),
+      );
     for (const [table, rpc] of [
       ["pump_out_logs", "pump_out_log"],
       ["general_waste_logs", "general_waste_log"],
       ["uniforms", "uniform"],
       ["inventory_items", "inventory_item"],
       ["checklists", "checklist"],
+      ["crew_leave", "crew_leave"],
     ]) {
       if (path === "/rest/v1/rpc/read_web_offline_" + table)
         return json(
@@ -683,7 +696,7 @@ try {
     if (line === "status") {
       const report = JSON.parse(
         sql(
-          "SELECT json_build_object('notes',coalesce((SELECT json_agg(n) FROM notes n),'[]'),'shoppingLists',coalesce((SELECT json_agg(s) FROM shopping_lists s),'[]'),'tasks',coalesce((SELECT json_agg(t) FROM vessel_tasks t),'[]'),'contractors',coalesce((SELECT json_agg(c) FROM contractors c),'[]'),'rules',coalesce((SELECT json_agg(r) FROM rules r),'[]'),'safetyEquipment',coalesce((SELECT json_agg(e) FROM safety_equipment e),'[]'),'musterStations',coalesce((SELECT json_agg(m) FROM muster_stations m),'[]'),'trips',coalesce((SELECT json_agg(t) FROM trips t),'[]'),'yardJobs',coalesce((SELECT json_agg(y) FROM yard_period_jobs y),'[]'),'maintenanceLogs',coalesce((SELECT json_agg(m) FROM maintenance_logs m),'[]'),'pumpOutLogs',coalesce((SELECT json_agg(p) FROM pump_out_logs p),'[]'),'generalWasteLogs',coalesce((SELECT json_agg(w) FROM general_waste_logs w),'[]'),'uniforms',coalesce((SELECT json_agg(u) FROM uniforms u),'[]'),'inventory',coalesce((SELECT json_agg(i) FROM inventory_items i),'[]'),'checklists',coalesce((SELECT json_agg(web_offline_checklist_record(id)) FROM pre_departure_checklists),'[]'),'notificationEnqueues',(SELECT count(*) FROM synthetic_notification_capture),'receipts',(SELECT count(*) FROM offline_private.note_receipts)+(SELECT count(*) FROM offline_private.record_receipts));",
+          "SELECT json_build_object('notes',coalesce((SELECT json_agg(n) FROM notes n),'[]'),'shoppingLists',coalesce((SELECT json_agg(s) FROM shopping_lists s),'[]'),'tasks',coalesce((SELECT json_agg(t) FROM vessel_tasks t),'[]'),'contractors',coalesce((SELECT json_agg(c) FROM contractors c),'[]'),'rules',coalesce((SELECT json_agg(r) FROM rules r),'[]'),'safetyEquipment',coalesce((SELECT json_agg(e) FROM safety_equipment e),'[]'),'musterStations',coalesce((SELECT json_agg(m) FROM muster_stations m),'[]'),'trips',coalesce((SELECT json_agg(t) FROM trips t),'[]'),'yardJobs',coalesce((SELECT json_agg(y) FROM yard_period_jobs y),'[]'),'maintenanceLogs',coalesce((SELECT json_agg(m) FROM maintenance_logs m),'[]'),'pumpOutLogs',coalesce((SELECT json_agg(p) FROM pump_out_logs p),'[]'),'generalWasteLogs',coalesce((SELECT json_agg(w) FROM general_waste_logs w),'[]'),'uniforms',coalesce((SELECT json_agg(u) FROM uniforms u),'[]'),'inventory',coalesce((SELECT json_agg(i) FROM inventory_items i),'[]'),'checklists',coalesce((SELECT json_agg(web_offline_checklist_record(id)) FROM pre_departure_checklists),'[]'),'crewLeave',coalesce((SELECT json_agg(c) FROM crew_leave c),'[]'),'notificationEnqueues',(SELECT count(*) FROM synthetic_notification_capture),'receipts',(SELECT count(*) FROM offline_private.note_receipts)+(SELECT count(*) FROM offline_private.record_receipts));",
         ),
       );
       writeFileSync(join(dir, "result.json"), JSON.stringify(report, null, 2));

@@ -1,3 +1,4 @@
+import { crewLeaveAdapter, crewLeaveDeviceCopy } from './crewLeaveAdapter';
 import { checklistsAdapter, checklistDeviceCopy } from './checklistsAdapter';
 import { inventoryAdapter, inventoryDeviceCopy } from './inventoryAdapter';
 import { vesselRecordAdapter, vesselRecordDeviceCopy } from './vesselRecordAdapter';
@@ -30,6 +31,7 @@ import { yardJobsAdapter, yardJobDeviceCopy } from './yardJobsAdapter';
 import { tripsAdapter, tripDeviceCopy } from './tripsAdapter';
 import { contractorsAdapter, contractorDeviceCopy } from './contractorsAdapter';
 const adapters = {
+  crewLeave: crewLeaveAdapter,
   preDepartureChecklists: checklistsAdapter,
   inventory: inventoryAdapter,
   pumpOutLogs: vesselRecordAdapter('pumpOutLogs'),
@@ -48,6 +50,7 @@ const adapters = {
   musterStations: publicationsAdapter,
 };
 const readFunctions = {
+  crewLeave: 'read_web_offline_crew_leave',
   preDepartureChecklists: 'read_web_offline_checklists',
   inventory: 'read_web_offline_inventory_items',
   pumpOutLogs: 'read_web_offline_pump_out_logs',
@@ -66,6 +69,7 @@ const readFunctions = {
   rules: 'read_web_offline_rules',
 };
 const syncFunctions = {
+  crewLeave: 'sync_web_offline_crew_leave',
   preDepartureChecklists: 'sync_web_offline_checklist',
   inventory: 'sync_web_offline_inventory_item',
   pumpOutLogs: 'sync_web_offline_pump_out_log',
@@ -300,6 +304,27 @@ async function refreshNotes(a: Active) {
     sameActive(a);
     state.shipyardFolders = folders.data;
   });
+  const roster = await supabase.rpc('read_web_offline_crew_roster', {
+    p_vessel_id: a.scope.vesselId,
+    p_device_id: a.scope.deviceId,
+  });
+  sameActive(a);
+  if (roster.error) throw roster.error;
+  if (
+    !Array.isArray(roster.data) ||
+    roster.data.some(
+      (m: RecordValue) =>
+        m.vessel_id !== a.scope.vesselId ||
+        typeof m.id !== 'string' ||
+        typeof m.name !== 'string' ||
+        typeof m.position !== 'string'
+    )
+  )
+    throw new OfflineError('INVALID_SNAPSHOT');
+  await a.store.update(a.scope, (state) => {
+    sameActive(a);
+    state.crewRoster = roster.data;
+  });
   for (const feature of Object.keys(adapters) as SupportedFeature[]) {
     if (!a.permit?.claims.permissions[feature]?.includes('read')) continue;
     sameActive(a);
@@ -530,33 +555,35 @@ export async function keepBothNoteCopies(operationId: string): Promise<void> {
           created_at: now,
           updated_at: now,
         }
-      : change.feature === 'preDepartureChecklists'
-        ? checklistDeviceCopy(latest.value, id, a.scope.userId)
-        : change.feature === 'inventory'
-          ? inventoryDeviceCopy(latest.value, id)
-          : change.feature === 'uniforms' ||
-              change.feature === 'pumpOutLogs' ||
-              change.feature === 'generalWasteLogs'
-            ? vesselRecordDeviceCopy(
-                change.feature,
-                latest.value,
-                id,
-                a.scope.userId,
-                useAuthStore.getState().user?.name ?? ''
-              )
-            : change.feature === 'maintenanceLogs'
-              ? maintenanceDeviceCopy(latest.value, id)
-              : change.feature === 'tasks'
-                ? taskDeviceCopy(latest.value, id, a.scope.userId)
-                : change.feature === 'yardJobs'
-                  ? yardJobDeviceCopy(latest.value, id, a.scope.userId)
-                  : change.feature === 'trips'
-                    ? tripDeviceCopy(latest.value, id, a.scope.userId)
-                    : change.feature === 'contractors'
-                      ? contractorDeviceCopy(latest.value, id, a.scope.userId)
-                      : change.feature === 'shoppingLists'
-                        ? shoppingDeviceCopy(latest.value, id, a.scope.userId)
-                        : publicationDeviceCopy(latest.value, id, a.scope.userId);
+      : change.feature === 'crewLeave'
+        ? crewLeaveDeviceCopy(latest.value, id, a.scope.userId)
+        : change.feature === 'preDepartureChecklists'
+          ? checklistDeviceCopy(latest.value, id, a.scope.userId)
+          : change.feature === 'inventory'
+            ? inventoryDeviceCopy(latest.value, id)
+            : change.feature === 'uniforms' ||
+                change.feature === 'pumpOutLogs' ||
+                change.feature === 'generalWasteLogs'
+              ? vesselRecordDeviceCopy(
+                  change.feature,
+                  latest.value,
+                  id,
+                  a.scope.userId,
+                  useAuthStore.getState().user?.name ?? ''
+                )
+              : change.feature === 'maintenanceLogs'
+                ? maintenanceDeviceCopy(latest.value, id)
+                : change.feature === 'tasks'
+                  ? taskDeviceCopy(latest.value, id, a.scope.userId)
+                  : change.feature === 'yardJobs'
+                    ? yardJobDeviceCopy(latest.value, id, a.scope.userId)
+                    : change.feature === 'trips'
+                      ? tripDeviceCopy(latest.value, id, a.scope.userId)
+                      : change.feature === 'contractors'
+                        ? contractorDeviceCopy(latest.value, id, a.scope.userId)
+                        : change.feature === 'shoppingLists'
+                          ? shoppingDeviceCopy(latest.value, id, a.scope.userId)
+                          : publicationDeviceCopy(latest.value, id, a.scope.userId);
   await a.box.forkConflict(operationId, id, copy);
   notifyNotes();
   await checkOfflineAccess();

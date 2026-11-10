@@ -241,6 +241,7 @@ export interface TripPreference {
 export type CrewLeaveType = 'ANNUAL' | 'SICK' | 'ROTATION' | 'OTHER';
 
 export interface CrewLeave {
+  offlineLocalVersion?: number;
   id: string;
   vesselId: string;
   crewMemberId: string | null;

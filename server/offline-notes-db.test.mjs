@@ -1,3 +1,5 @@
+import { runCrewLeaveChecks } from "./offline-crew-leave-db-cases.mjs";
+import { installCrewLeave } from "./offline-crew-leave-fixture.mjs";
 import { runChecklistChecks } from "./offline-checklists-db-cases.mjs";
 import { installChecklists } from "./offline-checklists-fixture.mjs";
 import { installInventory } from "./offline-inventory-fixture.mjs";
@@ -1087,6 +1089,8 @@ test("real isolated PostgreSQL offline note protocol", async (t) => {
     );
     installChecklists(sql, baseline, migration);
     await runChecklistChecks(t, { sql, run, user, vessel, device });
+    installCrewLeave(sql, migration);
+    await runCrewLeaveChecks(t, { sql, run, user, vessel, device });
     let first;
     await t.test("grant binds session and caps access at seven days", () => {
       const c = JSON.parse(

@@ -28,6 +28,7 @@ export type PendingChange = OfflineMutation & {
 export type Partition = {
   drafts?: Partial<Record<OfflineFeature, { value: RecordValue; version: number }>>;
   vesselLabel?: string;
+  crewRoster?: RecordValue[];
   tripColors?: RecordValue | null;
   shipyardFolders?: { folders: RecordValue[]; assignments: RecordValue[] };
   snapshots?: Partial<Record<OfflineFeature, boolean>>;

@@ -1,6 +1,8 @@
+import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
+import type { LeaveCrewMember } from '../services/crewLeave';
 /** Create or edit a crew leave date range. */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -19,9 +21,8 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { CREW_LEAVE_COLORS, CREW_LEAVE_LABELS, CREW_LEAVE_TYPES } from '../constants/crewLeave';
 import { useThemeColors } from '../hooks/useThemeColors';
 import crewLeaveService from '../services/crewLeave';
-import userService from '../services/user';
 import { useAuthStore } from '../store';
-import type { CrewLeaveType, User } from '../types';
+import type { CrewLeaveType } from '../types';
 import { formatLocalDateString, parseLocalDate, toYYYYMMDD } from '../utils';
 
 type PickerMode = 'crew' | 'type' | null;
@@ -47,7 +48,10 @@ export const AddEditCrewLeaveScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const leaveId = route.params?.leaveId as string | undefined;
-  const [crew, setCrew] = useState<User[]>([]);
+  const busyRef = useRef(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [offlineVersion, setOfflineVersion] = useState<number | undefined>();
+  const [crew, setCrew] = useState<LeaveCrewMember[]>([]);
   const [crewMemberId, setCrewMemberId] = useState<string | null>(null);
   const [leaveType, setLeaveType] = useState<CrewLeaveType>('ANNUAL');
   const [startDate, setStartDate] = useState<string | null>(null);
@@ -74,18 +78,21 @@ export const AddEditCrewLeaveScreen = ({ navigation, route }: any) => {
       }
       try {
         const [members, existing] = await Promise.all([
-          userService.getVesselCrew(vesselId),
+          crewLeaveService.getCrew(vesselId),
           leaveId ? crewLeaveService.getById(leaveId) : Promise.resolve(null),
         ]);
         if (!active) return;
         setCrew(members);
+        setLoadFailed(false);
         if (leaveId && !existing) {
+          setLoadFailed(true);
           Alert.alert('Not found', 'This crew leave record is no longer available.', [
-            { text: 'OK', onPress: () => navigation.goBack() },
+            { text: 'OK', onPress: () => returnToPreviousPage(navigation) },
           ]);
           return;
         }
         if (existing) {
+          setOfflineVersion(existing.offlineLocalVersion);
           setCrewMemberId(existing.crewMemberId);
           setLeaveType(existing.leaveType);
           setStartDate(existing.startDate);
@@ -94,6 +101,7 @@ export const AddEditCrewLeaveScreen = ({ navigation, route }: any) => {
           setDateSelectionStep('start');
         }
       } catch (error) {
+        setLoadFailed(true);
         console.error('Load crew leave form error:', error);
         Alert.alert('Error', 'Crew leave details could not be loaded.');
       } finally {
@@ -123,20 +131,26 @@ export const AddEditCrewLeaveScreen = ({ navigation, route }: any) => {
   };
 
   const handleSave = async () => {
+    if (!canManage || busyRef.current || loadFailed) return;
     if (!vesselId || !crewMemberId || !startDate || !endDate) {
       Alert.alert('Missing information', 'Select a crew member and their start and end dates.');
       return;
     }
+    busyRef.current = true;
     setSaving(true);
     try {
       if (leaveId) {
-        await crewLeaveService.update(leaveId, {
-          crewMemberId,
-          leaveType,
-          startDate,
-          endDate,
-          notes,
-        });
+        await crewLeaveService.update(
+          leaveId,
+          {
+            crewMemberId,
+            leaveType,
+            startDate,
+            endDate,
+            notes,
+          },
+          offlineVersion
+        );
       } else {
         await crewLeaveService.create({
           vesselId,
@@ -147,11 +161,12 @@ export const AddEditCrewLeaveScreen = ({ navigation, route }: any) => {
           notes,
         });
       }
-      navigation.goBack();
+      returnToPreviousPage(navigation);
     } catch (error) {
       console.error('Save crew leave error:', error);
       Alert.alert('Could not save crew leave', 'Check the details and try again.');
     } finally {
+      busyRef.current = false;
       setSaving(false);
     }
   };

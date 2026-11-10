@@ -56,6 +56,7 @@ self.addEventListener('fetch', (event) => {
       '/logs/general-waste/edit': 'logId',
       '/uniforms/edit': 'uniformId',
       '/inventory/edit': 'itemId',
+      '/crew-leave/edit': 'leaveId',
       '/pre-departure/edit': 'checklistId',
       '/pre-departure/view': 'checklistId',
       '/safety/equipment/create': 'equipmentId',

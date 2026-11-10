@@ -1,3 +1,7 @@
+import { offlineCrewLeave } from '../offline/crewLeaveService';
+import { selectOfflineLeavePage } from '../offline/crewLeaveQueries';
+import userService from './user';
+import type { User } from '../types';
 import { supabase } from './supabase';
 import { requireAffectedRows } from './mutationResult';
 import type { CrewLeave, CrewLeaveType, Department } from '../types';
@@ -62,7 +66,18 @@ function isMissingDepartmentSnapshot(error: unknown): boolean {
   );
 }
 
+export type LeaveCrewMember = Pick<User, 'id' | 'name' | 'position' | 'role'>;
 class CrewLeaveService {
+  subscribe = offlineCrewLeave.subscribe;
+  async getCrew(vesselId: string): Promise<LeaveCrewMember[]> {
+    if (!offlineCrewLeave.enabled()) return userService.getVesselCrew(vesselId);
+    return (await offlineCrewLeave.roster(vesselId)).map((m) => ({
+      id: String(m.id),
+      name: String(m.name),
+      position: String(m.position),
+      role: m.role as User['role'],
+    }));
+  }
   private mapRow(row: any): CrewLeave {
     const crewMember = Array.isArray(row.crew_member) ? row.crew_member[0] : row.crew_member;
     const snapshotDepartments = Array.isArray(row.crew_member_departments_snapshot)
@@ -70,6 +85,7 @@ class CrewLeaveService {
       : [];
     const liveDepartments = [crewMember?.department, crewMember?.department_2].filter(isDepartment);
     return {
+      offlineLocalVersion: row.offlineLocalVersion,
       id: row.id,
       vesselId: row.vessel_id,
       crewMemberId: row.crew_member_id ?? null,
@@ -109,6 +125,10 @@ class CrewLeaveService {
     const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Math.trunc(requestedPageSize)));
     const safeOffset = Math.max(0, Math.trunc(offset));
 
+    if (offlineCrewLeave.enabled()) {
+      const rows = (await offlineCrewLeave.list(vesselId)).map((row) => this.mapRow(row));
+      return selectOfflineLeavePage(rows, { ...filters, asOfDate }, safeOffset, pageSize);
+    }
     const buildQuery = (includeDepartment: boolean) => {
       let query = supabase.from('crew_leave').select(SELECT_WITH_CREW).eq('vessel_id', vesselId);
 
@@ -177,6 +197,15 @@ class CrewLeaveService {
     windowStart: string,
     windowEnd: string
   ): Promise<CrewLeaveCalendarEntry[]> {
+    if (offlineCrewLeave.enabled())
+      return (await offlineCrewLeave.list(vesselId))
+        .filter((r) => String(r.start_date) <= windowEnd && String(r.end_date) >= windowStart)
+        .map((r) => ({
+          id: String(r.id),
+          leaveType: r.leave_type as CrewLeaveType,
+          startDate: String(r.start_date),
+          endDate: String(r.end_date),
+        }));
     const { data, error } = await supabase
       .from('crew_leave')
       .select('id, leave_type, start_date, end_date')
@@ -194,6 +223,10 @@ class CrewLeaveService {
   }
 
   async getById(id: string): Promise<CrewLeave | null> {
+    if (offlineCrewLeave.enabled()) {
+      const row = await offlineCrewLeave.read(id);
+      return row ? this.mapRow(row) : null;
+    }
     const { data, error } = await supabase
       .from('crew_leave')
       .select(SELECT_WITH_CREW)
@@ -204,6 +237,17 @@ class CrewLeaveService {
   }
 
   async create(input: CreateCrewLeaveData): Promise<CrewLeave> {
+    if (offlineCrewLeave.enabled())
+      return this.mapRow(
+        await offlineCrewLeave.create({
+          vessel_id: input.vesselId,
+          crew_member_id: input.crewMemberId,
+          leave_type: input.leaveType,
+          start_date: input.startDate,
+          end_date: input.endDate,
+          notes: input.notes?.trim() || '',
+        })
+      );
     const { data: authData } = await supabase.auth.getUser();
     if (!authData.user) throw new Error('You must be signed in to publish crew leave.');
 
@@ -227,14 +271,18 @@ class CrewLeaveService {
     return created;
   }
 
-  async update(id: string, input: UpdateCrewLeaveData): Promise<void> {
-    const patch: Record<string, unknown> = {};
+  async update(id: string, input: UpdateCrewLeaveData, version?: number): Promise<void> {
+    const patch: Record<string, string> = {};
     if (input.crewMemberId !== undefined) patch.crew_member_id = input.crewMemberId;
     if (input.leaveType !== undefined) patch.leave_type = input.leaveType;
     if (input.startDate !== undefined) patch.start_date = input.startDate;
     if (input.endDate !== undefined) patch.end_date = input.endDate;
     if (input.notes !== undefined) patch.notes = input.notes.trim();
 
+    if (offlineCrewLeave.enabled()) {
+      await offlineCrewLeave.update(id, patch, version);
+      return;
+    }
     const { data, error } = await supabase
       .from('crew_leave')
       .update(patch)
@@ -245,8 +293,10 @@ class CrewLeaveService {
   }
 
   async delete(id: string): Promise<void> {
+    if (offlineCrewLeave.enabled()) await offlineCrewLeave.beforeDelete(id);
     const { data, error } = await supabase.from('crew_leave').delete().eq('id', id).select('id');
     requireAffectedRows(data, error, 'Deleting crew leave');
+    if (offlineCrewLeave.enabled()) await offlineCrewLeave.refresh();
   }
 }
 

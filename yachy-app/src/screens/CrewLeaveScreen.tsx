@@ -198,7 +198,9 @@ export const CrewLeaveScreen = ({ navigation }: any) => {
   useFocusEffect(
     useCallback(() => {
       void loadLeave('replace');
+      const unsubscribe = crewLeaveService.subscribe(() => void loadLeave('replace'));
       return () => {
+        unsubscribe();
         requestIdRef.current += 1;
       };
     }, [loadLeave])
