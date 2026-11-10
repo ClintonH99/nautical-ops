@@ -21,8 +21,6 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import userService from '../services/user';
-import { User } from '../types';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -35,7 +33,12 @@ import {
   TimePickerTrigger,
 } from '../components';
 import {
-  getRules,
+  getRulesEditor,
+  watchDutiesOfflineEnabled,
+  subscribeWatchDuties,
+  getDutyCrew,
+  DutyCrewMember,
+  createDutyGroupWithItems,
   saveRules,
   getWeekAssignments,
   WatchAssignment,
@@ -43,10 +46,8 @@ import {
   setItemChecked,
   DutyGroup,
   Department,
-  createDutyGroup,
   deleteDutyGroup,
   addDutyItem,
-  addDutyItems,
   deleteDutyItem,
   addWatchAssignment,
   removeWatchAssignment,
@@ -104,7 +105,7 @@ interface WatchDutiesCacheEntry {
   rules: string;
   assignments: WatchAssignment[];
   dutyGroups: DutyGroup[];
-  crewList: User[];
+  crewList: DutyCrewMember[];
 }
 
 const watchDutiesCache = new Map<string, WatchDutiesCacheEntry>();
@@ -120,8 +121,15 @@ export const WatchDutiesScreen = () => {
     user?.vesselId && user.id
       ? `${user.vesselId}:${user.id}:${canManage ? 'manage' : 'view'}:${weekStart}`
       : null;
-  const cachedData = contextKey ? watchDutiesCache.get(contextKey) : undefined;
+  const cachedData =
+    contextKey && !watchDutiesOfflineEnabled() ? watchDutiesCache.get(contextKey) : undefined;
 
+  const rulesVersion = useRef(0);
+  const editingRulesVersion = useRef(0);
+  const savingRulesRef = useRef(false);
+  const savingGroupRef = useRef(false);
+  const addingItemRef = useRef(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [rules, setRules] = useState(cachedData?.rules ?? '');
   const [editingRules, setEditingRules] = useState(false);
   const [rulesDraft, setRulesDraft] = useState('');
@@ -137,7 +145,7 @@ export const WatchDutiesScreen = () => {
   const [addingItemGroupId, setAddingItemGroupId] = useState<string | null>(null);
   const [newItemText, setNewItemText] = useState('');
   const [savingGroup, setSavingGroup] = useState(false);
-  const [crewList, setCrewList] = useState<User[]>(cachedData?.crewList ?? []);
+  const [crewList, setCrewList] = useState<DutyCrewMember[]>(cachedData?.crewList ?? []);
   const [assignModalVisible, setAssignModalVisible] = useState(false);
   const [assignDate, setAssignDate] = useState<string | null>(null);
   const [crewPickerVisible, setCrewPickerVisible] = useState(false);
@@ -182,7 +190,9 @@ export const WatchDutiesScreen = () => {
       setAssignments((current) => {
         const next = typeof update === 'function' ? update(current) : update;
         if (contextKey) {
-          const cached = watchDutiesCache.get(contextKey);
+          const cached = !watchDutiesOfflineEnabled()
+            ? watchDutiesCache.get(contextKey)
+            : undefined;
           if (cached) watchDutiesCache.set(contextKey, { ...cached, assignments: next });
         }
         return next;
@@ -207,7 +217,7 @@ export const WatchDutiesScreen = () => {
     if (!user?.vesselId || !user.id || !contextKey) return;
     if (loadedContextRef.current !== contextKey) {
       loadedContextRef.current = contextKey;
-      const cached = watchDutiesCache.get(contextKey);
+      const cached = !watchDutiesOfflineEnabled() ? watchDutiesCache.get(contextKey) : undefined;
       setRules(cached?.rules ?? '');
       setAssignments(cached?.assignments ?? []);
       replaceDutyGroups(cached?.dutyGroups ?? []);
@@ -215,21 +225,24 @@ export const WatchDutiesScreen = () => {
     }
     try {
       const [rulesData, assignmentData, dutyData, crewData] = await Promise.all([
-        getRules(user.vesselId),
+        getRulesEditor(user.vesselId),
         getWeekAssignments(user.vesselId, weekStart),
         getDutyGroups(user.vesselId, user.id),
-        canManage ? userService.getVesselCrew(user.vesselId) : Promise.resolve([] as User[]),
+        canManage ? getDutyCrew(user.vesselId) : Promise.resolve([] as DutyCrewMember[]),
       ]);
 
-      watchDutiesCache.set(contextKey, {
-        rules: rulesData,
-        assignments: assignmentData,
-        dutyGroups: dutyData,
-        crewList: crewData,
-      });
+      if (!watchDutiesOfflineEnabled())
+        watchDutiesCache.set(contextKey, {
+          rules: rulesData.content,
+          assignments: assignmentData,
+          dutyGroups: dutyData,
+          crewList: crewData,
+        });
       if (!mountedRef.current) return;
 
-      setRules(rulesData);
+      setLoadError(null);
+      rulesVersion.current = rulesData.version;
+      setRules(rulesData.content);
       setAssignments(assignmentData);
       confirmedDutyStatesRef.current = new Map(
         dutyData.flatMap((group) => group.items.map((item) => [item.id, item.checked] as const))
@@ -237,6 +250,7 @@ export const WatchDutiesScreen = () => {
       replaceDutyGroups(dutyData);
       setCrewList(crewData);
     } catch (e) {
+      setLoadError('Watch duties could not be loaded. Reconnect and refresh before editing.');
       console.error('Load Watch Duties error:', e);
     }
   }, [canManage, contextKey, replaceDutyGroups, user?.id, user?.vesselId, weekStart]);
@@ -245,6 +259,20 @@ export const WatchDutiesScreen = () => {
     useCallback(() => {
       loadData();
     }, [loadData])
+  );
+
+  useEffect(
+    () =>
+      subscribeWatchDuties(() => {
+        if (
+          !savingDutyItemIdsRef.current.size &&
+          !savingGroupRef.current &&
+          !addingItemRef.current &&
+          !savingRulesRef.current
+        )
+          void loadData();
+      }),
+    [loadData]
   );
 
   const filteredGroups =
@@ -271,7 +299,12 @@ export const WatchDutiesScreen = () => {
           if (checked === undefined) continue;
 
           try {
-            await setItemChecked(userId, itemId, checked);
+            await setItemChecked(
+              userId,
+              itemId,
+              checked,
+              confirmedDutyStatesRef.current.get(itemId) ?? false
+            );
             confirmedDutyStatesRef.current.set(itemId, checked);
           } catch (error) {
             console.error('Toggle duty item error:', error);
@@ -293,7 +326,7 @@ export const WatchDutiesScreen = () => {
   );
 
   const handleToggleItem = (itemId: string) => {
-    if (!user?.id) return;
+    if (!user?.id || loadError) return;
 
     const latestItem = dutyGroupsRef.current
       .flatMap((group) => group.items)
@@ -307,7 +340,7 @@ export const WatchDutiesScreen = () => {
   };
 
   const openAssignModal = (dateStr: string) => {
-    if (!canManage) return;
+    if (!canManage || loadError) return;
     setAssignDate(dateStr);
     setSelectedCrewId(null);
     setAssignStartTime('18:00');
@@ -488,34 +521,20 @@ export const WatchDutiesScreen = () => {
     if (!user?.vesselId || !title) return;
 
     const itemLabels = newGroupItems.map((item) => item.trim()).filter(Boolean);
-    let createdGroupId: string | null = null;
+    if (savingGroupRef.current || loadError) return;
+    savingGroupRef.current = true;
     setSavingGroup(true);
     try {
-      createdGroupId = await createDutyGroup(user.vesselId, title, newGroupDept);
-      const createdItems = await addDutyItems(createdGroupId, itemLabels);
-      createdItems.forEach((item) => confirmedDutyStatesRef.current.set(item.id, false));
-      replaceDutyGroups([
-        ...dutyGroupsRef.current,
-        {
-          id: createdGroupId,
-          title,
-          department: newGroupDept,
-          items: createdItems,
-        },
-      ]);
+      const group = await createDutyGroupWithItems(user.vesselId, title, newGroupDept, itemLabels);
+      group.items.forEach((item) => confirmedDutyStatesRef.current.set(item.id, false));
+      replaceDutyGroups([...dutyGroupsRef.current, group]);
       setNewGroupTitle('');
       setNewGroupItems(['']);
       setAddGroupModalVisible(false);
     } catch (e) {
-      if (createdGroupId) {
-        try {
-          await deleteDutyGroup(createdGroupId);
-        } catch (cleanupError) {
-          console.error('Clean up duty group error:', cleanupError);
-        }
-      }
-      Alert.alert('Error', 'Failed to create duty group.');
+      Alert.alert('Error', 'Failed to create duty group. Your form is still here.');
     } finally {
+      savingGroupRef.current = false;
       setSavingGroup(false);
     }
   };
@@ -540,11 +559,23 @@ export const WatchDutiesScreen = () => {
 
   const handleAddItem = async (groupId: string) => {
     const label = newItemText.trim();
-    if (!label) return;
+    if (!label || loadError || addingItemRef.current) return;
+    addingItemRef.current = true;
     const group = dutyGroups.find((g) => g.id === groupId);
     const sortOrder = group ? group.items.length : 0;
     try {
-      const itemId = await addDutyItem(groupId, label, sortOrder);
+      const itemId = await addDutyItem(
+        groupId,
+        label,
+        sortOrder,
+        group?.offlineLocalVersion,
+        user?.vesselId
+      );
+      if (watchDutiesOfflineEnabled()) {
+        await loadData();
+        setNewItemText('');
+        return;
+      }
       setDutyGroups((prev) =>
         prev.map((g) =>
           g.id === groupId
@@ -566,7 +597,9 @@ export const WatchDutiesScreen = () => {
       setNewItemText('');
       // Field stays open so several duties can be typed one after another.
     } catch (e) {
-      Alert.alert('Error', 'Failed to add item.');
+      Alert.alert('Error', 'Failed to add item. Refresh duties before retrying.');
+    } finally {
+      addingItemRef.current = false;
     }
   };
 
@@ -593,15 +626,19 @@ export const WatchDutiesScreen = () => {
   };
 
   const handleSaveRules = async () => {
-    if (!user?.vesselId) return;
+    if (!user?.vesselId || loadError || savingRulesRef.current) return;
+    savingRulesRef.current = true;
     setSavingRules(true);
     try {
-      await saveRules(user.vesselId, rulesDraft);
+      await saveRules(user.vesselId, rulesDraft, editingRulesVersion.current);
+      const fresh = await getRulesEditor(user.vesselId);
+      rulesVersion.current = fresh.version;
       setRules(rulesDraft);
       setEditingRules(false);
     } catch (e) {
       Alert.alert('Error', 'Failed to save rules.');
     } finally {
+      savingRulesRef.current = false;
       setSavingRules(false);
     }
   };
@@ -613,6 +650,11 @@ export const WatchDutiesScreen = () => {
       keyboardVerticalOffset={0}
     >
       <PageHeader title="Watch Duties" info={WATCH_DUTIES_INFO} infoScreenKey="watch_duties" />
+      {loadError && (
+        <Text accessibilityRole="alert" style={{ color: themeColors.textPrimary, padding: 16 }}>
+          {loadError}
+        </Text>
+      )}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -992,6 +1034,7 @@ export const WatchDutiesScreen = () => {
           {canManage && !editingRules ? (
             <PreviewActionButtons
               onEdit={() => {
+                editingRulesVersion.current = rulesVersion.current;
                 setRulesDraft(rules);
                 setEditingRules(true);
               }}

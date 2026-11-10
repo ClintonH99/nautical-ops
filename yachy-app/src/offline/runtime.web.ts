@@ -1,3 +1,4 @@
+import { watchDutiesAdapter } from './watchDutiesAdapter';
 import { restAdapter } from './restAdapter';
 import { watchKeepingAdapter, watchRulesAdapter, watchDeviceCopy } from './watchKeepingAdapter';
 import { crewLeaveAdapter, crewLeaveDeviceCopy } from './crewLeaveAdapter';
@@ -33,6 +34,11 @@ import { yardJobsAdapter, yardJobDeviceCopy } from './yardJobsAdapter';
 import { tripsAdapter, tripDeviceCopy } from './tripsAdapter';
 import { contractorsAdapter, contractorDeviceCopy } from './contractorsAdapter';
 const adapters = {
+  watchDuties: watchDutiesAdapter('watchDuties'),
+  watchDutyRules: watchDutiesAdapter('watchDutyRules'),
+  watchDutyChecks: watchDutiesAdapter('watchDutyChecks'),
+  watchAssignments: watchDutiesAdapter('watchAssignments'),
+
   restEntries: restAdapter(false),
   restReview: restAdapter(true),
   watchKeeping: watchKeepingAdapter,
@@ -56,6 +62,11 @@ const adapters = {
   musterStations: publicationsAdapter,
 };
 const readFunctions = {
+  watchDuties: 'read_web_offline_watch_duties',
+  watchDutyRules: 'read_web_offline_watch_duty_rules',
+  watchDutyChecks: 'read_web_offline_watch_duty_checks',
+  watchAssignments: 'read_web_offline_watch_assignments',
+
   restEntries: 'read_web_offline_rest_entries',
   restReview: 'read_web_offline_rest_review',
   watchKeeping: 'read_web_offline_watch_keeping',
@@ -79,6 +90,11 @@ const readFunctions = {
   rules: 'read_web_offline_rules',
 };
 const syncFunctions = {
+  watchDuties: 'sync_web_offline_watch_duties',
+  watchDutyRules: 'sync_web_offline_watch_duty_rules',
+  watchDutyChecks: 'sync_web_offline_watch_duty_checks',
+  watchAssignments: 'sync_web_offline_watch_assignments',
+
   restEntries: 'sync_web_offline_rest_entries',
   restReview: 'sync_web_offline_rest_entries',
   watchKeeping: 'sync_web_offline_watch_keeping',
@@ -215,7 +231,15 @@ export async function checkOfflineAccess(): Promise<boolean> {
         .filter((change) => change.state === 'conflict')
         .map((change) => ({
           id: change.id,
-          canFork: !['watchKeepingRules', 'restEntries', 'restReview'].includes(change.feature),
+          canFork: ![
+            'watchKeepingRules',
+            'restEntries',
+            'restReview',
+            'watchDutyRules',
+            'watchDutyChecks',
+            'watchDuties',
+            'watchAssignments',
+          ].includes(change.feature),
           title: String(
             change.value.title ??
               change.value.watch_title ??
@@ -570,7 +594,17 @@ export async function keepBothNoteCopies(operationId: string): Promise<void> {
     (item) => item.id === operationId && item.state === 'conflict'
   );
   if (!change) throw new OfflineError('CONFLICT_CHANGED');
-  if (['watchKeepingRules', 'restEntries', 'restReview'].includes(change.feature))
+  if (
+    [
+      'watchKeepingRules',
+      'restEntries',
+      'restReview',
+      'watchDutyRules',
+      'watchDutyChecks',
+      'watchDuties',
+      'watchAssignments',
+    ].includes(change.feature)
+  )
     throw new OfflineError('RECONCILE_FIRST');
   const latest = await a.box.read(change.feature, change.recordId);
   if (!latest) throw new OfflineError('CONFLICT_CHANGED');

@@ -191,3 +191,29 @@ HOURS OF REST checkpoint — 10 November 2026 (local only)
 - Unresolved conflicts remain intact, never auto-copied into another rest day.
   Manual reconciliation, offline PDF/signature export and whole-app release gate
   remain. No hosted migrations, push, deployment or activation performed.
+
+WATCH DUTIES checkpoint — 10 November 2026 (local only)
+- Shared groups/items, rules, personal checkmarks and watch assignments have
+  separate adapters and signed capabilities. Captain/MOV and HOD manage shared
+  records; checkmarks are strictly the current user even for managers.
+- Group/item writes and receipt are atomic. Existing child deletion is rejected;
+  rules/checkmarks are singleton records. Current RLS, membership and manager
+  role are rechecked, assignments require current vessel crew, timestamps are
+  server-set, stale rows and child collisions retain local work.
+- Rules capture the loaded revision. Cached roster replaces online crew lookup;
+  legacy unpartitioned module cache is skipped. Deletes/resets remain online and
+  refuse pending duty changes. No duty completion reset occurs automatically.
+- 208 combined Node checks and 46 disposable PostgreSQL checks passed, plus
+  TypeScript, scoped ESLint (zero errors, six existing unused-catch warnings)
+  and full web export. Browser :55905: HTTP stopped, rules/group/own check/
+  overnight assignment saved; reload retained all; another item appended;
+  reconnect + explicit Retry Sync saved 1 group/2 items/1 personal check/1 rules
+  row/1 assignment with exactly 4 receipts. No real notifications sent.
+  Evidence nautical-offline-app-0hKVC0/result.json and
+  /private/tmp/nautical-offline-duties-pending.png,
+  /private/tmp/nautical-offline-duties-synced.png.
+- Nineteen business areas integrated locally. Whole-app scope remains incomplete:
+  Sea Miles, Fuel, private attachments/PDFs, singleton conflict recovery,
+  storage failure fallback, old-session unfinished drafts and release gate.
+  Duty conflicts are retained with no blind copy/overwrite. No hosted schema,
+  signing configuration, push, deployment or live activation performed.

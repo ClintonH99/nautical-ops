@@ -1,3 +1,7 @@
+import { offlineDuties } from '../offline/watchDutiesService';
+import type { RecordValue } from '../offline/outbox';
+import type { User } from '../types';
+import userService from './user';
 /**
  * Watch Duties
  * Rules, department-tagged duty groups with a personal checklist per
@@ -20,6 +24,7 @@ export interface DutyItem {
 }
 
 export interface DutyGroup {
+  offlineLocalVersion?: number;
   id: string;
   title: string;
   department: Department;
@@ -35,9 +40,65 @@ export interface WatchAssignment {
   endTime: string;
 }
 
+export const watchDutiesOfflineEnabled = offlineDuties.enabled;
+export const subscribeWatchDuties = offlineDuties.subscribe;
+export type DutyCrewMember = Pick<User, 'id' | 'name'>;
+export async function getDutyCrew(vesselId: string): Promise<DutyCrewMember[]> {
+  if (!offlineDuties.enabled()) return userService.getVesselCrew(vesselId);
+  return (await offlineDuties.roster(vesselId)).map((u) => ({
+    id: String(u.id),
+    name: String(u.name),
+  }));
+}
+function mapGroup(g: RecordValue, checks: RecordValue[] = []): DutyGroup {
+  return {
+    id: String(g.id),
+    title: String(g.title),
+    department: g.department as Department,
+    offlineLocalVersion: Number(g.offlineLocalVersion),
+    items: (g.items as RecordValue[]).map((i) => ({
+      id: String(i.id),
+      label: String(i.label),
+      sortOrder: Number(i.sort_order),
+      checked: checks.find((c) => c.item_id === i.id)?.checked === true,
+    })),
+  };
+}
+export async function getRulesEditor(
+  vesselId: string
+): Promise<{ content: string; version: number }> {
+  if (!offlineDuties.enabled()) return { content: await getRules(vesselId), version: 0 };
+  const r = (await offlineDuties.list('watchDutyRules', vesselId))[0];
+  return { content: String(r?.content ?? ''), version: Number(r?.offlineLocalVersion ?? 0) };
+}
+export async function createDutyGroupWithItems(
+  vesselId: string,
+  title: string,
+  department: Department,
+  labels: string[]
+): Promise<DutyGroup> {
+  if (offlineDuties.enabled())
+    return mapGroup(
+      await offlineDuties.create('watchDuties', {
+        vessel_id: vesselId,
+        title,
+        department,
+        items: labels.map((label) => ({ label })),
+      })
+    );
+  const id = await createDutyGroup(vesselId, title, department);
+  try {
+    return { id, title, department, items: await addDutyItems(id, labels) };
+  } catch (e) {
+    await deleteDutyGroup(id);
+    throw e;
+  }
+}
+
 // ---- Rules ----
 
 export async function getRules(vesselId: string): Promise<string> {
+  if (offlineDuties.enabled()) return (await getRulesEditor(vesselId)).content;
   const { data } = await supabase
     .from('watch_duty_rules')
     .select('content')
@@ -46,7 +107,17 @@ export async function getRules(vesselId: string): Promise<string> {
   return data?.content ?? '';
 }
 
-export async function saveRules(vesselId: string, content: string): Promise<void> {
+export async function saveRules(
+  vesselId: string,
+  content: string,
+  version?: number
+): Promise<void> {
+  if (offlineDuties.enabled()) {
+    if (version === 0)
+      await offlineDuties.create('watchDutyRules', { vessel_id: vesselId, content });
+    else await offlineDuties.update('watchDutyRules', vesselId, { content }, version);
+    return;
+  }
   const { error } = await supabase
     .from('watch_duty_rules')
     .upsert({ vessel_id: vesselId, content, updated_at: new Date().toISOString() });
@@ -56,6 +127,14 @@ export async function saveRules(vesselId: string, content: string): Promise<void
 // ---- Duty groups and items ----
 
 export async function getDutyGroups(vesselId: string, userId: string): Promise<DutyGroup[]> {
+  if (offlineDuties.enabled()) {
+    const [groups, checks] = await Promise.all([
+      offlineDuties.list('watchDuties', vesselId),
+      offlineDuties.list('watchDutyChecks', vesselId),
+    ]);
+    if (checks.some((c) => c.user_id !== userId)) throw new Error('Account changed');
+    return groups.map((g) => mapGroup(g, checks));
+  }
   const { data: groups } = await supabase
     .from('watch_duty_groups')
     .select('id, title, department')
@@ -102,6 +181,8 @@ export async function createDutyGroup(
   title: string,
   department: Department
 ): Promise<string> {
+  if (offlineDuties.enabled())
+    return (await createDutyGroupWithItems(vesselId, title, department, [])).id;
   const { data, error } = await supabase
     .from('watch_duty_groups')
     .insert({ vessel_id: vesselId, title, department })
@@ -112,6 +193,7 @@ export async function createDutyGroup(
 }
 
 export async function deleteDutyGroup(groupId: string): Promise<void> {
+  if (offlineDuties.enabled()) await offlineDuties.beforeDelete();
   const { data, error } = await supabase
     .from('watch_duty_groups')
     .delete()
@@ -123,8 +205,35 @@ export async function deleteDutyGroup(groupId: string): Promise<void> {
 export async function addDutyItem(
   groupId: string,
   label: string,
-  sortOrder: number
+  sortOrder: number,
+  version?: number,
+  vesselId?: string
 ): Promise<string> {
+  if (offlineDuties.enabled()) {
+    if (!vesselId) throw new Error('Vessel required');
+    const g = (await offlineDuties.list('watchDuties', vesselId)).find((g) => g.id === groupId);
+    if (!g) throw new Error('Duty group not downloaded');
+    const items = g.items as RecordValue[],
+      id = crypto.randomUUID();
+    await offlineDuties.update(
+      'watchDuties',
+      groupId,
+      {
+        items: [
+          ...items,
+          {
+            id,
+            group_id: groupId,
+            label,
+            sort_order: Math.max(-1, ...items.map((i) => Number(i.sort_order))) + 1,
+            created_at: new Date().toISOString(),
+          },
+        ],
+      },
+      version
+    );
+    return id;
+  }
   const { data, error } = await supabase
     .from('watch_duty_items')
     .insert({ group_id: groupId, label, sort_order: sortOrder })
@@ -135,6 +244,7 @@ export async function addDutyItem(
 }
 
 export async function addDutyItems(groupId: string, labels: string[]): Promise<DutyItem[]> {
+  if (offlineDuties.enabled()) throw new Error('Save the duty group and its items together.');
   if (labels.length === 0) return [];
 
   const rows = labels.map((label, sortOrder) => ({
@@ -159,6 +269,7 @@ export async function addDutyItems(groupId: string, labels: string[]): Promise<D
 }
 
 export async function deleteDutyItem(itemId: string): Promise<void> {
+  if (offlineDuties.enabled()) await offlineDuties.beforeDelete();
   const { data, error } = await supabase
     .from('watch_duty_items')
     .delete()
@@ -170,8 +281,10 @@ export async function deleteDutyItem(itemId: string): Promise<void> {
 export async function setItemChecked(
   userId: string,
   itemId: string,
-  checked: boolean
+  checked: boolean,
+  expected?: boolean
 ): Promise<void> {
+  if (offlineDuties.enabled()) return offlineDuties.check(userId, itemId, checked, expected);
   const { error } = await supabase
     .from('watch_duty_completions')
     .upsert({ user_id: userId, item_id: itemId, checked, updated_at: new Date().toISOString() });
@@ -184,6 +297,7 @@ export async function setItemChecked(
  * represents the unchecked state.
  */
 export async function resetDutyCompletionsForVessel(vesselId: string): Promise<void> {
+  if (offlineDuties.enabled()) await offlineDuties.beforeDelete();
   const { data: groups, error: groupsError } = await supabase
     .from('watch_duty_groups')
     .select('id')
@@ -212,6 +326,26 @@ export async function getWeekAssignments(
   vesselId: string,
   startDate: string
 ): Promise<WatchAssignment[]> {
+  if (offlineDuties.enabled()) {
+    const end = new Date(startDate + 'T00:00:00Z');
+    end.setUTCDate(end.getUTCDate() + 6);
+    const [rows, crew] = await Promise.all([
+      offlineDuties.list('watchAssignments', vesselId),
+      getDutyCrew(vesselId),
+    ]);
+    return rows
+      .filter(
+        (r) => String(r.date) >= startDate && String(r.date) <= end.toISOString().slice(0, 10)
+      )
+      .map((r) => ({
+        id: String(r.id),
+        date: String(r.date),
+        userId: String(r.user_id),
+        userName: crew.find((c) => c.id === r.user_id)?.name ?? 'Crew Member',
+        startTime: String(r.start_time),
+        endTime: String(r.end_time),
+      }));
+  }
   const start = new Date(startDate);
   const end = new Date(start);
   end.setDate(end.getDate() + 6);
@@ -252,6 +386,18 @@ export async function addWatchAssignment(
   startTime: string,
   endTime: string
 ): Promise<string> {
+  if (offlineDuties.enabled())
+    return String(
+      (
+        await offlineDuties.create('watchAssignments', {
+          vessel_id: vesselId,
+          date,
+          user_id: userId,
+          start_time: startTime,
+          end_time: endTime,
+        })
+      ).id
+    );
   const { data, error } = await supabase
     .from('watch_assignments')
     .insert({
@@ -268,6 +414,7 @@ export async function addWatchAssignment(
 }
 
 export async function removeWatchAssignment(assignmentId: string): Promise<void> {
+  if (offlineDuties.enabled()) await offlineDuties.beforeDelete();
   const { data, error } = await supabase
     .from('watch_assignments')
     .delete()
@@ -278,6 +425,7 @@ export async function removeWatchAssignment(assignmentId: string): Promise<void>
 
 /** Clear every crew assignment in the displayed Monday-Sunday week. */
 export async function resetWeekAssignments(vesselId: string, startDate: string): Promise<void> {
+  if (offlineDuties.enabled()) await offlineDuties.beforeDelete();
   const end = new Date(`${startDate}T00:00:00Z`);
   end.setUTCDate(end.getUTCDate() + 6);
   const endDate = end.toISOString().slice(0, 10);
