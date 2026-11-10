@@ -375,18 +375,20 @@ export async function keepBothNoteCopies(operationId: string): Promise<void> {
     (item) => item.id === operationId && item.state === 'conflict'
   );
   if (!change) throw new OfflineError('CONFLICT_CHANGED');
+  const latest = await a.box.read(change.feature, change.recordId);
+  if (!latest) throw new OfflineError('CONFLICT_CHANGED');
   const id = crypto.randomUUID(),
     now = new Date().toISOString();
   const copy =
     change.feature === 'notes'
       ? {
-          ...change.value,
+          ...latest.value,
           id,
-          title: String(change.value.title) + ' (device copy)',
+          title: String(latest.value.title) + ' (device copy)',
           created_at: now,
           updated_at: now,
         }
-      : shoppingDeviceCopy(change.value, id, a.scope.userId);
+      : shoppingDeviceCopy(latest.value, id, a.scope.userId);
   await a.box.forkConflict(operationId, id, copy);
   notifyNotes();
   await checkOfflineAccess();

@@ -95,7 +95,7 @@ export const note = {
   title: "Offline note",
   content: "Synthetic data only",
 };
-export async function fixture(overrides = {}) {
+export async function fixture(overrides = {}, adapter = notesAdapter) {
   const store = new MemoryStore();
   const context = {
     scope: { ...scope },
@@ -110,7 +110,7 @@ export async function fixture(overrides = {}) {
     new OfflineOutbox({
       store,
       context: () => context,
-      adapters: { notes: notesAdapter },
+      adapters: { notes: adapter },
       newId: () => `test-op-${++counter}`,
     });
   const box = makeBox();

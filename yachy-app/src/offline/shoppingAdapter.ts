@@ -12,6 +12,7 @@ const fields = [
 ];
 const departments = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
 export const shoppingAdapter: OfflineAdapter = {
+  serverFields: ['created_at'],
   validate: (value) =>
     fields.every((key) => key in value) &&
     Object.keys(value).every((key) => fields.includes(key)) &&

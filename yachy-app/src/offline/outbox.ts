@@ -17,6 +17,8 @@ export type OfflineMutation = {
   baseRevision: string | null;
 };
 export type PendingChange = OfflineMutation & {
+  /** Local-only dependency; never transmitted before its parent is acknowledged. */
+  afterId?: string;
   localVersion: number;
   state: 'pending' | 'sending' | 'conflict' | 'blocked';
   attempts: number;
@@ -57,6 +59,8 @@ export interface OfflineTransport {
   apply(scope: OfflineScope, change: Readonly<OfflineMutation>): Promise<SyncResult>;
 }
 export type OfflineAdapter = {
+  /** Server-maintained fields never form part of a later local edit delta. */
+  serverFields?: readonly string[];
   authorizeRead: (scope: OfflineScope, value: RecordValue) => boolean;
   /** Validate permitted fields AND row-level constraints for this exact user. */
   authorize: (
@@ -289,9 +293,11 @@ export class OfflineOutbox {
       const previous = state.records[key] ?? null;
       if ((previous?.localVersion ?? 0) !== input.expectedLocalVersion)
         throw new OfflineError('LOCAL_CONFLICT');
-      const existing = state.changes.find((c) => c.feature === feature && c.recordId === recordId);
-      if (existing && (existing.attempts > 0 || existing.state !== 'pending'))
+      const related = state.changes.filter((c) => c.feature === feature && c.recordId === recordId);
+      const existing = related.at(-1);
+      if (related.some((change) => change.state === 'conflict' || change.state === 'blocked'))
         throw new OfflineError('RECONCILE_FIRST');
+      const followsAttempt = !!existing && (existing.attempts > 0 || existing.state === 'sending');
       if (
         !existing &&
         ((kind === 'create' && previous) || (kind === 'update' && !previous?.serverRevision))
@@ -308,7 +314,12 @@ export class OfflineOutbox {
         id: operationId,
         feature,
         recordId,
-        kind: existing?.kind ?? kind,
+        kind: followsAttempt ? 'update' : (existing?.kind ?? kind),
+        ...(followsAttempt
+          ? { afterId: existing!.id }
+          : existing?.afterId
+            ? { afterId: existing.afterId }
+            : {}),
         value,
         baseRevision: existing?.baseRevision ?? previous?.serverRevision ?? null,
         localVersion,
@@ -317,7 +328,8 @@ export class OfflineOutbox {
         claim: null,
         claimUntil: 0,
       };
-      if (existing) state.changes.splice(state.changes.indexOf(existing), 1, change);
+      if (existing && !followsAttempt)
+        state.changes.splice(state.changes.indexOf(existing), 1, change);
       else state.changes.push(change);
       state.records[key] = { value, serverRevision: change.baseRevision, localVersion };
       // The store resolves only after the durable transaction completes.
@@ -358,7 +370,13 @@ export class OfflineOutbox {
         claimUntil: 0,
       };
       // Replacement and removal commit together; a storage failure keeps the original.
-      state.changes.splice(state.changes.indexOf(original), 1, replacement);
+      const dependents = state.changes.filter((change) => change.afterId === original.id);
+      if (dependents.some((change) => change.attempts > 0))
+        throw new OfflineError('CONFLICT_CHANGED');
+      state.changes = state.changes.filter(
+        (change) => change.id !== original.id && change.afterId !== original.id
+      );
+      state.changes.push(replacement);
       state.records[keyFor(original.feature, recordId)] = {
         value: safe,
         serverRevision: null,
@@ -384,7 +402,8 @@ export class OfflineOutbox {
       const operation = await this.store.update(scope, (state) => {
         const c = this.bound(scope);
         const change = state.changes.find((item) => item.id === id);
-        if (!change || change.state === 'conflict' || change.state === 'blocked') return null;
+        if (!change || change.afterId || change.state === 'conflict' || change.state === 'blocked')
+          return null;
         if (change.state === 'sending' && change.claimUntil > c.nowMs) return null;
         const adapter = this.adapters[change.feature];
         if (
@@ -442,11 +461,51 @@ export class OfflineOutbox {
           }
         }
         if (acceptedValue && result.status === 'applied') {
-          state.records[keyFor(change.feature, change.recordId)] = {
-            value: acceptedValue,
-            serverRevision: result.revision,
-            localVersion: change.localVersion + 1,
-          };
+          const dependent = state.changes.find((item) => item.afterId === id);
+          if (dependent) {
+            // Apply only the newer device edits to the confirmed row. If another
+            // device changed one of those fields, retain the draft for review.
+            const merged = structuredClone(acceptedValue);
+            let conflict = false;
+            for (const key of new Set([
+              ...Object.keys(change.value),
+              ...Object.keys(dependent.value),
+            ])) {
+              if (adapter?.serverFields?.includes(key)) continue;
+              const before = JSON.stringify(change.value[key]),
+                next = JSON.stringify(dependent.value[key]);
+              if (before === next) continue;
+              const online = JSON.stringify(acceptedValue[key]);
+              if (online !== before && online !== next) conflict = true;
+              if (key in dependent.value) merged[key] = dependent.value[key];
+              else delete merged[key];
+            }
+            delete dependent.afterId;
+            dependent.baseRevision = result.revision;
+            dependent.localVersion++;
+            if (
+              !adapter?.validate(merged) ||
+              !adapter.authorize(scope, 'update', merged, {
+                value: acceptedValue,
+                serverRevision: result.revision,
+                localVersion: change.localVersion,
+              })
+            )
+              conflict = true;
+            dependent.value = conflict ? dependent.value : merged;
+            dependent.state = conflict ? 'conflict' : 'pending';
+            state.records[keyFor(change.feature, change.recordId)] = {
+              value: structuredClone(dependent.value),
+              serverRevision: result.revision,
+              localVersion: dependent.localVersion,
+            };
+          } else {
+            state.records[keyFor(change.feature, change.recordId)] = {
+              value: acceptedValue,
+              serverRevision: result.revision,
+              localVersion: change.localVersion + 1,
+            };
+          }
           state.changes = state.changes.filter((c) => c.id !== id);
           return 'APPLIED';
         }

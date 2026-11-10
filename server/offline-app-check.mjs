@@ -89,6 +89,7 @@ const run = (source) =>
   )
     .split("\n")
     .at(-1);
+let loseNextNoteReply = false;
 let server,
   stopped = false,
   databaseStarted = false;
@@ -309,14 +310,24 @@ try {
           ),
         ),
       );
-    if (path === "/rest/v1/rpc/sync_web_offline_note")
-      return json(
-        JSON.parse(
-          run(
-            `SELECT sync_web_offline_note(${quote(body.p_vessel_id)},${quote(body.p_device_id)},${quote(JSON.stringify(body.p_operation))}::jsonb);`,
-          ),
+    if (path === "/rest/v1/rpc/sync_web_offline_note") {
+      const result = JSON.parse(
+        run(
+          `SELECT sync_web_offline_note(${quote(body.p_vessel_id)},${quote(body.p_device_id)},${quote(JSON.stringify(body.p_operation))}::jsonb);`,
         ),
       );
+      if (loseNextNoteReply) {
+        loseNextNoteReply = false;
+        res.destroy();
+        server.closeAllConnections();
+        server.close();
+        console.log(
+          "Synthetic note committed; response lost and HTTP server stopped. Use online to reconnect.",
+        );
+        return;
+      }
+      return json(result);
+    }
     if (path === "/rest/v1/rpc/read_web_offline_shopping")
       return json(
         JSON.parse(
@@ -421,6 +432,12 @@ try {
   );
   const lines = createInterface({ input: process.stdin });
   for await (const line of lines) {
+    if (line === "lose-next-reply") {
+      loseNextNoteReply = true;
+      console.log(
+        "Next synthetic note reply will be lost after the database commit.",
+      );
+    }
     if (line === "offline") {
       server.closeAllConnections();
       await new Promise((resolve) => server.close(resolve));

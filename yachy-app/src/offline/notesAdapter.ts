@@ -10,6 +10,7 @@ const fields = [
   'updated_at',
 ];
 export const notesAdapter: OfflineAdapter = {
+  serverFields: ['created_at', 'updated_at'],
   validate: (value) =>
     fields.every((key) => typeof value[key] === 'string') &&
     Object.keys(value).every((key) => fields.includes(key)) &&

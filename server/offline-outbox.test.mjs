@@ -274,16 +274,19 @@ test("attempted payload cannot be changed under an idempotency key", async () =>
       throw Error("offline");
     }),
   );
-  await assert.rejects(
-    f.box.save({
-      feature: "notes",
-      recordId: "note-1",
-      kind: "update",
-      value: { ...note, title: "different" },
-      expectedLocalVersion: 1,
-    }),
-    denied("RECONCILE_FIRST"),
-  );
+  const original = (await f.store.read(scope)).changes[0];
+  await f.box.save({
+    feature: "notes",
+    recordId: "note-1",
+    kind: "update",
+    value: { ...note, title: "different" },
+    expectedLocalVersion: 1,
+  });
+  const changes = (await f.store.read(scope)).changes;
+  assert.equal(changes.length, 2);
+  assert.deepEqual(changes[0], original);
+  assert.equal(changes[1].afterId, original.id);
+  assert.equal(changes[1].value.title, "different");
 });
 test("cross-tab send claim prevents simultaneous uploads", async () => {
   const f = await fixture();
