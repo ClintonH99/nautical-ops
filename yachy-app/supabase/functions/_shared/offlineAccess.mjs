@@ -76,6 +76,10 @@ export function createOfflineAccessHandler({ getEnv, createClient }) {
       }
       const permissions = {};
       for (const feature of [
+        'fuelLogs',
+        'fuelTransfers',
+        'fuelEntries',
+        'fuelAdjustments',
         'notes',
         'shoppingLists',
         'tasks',

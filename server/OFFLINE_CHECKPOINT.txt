@@ -336,3 +336,15 @@ WHOLE-APP OFFLINE AUDIT — 10 November 2026 (local only)
   persisted through refresh, then synced once. Maintenance-recipient guard and
   department-colour reload verified. Production is unchanged; hosted backend
   compatibility, staging roles and explicit live activation remain release steps.
+
+LIVE RELEASE PREFLIGHT — 10 November 2026
+Production target verified as Supabase grtrcjgsvfsknpnlarxv and Vercel
+prj_2BXoxvAOXk3ZhGZ1y5Yrz3VMbe37. Live schema inspection found all referenced
+existing tables/functions and all explicit inserted columns. Found and fixed
+missing Fuel feature permissions in the signed permit issuer; added a full
+implemented-feature permit round-trip regression. 316 offline Node/database
+checks pass, including 59 isolated PostgreSQL checks. The previously verified
+source recovery checkpoint remains separate and intact.
+No hosted database backups are listed. Approval is pending for an encrypted
+one-time production database recovery copy before migrations. Frontend build
+will be staged without assigning live domains. This is not a live activation.

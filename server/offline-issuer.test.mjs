@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createOfflineAccessHandler } from "../yachy-app/supabase/functions/_shared/offlineAccess.mjs";
-import { verifyOfflinePermit } from "../yachy-app/src/offline/access.ts";
+import {
+  OFFLINE_FEATURES,
+  verifyOfflinePermit,
+} from "../yachy-app/src/offline/access.ts";
 const pair = await crypto.subtle.generateKey(
   { name: "ECDSA", namedCurve: "P-256" },
   true,
@@ -126,6 +129,20 @@ test("invalid login rejected before access lookup", async () => {
   const f = fixture({ authError: { message: "denied" } });
   assert.equal((await f.handler(f.request())).status, 401);
   assert.equal(f.queries(), 0);
+});
+test("signed permits retain every implemented feature and its exact server permissions", async () => {
+  const permissions = Object.fromEntries(
+    OFFLINE_FEATURES.map((feature) => [
+      feature,
+      feature === "fuelAdjustments" ? ["read"] : ["read", "create", "update"],
+    ]),
+  );
+  const f = fixture({ data: { ...context, permissions } });
+  const response = await f.handler(f.request());
+  assert.equal(response.status, 200);
+  const { token } = await response.json();
+  const permit = await verifyOfflinePermit(token, { test: publicKey }, scope);
+  assert.deepEqual(permit.claims.permissions, permissions);
 });
 test("disabled configuration issues no permits", async () => {
   const f = fixture({ env: { WEB_OFFLINE_ENABLED: "false" } });
