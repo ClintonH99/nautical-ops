@@ -116,8 +116,8 @@ export const FAQScreen = () => {
           <View style={styles.faqList}>
             {unavailable && (
               <Text style={{ color: themeColors.textSecondary }}>
-                Help articles have not been downloaded. Reconnect and use Retry Sync. You can
-                contact support@nautical-ops.com when connected.
+                Help articles have not been downloaded. Reconnect to download them automatically.
+                You can contact support@nautical-ops.com when connected.
               </Text>
             )}
             {faqs.map((faq) => {

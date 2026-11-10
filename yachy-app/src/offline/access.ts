@@ -73,7 +73,7 @@ export class OfflineError extends Error {
         LOCAL_CONFLICT:
           'This record changed while you were editing. Your form is still open. Reopen the saved record before trying again.',
         NOT_DOWNLOADED:
-          'This information has not been downloaded yet. Reconnect and use Retry Sync.',
+          'This information has not been downloaded yet. Reconnect to download it automatically.',
       }[code] ?? code
     );
     this.code = code;

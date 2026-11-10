@@ -118,7 +118,7 @@ export const FutureUpdatesScreen = () => {
         ) : updates.length === 0 ? (
           <Text style={[styles.cardDesc, { color: themeColors.textSecondary }]}>
             {unavailable
-              ? 'Updates have not been downloaded. Reconnect and use Retry Sync.'
+              ? 'Updates have not been downloaded. Reconnect to download them automatically.'
               : 'No updates posted yet — check back soon.'}
           </Text>
         ) : (
