@@ -26,6 +26,7 @@ export type PendingChange = OfflineMutation & {
   claimUntil: number;
 };
 export type Partition = {
+  drafts?: Partial<Record<OfflineFeature, { value: RecordValue; version: number }>>;
   vesselLabel?: string;
   tripColors?: RecordValue | null;
   shipyardFolders?: { folders: RecordValue[]; assignments: RecordValue[] };
@@ -123,6 +124,31 @@ function snapshot(value: RecordValue): RecordValue {
 
 /** Not wired to the app until real access issuer, adapters and sync server pass E2E. */
 export class OfflineOutbox {
+  /** Drafts are local-only and cannot bypass the same session/access lease as records. */
+  async readDraft(feature: OfflineFeature) {
+    const scope = { ...this.context().scope };
+    await this.checkpoint(scope);
+    return this.store.update(scope, (state) => {
+      this.check(scope, state, feature, 'read');
+      return structuredClone(state.drafts?.[feature] ?? { value: {}, version: 0 });
+    });
+  }
+  async writeDraft(feature: OfflineFeature, value: RecordValue, expectedVersion: number) {
+    const scope = { ...this.context().scope },
+      safe = snapshot(value);
+    await this.checkpoint(scope);
+    return this.store.update(scope, (state) => {
+      this.check(scope, state, feature, 'create');
+      this.check(scope, state, feature, 'update');
+      const current = state.drafts?.[feature];
+      if ((current?.version ?? 0) !== expectedVersion) throw new OfflineError('LOCAL_CONFLICT');
+      state.drafts ??= {};
+      const version = expectedVersion + 1;
+      state.drafts[feature] = { value: safe, version };
+      return version;
+    });
+  }
+
   async list(feature: OfflineFeature): Promise<LocalRecord[]> {
     const scope = { ...this.context().scope };
     await this.checkpoint(scope);

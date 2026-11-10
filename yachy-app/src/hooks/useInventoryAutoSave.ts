@@ -1,3 +1,4 @@
+import { useOfflineStatus } from '../offline/runtime';
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 import { useAuthStore } from '../store';
@@ -6,7 +7,11 @@ import { getInventoryAutoSave } from '../services/inventoryAutoSave';
 export function useInventoryAutoSave() {
   const userId = useAuthStore((s) => s.user?.id ?? '');
   const vesselId = useAuthStore((s) => s.user?.vesselId ?? '');
-  const queue = useMemo(() => getInventoryAutoSave(userId, vesselId), [userId, vesselId]);
+  const partitionKey = useOfflineStatus((s) => s.partitionKey ?? '');
+  const queue = useMemo(
+    () => getInventoryAutoSave(userId, vesselId, partitionKey),
+    [userId, vesselId, partitionKey]
+  );
   const state = useSyncExternalStore(queue.subscribe, queue.getSnapshot, queue.getSnapshot);
   useEffect(() => {
     void queue.load();

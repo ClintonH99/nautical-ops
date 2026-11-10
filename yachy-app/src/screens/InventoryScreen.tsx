@@ -169,7 +169,11 @@ export const InventoryScreen = ({ navigation }: any) => {
     .map((entry) => `${entry.id}:${entry.savedVersion}`)
     .join('|');
   useEffect(() => {
-    if (isFocused) void loadItems();
+    if (!isFocused) return;
+    void loadItems();
+    return inventoryService.subscribe(() => {
+      void loadItems();
+    });
   }, [isFocused, loadItems, syncRevision]);
 
   const onRefresh = () => {

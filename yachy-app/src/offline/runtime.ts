@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { User } from '../types';
 export type OfflineStatus = {
   enabled: boolean;
+  partitionKey?: string;
   ready: boolean;
   saving: number;
   shellState: 'preparing' | 'ready' | 'unavailable';

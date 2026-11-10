@@ -1,3 +1,4 @@
+import { offlineInventory } from '../offline/inventoryService';
 /**
  * Inventory Items Service
  * Per vessel: title, description, location, department, amount/item rows
@@ -13,6 +14,7 @@ export interface InventoryItemRow {
 }
 
 export interface InventoryItem {
+  offlineLocalVersion?: number;
   id: string;
   vesselId: string;
   department: Department;
@@ -68,6 +70,8 @@ function normalizeRows(raw: unknown): InventoryItemRow[] {
 }
 
 class InventoryService {
+  subscribe = offlineInventory.subscribe;
+  offlineEnabled = offlineInventory.enabled;
   /** Retriable auto-save: stable create IDs and conditional updates avoid duplicates/overwrites. */
   async autoSave(
     id: string,
@@ -89,6 +93,18 @@ class InventoryService {
         Math.max(Date.now(), (Date.parse(base?.lastEditedAt ?? '') || 0) + 1)
       ).toISOString(),
     };
+    if (offlineInventory.enabled()) {
+      const b = base
+        ? {
+            department: base.department,
+            title: base.title,
+            description: base.description,
+            location: base.location,
+            items: base.items.map((r) => ({ ...r })),
+          }
+        : null;
+      return this.mapRow(await offlineInventory.save(id, input.vesselId, payload, b));
+    }
     if (!payload.title) throw new Error('Please enter a title.');
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15_000);
@@ -133,6 +149,10 @@ class InventoryService {
   }
 
   async getFreshById(id: string, vesselId: string): Promise<InventoryItem | null> {
+    if (offlineInventory.enabled()) {
+      const row = await offlineInventory.read(id, vesselId);
+      return row ? this.mapRow(row) : null;
+    }
     // Explicit no-cache query also avoids the short-lived presentation read cache.
     readTransport.invalidate();
     const { data, error } = await supabase
@@ -145,6 +165,7 @@ class InventoryService {
     return data ? this.mapRow(data) : null;
   }
   async getByVessel(vesselId: string): Promise<InventoryItem[]> {
+    if (offlineInventory.enabled()) return (await offlineInventory.list(vesselId)).map(this.mapRow);
     try {
       const { data, error } = await supabase
         .from('inventory_items')
@@ -161,6 +182,10 @@ class InventoryService {
   }
 
   async getById(id: string): Promise<InventoryItem | null> {
+    if (offlineInventory.enabled()) {
+      const row = await offlineInventory.read(id);
+      return row ? this.mapRow(row) : null;
+    }
     try {
       const { data, error } = await supabase
         .from('inventory_items')
@@ -176,6 +201,7 @@ class InventoryService {
   }
 
   async create(input: CreateInventoryItemInput): Promise<InventoryItem> {
+    if (offlineInventory.enabled()) return this.autoSave(crypto.randomUUID(), input, null);
     const items = input.items
       .filter((row) => row.amount.trim() || row.item.trim())
       .map((row) => ({ amount: row.amount.trim(), item: row.item.trim() }));
@@ -212,6 +238,8 @@ class InventoryService {
       lastEditedByName?: string;
     }
   ): Promise<InventoryItem> {
+    if (offlineInventory.enabled())
+      throw new Error('Use Inventory Auto Save to preserve revision checks.');
     const payload: Record<string, unknown> = {};
     if (updates.title !== undefined) {
       const t = updates.title.trim();
@@ -240,16 +268,20 @@ class InventoryService {
   }
 
   async delete(id: string): Promise<void> {
+    if (offlineInventory.enabled()) await offlineInventory.beforeDelete(id);
     const { data, error } = await supabase
       .from('inventory_items')
       .delete()
       .eq('id', id)
       .select('id');
     requireAffectedRows(data, error, 'Deleting the inventory item');
+    if (offlineInventory.enabled()) await offlineInventory.refresh();
   }
 
   private mapRow(row: Record<string, unknown>): InventoryItem {
     return {
+      offlineLocalVersion:
+        typeof row.offlineLocalVersion === 'number' ? row.offlineLocalVersion : undefined,
       id: row.id as string,
       vesselId: row.vessel_id as string,
       department: row.department as Department,

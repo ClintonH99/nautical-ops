@@ -1,3 +1,4 @@
+import { inventoryAdapter, inventoryDeviceCopy } from './inventoryAdapter';
 import { vesselRecordAdapter, vesselRecordDeviceCopy } from './vesselRecordAdapter';
 import { boundedCheck } from './boundedCheck';
 import { maintenanceAdapter, maintenanceDeviceCopy } from './maintenanceAdapter';
@@ -28,6 +29,7 @@ import { yardJobsAdapter, yardJobDeviceCopy } from './yardJobsAdapter';
 import { tripsAdapter, tripDeviceCopy } from './tripsAdapter';
 import { contractorsAdapter, contractorDeviceCopy } from './contractorsAdapter';
 const adapters = {
+  inventory: inventoryAdapter,
   pumpOutLogs: vesselRecordAdapter('pumpOutLogs'),
   generalWasteLogs: vesselRecordAdapter('generalWasteLogs'),
   uniforms: vesselRecordAdapter('uniforms'),
@@ -44,6 +46,7 @@ const adapters = {
   musterStations: publicationsAdapter,
 };
 const readFunctions = {
+  inventory: 'read_web_offline_inventory_items',
   pumpOutLogs: 'read_web_offline_pump_out_logs',
   generalWasteLogs: 'read_web_offline_general_waste_logs',
   uniforms: 'read_web_offline_uniforms',
@@ -60,6 +63,7 @@ const readFunctions = {
   rules: 'read_web_offline_rules',
 };
 const syncFunctions = {
+  inventory: 'sync_web_offline_inventory_item',
   pumpOutLogs: 'sync_web_offline_pump_out_log',
   generalWasteLogs: 'sync_web_offline_general_waste_log',
   uniforms: 'sync_web_offline_uniform',
@@ -374,6 +378,7 @@ async function initializeOffline(user: User | null): Promise<void> {
   syncFlight = null;
   active?.store.close();
   active = null;
+  useOfflineStatus.setState({ partitionKey: undefined });
   useOfflineStatus.setState({
     ready: false,
     pending: 0,
@@ -411,6 +416,7 @@ async function initializeOffline(user: User | null): Promise<void> {
       box: new OfflineOutbox({ store, context: () => context(a), adapters }),
     });
     active = a;
+    useOfflineStatus.setState({ partitionKey: scopeKey(a.scope) });
     const token = localStorage.getItem(grantKey(scope));
     if (token) {
       try {
@@ -520,29 +526,31 @@ export async function keepBothNoteCopies(operationId: string): Promise<void> {
           created_at: now,
           updated_at: now,
         }
-      : change.feature === 'uniforms' ||
-          change.feature === 'pumpOutLogs' ||
-          change.feature === 'generalWasteLogs'
-        ? vesselRecordDeviceCopy(
-            change.feature,
-            latest.value,
-            id,
-            a.scope.userId,
-            useAuthStore.getState().user?.name ?? ''
-          )
-        : change.feature === 'maintenanceLogs'
-          ? maintenanceDeviceCopy(latest.value, id)
-          : change.feature === 'tasks'
-            ? taskDeviceCopy(latest.value, id, a.scope.userId)
-            : change.feature === 'yardJobs'
-              ? yardJobDeviceCopy(latest.value, id, a.scope.userId)
-              : change.feature === 'trips'
-                ? tripDeviceCopy(latest.value, id, a.scope.userId)
-                : change.feature === 'contractors'
-                  ? contractorDeviceCopy(latest.value, id, a.scope.userId)
-                  : change.feature === 'shoppingLists'
-                    ? shoppingDeviceCopy(latest.value, id, a.scope.userId)
-                    : publicationDeviceCopy(latest.value, id, a.scope.userId);
+      : change.feature === 'inventory'
+        ? inventoryDeviceCopy(latest.value, id)
+        : change.feature === 'uniforms' ||
+            change.feature === 'pumpOutLogs' ||
+            change.feature === 'generalWasteLogs'
+          ? vesselRecordDeviceCopy(
+              change.feature,
+              latest.value,
+              id,
+              a.scope.userId,
+              useAuthStore.getState().user?.name ?? ''
+            )
+          : change.feature === 'maintenanceLogs'
+            ? maintenanceDeviceCopy(latest.value, id)
+            : change.feature === 'tasks'
+              ? taskDeviceCopy(latest.value, id, a.scope.userId)
+              : change.feature === 'yardJobs'
+                ? yardJobDeviceCopy(latest.value, id, a.scope.userId)
+                : change.feature === 'trips'
+                  ? tripDeviceCopy(latest.value, id, a.scope.userId)
+                  : change.feature === 'contractors'
+                    ? contractorDeviceCopy(latest.value, id, a.scope.userId)
+                    : change.feature === 'shoppingLists'
+                      ? shoppingDeviceCopy(latest.value, id, a.scope.userId)
+                      : publicationDeviceCopy(latest.value, id, a.scope.userId);
   await a.box.forkConflict(operationId, id, copy);
   notifyNotes();
   await checkOfflineAccess();

@@ -1,3 +1,4 @@
+import { installInventory } from "./offline-inventory-fixture.mjs";
 import { installVesselRecords } from "./offline-vessel-records-fixture.mjs";
 import { installMaintenance } from "./offline-maintenance-fixture.mjs";
 import { installYard } from "./offline-yard-fixture.mjs";
@@ -983,6 +984,105 @@ test("real isolated PostgreSQL offline note protocol", async (t) => {
           );
         },
       );
+    installInventory(sql, baseline, migration);
+    await t.test(
+      "inventory: replay, clear fields, stale base, legacy fields and current RLS",
+      () => {
+        const value = {
+          id: crypto.randomUUID(),
+          vessel_id: vessel,
+          category_id: null,
+          name: "Supplies",
+          title: "Supplies",
+          description: "Before",
+          quantity: 0,
+          location: "Locker",
+          department: "BRIDGE",
+          photo: null,
+          last_edited_by: user,
+          last_edited_by_name: "Spoofed name",
+          last_edited_at: null,
+          created_at: null,
+          items: [{ amount: "2", item: "Rope" }],
+        };
+        const op = {
+          id: crypto.randomUUID(),
+          recordId: value.id,
+          feature: "inventory",
+          kind: "create",
+          value,
+          baseRevision: null,
+        };
+        const call = (op) =>
+          JSON.parse(
+            run(
+              `SELECT sync_web_offline_inventory_item('${vessel}','${device}','${JSON.stringify(op).replaceAll("'", "''")}'::jsonb);`,
+            ),
+          );
+        const first = call(op);
+        assert.equal(first.status, "applied");
+        assert.deepEqual(call(op), first);
+        assert.equal(first.value.last_edited_by_name, "Synthetic crew");
+        assert.equal(first.value.last_edited_by, user);
+        const edit = {
+          ...op,
+          id: crypto.randomUUID(),
+          kind: "update",
+          baseRevision: first.revision,
+          value: { ...first.value, description: "", items: [] },
+        };
+        const second = call(edit);
+        assert.equal(second.status, "applied");
+        assert.equal(second.value.description, "");
+        assert.deepEqual(second.value.items, []);
+        assert.deepEqual(call(edit), second);
+        assert.equal(
+          call({ ...edit, id: crypto.randomUUID() }).status,
+          "conflict",
+        );
+        for (const patch of [
+          { quantity: 7 },
+          { photo: "changed" },
+          { category_id: crypto.randomUUID() },
+          { items: [{ item: "Rope" }] },
+          { items: [true] },
+          { department: "ADMIN" },
+        ])
+          assert.throws(() =>
+            call({
+              ...edit,
+              id: crypto.randomUUID(),
+              baseRevision: second.revision,
+              value: { ...second.value, ...patch },
+            }),
+          );
+        assert.throws(() =>
+          call({
+            ...op,
+            id: crypto.randomUUID(),
+            value: { ...value, vessel_id: crypto.randomUUID() },
+          }),
+        );
+        sql(
+          'DROP POLICY "Active vessel members can manage inventory_items" ON inventory_items; CREATE POLICY record_read ON inventory_items FOR SELECT TO authenticated USING(public.current_user_can_access_vessel(vessel_id));',
+        );
+        assert.equal(
+          call({
+            ...edit,
+            id: crypto.randomUUID(),
+            baseRevision: second.revision,
+          }).status,
+          "forbidden",
+        );
+        assert.equal(sql("SELECT count(*) FROM inventory_items;"), "1");
+        assert.equal(
+          sql(
+            "SELECT count(*) FROM offline_private.record_receipts WHERE feature='inventory';",
+          ),
+          "2",
+        );
+      },
+    );
     let first;
     await t.test("grant binds session and caps access at seven days", () => {
       const c = JSON.parse(

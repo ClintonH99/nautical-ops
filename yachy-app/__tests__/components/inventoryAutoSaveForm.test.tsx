@@ -21,7 +21,7 @@ jest.mock('../../src/hooks/useThemeColors', () => ({
 }));
 jest.mock('../../src/services/inventory', () => ({
   __esModule: true,
-  default: { getFreshById: jest.fn(), delete: jest.fn() },
+  default: { getFreshById: jest.fn(), delete: jest.fn(), offlineEnabled: () => false },
 }));
 jest.mock('../../src/components/ScreenLoading', () => ({ ScreenLoading: () => null }));
 jest.mock('../../src/hooks/useInventoryAutoSave', () => ({

@@ -1,3 +1,4 @@
+import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * Add / Edit Inventory Item Screen
@@ -96,7 +97,7 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
       } catch {
         if (active) {
           Alert.alert('Error', 'Could not load inventory item.');
-          navigation.goBack();
+          returnToPreviousPage(navigation);
         }
       } finally {
         if (active) setLoading(false);
@@ -145,7 +146,7 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
       const latest = queue.getSnapshot().entries[editingId];
       if (latest.version !== latest.savedVersion)
         throw new Error('Your changes have not synced yet.');
-      navigation.goBack();
+      returnToPreviousPage(navigation);
     } catch (e) {
       Alert.alert(
         'Could not save',
@@ -259,7 +260,9 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
                         ? 'Saved on this device. Enter a title to sync.'
                         : entry.version !== entry.savedVersion
                           ? 'Saving…'
-                          : 'Saved')}
+                          : inventoryService.offlineEnabled()
+                            ? 'Saved on this device. Online changes sync automatically.'
+                            : 'Saved')}
           </Text>
         </TouchableOpacity>
         <View
@@ -451,7 +454,7 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
                           if (created) await inventoryService.delete(editingId);
                         });
                         Alert.alert('Deleted', 'Inventory item deleted.');
-                        navigation.goBack();
+                        returnToPreviousPage(navigation);
                       } catch (e) {
                         console.error('Delete inventory item error:', e);
                         Alert.alert('Error', 'Could not remove item.');

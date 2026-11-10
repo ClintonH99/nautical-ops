@@ -55,6 +55,7 @@ self.addEventListener('fetch', (event) => {
       '/logs/pump-out/edit': 'logId',
       '/logs/general-waste/edit': 'logId',
       '/uniforms/edit': 'uniformId',
+      '/inventory/edit': 'itemId',
       '/safety/equipment/create': 'equipmentId',
       '/safety/muster/create': 'musterStationId',
     }[url.pathname];
