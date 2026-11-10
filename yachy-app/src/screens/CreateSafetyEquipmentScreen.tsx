@@ -1,3 +1,4 @@
+import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * Create Safety Equipment Screen
@@ -273,7 +274,7 @@ export const CreateSafetyEquipmentScreen = ({ navigation, route }: any) => {
       } else {
         await safetyEquipmentService.create(vesselId, planTitle, payload, user?.id);
       }
-      navigation.goBack();
+      returnToPreviousPage(navigation);
     } catch (e) {
       Alert.alert('Error', 'Could not publish');
     } finally {

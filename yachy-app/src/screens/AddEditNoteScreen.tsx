@@ -1,3 +1,4 @@
+import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
 /**
  * Add / Edit Note Screen
@@ -80,7 +81,7 @@ export const AddEditNoteScreen = ({ navigation, route }: any) => {
           user?.name ?? 'Crew'
         );
       }
-      navigation.goBack();
+      returnToPreviousPage(navigation);
     } catch {
       Alert.alert('Error', 'Could not save note. Please try again.');
     } finally {
@@ -97,7 +98,7 @@ export const AddEditNoteScreen = ({ navigation, route }: any) => {
         onPress: async () => {
           try {
             await notesService.deleteNote(noteId!);
-            navigation.goBack();
+            returnToPreviousPage(navigation);
           } catch {
             Alert.alert('Error', 'Could not delete note.');
           }

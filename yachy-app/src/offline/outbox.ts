@@ -28,6 +28,7 @@ export type PendingChange = OfflineMutation & {
 export type Partition = {
   vesselLabel?: string;
   tripColors?: RecordValue | null;
+  shipyardFolders?: { folders: RecordValue[]; assignments: RecordValue[] };
   snapshots?: Partial<Record<OfflineFeature, boolean>>;
   schema: 1;
   highestObservedMs: number;
@@ -69,7 +70,8 @@ export type OfflineAdapter = {
     scope: OfflineScope,
     kind: 'create' | 'update',
     value: RecordValue,
-    previous: LocalRecord | null
+    previous: LocalRecord | null,
+    context?: OfflineContext
   ) => boolean;
   validate: (value: RecordValue) => boolean;
 };
@@ -306,7 +308,7 @@ export class OfflineOutbox {
       ) {
         throw new OfflineError('INVALID_BASE');
       }
-      if (!adapter.authorize(scope, kind, value, previous))
+      if (!adapter.authorize(scope, kind, value, previous, this.context()))
         throw new OfflineError('ACTION_NOT_ALLOWED');
       const localVersion = (previous?.localVersion ?? 0) + 1;
       const operationId = this.newId();
@@ -352,7 +354,7 @@ export class OfflineOutbox {
         !validId(recordId) ||
         state.records[keyFor(original.feature, recordId)] ||
         !adapter?.validate(safe) ||
-        !adapter.authorize(scope, 'create', safe, null)
+        !adapter.authorize(scope, 'create', safe, null, this.context())
       )
         throw new OfflineError('ACTION_NOT_ALLOWED');
       const id = this.newId();
@@ -415,7 +417,8 @@ export class OfflineOutbox {
             scope,
             change.kind,
             change.value,
-            state.records[keyFor(change.feature, change.recordId)] ?? null
+            state.records[keyFor(change.feature, change.recordId)] ?? null,
+            this.context()
           )
         ) {
           change.state = 'blocked';
@@ -487,11 +490,17 @@ export class OfflineOutbox {
             dependent.localVersion++;
             if (
               !adapter?.validate(merged) ||
-              !adapter.authorize(scope, 'update', merged, {
-                value: acceptedValue,
-                serverRevision: result.revision,
-                localVersion: change.localVersion,
-              })
+              !adapter.authorize(
+                scope,
+                'update',
+                merged,
+                {
+                  value: acceptedValue,
+                  serverRevision: result.revision,
+                  localVersion: change.localVersion,
+                },
+                this.context()
+              )
             )
               conflict = true;
             dependent.value = conflict ? dependent.value : merged;

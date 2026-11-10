@@ -1,3 +1,4 @@
+import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * Add / Edit Trip Screen
@@ -206,7 +207,7 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
           localVersion
         );
         Alert.alert('Updated', 'Trip updated.', [
-          { text: 'OK', onPress: () => navigation.goBack() },
+          { text: 'OK', onPress: () => returnToPreviousPage(navigation) },
         ]);
       } else {
         await tripsService.createTrip({
@@ -228,7 +229,7 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
           end_date: endDate,
           has_notes: !!notes.trim(),
         });
-        Alert.alert('Created', 'Trip added.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+        Alert.alert('Created', 'Trip added.', [{ text: 'OK', onPress: () => returnToPreviousPage(navigation) }]);
       }
     } catch (e) {
       console.error('Save trip error:', e);
@@ -427,7 +428,7 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
           />
           <TouchableOpacity
             style={styles.cancelBtn}
-            onPress={() => navigation.goBack()}
+            onPress={() => returnToPreviousPage(navigation)}
             disabled={saving}
           >
             <Text style={[styles.cancelText, { color: themeColors.textSecondary }]}>Cancel</Text>

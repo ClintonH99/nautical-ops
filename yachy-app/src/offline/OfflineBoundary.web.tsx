@@ -1,3 +1,4 @@
+import { supportsOfflineRoute } from './routes';
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useAuthStore } from '../store';
@@ -95,63 +96,7 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
     };
   }, [user?.id]);
   if (!webOfflineEnabled || !user?.vesselId) return children;
-  // First vertical slice only. Other features are never presented as saved offline.
-  const supported = route
-    ? [
-        'Home',
-        'Categories',
-        'Notepad',
-        'AddEditNote',
-        'GuestTrips',
-        'BossTrips',
-        'DeliveryTrips',
-        'AddEditTrip',
-        'Rules',
-        'CreateRules',
-        'SafetyEquipment',
-        'CreateSafetyEquipment',
-        'MusterStation',
-        'CreateMusterStation',
-        'ContractorDatabase',
-        'AddEditContractor',
-        'Tasks',
-        'OverdueTasks',
-        'UpcomingTasks',
-        'TasksList',
-        'AddEditTask',
-        'CompletedTasks',
-        'ShoppingListCategory',
-        'ShoppingList',
-        'AddEditShoppingList',
-      ].includes(route)
-    : [
-        '/',
-        '/app',
-        '/categories',
-        '/notepad',
-        '/notepad/edit',
-        '/trips/guest',
-        '/trips/boss',
-        '/trips/delivery',
-        '/trips/edit',
-        '/rules',
-        '/rules/create',
-        '/safety/equipment',
-        '/safety/equipment/create',
-        '/safety/muster',
-        '/safety/muster/create',
-        '/contractors',
-        '/contractors/edit',
-        '/tasks',
-        '/tasks/overdue',
-        '/tasks/upcoming',
-        '/tasks/list',
-        '/tasks/edit',
-        '/tasks/completed',
-        '/shopping',
-        '/shopping/list',
-        '/shopping/edit',
-      ].includes(location.pathname);
+  const supported = supportsOfflineRoute(route, location.pathname);
   const blocked = state.disconnected && (!state.ready || !supported);
   return (
     <View style={styles.root}>
@@ -243,7 +188,7 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
           <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>
             Your pending edits remain saved on this device.
             {state.ready
-              ? ' Notepad, Tasks, Shopping Lists and Contractors are available offline in this test build.'
+              ? ' Open a downloaded page such as Notepad. This test build does not yet support every page offline.'
               : ' Connect to the internet to verify your access.'}
           </Text>
           {state.ready && (

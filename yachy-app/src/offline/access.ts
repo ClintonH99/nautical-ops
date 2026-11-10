@@ -14,6 +14,7 @@ export const OFFLINE_FEATURES = [
   'musterStations',
   'preDepartureChecklists',
   'yardJobs',
+  'shipyardRecords',
   'contractors',
   'uniforms',
   'crewLeave',

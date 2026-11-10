@@ -21,6 +21,7 @@ import { shoppingAdapter, shoppingDeviceCopy } from './shoppingAdapter';
 import type { OfflineFeature } from './access';
 import { tasksAdapter, taskDeviceCopy } from './tasksAdapter';
 import { publicationsAdapter, publicationDeviceCopy } from './publicationsAdapter';
+import { yardJobsAdapter, yardJobDeviceCopy } from './yardJobsAdapter';
 import { tripsAdapter, tripDeviceCopy } from './tripsAdapter';
 import { contractorsAdapter, contractorDeviceCopy } from './contractorsAdapter';
 const adapters = {
@@ -29,6 +30,7 @@ const adapters = {
   tasks: tasksAdapter,
   contractors: contractorsAdapter,
   trips: tripsAdapter,
+  yardJobs: yardJobsAdapter,
   rules: publicationsAdapter,
   safetyEquipment: publicationsAdapter,
   musterStations: publicationsAdapter,
@@ -41,6 +43,7 @@ const readFunctions = {
   musterStations: 'read_web_offline_muster_stations',
   safetyEquipment: 'read_web_offline_safety_equipment',
   trips: 'read_web_offline_trips',
+  yardJobs: 'read_web_offline_yard_jobs',
   rules: 'read_web_offline_rules',
 };
 const syncFunctions = {
@@ -51,6 +54,7 @@ const syncFunctions = {
   musterStations: 'sync_web_offline_muster_stations',
   safetyEquipment: 'sync_web_offline_safety_equipment',
   trips: 'sync_web_offline_trip',
+  yardJobs: 'sync_web_offline_yard_job',
   rules: 'sync_web_offline_rules',
 };
 type SupportedFeature = keyof typeof adapters;
@@ -167,7 +171,12 @@ export async function checkOfflineAccess(): Promise<boolean> {
         .filter((change) => change.state === 'conflict')
         .map((change) => ({
           id: change.id,
-          title: String(change.value.title ?? change.value.company_name ?? 'Saved record'),
+          title: String(
+            change.value.title ??
+              change.value.company_name ??
+              change.value.job_title ??
+              'Saved record'
+          ),
         })),
     });
     return true;
@@ -244,6 +253,22 @@ async function refreshNotes(a: Active) {
   await a.store.update(a.scope, (state) => {
     sameActive(a);
     state.tripColors = colours.data;
+  });
+  const folders = await supabase.rpc('read_web_offline_shipyard_folders', {
+    p_vessel_id: a.scope.vesselId,
+    p_device_id: a.scope.deviceId,
+  });
+  sameActive(a);
+  if (folders.error) throw folders.error;
+  if (
+    !Array.isArray(folders.data?.folders) ||
+    !Array.isArray(folders.data?.assignments) ||
+    folders.data.folders.some((folder: RecordValue) => folder.vessel_id !== a.scope.vesselId)
+  )
+    throw new OfflineError('INVALID_SNAPSHOT');
+  await a.store.update(a.scope, (state) => {
+    sameActive(a);
+    state.shipyardFolders = folders.data;
   });
   for (const feature of Object.keys(adapters) as SupportedFeature[]) {
     if (!a.permit?.claims.permissions[feature]?.includes('read')) continue;
@@ -475,13 +500,15 @@ export async function keepBothNoteCopies(operationId: string): Promise<void> {
         }
       : change.feature === 'tasks'
         ? taskDeviceCopy(latest.value, id, a.scope.userId)
-        : change.feature === 'trips'
-          ? tripDeviceCopy(latest.value, id, a.scope.userId)
-          : change.feature === 'contractors'
-            ? contractorDeviceCopy(latest.value, id, a.scope.userId)
-            : change.feature === 'shoppingLists'
-              ? shoppingDeviceCopy(latest.value, id, a.scope.userId)
-              : publicationDeviceCopy(latest.value, id, a.scope.userId);
+        : change.feature === 'yardJobs'
+          ? yardJobDeviceCopy(latest.value, id, a.scope.userId)
+          : change.feature === 'trips'
+            ? tripDeviceCopy(latest.value, id, a.scope.userId)
+            : change.feature === 'contractors'
+              ? contractorDeviceCopy(latest.value, id, a.scope.userId)
+              : change.feature === 'shoppingLists'
+                ? shoppingDeviceCopy(latest.value, id, a.scope.userId)
+                : publicationDeviceCopy(latest.value, id, a.scope.userId);
   await a.box.forkConflict(operationId, id, copy);
   notifyNotes();
   await checkOfflineAccess();

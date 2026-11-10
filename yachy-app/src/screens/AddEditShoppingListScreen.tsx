@@ -1,3 +1,4 @@
+import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 /**
  * Add / Edit Shopping List Screen
  * Title, department (on create), bullet-point list of items
@@ -71,12 +72,12 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
         setIsMaster(!!list.isMaster);
       } else {
         Alert.alert('Error', 'Shopping list not found.');
-        navigation.goBack();
+        returnToPreviousPage(navigation);
       }
     } catch (e) {
       console.error('Load shopping list error:', e);
       Alert.alert('Error', 'Could not load list.');
-      navigation.goBack();
+      returnToPreviousPage(navigation);
     } finally {
       setLoading(false);
     }
@@ -165,7 +166,7 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
             : 'Shopping list added.'
         );
       }
-      navigation.goBack();
+      returnToPreviousPage(navigation);
     } catch (e) {
       console.error('Save shopping list error:', e);
       Alert.alert('Error', 'Could not save shopping list.');
@@ -184,7 +185,7 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
         onPress: async () => {
           try {
             await shoppingListsService.delete(listId);
-            navigation.goBack();
+            returnToPreviousPage(navigation);
           } catch {
             Alert.alert('Error', 'Could not delete list.');
           }

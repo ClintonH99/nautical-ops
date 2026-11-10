@@ -1,3 +1,4 @@
+import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * Add / Edit Contractor Screen
@@ -73,13 +74,13 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
       } else {
         setLoadFailed(true);
         Alert.alert('Error', 'Contractor not found.');
-        navigation.goBack();
+        returnToPreviousPage(navigation);
       }
     } catch (e) {
       setLoadFailed(true);
       console.error('Load contractor error:', e);
       Alert.alert('Error', 'Could not load contractor.');
-      navigation.goBack();
+      returnToPreviousPage(navigation);
     } finally {
       setLoading(false);
     }
@@ -146,7 +147,7 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
         });
         Alert.alert('Created', 'Contractor added.');
       }
-      navigation.goBack();
+      returnToPreviousPage(navigation);
     } catch (e) {
       console.error('Save contractor error:', e);
       Alert.alert('Error', 'Could not save contractor.');
@@ -171,7 +172,7 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
           setDeleting(true);
           try {
             await contractorsService.delete(contractorId);
-            navigation.goBack();
+            returnToPreviousPage(navigation);
           } catch {
             Alert.alert('Error', 'Could not delete contractor.');
           } finally {

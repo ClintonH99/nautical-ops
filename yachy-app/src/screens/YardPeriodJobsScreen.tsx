@@ -36,6 +36,7 @@ import {
 } from '../components';
 import { BORDER_RADIUS, COLORS, FONTS, SPACING, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { offlineYardJobs } from '../offline/yardJobsService';
 import yardJobsService from '../services/yardJobs';
 import { getDepartmentColor, useAuthStore, useDepartmentColorStore } from '../store';
 import type { Department, ShipyardRecordFolder, YardPeriodJob } from '../types';
@@ -153,6 +154,9 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
   useFocusEffect(
     useCallback(() => {
       void loadData();
+      return offlineYardJobs.subscribe(() => {
+        void loadData();
+      });
     }, [loadData])
   );
 
@@ -251,7 +255,7 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
         text: 'Mark Complete',
         onPress: async () => {
           try {
-            await yardJobsService.markComplete(job.id, user.id, user.name);
+            await yardJobsService.markComplete(job.id, user.id, user.name, job.offlineLocalVersion);
             await loadData();
           } catch (error: any) {
             Alert.alert('Could not complete job', error?.message || 'Please try again.');

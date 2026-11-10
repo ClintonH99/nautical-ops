@@ -1,3 +1,4 @@
+import { installYard } from "./offline-yard-fixture.mjs";
 import test from "node:test";
 import { installTrips } from "./offline-trips-fixture.mjs";
 import { installPublications } from "./offline-publications-fixture.mjs";
@@ -450,6 +451,36 @@ test("real isolated PostgreSQL offline note protocol", async (t) => {
       assert.equal(sql('SELECT count(*) FROM trips;'),'1');
       sql('DROP POLICY trips_read ON trips;');
       assert.deepEqual(JSON.parse(run(`SELECT read_web_offline_trips('${vessel}','${device}');`)),[]);
+    });
+    installYard(sql,baseline,migration);
+    await t.test('yard completion identity, Captain-only record edits, retries and folder scope',()=>{
+      sql(`UPDATE users SET role='CREW' WHERE id='${user}';`);
+      const value={id:crypto.randomUUID(),vessel_id:vessel,job_title:'Check passerelle',job_description:null,yard_location:null,contractor_company_name:null,contact_details:null,done_by_date:null,status:'NOT_STARTED',completed_by:null,completed_at:null,completed_by_name:null,created_by:user,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),department:'BRIDGE',priority:'GREEN',trip_id:null,defect_details:null,defect_location:null,equipment_serial:null,start_date:'2026-11-10',end_date:'2026-11-12'};
+      const op={id:crypto.randomUUID(),recordId:value.id,feature:'yardJobs',kind:'create',value,baseRevision:null};
+      const request=op=>`SELECT sync_web_offline_yard_job('${vessel}','${device}','${JSON.stringify(op).replaceAll("'","''")}'::jsonb);`;
+      const call=op=>JSON.parse(run(request(op)));
+      const first=call(op); assert.equal(first.status,'applied'); assert.deepEqual(call(op),first);
+      const complete={...op,id:crypto.randomUUID(),kind:'update',baseRevision:first.revision,value:{...first.value,status:'COMPLETED',completed_by:user,completed_at:new Date().toISOString(),completed_by_name:'Synthetic crew'}};
+      assert.throws(()=>call({...complete,value:{...complete.value,completed_by:crypto.randomUUID()}}));
+      const done=call(complete); assert.equal(done.status,'applied'); assert.deepEqual(call(complete),done);
+      const change={...complete,id:crypto.randomUUID(),baseRevision:done.revision,value:{...done.value,job_title:'Captain correction'}};
+      assert.throws(()=>call(change));
+      sql(`UPDATE users SET role='HOD' WHERE id='${user}';`); assert.throws(()=>call(change));
+      sql(`UPDATE users SET role='CAPTAIN_MOV' WHERE id='${user}';`);
+      const corrected=call(change); assert.equal(corrected.status,'applied');
+      assert.equal(call({...change,id:crypto.randomUUID()}).status,'conflict');
+      const otherVessel=crypto.randomUUID(),otherFolder=crypto.randomUUID(),folder=crypto.randomUUID();
+      sql(`INSERT INTO vessels VALUES('${otherVessel}'); INSERT INTO shipyard_record_folders(id,vessel_id,name) VALUES('${otherFolder}','${otherVessel}','Private other vessel'),('${folder}','${vessel}','Electrical');`);
+      assert.throws(()=>run(`INSERT INTO shipyard_record_folder_items(job_id,folder_id) VALUES('${value.id}','${otherFolder}');`));
+      run(`INSERT INTO shipyard_record_folder_items(job_id,folder_id) VALUES('${value.id}','${folder}');`);
+      const folders=JSON.parse(run(`SELECT read_web_offline_shipyard_folders('${vessel}','${device}');`));
+      assert.deepEqual(folders.folders.map(f=>f.id),[folder]);
+      assert.deepEqual(folders.assignments,[{job_id:value.id,folder_id:folder}]);
+      for(const patch of [{trip_id:crypto.randomUUID()},{start_date:'2026-02-30'},{status:'COMPLETED',completed_by:crypto.randomUUID(),completed_at:new Date().toISOString(),completed_by_name:'Forged'}]) {
+        const id=crypto.randomUUID(); assert.throws(()=>call({...op,id:crypto.randomUUID(),recordId:id,value:{...value,...patch,id}}));
+      }
+      assert.equal(sql("SELECT count(*) FROM offline_private.record_receipts WHERE feature='yardJobs';"),'3');
+      assert.equal(sql('SELECT count(*) FROM yard_period_jobs;'),'1');
     });
     let first;
     await t.test("grant binds session and caps access at seven days", () => {

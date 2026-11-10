@@ -144,3 +144,18 @@ test("only explicitly listed static assets are cached", async () => {
   );
   assert.equal(f.request("/private-user-data.json", { mode: "cors" }), null);
 });
+
+// Prevent named navigation and a reopened URL disagreeing on offline support.
+test('implemented screen names and reopened paths share one offline route map',async()=>{
+ const {OFFLINE_ROUTE_PATHS,supportsOfflineRoute}=await import('../yachy-app/src/offline/routes.ts');
+ const linking=await readFile(new URL('../yachy-app/src/navigation/webLinking.ts',import.meta.url),'utf8');
+ for(const [name,path] of Object.entries(OFFLINE_ROUTE_PATHS)) {
+   assert.ok(linking.includes(`${name}: '${path.slice(1)}'`),name);
+   assert.equal(supportsOfflineRoute(name,path),true);
+   assert.equal(supportsOfflineRoute(null,path),true);
+ }
+ for(const [name,path] of [['VesselPlans','/vessel-plans'],['VesselSettings','/vessel-settings'],['CrewManagement','/crew'],['Login','/login']]) {
+   assert.equal(supportsOfflineRoute(name,path),false);
+   assert.equal(supportsOfflineRoute(null,path),false);
+ }
+});

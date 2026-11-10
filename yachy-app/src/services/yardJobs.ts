@@ -2,6 +2,7 @@
  * Yard Period Jobs Service
  */
 
+import { offlineYardJobs } from '../offline/yardJobsService';
 import { supabase } from './supabase';
 import { requireAffectedRows } from './mutationResult';
 import {
@@ -61,6 +62,7 @@ export function validateYardJobDateRange(startDate: string, endDate: string): vo
 export function mapRowToYardJob(row: Record<string, unknown>): YardPeriodJob {
   const legacyDate = (row.done_by_date as string) ?? null;
   return {
+    offlineLocalVersion: row.offlineLocalVersion as number | undefined,
     id: row.id as string,
     vesselId: row.vessel_id as string,
     tripId: (row.trip_id as string) ?? null,
@@ -100,6 +102,8 @@ function mapRowToRecordFolder(row: Record<string, unknown>): ShipyardRecordFolde
 
 class YardJobsService {
   async getRecordFolders(vesselId: string): Promise<ShipyardRecordFolder[]> {
+    if (offlineYardJobs.enabled())
+      return (await offlineYardJobs.folders(vesselId)).folders.map(mapRowToRecordFolder);
     const { data, error } = await supabase
       .from('shipyard_record_folders')
       .select('*')
@@ -110,6 +114,11 @@ class YardJobsService {
   }
 
   async getRecordFolderAssignments(): Promise<ShipyardRecordFolderAssignment[]> {
+    if (offlineYardJobs.enabled())
+      return (await offlineYardJobs.folders()).assignments.map((row) => ({
+        jobId: String(row.job_id),
+        folderId: String(row.folder_id),
+      }));
     const { data, error } = await supabase
       .from('shipyard_record_folder_items')
       .select('job_id, folder_id');
@@ -118,6 +127,7 @@ class YardJobsService {
   }
 
   async createRecordFolder(vesselId: string, name: string): Promise<ShipyardRecordFolder> {
+    if (offlineYardJobs.enabled()) await offlineYardJobs.beforeOnlineAction();
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -131,34 +141,41 @@ class YardJobsService {
       .select('*')
       .single();
     if (error) throw error;
+    if (offlineYardJobs.enabled()) await offlineYardJobs.refresh();
     return mapRowToRecordFolder(data);
   }
 
   async renameRecordFolder(folderId: string, name: string): Promise<void> {
+    if (offlineYardJobs.enabled()) await offlineYardJobs.beforeOnlineAction();
     const { data, error } = await supabase
       .from('shipyard_record_folders')
       .update({ name: name.trim(), updated_at: new Date().toISOString() })
       .eq('id', folderId)
       .select('id');
     requireAffectedRows(data, error, 'Renaming the Shipyard Records folder');
+    if (offlineYardJobs.enabled()) await offlineYardJobs.refresh();
   }
 
   async deleteRecordFolder(folderId: string): Promise<void> {
+    if (offlineYardJobs.enabled()) await offlineYardJobs.beforeOnlineAction();
     const { data, error } = await supabase
       .from('shipyard_record_folders')
       .delete()
       .eq('id', folderId)
       .select('id');
     requireAffectedRows(data, error, 'Deleting the Shipyard Records folder');
+    if (offlineYardJobs.enabled()) await offlineYardJobs.refresh();
   }
 
   async moveRecordToFolder(jobId: string, folderId: string | null): Promise<void> {
+    if (offlineYardJobs.enabled()) await offlineYardJobs.beforeOnlineAction();
     if (!folderId) {
       const { error } = await supabase
         .from('shipyard_record_folder_items')
         .delete()
         .eq('job_id', jobId);
       if (error) throw error;
+      if (offlineYardJobs.enabled()) await offlineYardJobs.refresh();
       return;
     }
 
@@ -167,9 +184,14 @@ class YardJobsService {
       .upsert({ job_id: jobId, folder_id: folderId }, { onConflict: 'job_id' })
       .select('job_id');
     requireAffectedRows(data, error, 'Moving the Shipyard Record');
+    if (offlineYardJobs.enabled()) await offlineYardJobs.refresh();
   }
 
   async getByVessel(vesselId: string): Promise<YardPeriodJob[]> {
+    if (offlineYardJobs.enabled())
+      return (await offlineYardJobs.list(vesselId))
+        .map(mapRowToYardJob)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     try {
       const { data, error } = await supabase
         .from('yard_period_jobs')
@@ -186,6 +208,12 @@ class YardJobsService {
   }
 
   async getByTrip(tripId: string): Promise<YardPeriodJob[]> {
+    if (offlineYardJobs.enabled()) {
+      const { useAuthStore } = await import('../store');
+      const vesselId = useAuthStore.getState().user?.vesselId;
+      if (!vesselId) throw new Error('Select a vessel first.');
+      return (await this.getByVessel(vesselId)).filter((job) => job.tripId === tripId);
+    }
     try {
       const { data, error } = await supabase
         .from('yard_period_jobs')
@@ -204,6 +232,30 @@ class YardJobsService {
   async create(input: CreateYardJobData): Promise<YardPeriodJob> {
     try {
       validateYardJobDateRange(input.startDate, input.endDate);
+      if (offlineYardJobs.enabled())
+        return mapRowToYardJob(
+          await offlineYardJobs.create({
+            vessel_id: input.vesselId,
+            trip_id: input.tripId ?? null,
+            job_title: input.jobTitle.trim(),
+            job_description: input.jobDescription?.trim() || null,
+            defect_details: input.defectDetails?.trim() || null,
+            defect_location: input.defectLocation?.trim() || null,
+            equipment_serial: input.equipmentSerial?.trim() || null,
+            department: input.department,
+            priority: input.priority,
+            yard_location: input.yardLocation?.trim() || null,
+            contractor_company_name: input.contractorCompanyName?.trim() || null,
+            contact_details: input.contactDetails?.trim() || null,
+            start_date: input.startDate,
+            end_date: input.endDate,
+            status: 'NOT_STARTED',
+            done_by_date: null,
+            completed_by: null,
+            completed_at: null,
+            completed_by_name: null,
+          })
+        );
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -241,7 +293,11 @@ class YardJobsService {
     }
   }
 
-  async update(jobId: string, input: UpdateYardJobData): Promise<void> {
+  async update(
+    jobId: string,
+    input: UpdateYardJobData,
+    offlineLocalVersion?: number
+  ): Promise<void> {
     try {
       if (input.startDate !== undefined && input.endDate !== undefined) {
         validateYardJobDateRange(input.startDate, input.endDate);
@@ -274,6 +330,14 @@ class YardJobsService {
       if (input.completedByName !== undefined)
         payload.completed_by_name = input.completedByName || null;
 
+      if (offlineYardJobs.enabled()) {
+        await offlineYardJobs.update(
+          jobId,
+          payload as import('../offline/outbox').RecordValue,
+          offlineLocalVersion
+        );
+        return;
+      }
       const { data, error } = await supabase
         .from('yard_period_jobs')
         .update(payload)
@@ -287,6 +351,7 @@ class YardJobsService {
   }
 
   async delete(jobId: string): Promise<void> {
+    if (offlineYardJobs.enabled()) await offlineYardJobs.beforeDelete(jobId);
     try {
       const { data, error } = await supabase
         .from('yard_period_jobs')
@@ -294,6 +359,7 @@ class YardJobsService {
         .eq('id', jobId)
         .select('id');
       requireAffectedRows(data, error, 'Deleting the shipyard job');
+      if (offlineYardJobs.enabled()) await offlineYardJobs.refresh();
     } catch (error) {
       console.error('Delete yard job error:', error);
       throw error;
@@ -301,6 +367,10 @@ class YardJobsService {
   }
 
   async getById(jobId: string): Promise<YardPeriodJob | null> {
+    if (offlineYardJobs.enabled()) {
+      const row = await offlineYardJobs.read(jobId);
+      return row ? mapRowToYardJob(row) : null;
+    }
     try {
       const { data, error } = await supabase
         .from('yard_period_jobs')
@@ -316,21 +386,32 @@ class YardJobsService {
     }
   }
 
-  async markComplete(jobId: string, completedBy: string, completedByName: string): Promise<void> {
+  async markComplete(
+    jobId: string,
+    completedBy: string,
+    completedByName: string,
+    offlineLocalVersion?: number
+  ): Promise<void> {
     const completedAt = new Date().toISOString();
-    await this.update(jobId, {
-      status: 'COMPLETED',
-      completedBy,
-      completedAt,
-      completedByName,
-    });
+    await this.update(
+      jobId,
+      {
+        status: 'COMPLETED',
+        completedBy,
+        completedAt,
+        completedByName,
+      },
+      offlineLocalVersion
+    );
   }
 
   async unmarkComplete(jobId: string): Promise<void> {
+    if (offlineYardJobs.enabled()) await offlineYardJobs.beforeDelete(jobId);
     const { data, error } = await supabase.rpc('unmark_yard_job_complete', {
       target_job_id: jobId,
     });
     requireAffectedRows(data, error, 'Returning the Shipyard Record to Active Jobs');
+    if (offlineYardJobs.enabled()) await offlineYardJobs.refresh();
   }
 }
 

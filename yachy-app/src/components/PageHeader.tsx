@@ -1,3 +1,4 @@
+import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 /**
  * Shared page header.
  *
@@ -54,7 +55,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       <View style={styles.titleBar}>
         {showBack && (
           <TouchableOpacity
-            onPress={onBack ?? (() => navigation.goBack())}
+            onPress={onBack ?? (() => returnToPreviousPage(navigation))}
             style={styles.backBtn}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             accessibilityLabel="Go back"

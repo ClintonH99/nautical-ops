@@ -66,6 +66,16 @@ self.addEventListener('fetch', (event) => {
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
         url.searchParams.get('contractorId') || ''
       );
+    const yardQuery =
+      url.pathname === '/yard-period/edit' &&
+      [...url.searchParams.keys()].every(
+        (key, index, keys) =>
+          keys.indexOf(key) === index &&
+          ['jobId', 'tripId'].includes(key) &&
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+            url.searchParams.get(key) || ''
+          )
+      );
     const tripQuery =
       url.pathname === '/trips/edit' &&
       [...url.searchParams.keys()].every(
@@ -98,7 +108,8 @@ self.addEventListener('fetch', (event) => {
         !taskQuery &&
         !contractorQuery &&
         !publicationQuery &&
-        !tripQuery) ||
+        !tripQuery &&
+        !yardQuery) ||
       url.hash
     )
       return;

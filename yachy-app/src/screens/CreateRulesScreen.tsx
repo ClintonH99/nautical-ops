@@ -1,3 +1,4 @@
+import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * Create Rules Screen
@@ -124,7 +125,7 @@ export const CreateRulesScreen = ({ navigation, route }: any) => {
       } else {
         await rulesService.create(vesselId, t, filteredRules, user?.id);
       }
-      navigation.goBack();
+      returnToPreviousPage(navigation);
     } catch (e) {
       console.error('Publish error:', e);
       Alert.alert('Error', 'Could not publish');

@@ -1,3 +1,4 @@
+import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * Create Muster Station Screen
@@ -333,7 +334,7 @@ export const CreateMusterStationScreen = ({ navigation, route }: any) => {
       } else {
         await musterStationsService.create(vesselId, publishedTitle, data, user?.id);
       }
-      navigation.goBack();
+      returnToPreviousPage(navigation);
     } catch (e) {
       console.error('Publish error:', e);
       Alert.alert('Error', 'Could not publish');

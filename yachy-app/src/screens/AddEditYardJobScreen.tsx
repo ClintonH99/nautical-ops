@@ -1,10 +1,11 @@
+import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * Add / Edit Yard Period Job Screen
  * Job details, contractor information, and an individual start/end date range.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -71,6 +72,9 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
   const [dateSelectionStep, setDateSelectionStep] = useState<'start' | 'end'>('start');
   const [loading, setLoading] = useState(!!jobId);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [offlineLocalVersion, setOfflineLocalVersion] = useState<number | undefined>();
 
   const vesselId = user?.vesselId ?? null;
   const isEdit = !!jobId;
@@ -86,7 +90,9 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
     (async () => {
       try {
         const job = await yardJobsService.getById(jobId);
+        if (!job) throw new Error('Job not available on this device.');
         if (job) {
+          setOfflineLocalVersion(job.offlineLocalVersion);
           setJobTitle(job.jobTitle);
           setJobDescription(job.jobDescription ?? '');
           setDefectDetails(job.defectDetails ?? '');
@@ -102,6 +108,7 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
           setDateSelectionStep(job.startDate ? 'end' : 'start');
         }
       } catch (e) {
+        setLoadFailed(true);
         console.error('Load job error:', e);
         Alert.alert('Error', 'Could not load job');
       } finally {
@@ -148,6 +155,7 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
   };
 
   const handleSave = async () => {
+    if (savingRef.current || loading || loadFailed) return;
     const trimmed = jobTitle.trim();
     if (!trimmed) {
       Alert.alert('Missing title', 'Please enter a job title.');
@@ -162,49 +170,55 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
       return;
     }
 
+    savingRef.current = true;
     setSaving(true);
     try {
       if (isEdit) {
-        await yardJobsService.update(jobId, {
-          jobTitle: trimmed,
-          jobDescription: jobDescription.trim() || undefined,
-          defectDetails: defectDetails.trim() || undefined,
-          defectLocation: defectLocation.trim() || undefined,
-          equipmentSerial: equipmentSerial.trim() || undefined,
-          department,
-          priority,
-          yardLocation: yardLocation.trim() || undefined,
-          contractorCompanyName: contractorCompanyName.trim() || undefined,
-          contactDetails: contactDetails.trim() || undefined,
-          startDate,
-          endDate,
-        });
+        await yardJobsService.update(
+          jobId,
+          {
+            jobTitle: trimmed,
+            jobDescription: jobDescription.trim(),
+            defectDetails: defectDetails.trim(),
+            defectLocation: defectLocation.trim(),
+            equipmentSerial: equipmentSerial.trim(),
+            department,
+            priority,
+            yardLocation: yardLocation.trim(),
+            contractorCompanyName: contractorCompanyName.trim(),
+            contactDetails: contactDetails.trim(),
+            startDate,
+            endDate,
+          },
+          offlineLocalVersion
+        );
         Alert.alert('Updated', 'Job updated.', [
-          { text: 'OK', onPress: () => navigation.goBack() },
+          { text: 'OK', onPress: () => returnToPreviousPage(navigation) },
         ]);
       } else {
         await yardJobsService.create({
           vesselId,
           tripId: tripId ?? null,
           jobTitle: trimmed,
-          jobDescription: jobDescription.trim() || undefined,
-          defectDetails: defectDetails.trim() || undefined,
-          defectLocation: defectLocation.trim() || undefined,
-          equipmentSerial: equipmentSerial.trim() || undefined,
+          jobDescription: jobDescription.trim(),
+          defectDetails: defectDetails.trim(),
+          defectLocation: defectLocation.trim(),
+          equipmentSerial: equipmentSerial.trim(),
           department,
           priority,
-          yardLocation: yardLocation.trim() || undefined,
-          contractorCompanyName: contractorCompanyName.trim() || undefined,
-          contactDetails: contactDetails.trim() || undefined,
+          yardLocation: yardLocation.trim(),
+          contractorCompanyName: contractorCompanyName.trim(),
+          contactDetails: contactDetails.trim(),
           startDate,
           endDate,
         });
-        Alert.alert('Created', 'Job added.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+        Alert.alert('Created', 'Job added.', [{ text: 'OK', onPress: () => returnToPreviousPage(navigation) }]);
       }
     } catch (e) {
       console.error('Save job error:', e);
-      Alert.alert('Error', 'Could not save job.');
+      Alert.alert('Could not save job', e instanceof Error ? e.message : 'Please try again.');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -454,12 +468,12 @@ export const AddEditYardJobScreen = ({ navigation, route }: any) => {
             onPress={handleSave}
             variant="primary"
             loading={saving}
-            disabled={saving}
+            disabled={saving || loadFailed}
             fullWidth
           />
           <TouchableOpacity
             style={styles.cancelBtn}
-            onPress={() => navigation.goBack()}
+            onPress={() => returnToPreviousPage(navigation)}
             disabled={saving}
           >
             <Text style={[styles.cancelText, { color: themeColors.textSecondary }]}>Cancel</Text>

@@ -1,0 +1,35 @@
+/** Only integrated and tested device-storage routes are available offline. */
+export const OFFLINE_ROUTE_PATHS: Readonly<Record<string, string>> = {
+  Home: '/app',
+  Categories: '/categories',
+  Notepad: '/notepad',
+  AddEditNote: '/notepad/edit',
+  GuestTrips: '/trips/guest',
+  BossTrips: '/trips/boss',
+  DeliveryTrips: '/trips/delivery',
+  AddEditTrip: '/trips/edit',
+  Rules: '/rules',
+  CreateRules: '/rules/create',
+  SafetyEquipment: '/safety/equipment',
+  CreateSafetyEquipment: '/safety/equipment/create',
+  MusterStation: '/safety/muster',
+  CreateMusterStation: '/safety/muster/create',
+  ContractorDatabase: '/contractors',
+  AddEditContractor: '/contractors/edit',
+  Tasks: '/tasks',
+  OverdueTasks: '/tasks/overdue',
+  UpcomingTasks: '/tasks/upcoming',
+  TasksList: '/tasks/list',
+  AddEditTask: '/tasks/edit',
+  CompletedTasks: '/tasks/completed',
+  ShoppingListCategory: '/shopping',
+  ShoppingList: '/shopping/list',
+  AddEditShoppingList: '/shopping/edit',
+  YardPeriodJobs: '/yard-period',
+  AddEditYardJob: '/yard-period/edit',
+  TasksCalendar: '/tasks/calendar',
+};
+const paths = new Set(['/', ...Object.values(OFFLINE_ROUTE_PATHS)]);
+export function supportsOfflineRoute(name: string | null | undefined, path: string): boolean {
+  return name ? Object.hasOwn(OFFLINE_ROUTE_PATHS, name) : paths.has(path);
+}

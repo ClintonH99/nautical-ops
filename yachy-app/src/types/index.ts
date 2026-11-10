@@ -346,6 +346,7 @@ export interface PreDepartureChecklist {
 export type YardJobPriority = 'GREEN' | 'YELLOW' | 'RED';
 
 export interface YardPeriodJob {
+  offlineLocalVersion?: number;
   id: string;
   vesselId: string;
   tripId?: string | null;

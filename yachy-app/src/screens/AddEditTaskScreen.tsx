@@ -1,3 +1,4 @@
+import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 /**
  * Add / Edit Task Screen
  * Task Title, Task Notes, Done by Date (optional). Crew and HODs can create and edit.
@@ -171,7 +172,7 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
           is_recurring: !!resolvedRecurring,
         });
         Alert.alert('Updated', 'Task updated.', [
-          { text: 'OK', onPress: () => navigation.goBack() },
+          { text: 'OK', onPress: () => returnToPreviousPage(navigation) },
         ]);
       } else {
         await vesselTasksService.create({
@@ -189,7 +190,7 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
           has_deadline: !!resolvedDoneByDate,
           is_recurring: !!resolvedRecurring,
         });
-        Alert.alert('Created', 'Task added.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+        Alert.alert('Created', 'Task added.', [{ text: 'OK', onPress: () => returnToPreviousPage(navigation) }]);
       }
     } catch (e) {
       console.error('Save task error:', e);
@@ -453,7 +454,7 @@ export const AddEditTaskScreen = ({ navigation, route }: any) => {
           />
           <TouchableOpacity
             style={styles.cancelBtn}
-            onPress={() => navigation.goBack()}
+            onPress={() => returnToPreviousPage(navigation)}
             disabled={saving}
           >
             <Text style={[styles.cancelText, { color: themeColors.textSecondary }]}>Cancel</Text>

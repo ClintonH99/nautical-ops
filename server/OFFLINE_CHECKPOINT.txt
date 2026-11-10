@@ -4,7 +4,7 @@ Requested: everyday vessel features; add/edit offline; sync later; max 168h
 since verified access, shortened by known access end. Billing/invites stay online.
 
 Implemented locally: Notepad, Shopping Lists, everyday Tasks, Contractors,
-Rules, Safety Equipment, Muster Stations and Trips. NOT a whole-app offline
+Rules, Safety Equipment, Muster Stations, Trips and Yard Jobs. NOT a whole-app offline
 release. Production unchanged. No hosted migrations, real signing credentials,
 deployment or activation performed. EXPO_PUBLIC_WEB_OFFLINE defaults off.
 
@@ -21,7 +21,7 @@ Reads use RLS. Sync functions run under a non-login, non-owner, non-bypass role
 inheriting authenticated permissions. Receipt and record writes commit together.
 
 Checks from repository root:
-  node --test server/offline-access.test.mjs server/offline-outbox.test.mjs server/offline-recovery.test.mjs server/offline-issuer.test.mjs server/offline-shell.test.mjs server/offline-dependent-edits.test.mjs server/offline-tasks.test.mjs server/offline-contractors.test.mjs server/offline-publications.test.mjs server/offline-trips.test.mjs
+  node --test server/offline-access.test.mjs server/offline-outbox.test.mjs server/offline-recovery.test.mjs server/offline-issuer.test.mjs server/offline-shell.test.mjs server/offline-dependent-edits.test.mjs server/offline-tasks.test.mjs server/offline-contractors.test.mjs server/offline-publications.test.mjs server/offline-trips.test.mjs server/offline-yard.test.mjs server/offline-navigation.test.mjs
   node --test server/offline-notes-db.test.mjs
   node server/run-offline-browser-check.mjs
   node server/offline-app-check.mjs
@@ -32,8 +32,8 @@ Database uses a local Unix socket; the app uses loopback and connect-src self.
 App runner commands: offline, online, change-online-note, lose-next-reply, status, stop.
 
 Evidence:
-- 157 access/outbox/recovery/issuer/shell/dependent-edit/feature tests passed.
-- 16 local PostgreSQL tests passed: retry deduplication, changed payload rejection,
+- 162 access/outbox/recovery/issuer/shell/dependent-edit/feature tests passed.
+- 17 local PostgreSQL tests passed: retry deduplication, changed payload rejection,
   private receipts, stale revisions, session/access expiry, and existing row
   policies tightened after function creation. Not a hosted-policy audit.
 - Full app TypeScript passed; scoped ESLint zero errors, four existing any
@@ -50,7 +50,7 @@ Evidence:
 - Real browser Tasks: server stopped, create, reload, mark complete, reopen
   Completed Tasks, reconnect: one completed task and one receipt. Recurring
   deadline replay, stale versions, completion identity and RLS tested in PG.
-  Calendar still requires Yard Jobs integration. Unmark/delete stay online.
+  Task Calendar now uses the integrated Yard Jobs snapshot. Unmark/delete stay online.
   Evidence: /private/tmp/nautical-offline-task-synced.png
 - Real browser Contractors: stopped server, create and reload, reconnect: one
   contractor/contact and one receipt. /private/tmp/nautical-offline-contractor-synced.png
@@ -65,11 +65,20 @@ Evidence:
   /private/tmp/nautical-offline-trip-synced.png
   Evidence: nautical-offline-app-6KOYOx/result.json. Trip calendars keep saved
   colours. Upcoming Trips still needs linked Pre-Departure Checklists.
+- Real browser Yard Jobs: stopped server, create/reload/complete/reopen editor,
+  Captain edits and clears description, reconnect: one completed job/one receipt.
+  /private/tmp/nautical-offline-yard-synced.png
+  Evidence: nautical-offline-app-AvJF4R/result.json. Shipped completion trigger
+  denies crew/HOD edits; folder snapshots stay vessel-scoped. Folder mutations,
+  reopening and deletion still require online access at this stage.
+- Browser verification found named-route/path mismatch and back actions after
+  reload with no navigation history. Shared route map and web return fallback
+  added; automated checks pass. Browser check of return fallback still pending.
 - Real IndexedDB harness: reload persistence, atomic rollback, separate accounts,
   concurrent storage connections, expiry retention, denied sync, session recovery.
 
 Remaining before whole-app release:
-1. Integrate inventory, yard jobs, watches/rest, pre-departure, maintenance, logs,
+1. Integrate inventory, watches/rest, pre-departure, maintenance, logs,
    uniforms, leave and other normal modules with exact permissions.
 2. Completed: dependent edits after ambiguous uploads retain immutable attempted
    requests and merge only local changes onto acknowledged server versions.
