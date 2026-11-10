@@ -1,3 +1,5 @@
+import { installSeaMiles } from './offline-sea-fixture.mjs';
+import { runSeaChecks } from './offline-sea-db-cases.mjs';
 import { installDuties } from './offline-duties-fixture.mjs';
 import { runDutiesChecks } from './offline-duties-db-cases.mjs';
 import { runRestChecks } from "./offline-rest-db-cases.mjs";
@@ -1103,6 +1105,8 @@ test("real isolated PostgreSQL offline note protocol", async (t) => {
     await runRestChecks(t, { sql, run, user, vessel, device });
     installDuties(sql, baseline, migration);
     await runDutiesChecks(t,{sql,run,user,vessel,device});
+    installSeaMiles(sql,migration,user);
+    await runSeaChecks(t,{sql,run,user,vessel,device});
     let first;
     await t.test("grant binds session and caps access at seven days", () => {
       const c = JSON.parse(

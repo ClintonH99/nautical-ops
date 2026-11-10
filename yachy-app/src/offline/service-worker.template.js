@@ -4,7 +4,7 @@ const ASSETS = __OFFLINE_ASSETS__;
 const CACHE = 'nautical-ops-shell-' + BUILD;
 const ALLOWED_ASSETS = new Set(ASSETS);
 const OFFLINE_ROUTES =
-  /^\/(?:app|categories|notepad(?:\/edit)?|notes(?:\/edit)?|trips(?:\/.*)?|crew-leave(?:\/.*)?|safety(?:\/.*)?|rules(?:\/.*)?|pre-departure(?:\/.*)?|tasks(?:\/.*)?|yard-period(?:\/.*)?|maintenance(?:\/.*)?|watch-keeping|hours-of-rest(?:\/.*)?|watch-duties|watch-schedule(?:\/.*)?|shopping(?:\/.*)?|inventory(?:\/.*)?|uniforms(?:\/.*)?|logs(?:\/.*)?|contractors(?:\/edit)?)\/?$/;
+  /^\/(?:app|categories|notepad(?:\/edit)?|notes(?:\/edit)?|trips(?:\/.*)?|crew-leave(?:\/.*)?|safety(?:\/.*)?|rules(?:\/.*)?|pre-departure(?:\/.*)?|tasks(?:\/.*)?|yard-period(?:\/.*)?|maintenance(?:\/.*)?|crew\/sea-miles|watch-keeping|hours-of-rest(?:\/.*)?|watch-duties|watch-schedule(?:\/.*)?|shopping(?:\/.*)?|inventory(?:\/.*)?|uniforms(?:\/.*)?|logs(?:\/.*)?|contractors(?:\/edit)?)\/?$/;
 self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
@@ -101,6 +101,7 @@ self.addEventListener('fetch', (event) => {
                 url.searchParams.get(key) || ''
               )))
       );
+    const seaQuery=url.pathname==='/safety/sea-miles/edit'&&[...url.searchParams.keys()].every((key,index,keys)=>keys.indexOf(key)===index&&((key==='entryId'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(url.searchParams.get(key)||''))||(key==='reviewMode'&&['true','false'].includes(url.searchParams.get(key)))));
     const restQuery =
       url.pathname === '/hours-of-rest/entry' &&
       /^\d{4}-\d{2}-\d{2}$/.test(url.searchParams.get('date') || '') &&
@@ -131,6 +132,7 @@ self.addEventListener('fetch', (event) => {
         !shoppingQuery &&
         !taskQuery &&
         !restQuery &&
+        !seaQuery &&
         !contractorQuery &&
         !publicationQuery &&
         !tripQuery &&

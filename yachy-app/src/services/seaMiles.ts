@@ -1,3 +1,5 @@
+import { offlineSeaMiles } from '../offline/seaMilesService';
+import type { RecordValue } from '../offline/outbox';
 import { supabase } from './supabase';
 import { requireAffectedRows } from './mutationResult';
 import type {
@@ -33,6 +35,8 @@ const REVIEW_SELECT = '*';
 
 function mapRow(row: any): SeaMileEntry {
   return {
+    offlineLocalVersion: row.offlineLocalVersion,
+    offlinePending: row.offlinePending,
     id: row.id,
     userId: row.user_id,
     reviewVesselId: row.review_vessel_id ?? null,
@@ -87,7 +91,7 @@ function mapFolder(row: any): SeaMileFolder {
   };
 }
 
-function toRow(input: SeaMileEntryFields): Record<string, unknown> {
+function toRow(input: SeaMileEntryFields): RecordValue {
   return {
     voyage_date: input.voyageDate,
     vessel_name: input.vesselName.trim(),
@@ -103,7 +107,27 @@ function toRow(input: SeaMileEntryFields): Record<string, unknown> {
 }
 
 class SeaMilesService {
+  offlineEnabled = offlineSeaMiles.enabled;
+  subscribe = offlineSeaMiles.subscribe;
+  async hasApprovalSignature(userId: string): Promise<boolean> {
+    if (offlineSeaMiles.enabled()) return (await offlineSeaMiles.context()).hasSignature === true;
+    const { getSignatureForUser } = await import('./signatures');
+    return !!(await getSignatureForUser(userId));
+  }
+  async createSubmitted(userId: string, input: SeaMileEntryFields): Promise<void> {
+    if (offlineSeaMiles.enabled()) {
+      await offlineSeaMiles.create({ user_id: userId, status: 'PENDING', ...toRow(input) });
+      return;
+    }
+    const row = await this.createDraft(userId, input);
+    await this.submit(row.id, input);
+  }
+
   async getFolders(userId: string): Promise<SeaMileFolder[]> {
+    if (offlineSeaMiles.enabled())
+      return ((await offlineSeaMiles.context()).folders as RecordValue[])
+        .filter((f) => f.user_id === userId)
+        .map(mapFolder);
     const { data, error } = await supabase
       .from('sea_mile_folders')
       .select('*')
@@ -114,6 +138,11 @@ class SeaMilesService {
   }
 
   async getFolderAssignments(): Promise<SeaMileFolderAssignment[]> {
+    if (offlineSeaMiles.enabled())
+      return ((await offlineSeaMiles.context()).assignments as RecordValue[]).map((i) => ({
+        entryId: String(i.entry_id),
+        folderId: String(i.folder_id),
+      }));
     const { data, error } = await supabase
       .from('sea_mile_folder_items')
       .select('entry_id, folder_id');
@@ -122,40 +151,48 @@ class SeaMilesService {
   }
 
   async createFolder(userId: string, name: string): Promise<SeaMileFolder> {
+    if (offlineSeaMiles.enabled()) await offlineSeaMiles.beforeOnline();
     const { data, error } = await supabase
       .from('sea_mile_folders')
       .insert({ user_id: userId, name: name.trim() })
       .select('*')
       .single();
     if (error) throw error;
+    if (offlineSeaMiles.enabled()) await offlineSeaMiles.refresh();
     return mapFolder(data);
   }
 
   async renameFolder(id: string, name: string): Promise<void> {
+    if (offlineSeaMiles.enabled()) await offlineSeaMiles.beforeOnline();
     const { data, error } = await supabase
       .from('sea_mile_folders')
       .update({ name: name.trim() })
       .eq('id', id)
       .select('id');
     requireAffectedRows(data, error, 'Renaming sea-mile folder');
+    if (offlineSeaMiles.enabled()) await offlineSeaMiles.refresh();
   }
 
   async deleteFolder(id: string): Promise<void> {
+    if (offlineSeaMiles.enabled()) await offlineSeaMiles.beforeOnline();
     const { data, error } = await supabase
       .from('sea_mile_folders')
       .delete()
       .eq('id', id)
       .select('id');
     requireAffectedRows(data, error, 'Deleting sea-mile folder');
+    if (offlineSeaMiles.enabled()) await offlineSeaMiles.refresh();
   }
 
   async moveEntryToFolder(entryId: string, folderId: string | null): Promise<void> {
+    if (offlineSeaMiles.enabled()) await offlineSeaMiles.beforeOnline();
     if (!folderId) {
       const { error } = await supabase
         .from('sea_mile_folder_items')
         .delete()
         .eq('entry_id', entryId);
       if (error) throw error;
+      if (offlineSeaMiles.enabled()) await offlineSeaMiles.refresh();
       return;
     }
 
@@ -164,9 +201,14 @@ class SeaMilesService {
       .upsert({ entry_id: entryId, folder_id: folderId }, { onConflict: 'entry_id' })
       .select('entry_id');
     requireAffectedRows(data, error, 'Moving sea-mile entry');
+    if (offlineSeaMiles.enabled()) await offlineSeaMiles.refresh();
   }
 
   async getCaptainContact(userId: string): Promise<CaptainSeaMileContact | null> {
+    if (offlineSeaMiles.enabled()) {
+      const c = (await offlineSeaMiles.context()).contact as RecordValue | null;
+      return c?.user_id === userId ? mapCaptainContact(c) : null;
+    }
     const { data, error } = await supabase
       .from('captain_sea_mile_contacts')
       .select('*')
@@ -180,6 +222,7 @@ class SeaMilesService {
     userId: string,
     input: CaptainSeaMileContactFields
   ): Promise<CaptainSeaMileContact> {
+    if (offlineSeaMiles.enabled()) await offlineSeaMiles.beforeOnline();
     const { data, error } = await supabase
       .from('captain_sea_mile_contacts')
       .upsert(
@@ -196,10 +239,16 @@ class SeaMilesService {
       .select('*')
       .single();
     if (error) throw error;
+    if (offlineSeaMiles.enabled()) await offlineSeaMiles.refresh();
     return mapCaptainContact(data);
   }
 
   async getOwn(userId: string): Promise<SeaMileEntry[]> {
+    if (offlineSeaMiles.enabled())
+      return (await offlineSeaMiles.list())
+        .filter((r) => r.user_id === userId)
+        .map(mapRow)
+        .sort((a, b) => b.voyageDate.localeCompare(a.voyageDate));
     const { data, error } = await supabase
       .from('sea_mile_entries')
       .select(OWN_SELECT)
@@ -211,6 +260,10 @@ class SeaMilesService {
   }
 
   async getById(id: string): Promise<SeaMileEntry | null> {
+    if (offlineSeaMiles.enabled()) {
+      const row = await offlineSeaMiles.read(id);
+      return row ? mapRow(row) : null;
+    }
     const { data, error } = await supabase
       .from('sea_mile_entries')
       .select(REVIEW_SELECT)
@@ -221,6 +274,12 @@ class SeaMilesService {
   }
 
   async getPendingForVessel(vesselId: string): Promise<SeaMileEntry[]> {
+    if (offlineSeaMiles.enabled())
+      return (await offlineSeaMiles.list(true))
+        .filter(
+          (r) => r.review_vessel_id === vesselId && (r.status === 'PENDING' || r.offlinePending)
+        )
+        .map(mapRow);
     const { data, error } = await supabase
       .from('sea_mile_entries')
       .select(REVIEW_SELECT)
@@ -232,6 +291,10 @@ class SeaMilesService {
   }
 
   async createDraft(userId: string, input: SeaMileEntryFields): Promise<SeaMileEntry> {
+    if (offlineSeaMiles.enabled())
+      return mapRow(
+        await offlineSeaMiles.create({ user_id: userId, status: 'DRAFT', ...toRow(input) })
+      );
     const { data, error } = await supabase
       .from('sea_mile_entries')
       .insert({ user_id: userId, status: 'DRAFT', ...toRow(input) })
@@ -241,7 +304,9 @@ class SeaMilesService {
     return mapRow(data);
   }
 
-  async updateEditable(id: string, input: SeaMileEntryFields): Promise<void> {
+  async updateEditable(id: string, input: SeaMileEntryFields, version?: number): Promise<void> {
+    if (offlineSeaMiles.enabled())
+      return offlineSeaMiles.update(id, { ...toRow(input), status: 'DRAFT' }, version);
     const { data, error } = await supabase
       .from('sea_mile_entries')
       .update({ ...toRow(input), status: 'DRAFT' })
@@ -250,7 +315,9 @@ class SeaMilesService {
     requireAffectedRows(data, error, 'Updating sea-mile entry');
   }
 
-  async submit(id: string, input: SeaMileEntryFields): Promise<void> {
+  async submit(id: string, input: SeaMileEntryFields, version?: number): Promise<void> {
+    if (offlineSeaMiles.enabled())
+      return offlineSeaMiles.update(id, { ...toRow(input), status: 'PENDING' }, version);
     const { data, error } = await supabase
       .from('sea_mile_entries')
       .update({ ...toRow(input), status: 'PENDING' })
@@ -259,7 +326,12 @@ class SeaMilesService {
     requireAffectedRows(data, error, 'Submitting sea-mile entry');
   }
 
-  async updatePendingAsCaptain(id: string, input: SeaMileEntryFields): Promise<void> {
+  async updatePendingAsCaptain(
+    id: string,
+    input: SeaMileEntryFields,
+    version?: number
+  ): Promise<void> {
+    if (offlineSeaMiles.enabled()) return offlineSeaMiles.update(id, { ...toRow(input) }, version);
     const { data, error } = await supabase
       .from('sea_mile_entries')
       .update(toRow(input))
@@ -269,7 +341,9 @@ class SeaMilesService {
     requireAffectedRows(data, error, 'Updating pending sea-mile entry');
   }
 
-  async approve(id: string): Promise<void> {
+  async approve(id: string, version?: number): Promise<void> {
+    if (offlineSeaMiles.enabled())
+      return offlineSeaMiles.update(id, { status: 'APPROVED' }, version);
     const { data, error } = await supabase
       .from('sea_mile_entries')
       .update({ status: 'APPROVED' })
@@ -279,7 +353,13 @@ class SeaMilesService {
     requireAffectedRows(data, error, 'Approving sea-mile entry');
   }
 
-  async decline(id: string, comment: string): Promise<void> {
+  async decline(id: string, comment: string, version?: number): Promise<void> {
+    if (offlineSeaMiles.enabled())
+      return offlineSeaMiles.update(
+        id,
+        { status: 'DECLINED', decline_comment: comment.trim() },
+        version
+      );
     const { data, error } = await supabase
       .from('sea_mile_entries')
       .update({ status: 'DECLINED', decline_comment: comment.trim() })
@@ -290,12 +370,14 @@ class SeaMilesService {
   }
 
   async deleteEditable(id: string): Promise<void> {
+    if (offlineSeaMiles.enabled()) await offlineSeaMiles.beforeOnline();
     const { data, error } = await supabase
       .from('sea_mile_entries')
       .delete()
       .eq('id', id)
       .select('id');
     requireAffectedRows(data, error, 'Deleting sea-mile entry');
+    if (offlineSeaMiles.enabled()) await offlineSeaMiles.refresh();
   }
 }
 

@@ -217,3 +217,24 @@ WATCH DUTIES checkpoint — 10 November 2026 (local only)
   storage failure fallback, old-session unfinished drafts and release gate.
   Duty conflicts are retained with no blind copy/overwrite. No hosted schema,
   signing configuration, push, deployment or live activation performed.
+
+SEA MILES checkpoint — 10 November 2026 (local only)
+- Personal drafts/submissions and Captain reviews use separate adapters. Original
+  ownership, pending locks and permanent approved locks remain enforced by the
+  shipped database policies/triggers. Approval checks the exact signature/contact
+  revision captured offline; changes require reconciliation. Pending approvals
+  cannot be exported as approved PDF records before server confirmation.
+- Durable replay authorization is separate from new-edit authorization, so a
+  locally locked approval can retry its immutable operation after a lost reply.
+  Current permissions are still rechecked. Captain downgrade retains pending work.
+- 217 combined Node checks, 51 isolated PostgreSQL checks, 16 Sea Miles PDF/folder
+  regressions, TypeScript, scoped lint (zero errors, 18 existing type/unused
+  warnings) and full web export passed. Browser te94Ng: offline create/reload/
+  edit/submit, reconnect, offline approval/reload, reconnect -> one approved row
+  and two receipts, zero notifications. Reviewer contact and signature stamped
+  by the server; tested UI labels distinguish pending device changes.
+  Evidence /private/tmp/nautical-offline-sea-pending.png,
+  /private/tmp/nautical-offline-sea-synced.png and nautical-offline-app-te94Ng/result.json.
+- Twenty areas integrated locally. Fuel, private attachments/PDFs, conflict and
+  old-session draft recovery, storage failure handling and full release gate
+  remain. No hosted migrations, signing config, push, deployment or activation.

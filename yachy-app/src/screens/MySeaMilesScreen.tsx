@@ -2,7 +2,7 @@ import { ScreenLoading } from '../components/ScreenLoading';
 import { optimisticDelete } from '../utils/optimisticDelete';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
 import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -148,6 +148,13 @@ export const MySeaMilesScreen = ({ navigation }: any) => {
     }
   }, [setEntries, setFolderAssignments, setFolders, setLoading, user?.id]);
 
+  useEffect(
+    () =>
+      seaMilesService.subscribe(() => {
+        void loadEntries();
+      }),
+    [loadEntries]
+  );
   useFocusEffect(
     useCallback(() => {
       void loadEntries();
@@ -171,7 +178,7 @@ export const MySeaMilesScreen = ({ navigation }: any) => {
   }, [entries, folderAssignments, searchQuery, selectedFolderId]);
 
   const approvedEntries = useMemo(
-    () => visibleEntries.filter((entry) => entry.status === 'APPROVED'),
+    () => visibleEntries.filter((entry) => entry.status === 'APPROVED' && !entry.offlinePending),
     [visibleEntries]
   );
 
@@ -335,7 +342,7 @@ export const MySeaMilesScreen = ({ navigation }: any) => {
 
   const handleExport = async () => {
     const selected = entries.filter(
-      (entry) => entry.status === 'APPROVED' && selectedIds.has(entry.id)
+      (entry) => entry.status === 'APPROVED' && !entry.offlinePending && selectedIds.has(entry.id)
     );
     if (!selected.length || !user) return;
     setExporting(true);
@@ -461,8 +468,9 @@ export const MySeaMilesScreen = ({ navigation }: any) => {
           </View>
         ) : (
           visibleEntries.map((entry) => {
-            const editable = entry.status === 'DRAFT' || entry.status === 'DECLINED';
-            const selectable = exportMode && entry.status === 'APPROVED';
+            const editable =
+              entry.status === 'DRAFT' || (entry.status === 'DECLINED' && !entry.offlinePending);
+            const selectable = exportMode && entry.status === 'APPROVED' && !entry.offlinePending;
             const assignedFolder = folders.find(
               (folder) => folder.id === folderAssignments[entry.id]
             );
@@ -498,7 +506,9 @@ export const MySeaMilesScreen = ({ navigation }: any) => {
                         ]}
                       >
                         <Text style={[styles.statusText, { color: STATUS_COLORS[entry.status] }]}>
-                          {STATUS_LABELS[entry.status]}
+                          {entry.offlinePending
+                            ? 'Saved on device — awaiting sync'
+                            : STATUS_LABELS[entry.status]}
                         </Text>
                       </View>
                     </View>
@@ -553,7 +563,7 @@ export const MySeaMilesScreen = ({ navigation }: any) => {
                         </Text>
                       </View>
                     </View>
-                    {entry.status === 'APPROVED' && approvedBy ? (
+                    {entry.status === 'APPROVED' && !entry.offlinePending && approvedBy ? (
                       <Text style={[styles.approvedBy, { color: themeColors.textSecondary }]}>
                         Approved by {approvedBy}
                         {entry.reviewedAt

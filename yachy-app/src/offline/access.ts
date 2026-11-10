@@ -24,6 +24,7 @@ export const OFFLINE_FEATURES = [
   'uniforms',
   'crewLeave',
   'seaMiles',
+  'seaMilesReview',
   'fuelLogs',
   'pumpOutLogs',
   'generalWasteLogs',

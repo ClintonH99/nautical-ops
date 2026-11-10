@@ -63,6 +63,8 @@ test("normal app route reload has cached shell while offline", async () => {
 });
 for (const path of [
   "/",
+  "/crew/sea-miles",
+  "/safety/sea-miles/edit?entryId=00000000-0000-0000-0000-000000000001&reviewMode=true",
   "/hours-of-rest/entry?date=2026-11-10",
   "/hours-of-rest/entry?date=2026-11-10&targetUserId=00000000-0000-0000-0000-000000000001&targetUserName=Synthetic%20Crew&isManagerEditing=true",
   "/watch-schedule/create?timetableId=00000000-0000-0000-0000-000000000001",
@@ -88,6 +90,8 @@ for (const path of [
   );
 }
 for (const path of [
+  "/safety/sea-miles/edit?entryId=invalid",
+  "/safety/sea-miles/edit?token=private",
   "/hours-of-rest/entry?date=2026-11-10&token=private",
   "/hours-of-rest/entry?date=2026-11-10&date=2026-11-11",
   "/hours-of-rest/entry?date=invalid",

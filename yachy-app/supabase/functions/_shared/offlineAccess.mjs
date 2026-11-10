@@ -87,6 +87,8 @@ export function createOfflineAccessHandler({ getEnv, createClient }) {
         'crewLeave',
         'restEntries',
         'restReview',
+        'seaMiles',
+        'seaMilesReview',
         'watchDuties',
         'watchDutyRules',
         'watchDutyChecks',

@@ -1,3 +1,4 @@
+import { seaMilesAdapter } from './seaMilesAdapter';
 import { watchDutiesAdapter } from './watchDutiesAdapter';
 import { restAdapter } from './restAdapter';
 import { watchKeepingAdapter, watchRulesAdapter, watchDeviceCopy } from './watchKeepingAdapter';
@@ -34,6 +35,8 @@ import { yardJobsAdapter, yardJobDeviceCopy } from './yardJobsAdapter';
 import { tripsAdapter, tripDeviceCopy } from './tripsAdapter';
 import { contractorsAdapter, contractorDeviceCopy } from './contractorsAdapter';
 const adapters = {
+  seaMiles: seaMilesAdapter(),
+  seaMilesReview: seaMilesAdapter(true),
   watchDuties: watchDutiesAdapter('watchDuties'),
   watchDutyRules: watchDutiesAdapter('watchDutyRules'),
   watchDutyChecks: watchDutiesAdapter('watchDutyChecks'),
@@ -62,6 +65,8 @@ const adapters = {
   musterStations: publicationsAdapter,
 };
 const readFunctions = {
+  seaMiles: 'read_web_offline_sea_miles',
+  seaMilesReview: 'read_web_offline_sea_miles_review',
   watchDuties: 'read_web_offline_watch_duties',
   watchDutyRules: 'read_web_offline_watch_duty_rules',
   watchDutyChecks: 'read_web_offline_watch_duty_checks',
@@ -90,6 +95,8 @@ const readFunctions = {
   rules: 'read_web_offline_rules',
 };
 const syncFunctions = {
+  seaMiles: 'sync_web_offline_sea_miles',
+  seaMilesReview: 'sync_web_offline_sea_miles',
   watchDuties: 'sync_web_offline_watch_duties',
   watchDutyRules: 'sync_web_offline_watch_duty_rules',
   watchDutyChecks: 'sync_web_offline_watch_duty_checks',
@@ -239,6 +246,8 @@ export async function checkOfflineAccess(): Promise<boolean> {
             'watchDutyChecks',
             'watchDuties',
             'watchAssignments',
+            'seaMiles',
+            'seaMilesReview',
           ].includes(change.feature),
           title: String(
             change.value.title ??
@@ -376,6 +385,26 @@ async function refreshNotes(a: Active) {
   await a.store.update(a.scope, (state) => {
     sameActive(a);
     state.restSignature = restContext.data.hasSignature;
+  });
+  const seaContext = await supabase.rpc('read_web_offline_sea_context', {
+    p_vessel_id: a.scope.vesselId,
+    p_device_id: a.scope.deviceId,
+  });
+  sameActive(a);
+  if (seaContext.error) throw seaContext.error;
+  const sc = seaContext.data;
+  if (
+    !sc ||
+    !Array.isArray(sc.folders) ||
+    !Array.isArray(sc.assignments) ||
+    typeof sc.canSubmit !== 'boolean' ||
+    typeof sc.hasSignature !== 'boolean' ||
+    typeof sc.reviewRevision !== 'string'
+  )
+    throw new OfflineError('INVALID_SNAPSHOT');
+  await a.store.update(a.scope, (state) => {
+    sameActive(a);
+    state.seaMileContext = sc;
   });
   for (const feature of Object.keys(adapters) as SupportedFeature[]) {
     if (!a.permit?.claims.permissions[feature]?.includes('read')) continue;
@@ -603,6 +632,8 @@ export async function keepBothNoteCopies(operationId: string): Promise<void> {
       'watchDutyChecks',
       'watchDuties',
       'watchAssignments',
+      'seaMiles',
+      'seaMilesReview',
     ].includes(change.feature)
   )
     throw new OfflineError('RECONCILE_FIRST');

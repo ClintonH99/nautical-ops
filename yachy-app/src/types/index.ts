@@ -285,6 +285,8 @@ export interface SeaMileFolderAssignment {
 }
 
 export interface SeaMileEntry {
+  offlineLocalVersion?: number;
+  offlinePending?: boolean;
   id: string;
   userId: string;
   reviewVesselId: string | null;

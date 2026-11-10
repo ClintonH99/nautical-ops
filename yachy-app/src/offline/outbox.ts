@@ -30,6 +30,7 @@ export type Partition = {
   vesselLabel?: string;
   crewRoster?: RecordValue[];
   restSignature?: boolean;
+  seaMileContext?: RecordValue;
   tripColors?: RecordValue | null;
   shipyardFolders?: { folders: RecordValue[]; assignments: RecordValue[] };
   snapshots?: Partial<Record<OfflineFeature, boolean>>;
@@ -83,6 +84,8 @@ export type OfflineAdapter = {
     previous: LocalRecord | null,
     context?: OfflineContext
   ) => boolean;
+  /** Re-check scope/role for an already validated transition whose local status has advanced. Server still checks the original revision and transition. */
+  authorizeReplay?: OfflineAdapter['authorize'];
   validate: (value: RecordValue) => boolean;
 };
 const keyFor = (feature: OfflineFeature, id: string) => JSON.stringify([feature, id]);
@@ -490,7 +493,7 @@ export class OfflineOutbox {
         if (
           !adapter ||
           !adapter.validate(change.value) ||
-          !adapter.authorize(
+          !(adapter.authorizeReplay ?? adapter.authorize)(
             scope,
             change.kind,
             change.value,

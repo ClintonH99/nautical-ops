@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -66,6 +66,8 @@ export const AddEditSeaMileScreen = ({ navigation, route }: any) => {
   const entryId = route.params?.entryId as string | undefined;
   const reviewMode = route.params?.reviewMode === true;
 
+  const savingRef = useRef(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [entry, setEntry] = useState<SeaMileEntry | null>(null);
   const [loading, setLoading] = useState(!!entryId);
   const [saving, setSaving] = useState(false);
@@ -92,6 +94,7 @@ export const AddEditSeaMileScreen = ({ navigation, route }: any) => {
         const existing = await seaMilesService.getById(entryId);
         if (!active) return;
         if (!existing) {
+          setLoadFailed(true);
           Alert.alert('Not found', 'This sea-mile entry is no longer available.', [
             { text: 'OK', onPress: () => navigation.goBack() },
           ]);
@@ -101,6 +104,7 @@ export const AddEditSeaMileScreen = ({ navigation, route }: any) => {
           ? isMasterOfVessel(user) && existing.status === 'PENDING'
           : existing.userId === user?.id && ['DRAFT', 'DECLINED'].includes(existing.status);
         if (!canEdit) {
+          setLoadFailed(true);
           Alert.alert('Entry locked', 'This sea-mile entry cannot be edited.', [
             { text: 'OK', onPress: () => navigation.goBack() },
           ]);
@@ -121,6 +125,7 @@ export const AddEditSeaMileScreen = ({ navigation, route }: any) => {
         setNightHours(String(existing.nightHours));
         setTidal(existing.tidal);
       } catch (error) {
+        setLoadFailed(true);
         console.error('Load sea-mile entry error:', error);
         Alert.alert('Error', 'The sea-mile entry could not be loaded.');
       } finally {
@@ -192,13 +197,18 @@ export const AddEditSeaMileScreen = ({ navigation, route }: any) => {
 
   const saveDraftOrChanges = async () => {
     const validFields = requireFields();
-    if (!validFields || !user?.id) return;
+    if (!validFields || !user?.id || loadFailed || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       if (reviewMode && entryId) {
-        await seaMilesService.updatePendingAsCaptain(entryId, validFields);
+        await seaMilesService.updatePendingAsCaptain(
+          entryId,
+          validFields,
+          entry?.offlineLocalVersion
+        );
       } else if (entryId) {
-        await seaMilesService.updateEditable(entryId, validFields);
+        await seaMilesService.updateEditable(entryId, validFields, entry?.offlineLocalVersion);
       } else {
         await seaMilesService.createDraft(user.id, validFields);
       }
@@ -207,13 +217,14 @@ export const AddEditSeaMileScreen = ({ navigation, route }: any) => {
       console.error('Save sea-mile entry error:', error);
       Alert.alert('Could not save', error?.message || 'Please check the entry and try again.');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
 
   const submitForReview = async () => {
     const validFields = requireFields();
-    if (!validFields || !user?.id) return;
+    if (!validFields || !user?.id || loadFailed || savingRef.current) return;
     if (!user.vesselId) {
       Alert.alert(
         'Join a vessel first',
@@ -222,20 +233,23 @@ export const AddEditSeaMileScreen = ({ navigation, route }: any) => {
       return;
     }
 
+    savingRef.current = true;
     setSaving(true);
     try {
-      let id = entryId;
-      if (!id) {
-        id = (await seaMilesService.createDraft(user.id, validFields)).id;
-      }
-      await seaMilesService.submit(id, validFields);
-      Alert.alert('Submitted', 'Your sea-mile entry was sent to the Captain/MOV for review.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      if (!entryId) await seaMilesService.createSubmitted(user.id, validFields);
+      else await seaMilesService.submit(entryId, validFields, entry?.offlineLocalVersion);
+      Alert.alert(
+        seaMilesService.offlineEnabled() ? 'Saved on this device' : 'Submitted',
+        seaMilesService.offlineEnabled()
+          ? 'Your entry is saved on this device. It will reach the Captain after syncing.'
+          : 'Your sea-mile entry was sent to the Captain/MOV for review.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
     } catch (error: any) {
       console.error('Submit sea-mile entry error:', error);
       Alert.alert('Could not submit', error?.message || 'Please try again.');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

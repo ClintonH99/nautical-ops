@@ -1,7 +1,7 @@
 import { ScreenLoading } from '../components/ScreenLoading';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
 import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -26,7 +26,6 @@ import {
 import { BORDER_RADIUS, COLORS, FONTS, SPACING, SIZES } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import seaMilesService from '../services/seaMiles';
-import { getSignatureForUser } from '../services/signatures';
 import { useAuthStore } from '../store';
 import type { CaptainSeaMileContact, SeaMileEntry } from '../types';
 import { formatLocalDateString } from '../utils';
@@ -105,6 +104,13 @@ export const SeaMilesReviewScreen = ({ navigation }: any) => {
     }
   }, [applyContactToForm, setCaptainContact, setEntries, setLoading, user]);
 
+  useEffect(
+    () =>
+      seaMilesService.subscribe(() => {
+        if (!editingContact && !workingId) void loadEntries();
+      }),
+    [loadEntries, editingContact, workingId]
+  );
   useFocusEffect(
     useCallback(() => {
       void loadEntries();
@@ -113,6 +119,10 @@ export const SeaMilesReviewScreen = ({ navigation }: any) => {
 
   const approve = async (entry: SeaMileEntry) => {
     if (!user?.id) return;
+    if (entry.offlinePending) {
+      Alert.alert('Waiting to sync', 'Sync this entry before reviewing it.');
+      return;
+    }
     if (!captainContact) {
       setEditingContact(true);
       Alert.alert(
@@ -123,7 +133,7 @@ export const SeaMilesReviewScreen = ({ navigation }: any) => {
     }
     let signature;
     try {
-      signature = await getSignatureForUser(user.id);
+      signature = await seaMilesService.hasApprovalSignature(user.id);
     } catch (error) {
       console.error('Load approval signature error:', error);
       Alert.alert('Could not check signature', 'Please check your connection and try again.');
@@ -147,7 +157,7 @@ export const SeaMilesReviewScreen = ({ navigation }: any) => {
           onPress: async () => {
             setWorkingId(entry.id);
             try {
-              await seaMilesService.approve(entry.id);
+              await seaMilesService.approve(entry.id, entry.offlineLocalVersion);
               await loadEntries();
             } catch (error: any) {
               Alert.alert('Could not approve', error?.message || 'Please try again.');
@@ -214,7 +224,11 @@ export const SeaMilesReviewScreen = ({ navigation }: any) => {
     }
     setWorkingId(decliningEntry.id);
     try {
-      await seaMilesService.decline(decliningEntry.id, declineComment);
+      await seaMilesService.decline(
+        decliningEntry.id,
+        declineComment,
+        decliningEntry.offlineLocalVersion
+      );
       setDecliningEntry(null);
       setDeclineComment('');
       await loadEntries();
@@ -367,6 +381,7 @@ export const SeaMilesReviewScreen = ({ navigation }: any) => {
                 <Text style={[styles.summary, { color: themeColors.textSecondary }]}>
                   {formatLocalDateString(entry.voyageDate)} • {entry.vesselName} •{' '}
                   {amount(entry.milesLogged)} NM
+                  {entry.offlinePending ? ' • Saved on device — awaiting sync' : ''}
                 </Text>
               }
             >
@@ -394,7 +409,7 @@ export const SeaMilesReviewScreen = ({ navigation }: any) => {
                     navigation.navigate('AddEditSeaMile', { entryId: entry.id, reviewMode: true })
                   }
                   style={styles.action}
-                  disabled={workingId === entry.id}
+                  disabled={workingId === entry.id || entry.offlinePending}
                 />
                 <Button
                   title="Decline"
@@ -405,13 +420,14 @@ export const SeaMilesReviewScreen = ({ navigation }: any) => {
                     setDeclineComment('');
                   }}
                   style={styles.action}
-                  disabled={workingId === entry.id}
+                  disabled={workingId === entry.id || entry.offlinePending}
                 />
                 <Button
                   title="Approve"
                   size="small"
                   onPress={() => void approve(entry)}
                   style={styles.action}
+                  disabled={entry.offlinePending}
                   loading={workingId === entry.id}
                 />
               </View>
