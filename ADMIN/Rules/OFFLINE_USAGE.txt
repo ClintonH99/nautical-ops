@@ -1,0 +1,34 @@
+WEB OFFLINE USAGE — approved requirements, 9 November 2026
+
+Clinton approved add/edit offline with later sync and a seven-day limit.
+Seven days means 168 hours from the last successful online access verification,
+not from the last local edit, browser restart, or mere network connection.
+An already-known subscription/access end may shorten that window; this does
+not create extra free-trial or renewal grace. Existing billing rules remain.
+
+Keep plans, payments, invite codes, joining/leaving vessels, device/role/account
+management and server-dependent actions online-only. Never enqueue payments,
+invites or arbitrary HTTP requests. Initial sign-in and download need internet.
+Normal records must retain the user's existing field/row permissions; offline
+mode grants no broader Captain/MOV, HOD or crew powers.
+
+Persist records and pending changes separately for project, origin, user,
+vessel, registered browser and session. Show Saved on this device separately
+from Synced. Do not silently overwrite conflicting online changes. Revalidate
+current membership, device, subscription and row permissions before syncing.
+Retries need server-side atomic idempotency, not blind POST replay.
+
+Reaching the seven-day limit locks normal offline use but does not delete
+pending work. Sign-out/account switching must lock the old cache and prevent
+old work syncing as another account. Explicit disposal of pending work needs
+an informed user choice; expiration is never permission to discard it.
+
+Revocation cannot be discovered while disconnected. Cached data is held on
+the user's browser/device and is not protection against a malicious device
+owner or XSS. Browser eviction/cleared site data can lose unsynced work; never
+claim browser storage is a backup or promise background sync on every browser.
+
+Implementation gate: local foundation first; no live activation until signed
+server access grants, per-feature adapters, durable conflict-safe server sync,
+offline app loading, user-facing status/recovery and real browser tests pass.
+The previously deferred Paddle Sandbox task stays deferred.

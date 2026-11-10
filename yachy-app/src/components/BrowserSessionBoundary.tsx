@@ -6,6 +6,7 @@ import { LostDeviceScreen } from '../screens/LostDeviceScreen';
 import authService from '../services/auth';
 import { supabase, readTransport } from '../services/supabase';
 import { useAuthStore } from '../store';
+import { useOfflineStatus } from '../offline/runtime';
 import {
   useBrowserSessionLease,
   expireBrowserSessionUi,
@@ -35,7 +36,13 @@ export function BrowserSessionBoundary({
   const colors = useThemeColors();
   const lease = useBrowserSessionLease();
   const enabled = Platform.OS === 'web' && !!userId && lease.userId === userId;
-  const blocked = enabled && lease.status !== 'allowed';
+  const offline = useOfflineStatus();
+  const offlineAllowed =
+    offline.enabled &&
+    offline.disconnected &&
+    offline.ready &&
+    !['limited', 'revoked'].includes(lease.status);
+  const blocked = enabled && lease.status !== 'allowed' && !offlineAllowed;
   const [recovering, setRecovering] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [error, setError] = useState('');

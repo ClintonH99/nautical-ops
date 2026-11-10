@@ -11,6 +11,11 @@
   "outputDirectory": "yachy-app/dist",
   "routes": [
     {
+      "src": "/offline-worker.js",
+      "headers": { "Cache-Control": "no-cache", "Service-Worker-Allowed": "/" },
+      "continue": true
+    },
+    {
       "src": "/(.*)",
       "headers": {
         "X-Content-Type-Options": "nosniff",

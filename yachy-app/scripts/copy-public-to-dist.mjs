@@ -8,6 +8,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { WEB_ICON_FILES, withWebIcons } from './web-icons.mjs';
 import { publicPaddleScript } from './paddle-web-config.mjs';
+import { buildOfflineShell } from './build-offline-shell.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.join(__dirname, '..');
@@ -58,3 +59,4 @@ for (const name of ['index.html', ...FILES.filter((name) => name.endsWith('.html
 fs.writeFileSync(path.join(distDir, 'paddle-checkout-config.js'), publicPaddleScript(process.env));
 
 console.log('[copy-public-to-dist] done,', copied, 'files');
+if (process.env.EXPO_PUBLIC_WEB_OFFLINE === 'true') await buildOfflineShell(distDir);

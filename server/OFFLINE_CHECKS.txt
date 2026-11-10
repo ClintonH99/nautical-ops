@@ -1,0 +1,73 @@
+SUPERSEDED FOUNDATION CHECKPOINT — see OFFLINE_CHECKPOINT.txt for current status.
+The text below records the earlier foundation stage, not the current build.
+
+Status: not imported by App or any feature service; not deployed or pushed.
+This is infrastructure, not a working offline app release. No API keys, live
+backend calls, database migrations, service worker or real sync endpoint added.
+User choices: add/edit and sync later; up to seven days since verified access.
+Binding requirements: ADMIN/Rules/OFFLINE_USAGE.txt.
+
+From the repository root:
+  node --test server/offline-access.test.mjs server/offline-outbox.test.mjs
+  node server/run-offline-browser-check.mjs
+
+The second command compiles only the three offline modules into a temporary
+folder and prints a loopback URL. It serves four allowlisted assets, with
+connect-src 'none', and never serves the project directory or environment.
+Open that URL, click Run browser storage checks, then Reload and verify saved
+edits. Uses synthetic browser storage and ephemeral test signing keys; only
+the synthetic public key and test permit survive reload. No private signing
+key is persisted. Unique tiny test databases remain in that local origin.
+Stop the test server after checking. No package changes required.
+
+Verification of final source:
+- 62 Node tests passed.
+- Strict isolated TypeScript check passed (ES2022, DOM, bundler resolution).
+- ESLint passed with zero warnings for the three implementation modules.
+- Real in-app-browser IndexedDB checks passed before/after actual page reload.
+  Verified separate account partitions, atomic transaction rollback, concurrent
+  database connections, persistent pending edits, expiry retention and denied
+  online verification preventing upload. Server acknowledgement was MOCKED.
+- Screenshot: /private/tmp/nautical-offline-browser-check-20261109.png
+- No complete application build or offline application journey tested.
+
+Before integration/release:
+1. Resolve the authoritative current release checkout. Existing checkout is
+   security/phase-1b-local-staging at 3fae41a with unrelated user edits. Missing
+   temporary release worktrees are not authority to reset or overwrite it.
+2. Add a server-only permit issuer with pinned rotating public verification
+   keys. Verify live user, session, registered device, membership, subscription,
+   and exact existing row/field access. Never trust browser-provided rights.
+   The permit is offline UX access evidence, never server authorization.
+3. Implement versioned sync with atomic server idempotency and base-revision
+   checks in the same transaction as each write. Reject reuse of an operation
+   ID with a changed body. Recheck all current permissions on every operation.
+   The OfflineTransport interface alone does not provide these guarantees.
+4. Implement per-feature adapters from current real schemas/policies; synthetic
+   notes fixture is not a production notes adapter. Downloads must be filtered
+   by current permissions. Preserve original server base separately if a field
+   policy needs it; current queue retains a revision and local value only.
+5. Build deliberate conflict reconciliation and recovery of pending work after
+   an online re-login/session renewal. Current session partitioning isolates
+   work but does not automatically migrate old-session pending changes.
+6. Add offline app-shell loading and feature reads/forms. Provide permission-
+   checked list/query APIs and safe downloaded attachment handling. Never cache
+   billing/invite URLs, auth responses, private exports or arbitrary requests.
+7. Mock up and implement clear device-saved/pending/synced/conflict states and
+   reconnect-required messaging. Never label an attempted sync as completed.
+   Cached records are not encrypted by this foundation and are not a backup.
+8. Verify actual airplane-mode reload, edits, reopening, reconnect, revocation,
+   trial expiry, account/vessel switch, multiple tabs/devices, storage quota,
+   ambiguous server responses and conflict resolution against isolated data.
+   No production activation until the complete flow is verified.
+
+Important current behavior:
+- Unattempted edits can coalesce. Once an upload was attempted, further edits
+  to that record wait for reconciliation, so an idempotency ID cannot change.
+- Offline expiry retains pending work. Current online authorization can sync
+  it after expiry, while a revoked/blocked account cannot.
+- Browser storage failure must surface as a failed save, never fallback to an
+  in-memory success. Browser eviction and user clearing site data remain risks.
+- The browser owner or XSS can access local data. Local time checks detect
+  observed rollback, not deliberate tampering with the whole device/storage.
+- Deferred Paddle Sandbox setup is outside this work.

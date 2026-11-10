@@ -1,0 +1,281 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Offline storage verification — synthetic data only</title>
+<h1>Offline storage verification</h1>
+<p>Local test only. No accounts, real vessel data, or external requests.</p>
+<button id="start">Run browser storage checks</button>
+<button id="reload" hidden>Reload and verify saved edits</button>
+<pre id="results" role="status">Ready</pre>
+<script type="module">
+  import { openOfflineStore } from "./indexedDb.web.js";
+  import { OfflineOutbox } from "./outbox.js";
+  import { verifyOfflinePermit } from "./access.js";
+  const results = document.querySelector("#results");
+  const log = (text) => {
+    results.textContent += "\n" + text;
+  };
+  const assert = (ok, message) => {
+    if (!ok) throw Error(message);
+    log("PASS — " + message);
+  };
+  const expectError = async (fn, code) => {
+    try {
+      await fn();
+    } catch (e) {
+      assert(e.code === code, code);
+      return;
+    }
+    throw Error("Expected " + code);
+  };
+  const encode = (bytes) =>
+    btoa(String.fromCharCode(...bytes))
+      .replaceAll("+", "-")
+      .replaceAll("/", "_")
+      .replaceAll("=", "");
+  const json = (value) =>
+    encode(new TextEncoder().encode(JSON.stringify(value)));
+  const adapter = {
+    validate: (value) =>
+      typeof value.title === "string" &&
+      typeof value.ownerId === "string" &&
+      Object.keys(value).every((k) => ["title", "ownerId"].includes(k)),
+    authorizeRead: (scope, value) => value.ownerId === scope.userId,
+    authorize: (scope, kind, value, previous) =>
+      value.ownerId === scope.userId &&
+      (!previous || previous.value.ownerId === scope.userId),
+  };
+  async function setup(meta) {
+    const store = await openOfflineStore(meta.database);
+    const permit = await verifyOfflinePermit(
+      meta.token,
+      { fixture: meta.publicKey },
+      meta.scope,
+    );
+    const context = {
+      scope: meta.scope,
+      permit,
+      nowMs: meta.now,
+      highestObservedMs: meta.now,
+      blocked: false,
+    };
+    const box = new OfflineOutbox({
+      store,
+      context: () => context,
+      adapters: { notes: adapter },
+    });
+    return { store, box, context };
+  }
+  async function start() {
+    results.textContent = "Running";
+    const scope = {
+      origin: location.origin,
+      projectId: "synthetic-project",
+      userId: "synthetic-user",
+      vesselId: "synthetic-vessel",
+      deviceId: "synthetic-device",
+      sessionId: "synthetic-session",
+    };
+    const now = Math.floor(Date.now() / 1000) * 1000;
+    const pair = await crypto.subtle.generateKey(
+      { name: "ECDSA", namedCurve: "P-256" },
+      true,
+      ["sign", "verify"],
+    );
+    const claims = {
+      iss: "nautical-ops:synthetic-project",
+      aud: scope.origin,
+      sub: scope.userId,
+      projectId: scope.projectId,
+      vesselId: scope.vesselId,
+      deviceId: scope.deviceId,
+      sessionId: scope.sessionId,
+      iat: now / 1000,
+      exp: now / 1000 + 604800,
+      accessUntil: now / 1000 + 604800,
+      permissions: { notes: ["read", "create", "update"] },
+    };
+    const input =
+      json({ alg: "ES256", typ: "nautical-ops-offline+jwt", kid: "fixture" }) +
+      "." +
+      json(claims);
+    const signature = await crypto.subtle.sign(
+      { name: "ECDSA", hash: "SHA-256" },
+      pair.privateKey,
+      new TextEncoder().encode(input),
+    );
+    const meta = {
+      scope,
+      now,
+      database: "nautical-ops-offline-test-" + crypto.randomUUID(),
+      token: input + "." + encode(new Uint8Array(signature)),
+      publicKey: await crypto.subtle.exportKey("jwk", pair.publicKey),
+    };
+    // Synthetic public verification material only. The ephemeral private key is discarded.
+    const { store, box } = await setup(meta);
+    const result = await box.save({
+      feature: "notes",
+      recordId: "fixture-note",
+      kind: "create",
+      value: { title: "Survives reload", ownerId: scope.userId },
+      expectedLocalVersion: 0,
+    });
+    assert(result.saved === "device", "save reports device storage");
+    const second = await openOfflineStore(meta.database);
+    assert(
+      (await second.read(scope)).changes.length === 1,
+      "second connection sees committed edit",
+    );
+    const before = await store.read(scope);
+    await expectError(
+      () =>
+        store.update(scope, (state) => {
+          state.changes.length = 0;
+          throw Object.assign(Error("test"), { code: "FIXTURE_ABORT" });
+        }),
+      "FIXTURE_ABORT",
+    );
+    assert(
+      JSON.stringify(await second.read(scope)) === JSON.stringify(before),
+      "aborted transaction preserves record and queue",
+    );
+    await Promise.all(
+      Array.from({ length: 10 }, (_, i) =>
+        (i % 2 ? store : second).update(scope, (state) => {
+          state.highestObservedMs += 1;
+        }),
+      ),
+    );
+    assert(
+      (await store.read(scope)).highestObservedMs ===
+        before.highestObservedMs + 10,
+      "concurrent connections do not lose updates",
+    );
+    assert(
+      (await store.read({ ...scope, userId: "another-user" })).changes
+        .length === 0,
+      "other user cannot select this partition",
+    );
+    second.close();
+    store.close();
+    sessionStorage.setItem(
+      "offline-synthetic-reload-fixture",
+      JSON.stringify(meta),
+    );
+    document.querySelector("#reload").hidden = false;
+    log("READY FOR RELOAD — no server sync has occurred");
+  }
+  async function afterReload(meta) {
+    results.textContent = "Verifying after actual page reload";
+    const { store, box, context } = await setup(meta);
+    assert(
+      (await box.read("notes", "fixture-note")).value.title ===
+        "Survives reload",
+      "record survives page reload",
+    );
+    assert(
+      (await store.read(meta.scope)).changes.length === 1,
+      "pending edit survives page reload",
+    );
+    context.nowMs = meta.now + 604800000;
+    await expectError(
+      () => box.read("notes", "fixture-note"),
+      "ONLINE_CHECK_REQUIRED",
+    );
+    assert(
+      (await store.read(meta.scope)).changes.length === 1,
+      "expiry keeps pending work",
+    );
+    let applied = 0;
+    const denied = await box.sync({
+      protocol: "offline-mutation-v1",
+      revalidate: async () => false,
+      apply: async () => {
+        applied++;
+      },
+    });
+    assert(
+      denied.stopped === "ACCESS_RECHECK_FAILED",
+      "failed online verification is reported",
+    );
+    assert(applied === 0, "denied online verification prevents upload");
+    // A successful current online authorization may sync work after offline access expires.
+    const sync = await box.sync({
+      protocol: "offline-mutation-v1",
+      revalidate: async () => true,
+      apply: async (_scope, change) => ({
+        status: "applied",
+        operationId: change.id,
+        recordId: change.recordId,
+        revision: "synthetic-r1",
+        value: change.value,
+      }),
+    });
+    assert(
+      sync.synced === 1 && sync.stopped === null,
+      "one mock server acknowledgement accepted",
+    );
+    assert(
+      (await store.read(meta.scope)).changes.length === 0,
+      "mock acknowledgement clears only confirmed work",
+    );
+    const oldScope = { ...meta.scope, sessionId: "earlier-session" };
+    await store.update(oldScope, (state) => {
+      state.changes.push({
+        id: "recovery-operation",
+        feature: "notes",
+        recordId: "recovery-note",
+        kind: "create",
+        value: { title: "Earlier sign-in", ownerId: meta.scope.userId },
+        baseRevision: null,
+        localVersion: 1,
+        state: "pending",
+        attempts: 1,
+        claim: null,
+        claimUntil: 0,
+      });
+    });
+    assert(
+      (await store.recoverable(meta.scope)) === 1,
+      "earlier-session work is discoverable for the same owner",
+    );
+    assert(
+      (await store.recoverable({ ...meta.scope, userId: "different-user" })) ===
+        0,
+      "recovery does not expose another account",
+    );
+    try {
+      await store.recover(meta.scope, () => {
+        throw Error("simulated permission change");
+      });
+    } catch {}
+    assert(
+      (await store.read(oldScope)).changes.length === 1,
+      "failed recovery transaction preserves the source",
+    );
+    assert(
+      (await store.recover(
+        meta.scope,
+        (change) => change.value.ownerId === meta.scope.userId,
+      )) === 1,
+      "recovery moves work atomically",
+    );
+    assert(
+      (await store.read(oldScope)).changes.length === 0 &&
+        (await store.read(meta.scope)).changes[0].id === "recovery-operation",
+      "recovery retains the original server idempotency key",
+    );
+    store.close();
+    log(
+      "BROWSER STORAGE CHECKS PASSED — mocked sync only; app integration not tested",
+    );
+  }
+  const run = (fn) =>
+    fn().catch((error) => log("FAIL — " + (error.code || error.message)));
+  document.querySelector("#start").onclick = () => run(start);
+  document.querySelector("#reload").onclick = () =>
+    location.assign("/?resume=1");
+  if (location.search === "?resume=1") {
+    const saved = sessionStorage.getItem("offline-synthetic-reload-fixture");
+    if (saved) run(() => afterReload(JSON.parse(saved)));
+  }
+</script>

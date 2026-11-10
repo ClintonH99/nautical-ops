@@ -6,6 +6,8 @@
 import { supabase } from './supabase';
 import { requireAffectedRows } from './mutationResult';
 import { Department } from '../types';
+import { offlineShopping } from '../offline/shoppingService';
+import type { RecordValue } from '../offline/outbox';
 
 export interface ShoppingListItem {
   text: string;
@@ -16,6 +18,7 @@ export interface ShoppingListItem {
 export type ShoppingListType = 'general' | 'trip';
 
 export interface ShoppingList {
+  offlineLocalVersion?: number;
   id: string;
   vesselId: string;
   department: Department;
@@ -54,6 +57,7 @@ export function normalizeShoppingListItems(raw: unknown): ShoppingListItem[] {
 
 class ShoppingListsService {
   async getByVessel(vesselId: string): Promise<ShoppingList[]> {
+    if (offlineShopping.enabled()) return (await offlineShopping.list(vesselId)).map(this.mapRow);
     try {
       const { data, error } = await supabase
         .from('shopping_lists')
@@ -77,6 +81,17 @@ class ShoppingListsService {
         amount: item.amount?.trim(),
         checked: item.checked,
       }));
+    if (offlineShopping.enabled())
+      return this.mapRow(
+        await offlineShopping.create({
+          vessel_id: input.vesselId,
+          department: input.department,
+          list_type: input.listType,
+          title: input.title.trim(),
+          items: items.map((item) => ({ ...item, amount: item.amount || '' })),
+          is_master: input.isMaster ?? false,
+        })
+      );
     const { data, error } = await supabase
       .from('shopping_lists')
       .insert([
@@ -99,7 +114,8 @@ class ShoppingListsService {
 
   async update(
     id: string,
-    updates: { title?: string; items?: ShoppingListItem[] }
+    updates: { title?: string; items?: ShoppingListItem[] },
+    offlineLocalVersion?: number
   ): Promise<ShoppingList> {
     const payload: Record<string, unknown> = {};
     if (updates.title !== undefined) payload.title = updates.title.trim();
@@ -113,6 +129,11 @@ class ShoppingListsService {
         }));
     }
 
+    if (offlineShopping.enabled()) {
+      // Strip undefined optional quantities before the strict durable JSON save.
+      const value = JSON.parse(JSON.stringify(payload)) as RecordValue;
+      return this.mapRow(await offlineShopping.update(id, value, offlineLocalVersion));
+    }
     const { data, error } = await supabase
       .from('shopping_lists')
       .update(payload)
@@ -125,6 +146,7 @@ class ShoppingListsService {
   }
 
   async delete(id: string): Promise<void> {
+    if (offlineShopping.enabled()) await offlineShopping.beforeDelete(id);
     const { data, error } = await supabase
       .from('shopping_lists')
       .delete()
@@ -141,6 +163,7 @@ class ShoppingListsService {
   private mapRow(row: Record<string, unknown>): ShoppingList {
     const listType = row.list_type as string;
     return {
+      offlineLocalVersion: row.offlineLocalVersion as number | undefined,
       id: row.id as string,
       vesselId: row.vessel_id as string,
       department: row.department as Department,

@@ -4,7 +4,7 @@ import { optimisticDelete } from '../utils/optimisticDelete';
 /**
  * Notepad Screen
  */
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { PageHeader, PreviewActionButtons } from '../components';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -13,6 +13,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import notesService, { Note } from '../services/notes';
+import { offlineNotes } from '../offline/notesService';
 
 const NOTEPAD_INFO = {
   title: 'Notepad',
@@ -31,6 +32,7 @@ export const NotepadScreen = ({ navigation }: any) => {
   const [notes, setNotes] = useScreenState<Note[]>('notes', []);
   const [loading, setLoading] = useScreenLoading();
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const loadedUserIdRef = useRef<string | null>(user?.id ?? null);
   const vesselId = user?.vesselId ?? null;
 
@@ -49,7 +51,9 @@ export const NotepadScreen = ({ navigation }: any) => {
     try {
       const data = await notesService.getMyNotes(userId);
       setNotes(data);
+      setLoadError(false);
     } catch (e) {
+      setLoadError(true);
       console.error('Load notes error:', e);
     } finally {
       setLoading(false);
@@ -60,6 +64,13 @@ export const NotepadScreen = ({ navigation }: any) => {
     useCallback(() => {
       loadNotes();
     }, [loadNotes])
+  );
+  useEffect(
+    () =>
+      offlineNotes.subscribe(() => {
+        void loadNotes();
+      }),
+    [loadNotes]
   );
 
   const handleDelete = (note: Note) => {
@@ -98,6 +109,17 @@ export const NotepadScreen = ({ navigation }: any) => {
   return (
     <View style={styles.pageWrap}>
       <PageHeader title="Notepad" info={NOTEPAD_INFO} infoScreenKey="notepad" />
+      {loadError && (
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={() => void loadNotes()}
+          style={{ padding: 16 }}
+        >
+          <Text style={{ color: themeColors.textPrimary }}>
+            Notes could not be loaded. Your saved edits are kept. Tap to retry.
+          </Text>
+        </TouchableOpacity>
+      )}
       <ScrollView
         style={[styles.container, { backgroundColor: themeColors.background }]}
         contentContainerStyle={styles.content}

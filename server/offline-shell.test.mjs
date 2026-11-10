@@ -1,0 +1,127 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import vm from "node:vm";
+const template = await readFile(
+  new URL(
+    "../yachy-app/src/offline/service-worker.template.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
+function fixture() {
+  const listeners = {};
+  const entries = new Map([
+    ["/index.html", new Response("synthetic app shell")],
+    ["/_expo/app.js", new Response("synthetic code")],
+  ]);
+  const cache = {
+    match: async (key) => entries.get(key)?.clone(),
+    addAll: async () => {},
+  };
+  const self = {
+    location: { origin: "https://offline.example" },
+    clients: { claim: async () => {} },
+    addEventListener: (name, fn) => {
+      listeners[name] = fn;
+    },
+  };
+  vm.runInNewContext(
+    template
+      .replace("__OFFLINE_BUILD__", '"test"')
+      .replace("__OFFLINE_ASSETS__", '["/index.html","/_expo/app.js"]'),
+    {
+      self,
+      Set,
+      URL,
+      Request,
+      Response,
+      caches: { open: async () => cache, keys: async () => [] },
+      fetch: async () => {
+        throw Error("network disconnected");
+      },
+    },
+  );
+  function request(path, { method = "GET", mode = "navigate" } = {}) {
+    let result = null;
+    listeners.fetch({
+      request: { url: new URL(path, self.location.origin).href, method, mode },
+      respondWith: (value) => {
+        result = value;
+      },
+    });
+    return result;
+  }
+  return { request };
+}
+test("normal app route reload has cached shell while offline", async () => {
+  const f = fixture();
+  assert.equal(
+    await (await f.request("/notepad")).text(),
+    "synthetic app shell",
+  );
+});
+for (const path of [
+  "/",
+  "/shopping/list?listType=trip",
+  "/shopping/edit?listType=trip&asMasterList=true",
+  "/shopping/edit?listId=00000000-0000-0000-0000-000000000001",
+]) {
+  test("approved offline route " + path, async () =>
+    assert.equal(
+      await (await fixture().request(path)).text(),
+      "synthetic app shell",
+    ),
+  );
+}
+for (const path of [
+  "/shopping/edit?token=private",
+  "/shopping/list?listType=trip&listType=general",
+  "/?token=private",
+]) {
+  test("unapproved offline query " + path, () =>
+    assert.equal(fixture().request(path), null),
+  );
+}
+test("a note editor with one valid record ID can reload offline", async () => {
+  assert.equal(
+    await (
+      await fixture().request(
+        "/notepad/edit?noteId=00000000-0000-0000-0000-000000000001",
+      )
+    ).text(),
+    "synthetic app shell",
+  );
+});
+for (const query of [
+  "noteId=invalid",
+  "noteId=00000000-0000-0000-0000-000000000001&token=private",
+  "noteId=00000000-0000-0000-0000-000000000001&noteId=00000000-0000-0000-0000-000000000002",
+]) {
+  test("editor rejects unapproved query " + query, () =>
+    assert.equal(fixture().request("/notepad/edit?" + query), null),
+  );
+}
+for (const path of [
+  "/vessel-plans",
+  "/checkout",
+  "/settings/devices",
+  "/join-vessel",
+  "/api/export-pdf",
+  "/login",
+  "/app?crewInvite=ready",
+  "https://example.com/app",
+]) {
+  test(`never intercepts sensitive route ${path}`, () =>
+    assert.equal(fixture().request(path), null));
+}
+test("POST never cached or queued by service worker", () =>
+  assert.equal(fixture().request("/notepad", { method: "POST" }), null));
+test("only explicitly listed static assets are cached", async () => {
+  const f = fixture();
+  assert.equal(
+    await (await f.request("/_expo/app.js", { mode: "cors" })).text(),
+    "synthetic code",
+  );
+  assert.equal(f.request("/private-user-data.json", { mode: "cors" }), null);
+});

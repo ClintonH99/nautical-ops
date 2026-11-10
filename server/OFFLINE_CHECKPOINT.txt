@@ -1,0 +1,64 @@
+WEB OFFLINE — LOCAL CHECKPOINT, 9 November 2026
+
+Requested: everyday vessel features; add/edit offline; sync later; max 168h
+since verified access, shortened by known access end. Billing/invites stay online.
+
+Implemented locally: Notepad and Shopping Lists. NOT a whole-app offline
+release. Production unchanged. No hosted migrations, real signing credentials,
+deployment or activation performed. EXPO_PUBLIC_WEB_OFFLINE defaults off.
+
+Baseline: release/subscription-controls-20261103 at a8e512f. Work started in
+local-staging/offline-release to preserve unrelated canonical edits; reviewed
+source saved in the separate nautical-ops-offline checkout.
+
+Implemented: signed browser/session/user/vessel-bound access; durable IndexedDB
+records/outbox; cross-tab claims; immutable attempted writes; atomic server
+receipts and revision checks; offline shell with allowlisted routes/assets;
+Notes/Shopping services/forms; explicit keep-both conflict handling; same-user
+and browser recovery after a fresh online access check. Expiry preserves edits.
+Reads use RLS. Sync functions run under a non-login, non-owner, non-bypass role
+inheriting authenticated permissions. Receipt and record writes commit together.
+
+Checks from repository root:
+  node --test server/offline-access.test.mjs server/offline-outbox.test.mjs server/offline-recovery.test.mjs server/offline-issuer.test.mjs server/offline-shell.test.mjs
+  node --test server/offline-notes-db.test.mjs
+  node server/run-offline-browser-check.mjs
+  node server/offline-app-check.mjs
+  cd yachy-app && npm run typecheck
+
+All runners use synthetic local data, never hosted services or real credentials.
+Database uses a local Unix socket; the app uses loopback and connect-src self.
+App runner commands: offline, online, change-online-note, status, stop.
+
+Evidence:
+- 115 access/outbox/recovery/issuer/shell tests passed.
+- 12 local PostgreSQL tests passed: retry deduplication, changed payload rejection,
+  private receipts, stale revisions, session/access expiry, and existing row
+  policies tightened after function creation. Not a hosted-policy audit.
+- Full app TypeScript passed; scoped ESLint zero errors, four existing any
+  warnings on screen props. Isolated full web export passed.
+- Real browser, HTTP server stopped: Notes reload/create/edit/reload, reconnect:
+  exactly one final note/receipt. Separate conflict journey preserved the online
+  note and explicit device copy: two records/two receipts.
+- Real browser, server stopped: Shopping reload/create/reload, tick/reload,
+  reconnect: exactly one list with checked=true and one receipt.
+- Real IndexedDB harness: reload persistence, atomic rollback, separate accounts,
+  concurrent storage connections, expiry retention, denied sync, session recovery.
+
+Remaining before whole-app release:
+1. Integrate tasks, inventory, trips, watches/rest, safety, maintenance, logs,
+   contractors, uniforms, leave and other normal modules with exact permissions.
+2. Allow dependent edits after an ambiguous earlier upload. Currently editing
+   that record requests reconciliation; attempted request bodies stay immutable.
+3. Show shell download readiness/local checkbox save progress, and provide an
+   online fallback when browser storage is unavailable or full.
+4. Resolve old-session/new-session edits to the same record. Older work is kept
+   untouched if it would overwrite current-session work.
+5. Verify production-equivalent auth/schema/RLS/triggers, other roles/devices,
+   all routes, attachments, installed reopening and subscription gating.
+6. Provision signing credentials, deploy reviewed backend changes, pin public
+   verification keys, then enable only after complete release verification.
+
+Browser storage is not encrypted or a backup. Eviction or clearing site data can
+lose pending work. Revocation is unknowable while disconnected. No guaranteed
+background sync after closing the browser. Paddle Sandbox remains deferred.

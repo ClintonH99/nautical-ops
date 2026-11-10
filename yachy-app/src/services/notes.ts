@@ -5,8 +5,10 @@
  */
 import { supabase } from './supabase';
 import { requireAffectedRows } from './mutationResult';
+import { offlineNotes } from '../offline/notesService';
 
 export interface Note {
+  offlineLocalVersion?: number;
   id: string;
   vessel_id: string;
   user_id: string;
@@ -19,6 +21,7 @@ export interface Note {
 
 const notesService = {
   async getMyNotes(userId: string): Promise<Note[]> {
+    if (offlineNotes.enabled()) return offlineNotes.list(userId);
     const { data, error } = await supabase
       .from('notes')
       .select('*')
@@ -29,6 +32,7 @@ const notesService = {
   },
 
   async getNoteById(id: string): Promise<Note | null> {
+    if (offlineNotes.enabled()) return offlineNotes.get(id);
     const { data, error } = await supabase.from('notes').select('*').eq('id', id).single();
     if (error) throw error;
     return data;
@@ -41,6 +45,8 @@ const notesService = {
     content: string,
     createdByName: string
   ): Promise<Note> {
+    if (offlineNotes.enabled())
+      return offlineNotes.create(vesselId, userId, title, content, createdByName);
     const { data, error } = await supabase
       .from('notes')
       .insert({
@@ -56,7 +62,13 @@ const notesService = {
     return data;
   },
 
-  async updateNote(id: string, title: string, content: string): Promise<Note> {
+  async updateNote(
+    id: string,
+    title: string,
+    content: string,
+    offlineLocalVersion?: number
+  ): Promise<Note> {
+    if (offlineNotes.enabled()) return offlineNotes.update(id, title, content, offlineLocalVersion);
     const { data, error } = await supabase
       .from('notes')
       .update({ title, content, updated_at: new Date().toISOString() })
@@ -68,6 +80,7 @@ const notesService = {
   },
 
   async deleteNote(id: string): Promise<void> {
+    if (offlineNotes.enabled()) await offlineNotes.beforeDelete(id);
     const { data, error } = await supabase.from('notes').delete().eq('id', id).select('id');
     requireAffectedRows(data, error, 'Deleting the note');
   },

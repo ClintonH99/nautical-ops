@@ -15,6 +15,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore, useDepartmentColorStore, getDepartmentColor } from '../store';
 import shoppingListsService, { ShoppingList, ShoppingListItem } from '../services/shoppingLists';
+import { offlineShopping } from '../offline/shoppingService';
 import { Department } from '../types';
 import { Button, DepartmentMultiSelector, PageHeader, PreviewActionButtons } from '../components';
 import {
@@ -117,6 +118,15 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
     }, [loadLists])
   );
 
+  useEffect(
+    () =>
+      offlineShopping.subscribe(() => {
+        if (pendingItemsRef.current.size === 0 && savingListIdsRef.current.size === 0)
+          void loadLists();
+      }),
+    [loadLists]
+  );
+
   const onRefresh = () => {
     setRefreshing(true);
     loadLists();
@@ -134,7 +144,21 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
           if (!itemsToSave) continue;
 
           try {
-            const savedList = await shoppingListsService.update(listId, { items: itemsToSave });
+            const version = listsRef.current.find(
+              (list) => list.id === listId
+            )?.offlineLocalVersion;
+            const savedList = await shoppingListsService.update(
+              listId,
+              { items: itemsToSave },
+              version
+            );
+            replaceLists(
+              listsRef.current.map((list) =>
+                list.id === listId
+                  ? { ...list, offlineLocalVersion: savedList.offlineLocalVersion }
+                  : list
+              )
+            );
             confirmedItemsRef.current.set(listId, savedList.items);
           } catch (error) {
             console.error('Save shopping item state error:', error);
@@ -152,7 +176,7 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
         savingListIdsRef.current.delete(listId);
       }
     },
-    [updateListItemsLocally]
+    [updateListItemsLocally, replaceLists]
   );
 
   const saveItemsInBackground = useCallback(

@@ -145,6 +145,7 @@ import { readTransport } from '../services/supabase';
 import { vesselTransitionRoute } from '../utils/access';
 import { vesselNavigationState } from '../utils/vesselNavigation';
 import { getRenewableSessionUserId } from '../utils/cachedSession';
+import { setOfflineRoute } from '../offline/runtime';
 import { InventoryAutoSaveSync } from '../hooks/useInventoryAutoSave';
 import { isSentryEnabled, sentryNavigationIntegration, setSentryUserContext } from '../lib/sentry';
 
@@ -171,7 +172,7 @@ export const RootNavigator = () => {
   const browserLease = useBrowserSessionLease();
   const sessionBlocked = browserLease.userId === user?.id && browserLease.status !== 'allowed';
   const hasVessel = !!user?.vesselId;
-  const navigationRef = useNavigationContainerRef();
+  const navigationRef = useNavigationContainerRef<Record<string, object | undefined>>();
   // Preserve presentation intent while the existing server gate refreshes or
   // sign-in finishes. This flag never changes an access decision.
   const checkoutReturn = useRef(
@@ -764,7 +765,9 @@ export const RootNavigator = () => {
       ref={navigationRef}
       theme={navTheme}
       linking={webLinking}
+      onReady={() => setOfflineRoute(navigationRef.getCurrentRoute()?.name ?? null)}
       onStateChange={() => {
+        setOfflineRoute(navigationRef.getCurrentRoute()?.name ?? null);
         const current = navigationRef.getCurrentRoute() as
           | { name: string; params?: { crewInvite?: string } }
           | undefined;

@@ -25,6 +25,7 @@ import shoppingListsService, {
   ShoppingListType,
 } from '../services/shoppingLists';
 import { Department } from '../types';
+import { offlineShopping } from '../offline/shoppingService';
 import {
   Input,
   Button,
@@ -50,6 +51,7 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isMaster, setIsMaster] = useState(false);
+  const [offlineLocalVersion, setOfflineLocalVersion] = useState<number | undefined>();
 
   const vesselId = user?.vesselId ?? null;
 
@@ -62,6 +64,7 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
       const lists = await shoppingListsService.getByVessel(vesselId!);
       const list = lists.find((l) => l.id === listId);
       if (list) {
+        setOfflineLocalVersion(list.offlineLocalVersion);
         setTitle(list.title);
         setDepartment(list.department);
         setItems(list.items.length > 0 ? list.items : [{ text: '', checked: false }]);
@@ -133,8 +136,18 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
     setSaving(true);
     try {
       if (isEdit) {
-        await shoppingListsService.update(listId, { title: trimmedTitle, items: trimmedItems });
-        Alert.alert('Saved', 'Shopping list updated.');
+        const saved = await shoppingListsService.update(
+          listId,
+          { title: trimmedTitle, items: trimmedItems },
+          offlineLocalVersion
+        );
+        setOfflineLocalVersion(saved.offlineLocalVersion);
+        Alert.alert(
+          'Saved',
+          offlineShopping.enabled()
+            ? 'Saved on this device. Check the sync status before closing this browser.'
+            : 'Shopping list updated.'
+        );
       } else {
         await shoppingListsService.create({
           vesselId,
@@ -145,7 +158,12 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
           createdBy: user?.id,
           isMaster: asMasterList,
         });
-        Alert.alert('Created', 'Shopping list added.');
+        Alert.alert(
+          'Created',
+          offlineShopping.enabled()
+            ? 'Saved on this device. Check the sync status before closing this browser.'
+            : 'Shopping list added.'
+        );
       }
       navigation.goBack();
     } catch (e) {

@@ -34,6 +34,7 @@ export const AddEditNoteScreen = ({ navigation, route }: any) => {
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const contentInputRef = useRef<TextInput | null>(null);
+  const offlineVersion = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     if (isEdit) {
@@ -41,6 +42,7 @@ export const AddEditNoteScreen = ({ navigation, route }: any) => {
         .getNoteById(noteId!)
         .then((note) => {
           if (note) {
+            offlineVersion.current = note.offlineLocalVersion;
             setTitle(note.title);
             setContent(note.content);
           }
@@ -63,7 +65,12 @@ export const AddEditNoteScreen = ({ navigation, route }: any) => {
     try {
       setSaving(true);
       if (isEdit) {
-        await notesService.updateNote(noteId!, title.trim(), content.trim());
+        await notesService.updateNote(
+          noteId!,
+          title.trim(),
+          content.trim(),
+          offlineVersion.current
+        );
       } else {
         await notesService.createNote(
           vesselId,

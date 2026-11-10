@@ -15,6 +15,7 @@ import { RootNavigator } from './src/navigation/RootNavigator';
 import { isSupabaseConfigured } from './src/services/supabase';
 import { installWebViewport } from './src/utils/installWebViewport';
 import { WebPageRefresh } from './src/components/WebPageRefresh';
+import { OfflineBoundary } from './src/offline/OfflineBoundary';
 
 function AppContent() {
   useEffect(() => installWebViewport(), []);
@@ -56,7 +57,9 @@ function AppContent() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       {/* Session recovery is outside the stack and needs the same safe-area context. */}
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <RootNavigator />
+        <OfflineBoundary>
+          <RootNavigator />
+        </OfflineBoundary>
         <WebPageRefresh />
         <StatusBar style="auto" />
       </SafeAreaProvider>
