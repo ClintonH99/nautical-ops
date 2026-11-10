@@ -255,3 +255,21 @@ CONFLICT AND DRAFT RECOVERY checkpoint — 10 November 2026 (local only)
   Evidence /private/tmp/nautical-offline-conflict-recovered.png.
 - Fuel, attachments/PDFs, storage failure fallback and hosted release checks
   remain. No hosted migration, signing configuration, push or deployment.
+
+MORNING USER TEST checkpoint — 10 November 2026 (local only)
+- Start with node server/start-offline-test.mjs. It launches a detached loopback
+  test app and controls at http://127.0.0.1:55911. Each fresh launch allocates a
+  new app origin so old browser test data cannot be mistaken for a new vessel.
+  Existing running instances are reused. No OS startup job is installed.
+- Controls disconnect/reconnect only the synthetic server. Host, Origin and
+  per-process token checks protect changes; no arbitrary command or cloud path.
+- 225 feature/foundation checks and 2 local control tests passed, TypeScript,
+  scoped lint and full web export passed. Browser fMPDUw: use the control page
+  to disconnect; create note, cold refresh, edit; reconnect and Retry Sync;
+  refresh again. Local SQL confirms one final note and one receipt.
+  Evidence /private/tmp/nautical-offline-morning-pending.png and
+  /private/tmp/nautical-offline-morning-synced.png.
+- Test account: offline@example.test / synthetic-offline-check (dummy only).
+  Tests do not use actual users, payments or hosted credentials. Twenty areas
+  are available; remaining Fuel/attachments/PDF and release work is not hidden.
+  This is a reviewable test build, not the completed production offline release.

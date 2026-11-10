@@ -1,5 +1,6 @@
-import { installSeaMiles } from './offline-sea-fixture.mjs';
-import { installDuties } from './offline-duties-fixture.mjs';
+import { installSeaMiles } from "./offline-sea-fixture.mjs";
+import { startOfflineTestControls } from "./offline-test-controls.mjs";
+import { installDuties } from "./offline-duties-fixture.mjs";
 import { installRest } from "./offline-rest-fixture.mjs";
 import { installWatch } from "./offline-watch-fixture.mjs";
 import { installCrewLeave } from "./offline-crew-leave-fixture.mjs";
@@ -126,6 +127,7 @@ const run = (source) =>
     .at(-1);
 let loseNextNoteReply = false;
 let server,
+  controls,
   stopped = false,
   databaseStarted = false;
 function cleanup() {
@@ -133,6 +135,7 @@ function cleanup() {
   stopped = true;
   server?.closeAllConnections();
   server?.close();
+  void controls?.close();
   if (databaseStarted)
     execFileSync(
       join(bin, "pg_ctl"),
@@ -296,8 +299,14 @@ try {
       readFileSync(join(root, "yachy-app/supabase/migrations", name), "utf8"),
     user,
   );
-  installDuties(sql,baseline,name=>readFileSync(join(app,'supabase/migrations',name),'utf8'));
-  installSeaMiles(sql,name=>readFileSync(join(app,'supabase/migrations',name),'utf8'),user);
+  installDuties(sql, baseline, (name) =>
+    readFileSync(join(app, "supabase/migrations", name), "utf8"),
+  );
+  installSeaMiles(
+    sql,
+    (name) => readFileSync(join(app, "supabase/migrations", name), "utf8"),
+    user,
+  );
   if (process.env.OFFLINE_APP_WATCH_SEED === "true") {
     const other = "00000000-0000-0000-0000-000000000009";
     sql(
@@ -618,12 +627,13 @@ try {
       ["watch_rules", "watch_rules"],
       ["rest_entries", "rest_entries"],
       ["rest_review", "unused"],
-["sea_context","unused"],["sea_miles","sea_miles"],["sea_miles_review","unused"],
-["watch_duties","watch_duties"],
-["watch_duty_checks","watch_duty_checks"],
-["watch_duty_rules","watch_duty_rules"],
-["watch_assignments","watch_assignments"],
-
+      ["sea_context", "unused"],
+      ["sea_miles", "sea_miles"],
+      ["sea_miles_review", "unused"],
+      ["watch_duties", "watch_duties"],
+      ["watch_duty_checks", "watch_duty_checks"],
+      ["watch_duty_rules", "watch_duty_rules"],
+      ["watch_assignments", "watch_assignments"],
     ]) {
       if (path === "/rest/v1/rpc/read_web_offline_" + table)
         return json(
@@ -728,7 +738,8 @@ try {
     res.end(readFileSync(file));
   }
   const online = () =>
-    new Promise((resolve) => {
+    new Promise((resolve, reject) => {
+      if (server?.listening) return resolve();
       server = createServer((req, res) =>
         handle(req, res).catch(() => {
           if (!res.headersSent)
@@ -736,15 +747,42 @@ try {
           res.end(JSON.stringify({ message: "Synthetic request failed" }));
         }),
       );
+      server.once('error', reject);
       server.listen(port, "127.0.0.1", resolve);
     });
   await online();
+  const disconnect = async () => {
+    if (!server?.listening) return;
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+  };
   console.log(
     `READY ${origin}/login | Login: offline@example.test / synthetic-offline-check`,
   );
   console.log(
     `Evidence directory: ${dir}. Commands: offline, online, change-online-note, status, stop`,
   );
+  if (process.env.OFFLINE_TEST_CONTROLS_PORT) {
+    const controlPort = Number(process.env.OFFLINE_TEST_CONTROLS_PORT);
+    if (
+      !Number.isInteger(controlPort) ||
+      controlPort < 1024 ||
+      controlPort > 65535 ||
+      controlPort === port
+    )
+      throw new Error("Invalid local test control port");
+    controls = await startOfflineTestControls({
+      port: controlPort,
+      appOrigin: origin,
+      isOnline: () => !!server?.listening,
+      connect: online,
+      disconnect,
+    });
+    console.log(`TEST CONTROLS ${controls.origin}`);
+    // In user-test mode the local controls own the connection. Closing stdin
+    // must not tear down the test vessel when the agent's command returns.
+    await new Promise(() => {});
+  }
   const lines = createInterface({ input: process.stdin });
   for await (const line of lines) {
     if (line === "lose-next-reply") {
@@ -754,8 +792,7 @@ try {
       );
     }
     if (line === "offline") {
-      server.closeAllConnections();
-      await new Promise((resolve) => server.close(resolve));
+      await disconnect();
       console.log("OFFLINE — local HTTP server stopped; database retained.");
     }
     if (line === "online") {
