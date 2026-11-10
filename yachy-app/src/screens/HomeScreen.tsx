@@ -287,6 +287,7 @@ export const HomeScreen = ({ navigation, route }: any) => {
   useFocusEffect(
     useCallback(() => {
       if (hasVessel) loadTrips();
+      return tripsService.subscribe(() => { if (hasVessel) void loadTrips(); });
     }, [hasVessel, loadTrips])
   );
 

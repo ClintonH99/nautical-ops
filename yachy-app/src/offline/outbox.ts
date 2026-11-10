@@ -27,6 +27,7 @@ export type PendingChange = OfflineMutation & {
 };
 export type Partition = {
   vesselLabel?: string;
+  tripColors?: RecordValue | null;
   snapshots?: Partial<Record<OfflineFeature, boolean>>;
   schema: 1;
   highestObservedMs: number;

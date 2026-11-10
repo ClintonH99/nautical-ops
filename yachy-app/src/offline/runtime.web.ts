@@ -21,12 +21,14 @@ import { shoppingAdapter, shoppingDeviceCopy } from './shoppingAdapter';
 import type { OfflineFeature } from './access';
 import { tasksAdapter, taskDeviceCopy } from './tasksAdapter';
 import { publicationsAdapter, publicationDeviceCopy } from './publicationsAdapter';
+import { tripsAdapter, tripDeviceCopy } from './tripsAdapter';
 import { contractorsAdapter, contractorDeviceCopy } from './contractorsAdapter';
 const adapters = {
   notes: notesAdapter,
   shoppingLists: shoppingAdapter,
   tasks: tasksAdapter,
   contractors: contractorsAdapter,
+  trips: tripsAdapter,
   rules: publicationsAdapter,
   safetyEquipment: publicationsAdapter,
   musterStations: publicationsAdapter,
@@ -38,6 +40,7 @@ const readFunctions = {
   contractors: 'read_web_offline_contractors',
   musterStations: 'read_web_offline_muster_stations',
   safetyEquipment: 'read_web_offline_safety_equipment',
+  trips: 'read_web_offline_trips',
   rules: 'read_web_offline_rules',
 };
 const syncFunctions = {
@@ -47,6 +50,7 @@ const syncFunctions = {
   contractors: 'sync_web_offline_contractor',
   musterStations: 'sync_web_offline_muster_stations',
   safetyEquipment: 'sync_web_offline_safety_equipment',
+  trips: 'sync_web_offline_trip',
   rules: 'sync_web_offline_rules',
 };
 type SupportedFeature = keyof typeof adapters;
@@ -229,6 +233,17 @@ async function refreshNotes(a: Active) {
   await a.store.update(a.scope, (state) => {
     sameActive(a);
     state.vesselLabel = label.data.name;
+  });
+  const colours = await supabase
+    .from('vessel_trip_colors')
+    .select('guest_trip_color,boss_trip_color,delivery_trip_color,yard_period_color')
+    .eq('vessel_id', a.scope.vesselId)
+    .maybeSingle();
+  sameActive(a);
+  if (colours.error) throw colours.error;
+  await a.store.update(a.scope, (state) => {
+    sameActive(a);
+    state.tripColors = colours.data;
   });
   for (const feature of Object.keys(adapters) as SupportedFeature[]) {
     if (!a.permit?.claims.permissions[feature]?.includes('read')) continue;
@@ -460,11 +475,13 @@ export async function keepBothNoteCopies(operationId: string): Promise<void> {
         }
       : change.feature === 'tasks'
         ? taskDeviceCopy(latest.value, id, a.scope.userId)
-        : change.feature === 'contractors'
-          ? contractorDeviceCopy(latest.value, id, a.scope.userId)
-          : change.feature === 'shoppingLists'
-            ? shoppingDeviceCopy(latest.value, id, a.scope.userId)
-            : publicationDeviceCopy(latest.value, id, a.scope.userId);
+        : change.feature === 'trips'
+          ? tripDeviceCopy(latest.value, id, a.scope.userId)
+          : change.feature === 'contractors'
+            ? contractorDeviceCopy(latest.value, id, a.scope.userId)
+            : change.feature === 'shoppingLists'
+              ? shoppingDeviceCopy(latest.value, id, a.scope.userId)
+              : publicationDeviceCopy(latest.value, id, a.scope.userId);
   await a.box.forkConflict(operationId, id, copy);
   notifyNotes();
   await checkOfflineAccess();

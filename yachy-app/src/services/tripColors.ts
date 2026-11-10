@@ -3,6 +3,7 @@
  * Vessel-specific colors for trip types (Guest, Boss, Delivery, Yard Period). HOD can edit.
  */
 
+import { offlineTrips } from '../offline/tripsService';
 import { supabase } from './supabase';
 import { COLORS } from '../constants/theme';
 
@@ -37,6 +38,7 @@ class TripColorsService {
    * Get trip colors for a vessel (custom or defaults)
    */
   async getColors(vesselId: string): Promise<VesselTripColors> {
+    if (offlineTrips.enabled()) return rowToColors(await offlineTrips.colors(vesselId));
     try {
       const { data, error } = await supabase
         .from('vessel_trip_colors')
@@ -80,6 +82,7 @@ class TripColorsService {
         .single();
 
       if (error) throw error;
+      if (offlineTrips.enabled()) await offlineTrips.refresh();
       return rowToColors(data);
     } catch (error) {
       console.error('Set trip colors error:', error);

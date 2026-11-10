@@ -1,4 +1,5 @@
 import test from "node:test";
+import { installTrips } from "./offline-trips-fixture.mjs";
 import { installPublications } from "./offline-publications-fixture.mjs";
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync } from "node:fs";
@@ -424,6 +425,31 @@ test("real isolated PostgreSQL offline note protocol", async (t) => {
         assert.equal(sql(`SELECT count(*) FROM offline_private.record_receipts WHERE operation_id='${downgrade.id}';`),feature === 'safetyEquipment' ? '1':'0');
         assert.throws(() => run(request({...operation,id:crypto.randomUUID(),recordId:crypto.randomUUID(),value:{...value,vessel_id:crypto.randomUUID()}})));
       }
+    });
+    installTrips(sql, baseline, migration);
+    await t.test('trip dates, immutable type, atomic retry and current policy enforcement', () => {
+      const value = {id:crypto.randomUUID(),vessel_id:vessel,type:'GUEST',title:'Offline crossing',start_date:'2026-11-09',end_date:'2026-11-12',notes:'Initial',department:null,yard_location:null,contractor_company_name:null,contact_details:null,created_by:user,created_at:'2026-11-09T00:00:00Z',updated_at:'2026-11-09T00:00:00Z'};
+      const operation = {id:crypto.randomUUID(),recordId:value.id,feature:'trips',kind:'create',value,baseRevision:null};
+      const request = op => `SELECT sync_web_offline_trip('${vessel}','${device}','${JSON.stringify(op).replaceAll("'","''")}'::jsonb);`;
+      const first = JSON.parse(run(request(operation)));
+      assert.equal(first.status,'applied');
+      assert.deepEqual(JSON.parse(run(request(operation))),first);
+      const update = {...operation,id:crypto.randomUUID(),kind:'update',baseRevision:first.revision,value:{...first.value,notes:null,end_date:'2026-11-14'}};
+      const second = JSON.parse(run(request(update)));
+      assert.equal(second.status,'applied'); assert.equal(second.value.notes,null);
+      assert.equal(JSON.parse(run(request({...update,id:crypto.randomUUID()}))).status,'conflict');
+      assert.throws(()=>run(request({...update,id:crypto.randomUUID(),baseRevision:second.revision,value:{...second.value,type:'BOSS'}})));
+      for(const dates of [{start_date:'2026-11-20',end_date:'2026-11-14'},{start_date:'2026-02-30',end_date:'2026-11-14'}]) {
+        const id=crypto.randomUUID();
+        assert.throws(()=>run(request({...operation,id:crypto.randomUUID(),recordId:id,value:{...value,...dates,id}})));
+      }
+      sql(`DROP POLICY "Active vessel members can manage trips" ON trips;
+        CREATE POLICY trips_read ON trips FOR SELECT TO authenticated USING(public.current_user_can_access_vessel(vessel_id));`);
+      assert.equal(JSON.parse(run(request({...update,id:crypto.randomUUID(),baseRevision:second.revision}))).status,'forbidden');
+      assert.equal(sql("SELECT count(*) FROM offline_private.record_receipts WHERE feature='trips';"),'2');
+      assert.equal(sql('SELECT count(*) FROM trips;'),'1');
+      sql('DROP POLICY trips_read ON trips;');
+      assert.deepEqual(JSON.parse(run(`SELECT read_web_offline_trips('${vessel}','${device}');`)),[]);
     });
     let first;
     await t.test("grant binds session and caps access at seven days", () => {

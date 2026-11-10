@@ -65,6 +65,7 @@ export const DeliveryTripsScreen = ({ navigation }: any) => {
   useFocusEffect(
     useCallback(() => {
       loadTrips();
+      return tripsService.subscribe(() => { void loadTrips(); });
     }, [loadTrips])
   );
 

@@ -100,6 +100,7 @@ export const UpcomingTripsScreen = ({ navigation }: any) => {
   useFocusEffect(
     useCallback(() => {
       loadTrips();
+      return tripsService.subscribe(() => { void loadTrips(); });
     }, [loadTrips])
   );
 

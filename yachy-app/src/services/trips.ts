@@ -3,6 +3,8 @@
  * Handles Guest Trips, Boss Trips, Deliveries, and Yard Periods for a vessel
  */
 
+import { offlineTrips } from '../offline/tripsService';
+import type { RecordValue } from '../offline/outbox';
 import { supabase } from './supabase';
 import { requireAffectedRows } from './mutationResult';
 import { Trip, TripType, Department } from '../types';
@@ -64,7 +66,12 @@ export interface UpdateTripData {
 }
 
 class TripsService {
+  subscribe = offlineTrips.subscribe;
   async getTripsByVessel(vesselId: string): Promise<Trip[]> {
+    if (offlineTrips.enabled())
+      return (await offlineTrips.list(vesselId))
+        .map(this.mapRowToTrip)
+        .sort((a, b) => a.startDate.localeCompare(b.startDate));
     try {
       const { data, error } = await supabase
         .from('trips')
@@ -81,6 +88,8 @@ class TripsService {
   }
 
   async getTripsByVesselAndType(vesselId: string, type: TripType): Promise<Trip[]> {
+    if (offlineTrips.enabled())
+      return (await this.getTripsByVessel(vesselId)).filter((t) => t.type === type);
     let lastError: unknown;
 
     for (let attempt = 0; attempt <= TRIP_READ_RETRY_DELAYS_MS.length; attempt += 1) {
@@ -106,6 +115,10 @@ class TripsService {
   }
 
   async getTripsInRange(vesselId: string, start: string, end: string): Promise<Trip[]> {
+    if (offlineTrips.enabled())
+      return (await this.getTripsByVessel(vesselId)).filter(
+        (t) => t.startDate <= end && t.endDate >= start
+      );
     try {
       const { data, error } = await supabase
         .from('trips')
@@ -124,6 +137,21 @@ class TripsService {
   }
 
   async createTrip(input: CreateTripData): Promise<Trip> {
+    if (offlineTrips.enabled())
+      return this.mapRowToTrip(
+        await offlineTrips.create({
+          vessel_id: input.vesselId,
+          type: input.type,
+          title: input.title.trim(),
+          start_date: input.startDate,
+          end_date: input.endDate,
+          notes: input.notes?.trim() || null,
+          department: input.department ?? null,
+          yard_location: input.yardLocation?.trim() || null,
+          contractor_company_name: input.contractorCompanyName?.trim() || null,
+          contact_details: input.contactDetails?.trim() || null,
+        })
+      );
     try {
       const {
         data: { user },
@@ -157,9 +185,9 @@ class TripsService {
     }
   }
 
-  async updateTrip(tripId: string, input: UpdateTripData): Promise<void> {
+  async updateTrip(tripId: string, input: UpdateTripData, version?: number): Promise<void> {
     try {
-      const payload: Record<string, unknown> = {
+      const payload: RecordValue = {
         updated_at: new Date().toISOString(),
       };
       if (input.title !== undefined) payload.title = input.title.trim();
@@ -174,6 +202,10 @@ class TripsService {
       if (input.contactDetails !== undefined)
         payload.contact_details = input.contactDetails?.trim() || null;
 
+      if (offlineTrips.enabled()) {
+        await offlineTrips.update(tripId, payload, version);
+        return;
+      }
       const { data, error } = await supabase
         .from('trips')
         .update(payload)
@@ -187,9 +219,11 @@ class TripsService {
   }
 
   async deleteTrip(tripId: string): Promise<void> {
+    if (offlineTrips.enabled()) await offlineTrips.beforeDelete(tripId);
     try {
       const { data, error } = await supabase.from('trips').delete().eq('id', tripId).select('id');
       requireAffectedRows(data, error, 'Deleting the trip');
+      if (offlineTrips.enabled()) await offlineTrips.refresh();
     } catch (error) {
       console.error('Delete trip error:', error);
       throw error;
@@ -197,6 +231,10 @@ class TripsService {
   }
 
   async getTripById(tripId: string): Promise<Trip | null> {
+    if (offlineTrips.enabled()) {
+      const row = await offlineTrips.read(tripId);
+      return row ? this.mapRowToTrip(row) : null;
+    }
     try {
       const { data, error } = await supabase.from('trips').select('*').eq('id', tripId).single();
 
@@ -224,6 +262,7 @@ class TripsService {
       createdBy: row.created_by ?? undefined,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      offlineLocalVersion: row.offlineLocalVersion,
     };
   }
 }

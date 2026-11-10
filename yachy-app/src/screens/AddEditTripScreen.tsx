@@ -4,7 +4,7 @@ import { ScreenLoading } from '../components/ScreenLoading';
  * Calendar to choose start and end dates; title and notes. HOD only.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -77,6 +77,9 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
   const [endDate, setEndDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(!!tripId);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const [localVersion, setLocalVersion] = useState<number | undefined>();
+  const [loadFailed, setLoadFailed] = useState(false);
   const [step, setStep] = useState<'start' | 'end'>('start');
 
   const vesselId = user?.vesselId ?? null;
@@ -106,6 +109,8 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
     (async () => {
       try {
         const trip = await tripsService.getTripById(tripId);
+        if (!trip) throw new Error('Trip not available on this device');
+        setLocalVersion(trip.offlineLocalVersion);
         if (trip) {
           setTitle(trip.title);
           setNotes(trip.notes ?? '');
@@ -117,6 +122,7 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
           setContactDetails(trip.contactDetails ?? '');
         }
       } catch (e) {
+        setLoadFailed(true);
         console.error('Load trip error:', e);
         Alert.alert('Error', 'Could not load trip');
       } finally {
@@ -165,6 +171,7 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
   };
 
   const handleSave = async () => {
+    if (savingRef.current || loadFailed) return;
     const trimmed = title.trim();
     if (!trimmed) {
       Alert.alert('Missing title', 'Please enter a title for the trip.');
@@ -179,20 +186,25 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
       return;
     }
 
+    savingRef.current = true;
     setSaving(true);
     try {
       if (isEdit) {
-        await tripsService.updateTrip(tripId, {
-          title: trimmed,
-          startDate,
-          endDate,
-          notes: notes.trim() || undefined,
-          department: type === 'YARD_PERIOD' ? (department ?? null) : undefined,
-          yardLocation: type === 'YARD_PERIOD' ? yardLocation.trim() || null : undefined,
-          contractorCompanyName:
-            type === 'YARD_PERIOD' ? contractorCompanyName.trim() || null : undefined,
-          contactDetails: type === 'YARD_PERIOD' ? contactDetails.trim() || null : undefined,
-        });
+        await tripsService.updateTrip(
+          tripId,
+          {
+            title: trimmed,
+            startDate,
+            endDate,
+            notes: notes.trim(),
+            department: type === 'YARD_PERIOD' ? (department ?? null) : undefined,
+            yardLocation: type === 'YARD_PERIOD' ? yardLocation.trim() || null : undefined,
+            contractorCompanyName:
+              type === 'YARD_PERIOD' ? contractorCompanyName.trim() || null : undefined,
+            contactDetails: type === 'YARD_PERIOD' ? contactDetails.trim() || null : undefined,
+          },
+          localVersion
+        );
         Alert.alert('Updated', 'Trip updated.', [
           { text: 'OK', onPress: () => navigation.goBack() },
         ]);
@@ -222,9 +234,17 @@ export const AddEditTripScreen = ({ navigation, route }: any) => {
       console.error('Save trip error:', e);
       Alert.alert('Error', 'Could not save trip.');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
+
+  if (loadFailed)
+    return (
+      <View style={styles.center}>
+        <Text>Reconnect and reopen this trip. It could not be loaded safely.</Text>
+      </View>
+    );
 
   if (!vesselId) {
     return (

@@ -66,6 +66,18 @@ self.addEventListener('fetch', (event) => {
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
         url.searchParams.get('contractorId') || ''
       );
+    const tripQuery =
+      url.pathname === '/trips/edit' &&
+      [...url.searchParams.keys()].every(
+        (key, index, keys) =>
+          keys.indexOf(key) === index &&
+          ((key === 'type' &&
+            ['GUEST', 'BOSS', 'DELIVERY', 'YARD_PERIOD'].includes(url.searchParams.get(key))) ||
+            (key === 'tripId' &&
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+                url.searchParams.get(key) || ''
+              )))
+      );
     const taskQuery =
       ['/tasks/list', '/tasks/edit'].includes(url.pathname) &&
       [...url.searchParams.keys()].every(
@@ -85,7 +97,8 @@ self.addEventListener('fetch', (event) => {
         !shoppingQuery &&
         !taskQuery &&
         !contractorQuery &&
-        !publicationQuery) ||
+        !publicationQuery &&
+        !tripQuery) ||
       url.hash
     )
       return;

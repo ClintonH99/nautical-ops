@@ -198,6 +198,7 @@ export interface Duty {
 export type TripType = 'BOSS' | 'GUEST' | 'DELIVERY' | 'YARD_PERIOD';
 
 export interface Trip {
+  offlineLocalVersion?: number;
   id: string;
   vesselId: string;
   type: TripType;
