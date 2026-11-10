@@ -437,3 +437,7 @@ an offline note and reloaded successfully while the server remained stopped.
 After restoring the server and reloading, the database contained exactly one
 note and one sync receipt. This verifies cold browser navigation, persistence,
 and reconnect sync. Physical iPhone Home Screen retest remains user-side.
+Live deployment dpl_FnvM9fy1X846pGJvBuHupbPHnZum promoted after READY.
+www.nautical-ops.com alias verified; public manifest returns start_url /app
+and live worker includes bare /login and /login/ fallback. Source 9f899ba.
+Rollback target: dpl_3Qn46eek2RWFWw6fGnYPwNKomacp. No database changes.
