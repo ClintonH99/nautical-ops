@@ -415,3 +415,10 @@ pending-change banner to clear. Initial login/preparation requires internet.
 Offline access lasts up to seven days from verification, shortened by a known
 access end. Plans/payments/invites/account and vessel setup remain online-only.
 Do not clear browser data or sign out while unsynced changes remain.
+
+10 November 2026 — User requested removal of the global offline-status banner.
+Removed connection/pending counters, shell/download messages and Retry Sync
+from OfflineBoundary. Background preparation, reconnect sync, timed retries,
+access guards and explicit conflict/recovery actions remain. TypeScript and
+scoped ESLint pass. This supersedes earlier instructions to wait for the
+pending banner to clear: routine sync now runs without a global banner.

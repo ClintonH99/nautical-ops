@@ -161,12 +161,7 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
   const blocked = state.disconnected && (!state.ready || !supported);
   return (
     <View style={styles.root}>
-      {(state.disconnected ||
-        state.pending > 0 ||
-        state.saving > 0 ||
-        state.shellState !== 'ready' ||
-        !state.recordsReady ||
-        state.issue ||
+      {(state.conflicts.length > 0 ||
         state.recoverable > 0 ||
         (state.recoveryCopies ?? 0) > 0 ||
         (state.recoveryVersion ?? 0) > 0) && (
@@ -174,29 +169,6 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
           style={[styles.banner, { backgroundColor: colors.surface, borderColor: colors.border }]}
           accessibilityLiveRegion="polite"
         >
-          <Text style={{ color: colors.textPrimary }}>
-            {state.disconnected ? 'Offline' : 'Connected'} · {state.pending}{' '}
-            {state.pending === 1 ? 'change' : 'changes'} saved on this device
-            {state.pending ? ' · Waiting to sync' : ''}
-          </Text>
-          {state.saving > 0 && (
-            <Text style={{ color: colors.textPrimary }}>
-              Saving on this device… Please keep this page open.
-            </Text>
-          )}
-          {state.shellState !== 'ready' && (
-            <Text style={{ color: colors.textSecondary }}>
-              {state.shellState === 'preparing'
-                ? 'Downloading offline pages. Keep this page open.'
-                : 'Offline page download is incomplete. Reconnect before closing the app.'}
-            </Text>
-          )}
-          {!state.recordsReady && (
-            <Text style={{ color: colors.textSecondary }}>
-              Record download is incomplete. Keep connected and use Retry sync before going offline.
-            </Text>
-          )}
-          {state.issue && <Text style={{ color: colors.textSecondary }}>{state.issue}</Text>}
           {state.conflicts.map((conflict) => (
             <View key={conflict.id} style={{ gap: 4 }}>
               <Text style={{ color: colors.textPrimary }}>
@@ -307,13 +279,6 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
                 </TouchableOpacity>
               )}
             </View>
-          )}
-          {navigator.onLine && (
-            <TouchableOpacity accessibilityRole="button" onPress={() => void syncOffline()}>
-              <Text style={{ color: colors.textPrimary, textDecorationLine: 'underline' }}>
-                Retry Sync
-              </Text>
-            </TouchableOpacity>
           )}
         </View>
       )}
