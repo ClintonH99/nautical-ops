@@ -39,12 +39,12 @@ export const ViewPreDepartureChecklistScreen = ({ route }: any) => {
   const savingItemIdsRef = useRef(new Set<string>());
   const mountedRef = useRef(true);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
       mountedRef.current = false;
-    },
-    []
-  );
+    };
+  }, []);
 
   const replaceChecklist = useCallback((nextChecklist: PreDepartureChecklist | null) => {
     checklistRef.current = nextChecklist;
@@ -81,6 +81,9 @@ export const ViewPreDepartureChecklistScreen = ({ route }: any) => {
   useFocusEffect(
     useCallback(() => {
       loadChecklist();
+      return preDepartureChecklistsService.subscribe(() => {
+        if (!savingItemIdsRef.current.size) void loadChecklist();
+      });
     }, [loadChecklist])
   );
 
@@ -96,7 +99,11 @@ export const ViewPreDepartureChecklistScreen = ({ route }: any) => {
           if (checked === undefined) continue;
 
           try {
-            await preDepartureChecklistsService.updateItemChecked(itemId, checked);
+            await preDepartureChecklistsService.updateItemChecked(
+              itemId,
+              checked,
+              confirmedStatesRef.current.get(itemId)
+            );
             confirmedStatesRef.current.set(itemId, checked);
           } catch (error) {
             console.error('Update checklist item error:', error);

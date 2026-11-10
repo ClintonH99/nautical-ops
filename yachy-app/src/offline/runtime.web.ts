@@ -1,3 +1,4 @@
+import { checklistsAdapter, checklistDeviceCopy } from './checklistsAdapter';
 import { inventoryAdapter, inventoryDeviceCopy } from './inventoryAdapter';
 import { vesselRecordAdapter, vesselRecordDeviceCopy } from './vesselRecordAdapter';
 import { boundedCheck } from './boundedCheck';
@@ -29,6 +30,7 @@ import { yardJobsAdapter, yardJobDeviceCopy } from './yardJobsAdapter';
 import { tripsAdapter, tripDeviceCopy } from './tripsAdapter';
 import { contractorsAdapter, contractorDeviceCopy } from './contractorsAdapter';
 const adapters = {
+  preDepartureChecklists: checklistsAdapter,
   inventory: inventoryAdapter,
   pumpOutLogs: vesselRecordAdapter('pumpOutLogs'),
   generalWasteLogs: vesselRecordAdapter('generalWasteLogs'),
@@ -46,6 +48,7 @@ const adapters = {
   musterStations: publicationsAdapter,
 };
 const readFunctions = {
+  preDepartureChecklists: 'read_web_offline_checklists',
   inventory: 'read_web_offline_inventory_items',
   pumpOutLogs: 'read_web_offline_pump_out_logs',
   generalWasteLogs: 'read_web_offline_general_waste_logs',
@@ -63,6 +66,7 @@ const readFunctions = {
   rules: 'read_web_offline_rules',
 };
 const syncFunctions = {
+  preDepartureChecklists: 'sync_web_offline_checklist',
   inventory: 'sync_web_offline_inventory_item',
   pumpOutLogs: 'sync_web_offline_pump_out_log',
   generalWasteLogs: 'sync_web_offline_general_waste_log',
@@ -526,31 +530,33 @@ export async function keepBothNoteCopies(operationId: string): Promise<void> {
           created_at: now,
           updated_at: now,
         }
-      : change.feature === 'inventory'
-        ? inventoryDeviceCopy(latest.value, id)
-        : change.feature === 'uniforms' ||
-            change.feature === 'pumpOutLogs' ||
-            change.feature === 'generalWasteLogs'
-          ? vesselRecordDeviceCopy(
-              change.feature,
-              latest.value,
-              id,
-              a.scope.userId,
-              useAuthStore.getState().user?.name ?? ''
-            )
-          : change.feature === 'maintenanceLogs'
-            ? maintenanceDeviceCopy(latest.value, id)
-            : change.feature === 'tasks'
-              ? taskDeviceCopy(latest.value, id, a.scope.userId)
-              : change.feature === 'yardJobs'
-                ? yardJobDeviceCopy(latest.value, id, a.scope.userId)
-                : change.feature === 'trips'
-                  ? tripDeviceCopy(latest.value, id, a.scope.userId)
-                  : change.feature === 'contractors'
-                    ? contractorDeviceCopy(latest.value, id, a.scope.userId)
-                    : change.feature === 'shoppingLists'
-                      ? shoppingDeviceCopy(latest.value, id, a.scope.userId)
-                      : publicationDeviceCopy(latest.value, id, a.scope.userId);
+      : change.feature === 'preDepartureChecklists'
+        ? checklistDeviceCopy(latest.value, id, a.scope.userId)
+        : change.feature === 'inventory'
+          ? inventoryDeviceCopy(latest.value, id)
+          : change.feature === 'uniforms' ||
+              change.feature === 'pumpOutLogs' ||
+              change.feature === 'generalWasteLogs'
+            ? vesselRecordDeviceCopy(
+                change.feature,
+                latest.value,
+                id,
+                a.scope.userId,
+                useAuthStore.getState().user?.name ?? ''
+              )
+            : change.feature === 'maintenanceLogs'
+              ? maintenanceDeviceCopy(latest.value, id)
+              : change.feature === 'tasks'
+                ? taskDeviceCopy(latest.value, id, a.scope.userId)
+                : change.feature === 'yardJobs'
+                  ? yardJobDeviceCopy(latest.value, id, a.scope.userId)
+                  : change.feature === 'trips'
+                    ? tripDeviceCopy(latest.value, id, a.scope.userId)
+                    : change.feature === 'contractors'
+                      ? contractorDeviceCopy(latest.value, id, a.scope.userId)
+                      : change.feature === 'shoppingLists'
+                        ? shoppingDeviceCopy(latest.value, id, a.scope.userId)
+                        : publicationDeviceCopy(latest.value, id, a.scope.userId);
   await a.box.forkConflict(operationId, id, copy);
   notifyNotes();
   await checkOfflineAccess();

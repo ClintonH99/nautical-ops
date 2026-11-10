@@ -1,3 +1,5 @@
+import { runChecklistChecks } from "./offline-checklists-db-cases.mjs";
+import { installChecklists } from "./offline-checklists-fixture.mjs";
 import { installInventory } from "./offline-inventory-fixture.mjs";
 import { installVesselRecords } from "./offline-vessel-records-fixture.mjs";
 import { installMaintenance } from "./offline-maintenance-fixture.mjs";
@@ -1083,6 +1085,8 @@ test("real isolated PostgreSQL offline note protocol", async (t) => {
         );
       },
     );
+    installChecklists(sql, baseline, migration);
+    await runChecklistChecks(t, { sql, run, user, vessel, device });
     let first;
     await t.test("grant binds session and caps access at seven days", () => {
       const c = JSON.parse(

@@ -1,3 +1,4 @@
+import { offlineChecklists } from '../offline/checklistsService';
 /**
  * Pre-Departure Checklists Service
  * CRUD for pre-departure checklists and their items
@@ -21,8 +22,10 @@ export interface UpdatePreDepartureChecklistData {
 }
 
 class PreDepartureChecklistsService {
+  subscribe = offlineChecklists.subscribe;
   private mapItem(row: any): PreDepartureChecklistItem {
     return {
+      offlineLocalVersion: row.offlineLocalVersion,
       id: row.id,
       checklistId: row.checklist_id,
       label: row.label ?? '',
@@ -35,6 +38,7 @@ class PreDepartureChecklistsService {
   private mapChecklist(row: any, items: PreDepartureChecklistItem[]): PreDepartureChecklist {
     const linkedTrip = Array.isArray(row.trip) ? row.trip[0] : row.trip;
     return {
+      offlineLocalVersion: row.offlineLocalVersion,
       id: row.id,
       vesselId: row.vessel_id,
       tripId: row.trip_id ?? null,
@@ -55,6 +59,10 @@ class PreDepartureChecklistsService {
   }
 
   async getByVessel(vesselId: string): Promise<PreDepartureChecklist[]> {
+    if (offlineChecklists.enabled())
+      return (await offlineChecklists.list(vesselId)).map((row) =>
+        this.mapChecklist(row, (row.items as any[]).map(this.mapItem))
+      );
     try {
       const { data: checklists, error: listsError } = await supabase
         .from('pre_departure_checklists')
@@ -68,7 +76,10 @@ class PreDepartureChecklistsService {
       const { data: items, error: itemsError } = await supabase
         .from('pre_departure_checklist_items')
         .select('*')
-        .in('checklist_id', checklists.map((c) => c.id))
+        .in(
+          'checklist_id',
+          checklists.map((c) => c.id)
+        )
         .order('sort_order', { ascending: true });
 
       if (itemsError) throw itemsError;
@@ -87,6 +98,10 @@ class PreDepartureChecklistsService {
   }
 
   async getById(id: string): Promise<PreDepartureChecklist | null> {
+    if (offlineChecklists.enabled()) {
+      const row = await offlineChecklists.read(id);
+      return row ? this.mapChecklist(row, (row.items as any[]).map(this.mapItem)) : null;
+    }
     try {
       const { data: checklist, error: listError } = await supabase
         .from('pre_departure_checklists')
@@ -112,6 +127,16 @@ class PreDepartureChecklistsService {
   }
 
   async create(input: CreatePreDepartureChecklistData): Promise<PreDepartureChecklist> {
+    if (offlineChecklists.enabled()) {
+      const row = await offlineChecklists.create({
+        vessel_id: input.vesselId,
+        trip_id: input.tripId ?? null,
+        department: input.department ?? null,
+        title: input.title.trim(),
+        items: input.items.map((i) => ({ label: i.label.trim() })),
+      });
+      return this.mapChecklist(row, (row.items as any[]).map(this.mapItem));
+    }
     const { data: checklist, error: listError } = await supabase
       .from('pre_departure_checklists')
       .insert([
@@ -149,7 +174,19 @@ class PreDepartureChecklistsService {
     return created;
   }
 
-  async update(id: string, input: UpdatePreDepartureChecklistData): Promise<void> {
+  async update(
+    id: string,
+    input: UpdatePreDepartureChecklistData,
+    version?: number
+  ): Promise<void> {
+    if (offlineChecklists.enabled()) {
+      const patch: Record<string, string | null> = {};
+      if (input.title !== undefined) patch.title = input.title.trim();
+      if (input.tripId !== undefined) patch.trip_id = input.tripId;
+      if (input.department !== undefined) patch.department = input.department;
+      await offlineChecklists.update(id, patch, version);
+      return;
+    }
     const patch: Record<string, any> = {};
     if (input.title !== undefined) patch.title = input.title.trim();
     if (input.tripId !== undefined) patch.trip_id = input.tripId ?? null;
@@ -166,7 +203,8 @@ class PreDepartureChecklistsService {
     }
   }
 
-  async updateItemChecked(itemId: string, checked: boolean): Promise<void> {
+  async updateItemChecked(itemId: string, checked: boolean, expected?: boolean): Promise<void> {
+    if (offlineChecklists.enabled()) return offlineChecklists.check(itemId, checked, expected);
     const { data, error } = await supabase
       .from('pre_departure_checklist_items')
       .update({ checked })
@@ -176,7 +214,13 @@ class PreDepartureChecklistsService {
     if (!data?.length) throw new Error('Checklist item not found or you do not have permission.');
   }
 
-  async addItem(checklistId: string, label: string): Promise<PreDepartureChecklistItem> {
+  async addItem(
+    checklistId: string,
+    label: string,
+    version?: number
+  ): Promise<PreDepartureChecklistItem> {
+    if (offlineChecklists.enabled())
+      return this.mapItem(await offlineChecklists.add(checklistId, label, version));
     const { data: max } = await supabase
       .from('pre_departure_checklist_items')
       .select('sort_order')
@@ -188,7 +232,9 @@ class PreDepartureChecklistsService {
     const order = (max?.sort_order ?? -1) + 1;
     const { data, error } = await supabase
       .from('pre_departure_checklist_items')
-      .insert([{ checklist_id: checklistId, label: label.trim(), sort_order: order, checked: false }])
+      .insert([
+        { checklist_id: checklistId, label: label.trim(), sort_order: order, checked: false },
+      ])
       .select()
       .single();
 
@@ -197,6 +243,7 @@ class PreDepartureChecklistsService {
   }
 
   async deleteItem(itemId: string): Promise<void> {
+    if (offlineChecklists.enabled()) await offlineChecklists.beforeDelete(itemId, true);
     const { data, error } = await supabase
       .from('pre_departure_checklist_items')
       .delete()
@@ -204,9 +251,11 @@ class PreDepartureChecklistsService {
       .select('id');
     if (error) throw error;
     if (!data?.length) throw new Error('Checklist item not found or you do not have permission.');
+    if (offlineChecklists.enabled()) await offlineChecklists.refresh();
   }
 
   async delete(id: string): Promise<void> {
+    if (offlineChecklists.enabled()) await offlineChecklists.beforeDelete(id);
     const { data, error } = await supabase
       .from('pre_departure_checklists')
       .delete()
@@ -214,6 +263,7 @@ class PreDepartureChecklistsService {
       .select('id');
     if (error) throw error;
     if (!data?.length) throw new Error('Checklist not found or you do not have permission.');
+    if (offlineChecklists.enabled()) await offlineChecklists.refresh();
   }
 }
 

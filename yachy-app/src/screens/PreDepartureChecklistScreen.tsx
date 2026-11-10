@@ -132,6 +132,9 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
   useFocusEffect(
     useCallback(() => {
       loadChecklists();
+      return preDepartureChecklistsService.subscribe(() => {
+        void loadChecklists();
+      });
     }, [loadChecklists])
   );
 

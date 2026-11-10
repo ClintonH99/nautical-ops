@@ -5,7 +5,7 @@ since verified access, shortened by known access end. Billing/invites stay onlin
 
 Implemented locally: Notepad, Shopping Lists, everyday Tasks, Contractors,
 Rules, Safety Equipment, Muster Stations, Trips, Yard Jobs, Maintenance Logs, Discharge/Pump-out Logs,
-General Waste Logs, Uniforms and Inventory. NOT a whole-app offline
+General Waste Logs, Uniforms, Inventory and Pre-Departure Checklists. NOT a whole-app offline
 release. Production unchanged. No hosted migrations, real signing credentials,
 deployment or activation performed. EXPO_PUBLIC_WEB_OFFLINE defaults off.
 
@@ -22,7 +22,7 @@ Reads use RLS. Sync functions run under a non-login, non-owner, non-bypass role
 inheriting authenticated permissions. Receipt and record writes commit together.
 
 Checks from repository root:
-  node --test server/offline-access.test.mjs server/offline-outbox.test.mjs server/offline-recovery.test.mjs server/offline-issuer.test.mjs server/offline-shell.test.mjs server/offline-dependent-edits.test.mjs server/offline-tasks.test.mjs server/offline-contractors.test.mjs server/offline-publications.test.mjs server/offline-trips.test.mjs server/offline-yard.test.mjs server/offline-navigation.test.mjs server/offline-maintenance.test.mjs server/offline-vessel-records.test.mjs server/offline-bounded-check.test.mjs server/offline-inventory.test.mjs
+  node --test server/offline-access.test.mjs server/offline-outbox.test.mjs server/offline-recovery.test.mjs server/offline-issuer.test.mjs server/offline-shell.test.mjs server/offline-dependent-edits.test.mjs server/offline-tasks.test.mjs server/offline-contractors.test.mjs server/offline-publications.test.mjs server/offline-trips.test.mjs server/offline-yard.test.mjs server/offline-navigation.test.mjs server/offline-maintenance.test.mjs server/offline-vessel-records.test.mjs server/offline-bounded-check.test.mjs server/offline-inventory.test.mjs server/offline-checklists.test.mjs
   node --test server/offline-notes-db.test.mjs
   node server/run-offline-browser-check.mjs
   node server/offline-app-check.mjs
@@ -33,8 +33,8 @@ Database uses a local Unix socket; the app uses loopback and connect-src self.
 App runner commands: offline, online, change-online-note, lose-next-reply, status, stop.
 
 Evidence:
-- 179 access/outbox/recovery/issuer/shell/dependent-edit/feature tests passed.
-- 22 local PostgreSQL tests passed: retry deduplication, changed payload rejection,
+- 187 access/outbox/recovery/issuer/shell/dependent-edit/feature tests passed.
+- 27 local PostgreSQL tests passed: retry deduplication, changed payload rejection,
   private receipts, stale revisions, session/access expiry, and existing row
   policies tightened after function creation. Not a hosted-policy audit.
 - Full app TypeScript passed; scoped ESLint zero errors, 14 existing any/unused
@@ -65,7 +65,7 @@ Evidence:
   clear notes, reconnect: one revised trip and one receipt.
   /private/tmp/nautical-offline-trip-synced.png
   Evidence: nautical-offline-app-6KOYOx/result.json. Trip calendars keep saved
-  colours. Upcoming Trips still needs linked Pre-Departure Checklists.
+  colours. Upcoming Trips now uses linked cached Pre-Departure Checklists.
 - Real browser Yard Jobs: stopped server, create/reload/complete/reopen editor,
   Captain edits and clears description, reconnect: one completed job/one receipt.
   /private/tmp/nautical-offline-yard-synced.png
@@ -124,3 +124,12 @@ Remaining before whole-app release:
 Browser storage is not encrypted or a backup. Eviction or clearing site data can
 lose pending work. Revocation is unknowable while disconnected. No guaranteed
 background sync after closing the browser. Paddle Sandbox remains deferred.
+
+- Pre-Departure browser: stopped HTTP server, create/reload/check item/reload,
+  add seventh item and rename/reload; reconnect + Retry Sync saved one checklist,
+  seven children, one receipt. Checked state retained. Evidence:
+  nautical-offline-app-D1IHGl/result.json; /private/tmp/nautical-offline-checklist-synced.png.
+  Parent/child writes are atomic; stale children, role downgrade, ID collision
+  and denied child policy roll back correctly in local PostgreSQL.
+  Dependent checklist edits preserve server child timestamps and unrelated edits.
+  TypeScript, scoped ESLint (zero errors; 16 any/unused warnings), full export pass.

@@ -65,6 +65,13 @@ export interface OfflineTransport {
 export type OfflineAdapter = {
   /** Server-maintained fields never form part of a later local edit delta. */
   serverFields?: readonly string[];
+  /** Aggregate fields may reconcile child rows, preserving server metadata. */
+  mergeField?: (
+    key: string,
+    before: Json,
+    next: Json,
+    online: Json
+  ) => { value: Json; conflict: boolean } | undefined;
   authorizeRead: (scope: OfflineScope, value: RecordValue) => boolean;
   /** Validate permitted fields AND row-level constraints for this exact user. */
   authorize: (
@@ -521,11 +528,17 @@ export class OfflineOutbox {
               ...Object.keys(dependent.value),
             ])) {
               if (adapter?.serverFields?.includes(key)) continue;
-              const before = JSON.stringify(change.value[key]),
-                next = JSON.stringify(dependent.value[key]);
-              if (before === next) continue;
-              const online = JSON.stringify(acceptedValue[key]);
-              if (online !== before && online !== next) conflict = true;
+              const before = change.value[key],
+                next = dependent.value[key];
+              if (sameJson(before, next)) continue;
+              const online = acceptedValue[key];
+              const field = adapter?.mergeField?.(key, before, next, online);
+              if (field) {
+                merged[key] = field.value;
+                conflict ||= field.conflict;
+                continue;
+              }
+              if (!sameJson(online, before) && !sameJson(online, next)) conflict = true;
               if (key in dependent.value) merged[key] = dependent.value[key];
               else delete merged[key];
             }

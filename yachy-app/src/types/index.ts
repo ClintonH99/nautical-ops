@@ -316,6 +316,7 @@ export interface SeaMileEntry {
 }
 
 export interface PreDepartureChecklistItem {
+  offlineLocalVersion?: number;
   id: string;
   checklistId: string;
   label: string;
@@ -325,6 +326,7 @@ export interface PreDepartureChecklistItem {
 }
 
 export interface PreDepartureChecklist {
+  offlineLocalVersion?: number;
   id: string;
   vesselId: string;
   tripId: string | null;

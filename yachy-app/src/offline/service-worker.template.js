@@ -56,6 +56,8 @@ self.addEventListener('fetch', (event) => {
       '/logs/general-waste/edit': 'logId',
       '/uniforms/edit': 'uniformId',
       '/inventory/edit': 'itemId',
+      '/pre-departure/edit': 'checklistId',
+      '/pre-departure/view': 'checklistId',
       '/safety/equipment/create': 'equipmentId',
       '/safety/muster/create': 'musterStationId',
     }[url.pathname];
@@ -72,11 +74,14 @@ self.addEventListener('fetch', (event) => {
         url.searchParams.get('contractorId') || ''
       );
     const yardQuery =
-      url.pathname === '/yard-period/edit' &&
+      ['/yard-period/edit', '/pre-departure/edit'].includes(url.pathname) &&
       [...url.searchParams.keys()].every(
         (key, index, keys) =>
           keys.indexOf(key) === index &&
-          ['jobId', 'tripId'].includes(key) &&
+          (url.pathname === '/yard-period/edit'
+            ? ['jobId', 'tripId']
+            : ['checklistId', 'tripId']
+          ).includes(key) &&
           /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
             url.searchParams.get(key) || ''
           )

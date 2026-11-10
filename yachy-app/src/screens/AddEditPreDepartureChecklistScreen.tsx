@@ -1,10 +1,11 @@
+import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * Add / Edit Pre-Departure Checklist Screen
  * Title, optional trip link, checklist items (read-and-do, not tickable)
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -69,6 +70,14 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
   // Captain/MOV and appointed HODs can manage every pre-departure checklist.
   const canEdit = () => isCaptain || isHOD;
 
+  const busyRef = useRef(false);
+  const loadedMetadata = useRef<{
+    title: string;
+    tripId: string | null;
+    department: Department | null;
+  } | null>(null);
+  const [offlineVersion, setOfflineVersion] = useState<number | undefined>();
+  const [loadFailed, setLoadFailed] = useState(false);
   const [title, setTitle] = useState('');
   const [tripId, setTripId] = useState<string | null>(initialTripId ?? null);
   const [department, setDepartment] = useState<Department | null>(null);
@@ -87,18 +96,23 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
     try {
       const c = await preDepartureChecklistsService.getById(checklistId);
       if (c) {
+        setOfflineVersion(c.offlineLocalVersion);
+        loadedMetadata.current = { title: c.title, tripId: c.tripId, department: c.department };
+        setLoadFailed(false);
         setTitle(c.title);
         setTripId(c.tripId);
         setDepartment(c.department);
         setItems(c.items);
       } else {
+        setLoadFailed(true);
         Alert.alert('Error', 'Checklist not found.');
-        navigation.goBack();
+        returnToPreviousPage(navigation);
       }
     } catch (e) {
+      setLoadFailed(true);
       console.error('Load checklist error:', e);
       Alert.alert('Error', 'Could not load checklist.');
-      navigation.goBack();
+      returnToPreviousPage(navigation);
     } finally {
       setLoading(false);
     }
@@ -106,8 +120,12 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
 
   const loadTrips = useCallback(async () => {
     if (!vesselId) return;
-    const data = await tripsService.getTripsByVessel(vesselId);
-    setTrips(data);
+    try {
+      const data = await tripsService.getTripsByVessel(vesselId);
+      setTrips(data);
+    } catch {
+      setTrips([]);
+    }
   }, [vesselId]);
 
   useFocusEffect(
@@ -134,7 +152,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
 
   const addItem = async () => {
     const label = newItemLabel.trim();
-    if (!label || !isEditable) return;
+    if (!label || !isEditable || busyRef.current || loadFailed) return;
 
     if (!isEdit) {
       setDraftItems((previous) => [...previous, label]);
@@ -143,21 +161,49 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
     }
 
     if (!checklistId) return;
+    busyRef.current = true;
     try {
-      const added = await preDepartureChecklistsService.addItem(checklistId, label);
+      const added = await preDepartureChecklistsService.addItem(checklistId, label, offlineVersion);
+      setOfflineVersion(added.offlineLocalVersion);
       setItems((prev) => [...prev, added].sort((a, b) => a.sortOrder - b.sortOrder));
       setNewItemLabel('');
     } catch (e) {
       Alert.alert('Error', 'Could not add item.');
+    } finally {
+      busyRef.current = false;
     }
   };
 
   const removeItem = async (item: PreDepartureChecklistItem) => {
+    if (busyRef.current || loadFailed) return;
+    busyRef.current = true;
     try {
       await preDepartureChecklistsService.deleteItem(item.id);
       setItems((prev) => prev.filter((i) => i.id !== item.id));
+      if (checklistId) {
+        const current = await preDepartureChecklistsService.getById(checklistId);
+        const before = loadedMetadata.current;
+        if (
+          current &&
+          before &&
+          current.title === before.title &&
+          current.tripId === before.tripId &&
+          current.department === before.department
+        ) {
+          setOfflineVersion(current.offlineLocalVersion);
+          setItems(current.items);
+        } else {
+          // Keep the form's old version: saving must not overwrite unseen changes.
+          Alert.alert(
+            'Checklist changed',
+            'Your unsaved edits are still here. Another change was found; reopen the checklist before saving.'
+          );
+        }
+      }
     } catch (e) {
       Alert.alert('Error', 'Could not remove item.');
+    } finally {
+      busyRef.current = false;
     }
   };
 
@@ -166,7 +212,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
   };
 
   const handleSave = async () => {
-    if (!isEditable) return;
+    if (!isEditable || busyRef.current || loadFailed) return;
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
       Alert.alert('Missing title', 'Please enter a title for the checklist.');
@@ -174,16 +220,21 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
     }
     if (!vesselId) return;
 
+    busyRef.current = true;
     setSaving(true);
     try {
       if (isEdit) {
-        await preDepartureChecklistsService.update(checklistId!, {
-          title: trimmedTitle,
-          tripId,
-          department,
-        });
+        await preDepartureChecklistsService.update(
+          checklistId!,
+          {
+            title: trimmedTitle,
+            tripId,
+            department,
+          },
+          offlineVersion
+        );
         Alert.alert('Saved', 'Checklist updated.', [
-          { text: 'OK', onPress: () => navigation.goBack() },
+          { text: 'OK', onPress: () => returnToPreviousPage(navigation) },
         ]);
       } else {
         const itemLabels = draftItems.map((label) => label.trim()).filter(Boolean);
@@ -203,13 +254,14 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
         Alert.alert('Created', 'Pre-departure checklist created.', [
           {
             text: 'OK',
-            onPress: () => navigation.goBack(),
+            onPress: () => returnToPreviousPage(navigation),
           },
         ]);
       }
     } catch (e) {
       Alert.alert('Error', 'Could not save checklist.');
     } finally {
+      busyRef.current = false;
       setSaving(false);
     }
   };
@@ -510,7 +562,7 @@ export const AddEditPreDepartureChecklistScreen = ({ navigation, route }: any) =
             />
             <TouchableOpacity
               style={styles.cancelBtn}
-              onPress={() => navigation.goBack()}
+              onPress={() => returnToPreviousPage(navigation)}
               disabled={saving}
             >
               <Text style={[styles.cancelText, { color: themeColors.textSecondary }]}>Cancel</Text>
