@@ -26,6 +26,15 @@ export type PendingChange = OfflineMutation & {
   claimUntil: number;
 };
 export type Partition = {
+  /** Preserved device versions after an explicit conflict resolution. Never auto-replayed. */
+  recoveryCopies?: {
+    id: string;
+    feature: OfflineFeature;
+    recordId: string;
+    value: RecordValue;
+    changes: PendingChange[];
+    savedAt: number;
+  }[];
   drafts?: Partial<Record<OfflineFeature, { value: RecordValue; version: number }>>;
   vesselLabel?: string;
   crewRoster?: RecordValue[];
@@ -420,7 +429,55 @@ export class OfflineOutbox {
       return { saved: 'device', localVersion, operationId };
     });
   }
-  /** Explicit keep-both choice. Never updates the conflicting online record. */
+  /** Explicit online-version choice. Archives the device version atomically; never writes online. */
+  async useOnlineVersion(input: {
+    operationId: string;
+    expectedLocalVersion: number;
+    online: { value: RecordValue; revision: string };
+  }): Promise<void> {
+    const scope = { ...this.context().scope };
+    const online = { value: snapshot(input.online.value), revision: input.online.revision };
+    await this.checkpoint(scope);
+    await this.store.update(scope, (state) => {
+      const original = state.changes.find(
+        (c) => c.id === input.operationId && c.state === 'conflict'
+      );
+      if (!original) throw new OfflineError('CONFLICT_CHANGED');
+      this.check(scope, state, original.feature, 'read');
+      const key = keyFor(original.feature, original.recordId),
+        local = state.records[key];
+      if (!local || local.localVersion !== input.expectedLocalVersion)
+        throw new OfflineError('LOCAL_CONFLICT');
+      const adapter = this.adapters[original.feature];
+      if (
+        !online.revision ||
+        online.value.id !== original.recordId ||
+        !adapter?.validate(online.value) ||
+        !adapter.authorizeRead(scope, online.value) ||
+        !adapter.authorizeRead(scope, local.value)
+      )
+        throw new OfflineError('ACTION_NOT_ALLOWED');
+      const related = state.changes.filter(
+        (c) => c.feature === original.feature && c.recordId === original.recordId
+      );
+      if (related.some((c) => c.state === 'sending' || c.claimUntil > this.context().nowMs))
+        throw new OfflineError('CONFLICT_CHANGED');
+      (state.recoveryCopies ??= []).push({
+        id: original.id,
+        feature: original.feature,
+        recordId: original.recordId,
+        value: structuredClone(local.value),
+        changes: structuredClone(related),
+        savedAt: this.context().nowMs,
+      });
+      state.changes = state.changes.filter((c) => !related.includes(c));
+      state.records[key] = {
+        value: online.value,
+        serverRevision: online.revision,
+        localVersion: local.localVersion + 1,
+      };
+    });
+  }
   async forkConflict(operationId: string, recordId: string, value: RecordValue): Promise<void> {
     const scope = { ...this.context().scope };
     const safe = snapshot(value);

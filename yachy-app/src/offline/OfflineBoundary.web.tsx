@@ -1,6 +1,6 @@
 import { supportsOfflineRoute } from './routes';
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import {
@@ -12,7 +12,12 @@ import {
   webOfflineEnabled,
   keepBothNoteCopies,
   recoverSavedNotes,
+  reviewOfflineConflict,
+  acceptReviewedOnlineVersion,
+  readOfflineRecoveryCopies,
 } from './runtime.web';
+import type { OfflineConflictReview } from './runtime.web';
+import { describeOfflineRecord } from './recordDescription';
 import { registerOfflineShell } from './registerShell.web';
 
 export function OfflineBoundary({ children }: { children: React.ReactNode }) {
@@ -21,6 +26,62 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
   const colors = useThemeColors();
   const route = useOfflineRoute((state) => state.name);
   const [resolving, setResolving] = useState<string | null>(null);
+  const [review, setReview] = useState<OfflineConflictReview | null>(null);
+  const [copies, setCopies] = useState<{
+    partition?: string;
+    items: { id: string; text: string }[];
+  } | null>(null);
+  useEffect(() => {
+    setReview(null);
+    setCopies(null);
+  }, [state.partitionKey, state.ready, user?.id, user?.vesselId]);
+  const openReview = async (id: string) => {
+    setResolving(id);
+    try {
+      setCopies(null);
+      setReview(await reviewOfflineConflict(id));
+    } catch {
+      useOfflineStatus.setState({
+        issue: 'Reconnect to compare both versions. Your device edits are still saved.',
+      });
+    } finally {
+      setResolving(null);
+    }
+  };
+  const acceptOnline = async () => {
+    if (!review) return;
+    setResolving(review.operationId);
+    try {
+      await acceptReviewedOnlineVersion(review);
+      setReview(null);
+    } catch {
+      setReview(null);
+      useOfflineStatus.setState({
+        issue: 'The record or access changed. Review it again; your device edits are still saved.',
+      });
+    } finally {
+      setResolving(null);
+    }
+  };
+  const showCopies = async () => {
+    if (copies) {
+      setCopies(null);
+      return;
+    }
+    try {
+      setReview(null);
+      const partition = useOfflineStatus.getState().partitionKey;
+      const items = (await readOfflineRecoveryCopies()).map((c) => ({
+        id: c.id,
+        text: describeOfflineRecord(c.value),
+      }));
+      setCopies({ partition, items });
+    } catch {
+      useOfflineStatus.setState({
+        issue: 'Reconnect to verify access to your preserved device copies.',
+      });
+    }
+  };
   const keepBoth = async (id: string) => {
     setResolving(id);
     try {
@@ -105,7 +166,9 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
         state.saving > 0 ||
         state.shellState !== 'ready' ||
         state.issue ||
-        state.recoverable > 0) && (
+        state.recoverable > 0 ||
+        (state.recoveryCopies ?? 0) > 0 ||
+        (state.recoveryVersion ?? 0) > 0) && (
         <View
           style={[styles.banner, { backgroundColor: colors.surface, borderColor: colors.border }]}
           accessibilityLiveRegion="polite"
@@ -132,9 +195,18 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
             <View key={conflict.id} style={{ gap: 4 }}>
               <Text style={{ color: colors.textPrimary }}>
                 {conflict.canFork === false
-                  ? 'Watch rules changed on another device. Your edits are kept here until the rules can be reconciled.'
+                  ? `${conflict.title}: the online record changed. Review both versions before continuing.`
                   : `${conflict.title}: changed on another device. Keep the online record and save your edits as a separate device copy.`}
               </Text>
+              <TouchableOpacity
+                accessibilityRole="button"
+                disabled={resolving !== null}
+                onPress={() => void openReview(conflict.id)}
+              >
+                <Text style={{ color: colors.textPrimary, textDecorationLine: 'underline' }}>
+                  Review both versions
+                </Text>
+              </TouchableOpacity>
               {conflict.canFork !== false && (
                 <TouchableOpacity
                   accessibilityRole="button"
@@ -148,6 +220,70 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
               )}
             </View>
           ))}
+          {review && state.ready && review.partition === state.partitionKey && (
+            <View style={{ gap: 8 }}>
+              <ScrollView style={{ maxHeight: 300 }}>
+                <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>
+                  Your device version
+                </Text>
+                <Text selectable style={{ color: colors.textPrimary }}>
+                  {describeOfflineRecord(review.local)}
+                </Text>
+                <Text style={{ color: colors.textPrimary, fontWeight: '700', marginTop: 12 }}>
+                  Current online version
+                </Text>
+                <Text selectable style={{ color: colors.textPrimary }}>
+                  {describeOfflineRecord(review.online.value)}
+                </Text>
+              </ScrollView>
+              <Text style={{ color: colors.textSecondary }}>
+                Using the online version keeps your device edits in Preserved device copies. They
+                will not be uploaded. You can refer to that copy while editing the current record.
+              </Text>
+              <TouchableOpacity
+                accessibilityRole="button"
+                disabled={resolving !== null}
+                onPress={() => void acceptOnline()}
+              >
+                <Text style={{ color: colors.textPrimary, textDecorationLine: 'underline' }}>
+                  Use online version and preserve my copy
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                accessibilityRole="button"
+                disabled={resolving !== null}
+                onPress={() => setReview(null)}
+              >
+                <Text style={{ color: colors.textPrimary, textDecorationLine: 'underline' }}>
+                  Keep unresolved
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {(state.recoveryCopies ?? 0) > 0 && state.ready && (
+            <TouchableOpacity accessibilityRole="button" onPress={() => void showCopies()}>
+              <Text style={{ color: colors.textPrimary, textDecorationLine: 'underline' }}>
+                {copies ? 'Hide preserved device copies' : 'Preserved device copies'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {copies && state.ready && copies.partition === state.partitionKey && (
+            <ScrollView style={{ maxHeight: 300 }}>
+              {copies.items.map((copy) => (
+                <View key={copy.id} style={{ marginBottom: 16 }}>
+                  <Text selectable style={{ color: colors.textPrimary }}>
+                    {copy.text}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
+          )}
+          {(state.recoveryVersion ?? 0) > 0 && state.ready && (
+            <Text style={{ color: colors.textPrimary }}>
+              Saved work recovered. Save any open form, then refresh this page to load recovered
+              Inventory drafts.
+            </Text>
+          )}
           {state.recoverable > 0 && (
             <View style={{ gap: 4 }}>
               <Text style={{ color: colors.textPrimary }}>

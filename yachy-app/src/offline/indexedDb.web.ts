@@ -4,10 +4,15 @@ import { emptyPartition } from './outbox.ts';
 import type { OfflineStore, Partition } from './outbox.ts';
 import type { PendingChange } from './outbox.ts';
 import { recoveryCount, planRecovery } from './recovery.ts';
+import type { RecoveryOptions } from './recovery.ts';
 export type BrowserOfflineStore = OfflineStore & {
   close(): void;
   recoverable(scope: OfflineScope): Promise<number>;
-  recover(scope: OfflineScope, allowed: (change: PendingChange) => boolean): Promise<number>;
+  recover(
+    scope: OfflineScope,
+    allowed: (change: PendingChange) => boolean,
+    options?: RecoveryOptions
+  ): Promise<number>;
 };
 
 /** No auth tokens, passwords or API keys belong in this database. */
@@ -76,7 +81,8 @@ export async function openOfflineStore(
   }
   function recovery(
     scope: OfflineScope,
-    allowed?: (change: PendingChange) => boolean
+    allowed?: (change: PendingChange) => boolean,
+    options?: RecoveryOptions
   ): Promise<number> {
     return new Promise((resolve, reject) => {
       let tx: IDBTransaction;
@@ -100,7 +106,7 @@ export async function openOfflineStore(
             (key, index) => [key, values.result[index]] as [string, Partition]
           );
           if (allowed) {
-            const plan = planRecovery(entries, scope, allowed);
+            const plan = planRecovery(entries, scope, allowed, options);
             result = plan.moved;
             for (const [key, value] of plan.updates) store.put(value, key);
           } else result = recoveryCount(entries, scope);
@@ -115,7 +121,7 @@ export async function openOfflineStore(
     read: (scope) => transaction(scope, false, (state) => state),
     update: (scope, change) => transaction(scope, true, change),
     recoverable: (scope) => recovery(scope),
-    recover: (scope, allowed) => recovery(scope, allowed),
+    recover: (scope, allowed, options) => recovery(scope, allowed, options),
     close: () => db.close(),
   };
 }

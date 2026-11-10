@@ -12,6 +12,8 @@ export type OfflineStatus = {
   expiresAt: number | null;
   conflicts: { id: string; title: string; canFork?: boolean }[];
   recoverable: number;
+  recoveryCopies?: number;
+  recoveryVersion?: number;
 };
 export const useOfflineStatus = create<OfflineStatus>(() => ({
   enabled: false,

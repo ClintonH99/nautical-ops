@@ -238,3 +238,20 @@ SEA MILES checkpoint — 10 November 2026 (local only)
 - Twenty areas integrated locally. Fuel, private attachments/PDFs, conflict and
   old-session draft recovery, storage failure handling and full release gate
   remain. No hosted migrations, signing config, push, deployment or activation.
+
+CONFLICT AND DRAFT RECOVERY checkpoint — 10 November 2026 (local only)
+- Every confirmed conflict can be reviewed against a freshly authorized online
+  record. Accepting the online version atomically preserves the device value
+  and pending operations in a separate readable archive; no automatic overwrite
+  or archive replay. Revision/partition changes require another review.
+- Old-session unfinished Inventory drafts and preserved copies recover only
+  into the same user/vessel/browser after current permissions are checked.
+  Newer drafts are retained. Clean preferences/fully saved entries do not block
+  recovery. Recovered Inventory drafts load on explicit page refresh; the UI
+  asks users to save open forms first, avoiding an in-place form replacement.
+- 225 combined Node checks, TypeScript and scoped lint passed. Browser A5YE34:
+  compare two versions, accept online/preserve device, reload, view device copy;
+  one unchanged online record and exactly one original receipt. No extra write.
+  Evidence /private/tmp/nautical-offline-conflict-recovered.png.
+- Fuel, attachments/PDFs, storage failure fallback and hosted release checks
+  remain. No hosted migration, signing configuration, push or deployment.

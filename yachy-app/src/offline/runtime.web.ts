@@ -234,6 +234,13 @@ export async function checkOfflineAccess(): Promise<boolean> {
       expiresAt: a.permit!.claims.exp * 1000,
       pending: state.changes.length,
       recoverable,
+      recoveryCopies: (state.recoveryCopies ?? []).filter((copy) => {
+        const adapter = adapters[copy.feature as SupportedFeature];
+        return (
+          !!a.permit?.claims.permissions[copy.feature]?.includes('read') &&
+          !!adapter?.authorizeRead(a.scope, copy.value)
+        );
+      }).length,
       conflicts: state.changes
         .filter((change) => change.state === 'conflict')
         .map((change) => ({
@@ -496,6 +503,8 @@ async function initializeOffline(user: User | null): Promise<void> {
     issue: null,
     conflicts: [],
     recoverable: 0,
+    recoveryCopies: 0,
+    recoveryVersion: 0,
   });
   if (!webOfflineEnabled || !user?.vesselId) return;
   try {
@@ -691,16 +700,134 @@ export async function recoverSavedNotes(): Promise<void> {
   if (!a || !navigator.onLine) throw new OfflineError('ONLINE_CHECK_REQUIRED');
   await refreshPermit(a);
   sameActive(a);
-  await a.store.recover(a.scope, (change) => {
-    sameActive(a);
-    const adapter = adapters[change.feature as SupportedFeature];
-    requireOfflineAccess(context(a), change.feature as OfflineFeature, 'read');
-    requireOfflineAccess(context(a), change.feature as OfflineFeature, change.kind);
-    return (
-      !!adapter && adapter.validate(change.value) && adapter.authorizeRead(a.scope, change.value)
-    );
+  const moved = await a.store.recover(
+    a.scope,
+    (change) => {
+      sameActive(a);
+      const adapter = adapters[change.feature as SupportedFeature];
+      try {
+        requireOfflineAccess(context(a), change.feature as OfflineFeature, 'read');
+        requireOfflineAccess(context(a), change.feature as OfflineFeature, change.kind);
+      } catch {
+        return false;
+      }
+      return (
+        !!adapter && adapter.validate(change.value) && adapter.authorizeRead(a.scope, change.value)
+      );
+    },
+    {
+      draft: (feature) => {
+        sameActive(a);
+        if (feature !== 'inventory') return false;
+        try {
+          for (const action of ['read', 'create', 'update'] as const)
+            requireOfflineAccess(context(a), feature, action);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      copy: (feature, value) => {
+        sameActive(a);
+        try {
+          requireOfflineAccess(context(a), feature, 'read');
+        } catch {
+          return false;
+        }
+        return adapters[feature as SupportedFeature]?.authorizeRead(a.scope, value) === true;
+      },
+    }
+  );
+  sameActive(a);
+  if (moved) useOfflineStatus.setState((s) => ({ recoveryVersion: (s.recoveryVersion ?? 0) + 1 }));
+  notifyNotes();
+  await checkOfflineAccess();
+  await syncOffline();
+}
+
+export type OfflineConflictReview = {
+  partition: string;
+  operationId: string;
+  feature: SupportedFeature;
+  localVersion: number;
+  local: RecordValue;
+  online: { value: RecordValue; revision: string };
+};
+async function onlineConflictRow(a: Active, feature: SupportedFeature, recordId: string) {
+  sameActive(a);
+  requireOfflineAccess(context(a), feature, 'read');
+  const { data, error } = await boundedCheck(
+    supabase.rpc(readFunctions[feature], {
+      p_vessel_id: a.scope.vesselId,
+      p_device_id: a.scope.deviceId,
+    })
+  );
+  sameActive(a);
+  if (error) throw error;
+  if (!Array.isArray(data)) throw new OfflineError('INVALID_SNAPSHOT');
+  const row = data.find((r) => r.value?.id === recordId);
+  if (
+    !row ||
+    typeof row.revision !== 'string' ||
+    !adapters[feature].validate(row.value) ||
+    !adapters[feature].authorizeRead(a.scope, row.value)
+  )
+    throw new OfflineError('ACTION_NOT_ALLOWED');
+  return { value: row.value as RecordValue, revision: row.revision as string };
+}
+export async function reviewOfflineConflict(operationId: string): Promise<OfflineConflictReview> {
+  const a = await offlineNotesContext();
+  if (!navigator.onLine) throw new OfflineError('ONLINE_CHECK_REQUIRED');
+  await refreshPermit(a);
+  const change = (await a.store.read(a.scope)).changes.find(
+    (c) => c.id === operationId && c.state === 'conflict'
+  );
+  if (!change || !(change.feature in adapters)) throw new OfflineError('CONFLICT_CHANGED');
+  const local = await a.box.read(change.feature, change.recordId);
+  if (!local) throw new OfflineError('CONFLICT_CHANGED');
+  const online = await onlineConflictRow(a, change.feature as SupportedFeature, change.recordId);
+  return {
+    partition: scopeKey(a.scope),
+    operationId,
+    feature: change.feature as SupportedFeature,
+    localVersion: local.localVersion,
+    local: local.value,
+    online,
+  };
+}
+export async function acceptReviewedOnlineVersion(review: OfflineConflictReview): Promise<void> {
+  const a = await offlineNotesContext();
+  if (!navigator.onLine || review.partition !== scopeKey(a.scope))
+    throw new OfflineError('SCOPE_CHANGED');
+  await refreshPermit(a);
+  const online = await onlineConflictRow(a, review.feature, String(review.local.id));
+  if (online.revision !== review.online.revision) throw new OfflineError('CONFLICT_CHANGED');
+  await a.box.useOnlineVersion({
+    operationId: review.operationId,
+    expectedLocalVersion: review.localVersion,
+    online,
   });
   notifyNotes();
   await checkOfflineAccess();
   await syncOffline();
+}
+export async function readOfflineRecoveryCopies(): Promise<{ id: string; value: RecordValue }[]> {
+  const a = await offlineNotesContext(),
+    state = await a.store.read(a.scope);
+  sameActive(a);
+  return (state.recoveryCopies ?? [])
+    .filter((copy) => {
+      const adapter = adapters[copy.feature as SupportedFeature];
+      try {
+        requireOfflineAccess(
+          { ...context(a), highestObservedMs: state.highestObservedMs },
+          copy.feature,
+          'read'
+        );
+      } catch {
+        return false;
+      }
+      return !!adapter?.authorizeRead(a.scope, copy.value);
+    })
+    .map((copy) => ({ id: copy.id, value: copy.value }));
 }
