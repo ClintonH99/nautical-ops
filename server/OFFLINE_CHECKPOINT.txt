@@ -4,7 +4,7 @@ Requested: everyday vessel features; add/edit offline; sync later; max 168h
 since verified access, shortened by known access end. Billing/invites stay online.
 
 Implemented locally: Notepad, Shopping Lists, everyday Tasks, Contractors,
-Rules, Safety Equipment, Muster Stations, Trips and Yard Jobs. NOT a whole-app offline
+Rules, Safety Equipment, Muster Stations, Trips, Yard Jobs and Maintenance Logs. NOT a whole-app offline
 release. Production unchanged. No hosted migrations, real signing credentials,
 deployment or activation performed. EXPO_PUBLIC_WEB_OFFLINE defaults off.
 
@@ -21,7 +21,7 @@ Reads use RLS. Sync functions run under a non-login, non-owner, non-bypass role
 inheriting authenticated permissions. Receipt and record writes commit together.
 
 Checks from repository root:
-  node --test server/offline-access.test.mjs server/offline-outbox.test.mjs server/offline-recovery.test.mjs server/offline-issuer.test.mjs server/offline-shell.test.mjs server/offline-dependent-edits.test.mjs server/offline-tasks.test.mjs server/offline-contractors.test.mjs server/offline-publications.test.mjs server/offline-trips.test.mjs server/offline-yard.test.mjs server/offline-navigation.test.mjs
+  node --test server/offline-access.test.mjs server/offline-outbox.test.mjs server/offline-recovery.test.mjs server/offline-issuer.test.mjs server/offline-shell.test.mjs server/offline-dependent-edits.test.mjs server/offline-tasks.test.mjs server/offline-contractors.test.mjs server/offline-publications.test.mjs server/offline-trips.test.mjs server/offline-yard.test.mjs server/offline-navigation.test.mjs server/offline-maintenance.test.mjs
   node --test server/offline-notes-db.test.mjs
   node server/run-offline-browser-check.mjs
   node server/offline-app-check.mjs
@@ -32,8 +32,8 @@ Database uses a local Unix socket; the app uses loopback and connect-src self.
 App runner commands: offline, online, change-online-note, lose-next-reply, status, stop.
 
 Evidence:
-- 162 access/outbox/recovery/issuer/shell/dependent-edit/feature tests passed.
-- 17 local PostgreSQL tests passed: retry deduplication, changed payload rejection,
+- 164 access/outbox/recovery/issuer/shell/dependent-edit/feature tests passed.
+- 18 local PostgreSQL tests passed: retry deduplication, changed payload rejection,
   private receipts, stale revisions, session/access expiry, and existing row
   policies tightened after function creation. Not a hosted-policy audit.
 - Full app TypeScript passed; scoped ESLint zero errors, four existing any
@@ -73,12 +73,18 @@ Evidence:
   reopening and deletion still require online access at this stage.
 - Browser verification found named-route/path mismatch and back actions after
   reload with no navigation history. Shared route map and web return fallback
-  added; automated checks pass. Browser check of return fallback still pending.
+  added; automated checks and browser reload/edit/save/back-to-home checks pass.
+- Real browser Maintenance: stopped server, reload/create/reopen editor/reload,
+  edit and clear serial/notes, save returns to list, reloaded list back returns
+  home. Reconnect: one final log, one receipt, one notification enqueue.
+  /private/tmp/nautical-offline-maintenance-synced.png
+  Evidence: nautical-offline-app-HvQKmW/result.json. Shipped notification trigger
+  tested locally with a synthetic queue counter; no email or push sent.
 - Real IndexedDB harness: reload persistence, atomic rollback, separate accounts,
   concurrent storage connections, expiry retention, denied sync, session recovery.
 
 Remaining before whole-app release:
-1. Integrate inventory, watches/rest, pre-departure, maintenance, logs,
+1. Integrate inventory, watches/rest, pre-departure, logs,
    uniforms, leave and other normal modules with exact permissions.
 2. Completed: dependent edits after ambiguous uploads retain immutable attempted
    requests and merge only local changes onto acknowledged server versions.

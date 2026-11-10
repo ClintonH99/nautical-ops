@@ -1,3 +1,4 @@
+import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 import { ScreenLoading } from '../components/ScreenLoading';
 /**
  * Add / Edit Maintenance Log Screen
@@ -5,7 +6,7 @@ import { ScreenLoading } from '../components/ScreenLoading';
  * What service done, Notes, Service done by (Crew/Contractor)
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -112,8 +113,16 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
   const [serviceDoneBy, setServiceDoneBy] = useState('');
   const [loading, setLoading] = useState(!!logId);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [offlineLocalVersion, setOfflineLocalVersion] = useState<number | undefined>();
 
   const vesselId = user?.vesselId ?? null;
+  const storageKey = useCallback(
+    (key: string) =>
+      Platform.OS === 'web' ? JSON.stringify([key, user?.id ?? '', vesselId ?? '']) : key,
+    [user?.id, vesselId]
+  );
   const isEdit = !!logId;
   const sectionTitleColor = themeColors.isDark ? COLORS.white : COLORS.primary;
 
@@ -126,8 +135,8 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
   const loadCustomEquipment = useCallback(async () => {
     try {
       const [customRaw, hiddenRaw] = await Promise.all([
-        AsyncStorage.getItem(CUSTOM_EQUIPMENT_STORAGE_KEY),
-        AsyncStorage.getItem(HIDDEN_EQUIPMENT_STORAGE_KEY),
+        AsyncStorage.getItem(storageKey(CUSTOM_EQUIPMENT_STORAGE_KEY)),
+        AsyncStorage.getItem(storageKey(HIDDEN_EQUIPMENT_STORAGE_KEY)),
       ]);
       const custom: string[] = customRaw ? JSON.parse(customRaw) : [];
       const hidden: string[] = hiddenRaw ? JSON.parse(hiddenRaw) : [];
@@ -140,7 +149,7 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
     } catch (e) {
       console.error('Load custom equipment error:', e);
     }
-  }, []);
+  }, [storageKey]);
 
   useEffect(() => {
     loadCustomEquipment();
@@ -149,8 +158,8 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
   const loadCustomLocations = useCallback(async () => {
     try {
       const [customRaw, hiddenRaw] = await Promise.all([
-        AsyncStorage.getItem(CUSTOM_LOCATION_STORAGE_KEY),
-        AsyncStorage.getItem(HIDDEN_LOCATION_STORAGE_KEY),
+        AsyncStorage.getItem(storageKey(CUSTOM_LOCATION_STORAGE_KEY)),
+        AsyncStorage.getItem(storageKey(HIDDEN_LOCATION_STORAGE_KEY)),
       ]);
       const custom: string[] = customRaw ? JSON.parse(customRaw) : [];
       const hidden: string[] = hiddenRaw ? JSON.parse(hiddenRaw) : [];
@@ -163,7 +172,7 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
     } catch (e) {
       console.error('Load custom locations error:', e);
     }
-  }, []);
+  }, [storageKey]);
 
   useEffect(() => {
     loadCustomLocations();
@@ -171,14 +180,14 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
 
   const loadSerialNumbersByKey = useCallback(async () => {
     try {
-      const raw = await AsyncStorage.getItem(SERIAL_NUMBERS_STORAGE_KEY);
+      const raw = await AsyncStorage.getItem(storageKey(SERIAL_NUMBERS_STORAGE_KEY));
       const parsed = raw ? JSON.parse(raw) : {};
       const byKey = Array.isArray(parsed) ? {} : parsed;
       setSerialNumbersByKey(byKey);
     } catch (e) {
       console.error('Load serial numbers error:', e);
     }
-  }, []);
+  }, [storageKey]);
 
   useEffect(() => {
     loadSerialNumbersByKey();
@@ -189,7 +198,9 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
     (async () => {
       try {
         const log = await maintenanceLogsService.getById(logId);
+        if (!log) throw new Error('Log is not available on this device.');
         if (log) {
+          setOfflineLocalVersion(log.offlineLocalVersion);
           const eq = log.equipment;
           setEquipment(eq);
           setEquipmentOptions((prev) => {
@@ -210,6 +221,7 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
           setServiceDoneBy(log.serviceDoneBy ?? '');
         }
       } catch (e) {
+        setLoadFailed(true);
         console.error('Load log error:', e);
         Alert.alert('Error', 'Could not load log');
       } finally {
@@ -230,7 +242,10 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
           setEquipmentOptions((prev) => prev.filter((x) => x !== opt));
           if (equipment === opt) setEquipment('');
           try {
-            await AsyncStorage.setItem(HIDDEN_EQUIPMENT_STORAGE_KEY, JSON.stringify(nextHidden));
+            await AsyncStorage.setItem(
+              storageKey(HIDDEN_EQUIPMENT_STORAGE_KEY),
+              JSON.stringify(nextHidden)
+            );
           } catch (e) {
             console.error('Save hidden equipment error:', e);
           }
@@ -251,7 +266,10 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
           setLocationOptions((prev) => prev.filter((x) => x !== opt));
           if (location === opt) setLocation('');
           try {
-            await AsyncStorage.setItem(HIDDEN_LOCATION_STORAGE_KEY, JSON.stringify(nextHidden));
+            await AsyncStorage.setItem(
+              storageKey(HIDDEN_LOCATION_STORAGE_KEY),
+              JSON.stringify(nextHidden)
+            );
           } catch (e) {
             console.error('Save hidden location error:', e);
           }
@@ -276,7 +294,7 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
     setLocationDropdownVisible(false);
     try {
       const custom = nextOptions.filter((o) => !DEFAULT_LOCATION_OPTIONS.includes(o));
-      await AsyncStorage.setItem(CUSTOM_LOCATION_STORAGE_KEY, JSON.stringify(custom));
+      await AsyncStorage.setItem(storageKey(CUSTOM_LOCATION_STORAGE_KEY), JSON.stringify(custom));
     } catch (e) {
       console.error('Save custom location error:', e);
     }
@@ -298,13 +316,14 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
     setEquipmentDropdownVisible(false);
     try {
       const custom = nextOptions.filter((o) => !DEFAULT_EQUIPMENT_OPTIONS.includes(o));
-      await AsyncStorage.setItem(CUSTOM_EQUIPMENT_STORAGE_KEY, JSON.stringify(custom));
+      await AsyncStorage.setItem(storageKey(CUSTOM_EQUIPMENT_STORAGE_KEY), JSON.stringify(custom));
     } catch (e) {
       console.error('Save custom equipment error:', e);
     }
   };
 
   const handleSave = async () => {
+    if (savingRef.current || loading || loadFailed) return;
     const trimmedEquipment = equipment.trim();
     if (!trimmedEquipment) {
       Alert.alert('Required', 'Please enter equipment.');
@@ -320,19 +339,24 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
       return;
     }
 
+    savingRef.current = true;
     setSaving(true);
     try {
       if (isEdit) {
-        await maintenanceLogsService.update(logId, {
-          equipment: trimmedEquipment,
-          portStarboardNa: location.trim() || undefined,
-          serialNumber: serialNumber.trim() || undefined,
-          hoursOfService: hoursOfService.trim() || undefined,
-          hoursAtNextService: hoursAtNextService.trim() || undefined,
-          whatServiceDone: whatServiceDone.trim() || undefined,
-          notes: notes.trim() || undefined,
-          serviceDoneBy: trimmedServiceDoneBy,
-        });
+        await maintenanceLogsService.update(
+          logId,
+          {
+            equipment: trimmedEquipment,
+            portStarboardNa: location.trim(),
+            serialNumber: serialNumber.trim(),
+            hoursOfService: hoursOfService.trim(),
+            hoursAtNextService: hoursAtNextService.trim(),
+            whatServiceDone: whatServiceDone.trim(),
+            notes: notes.trim(),
+            serviceDoneBy: trimmedServiceDoneBy,
+          },
+          offlineLocalVersion
+        );
         const sn = serialNumber.trim();
         if (sn) {
           const key = getSerialNumberKey(equipment, location);
@@ -343,25 +367,26 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
               MAX_STORED_SERIAL_NUMBERS
             );
             const next = { ...prev, [key]: nextList };
-            AsyncStorage.setItem(SERIAL_NUMBERS_STORAGE_KEY, JSON.stringify(next)).catch((e) =>
-              console.error('Save serial numbers error:', e)
-            );
+            AsyncStorage.setItem(
+              storageKey(SERIAL_NUMBERS_STORAGE_KEY),
+              JSON.stringify(next)
+            ).catch((e) => console.error('Save serial numbers error:', e));
             return next;
           });
         }
         Alert.alert('Updated', 'Log updated.', [
-          { text: 'OK', onPress: () => navigation.goBack() },
+          { text: 'OK', onPress: () => returnToPreviousPage(navigation) },
         ]);
       } else {
         await maintenanceLogsService.create({
           vesselId,
           equipment: trimmedEquipment,
-          portStarboardNa: location.trim() || undefined,
-          serialNumber: serialNumber.trim() || undefined,
-          hoursOfService: hoursOfService.trim() || undefined,
-          hoursAtNextService: hoursAtNextService.trim() || undefined,
-          whatServiceDone: whatServiceDone.trim() || undefined,
-          notes: notes.trim() || undefined,
+          portStarboardNa: location.trim(),
+          serialNumber: serialNumber.trim(),
+          hoursOfService: hoursOfService.trim(),
+          hoursAtNextService: hoursAtNextService.trim(),
+          whatServiceDone: whatServiceDone.trim(),
+          notes: notes.trim(),
           serviceDoneBy: trimmedServiceDoneBy,
         });
         const sn = serialNumber.trim();
@@ -374,9 +399,10 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
               MAX_STORED_SERIAL_NUMBERS
             );
             const next = { ...prev, [key]: nextList };
-            AsyncStorage.setItem(SERIAL_NUMBERS_STORAGE_KEY, JSON.stringify(next)).catch((e) =>
-              console.error('Save serial numbers error:', e)
-            );
+            AsyncStorage.setItem(
+              storageKey(SERIAL_NUMBERS_STORAGE_KEY),
+              JSON.stringify(next)
+            ).catch((e) => console.error('Save serial numbers error:', e));
             return next;
           });
         }
@@ -385,12 +411,15 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
           has_serial_number: !!serialNumber.trim(),
           has_hours_of_service: !!hoursOfService.trim(),
         });
-        Alert.alert('Saved', 'Log added.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+        Alert.alert('Saved', 'Log added.', [
+          { text: 'OK', onPress: () => returnToPreviousPage(navigation) },
+        ]);
       }
     } catch (e) {
       console.error('Save log error:', e);
-      Alert.alert('Error', 'Could not save log.');
+      Alert.alert('Could not save log', e instanceof Error ? e.message : 'Please try again.');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -895,12 +924,12 @@ export const AddEditMaintenanceLogScreen = ({ navigation, route }: any) => {
             onPress={handleSave}
             variant="primary"
             loading={saving}
-            disabled={saving}
+            disabled={saving || loadFailed}
             fullWidth
           />
           <TouchableOpacity
             style={styles.cancelBtn}
-            onPress={() => navigation.goBack()}
+            onPress={() => returnToPreviousPage(navigation)}
             disabled={saving}
           >
             <Text

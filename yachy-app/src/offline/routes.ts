@@ -1,6 +1,9 @@
 /** Only integrated and tested device-storage routes are available offline. */
 export const OFFLINE_ROUTE_PATHS: Readonly<Record<string, string>> = {
   Home: '/app',
+  MaintenanceHome: '/maintenance',
+  MaintenanceLog: '/maintenance/log',
+  AddEditMaintenanceLog: '/maintenance/edit',
   Categories: '/categories',
   Notepad: '/notepad',
   AddEditNote: '/notepad/edit',

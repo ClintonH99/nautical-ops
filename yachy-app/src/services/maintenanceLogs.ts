@@ -1,3 +1,4 @@
+import { offlineMaintenance } from '../offline/maintenanceService';
 /**
  * Maintenance Logs Service
  * CRUD for maintenance log entries (persist until manually deleted)
@@ -32,6 +33,10 @@ export interface UpdateMaintenanceLogData {
 
 class MaintenanceLogsService {
   async getByVessel(vesselId: string): Promise<MaintenanceLog[]> {
+    if (offlineMaintenance.enabled())
+      return (await offlineMaintenance.list(vesselId))
+        .map(this.mapRowToLog)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     try {
       const { data, error } = await supabase
         .from('maintenance_logs')
@@ -49,6 +54,20 @@ class MaintenanceLogsService {
 
   async create(input: CreateMaintenanceLogData): Promise<MaintenanceLog> {
     try {
+      if (offlineMaintenance.enabled())
+        return this.mapRowToLog(
+          await offlineMaintenance.create({
+            vessel_id: input.vesselId,
+            equipment: input.equipment.trim(),
+            port_starboard_na: input.portStarboardNa?.trim() || null,
+            serial_number: input.serialNumber?.trim() || null,
+            hours_of_service: input.hoursOfService?.trim() || null,
+            hours_at_next_service: input.hoursAtNextService?.trim() || null,
+            what_service_done: input.whatServiceDone?.trim() || null,
+            notes: input.notes?.trim() || null,
+            service_done_by: input.serviceDoneBy.trim(),
+          })
+        );
       const { data, error } = await supabase
         .from('maintenance_logs')
         .insert([
@@ -76,7 +95,11 @@ class MaintenanceLogsService {
     }
   }
 
-  async update(logId: string, input: UpdateMaintenanceLogData): Promise<void> {
+  async update(
+    logId: string,
+    input: UpdateMaintenanceLogData,
+    offlineLocalVersion?: number
+  ): Promise<void> {
     try {
       const payload: Record<string, unknown> = {
         updated_at: new Date().toISOString(),
@@ -95,6 +118,14 @@ class MaintenanceLogsService {
       if (input.notes !== undefined) payload.notes = input.notes?.trim() || null;
       if (input.serviceDoneBy !== undefined) payload.service_done_by = input.serviceDoneBy.trim();
 
+      if (offlineMaintenance.enabled()) {
+        await offlineMaintenance.update(
+          logId,
+          payload as import('../offline/outbox').RecordValue,
+          offlineLocalVersion
+        );
+        return;
+      }
       const { data, error } = await supabase
         .from('maintenance_logs')
         .update(payload)
@@ -108,6 +139,7 @@ class MaintenanceLogsService {
   }
 
   async delete(logId: string): Promise<void> {
+    if (offlineMaintenance.enabled()) await offlineMaintenance.beforeDelete(logId);
     try {
       const { data, error } = await supabase
         .from('maintenance_logs')
@@ -115,6 +147,7 @@ class MaintenanceLogsService {
         .eq('id', logId)
         .select('id');
       requireAffectedRows(data, error, 'Deleting the maintenance log');
+      if (offlineMaintenance.enabled()) await offlineMaintenance.refresh();
     } catch (error) {
       console.error('Delete maintenance log error:', error);
       throw error;
@@ -122,6 +155,10 @@ class MaintenanceLogsService {
   }
 
   async getById(logId: string): Promise<MaintenanceLog | null> {
+    if (offlineMaintenance.enabled()) {
+      const row = await offlineMaintenance.read(logId);
+      return row ? this.mapRowToLog(row) : null;
+    }
     try {
       const { data, error } = await supabase
         .from('maintenance_logs')
@@ -139,6 +176,7 @@ class MaintenanceLogsService {
 
   private mapRowToLog(row: Record<string, unknown>): MaintenanceLog {
     return {
+      offlineLocalVersion: row.offlineLocalVersion as number | undefined,
       id: row.id as string,
       vesselId: row.vessel_id as string,
       equipment: (row.equipment as string) ?? '',

@@ -51,6 +51,7 @@ self.addEventListener('fetch', (event) => {
       );
     const publicationId = {
       '/rules/create': 'ruleId',
+      '/maintenance/edit': 'logId',
       '/safety/equipment/create': 'equipmentId',
       '/safety/muster/create': 'musterStationId',
     }[url.pathname];

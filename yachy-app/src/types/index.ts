@@ -390,6 +390,7 @@ export interface ShipyardRecordFolderAssignment {
 // ===== MAINTENANCE LOG TYPES =====
 
 export interface MaintenanceLog {
+  offlineLocalVersion?: number;
   id: string;
   vesselId: string;
   equipment: string;

@@ -1,3 +1,4 @@
+import { offlineMaintenance } from '../offline/maintenanceService';
 import { optimisticDelete } from '../utils/optimisticDelete';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
 import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
@@ -142,7 +143,10 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
 
   useFocusEffect(
     useCallback(() => {
-      loadLogs();
+      void loadLogs();
+      return offlineMaintenance.subscribe(() => {
+        void loadLogs();
+      });
     }, [loadLogs])
   );
 

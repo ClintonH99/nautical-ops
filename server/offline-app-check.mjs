@@ -1,3 +1,4 @@
+import { installMaintenance } from "./offline-maintenance-fixture.mjs";
 import { installYard } from "./offline-yard-fixture.mjs";
 import { installTrips } from "./offline-trips-fixture.mjs";
 import { installPublications } from "./offline-publications-fixture.mjs";
@@ -233,6 +234,7 @@ try {
   sql(`UPDATE users SET role='CAPTAIN_MOV';`);
   installTrips(sql,baseline,name=>readFileSync(join(app,'supabase/migrations',name),'utf8'));
   installYard(sql,baseline,name=>readFileSync(join(app,'supabase/migrations',name),'utf8'));
+  installMaintenance(sql,baseline,name=>readFileSync(join(app,'supabase/migrations',name),'utf8'));
   const env = {
     ...process.env,
     EXPO_NO_DOTENV: "1",
@@ -445,6 +447,8 @@ try {
       if(path==='/rest/v1/rpc/'+name) return json(JSON.parse(run(`SELECT ${name}(${quote(body.p_vessel_id)},${quote(body.p_device_id)});`)));
     }
     if(path==='/rest/v1/rpc/sync_web_offline_yard_job') return json(JSON.parse(run(`SELECT sync_web_offline_yard_job(${quote(body.p_vessel_id)},${quote(body.p_device_id)},${quote(JSON.stringify(body.p_operation))}::jsonb);`)));
+    if(path==='/rest/v1/rpc/read_web_offline_maintenance_logs') return json(JSON.parse(run(`SELECT read_web_offline_maintenance_logs(${quote(body.p_vessel_id)},${quote(body.p_device_id)});`)));
+    if(path==='/rest/v1/rpc/sync_web_offline_maintenance_log') return json(JSON.parse(run(`SELECT sync_web_offline_maintenance_log(${quote(body.p_vessel_id)},${quote(body.p_device_id)},${quote(JSON.stringify(body.p_operation))}::jsonb);`)));
     if(path==='/rest/v1/vessel_trip_colors') return json(null);
     if (path === "/rest/v1/users")
       return json(url.searchParams.has("id") ? profile : [profile]);
@@ -558,7 +562,7 @@ try {
     if (line === "status") {
       const report = JSON.parse(
         sql(
-          "SELECT json_build_object('notes',coalesce((SELECT json_agg(n) FROM notes n),'[]'),'shoppingLists',coalesce((SELECT json_agg(s) FROM shopping_lists s),'[]'),'tasks',coalesce((SELECT json_agg(t) FROM vessel_tasks t),'[]'),'contractors',coalesce((SELECT json_agg(c) FROM contractors c),'[]'),'rules',coalesce((SELECT json_agg(r) FROM rules r),'[]'),'safetyEquipment',coalesce((SELECT json_agg(e) FROM safety_equipment e),'[]'),'musterStations',coalesce((SELECT json_agg(m) FROM muster_stations m),'[]'),'trips',coalesce((SELECT json_agg(t) FROM trips t),'[]'),'yardJobs',coalesce((SELECT json_agg(y) FROM yard_period_jobs y),'[]'),'receipts',(SELECT count(*) FROM offline_private.note_receipts)+(SELECT count(*) FROM offline_private.record_receipts));",
+          "SELECT json_build_object('notes',coalesce((SELECT json_agg(n) FROM notes n),'[]'),'shoppingLists',coalesce((SELECT json_agg(s) FROM shopping_lists s),'[]'),'tasks',coalesce((SELECT json_agg(t) FROM vessel_tasks t),'[]'),'contractors',coalesce((SELECT json_agg(c) FROM contractors c),'[]'),'rules',coalesce((SELECT json_agg(r) FROM rules r),'[]'),'safetyEquipment',coalesce((SELECT json_agg(e) FROM safety_equipment e),'[]'),'musterStations',coalesce((SELECT json_agg(m) FROM muster_stations m),'[]'),'trips',coalesce((SELECT json_agg(t) FROM trips t),'[]'),'yardJobs',coalesce((SELECT json_agg(y) FROM yard_period_jobs y),'[]'),'maintenanceLogs',coalesce((SELECT json_agg(m) FROM maintenance_logs m),'[]'),'notificationEnqueues',(SELECT count(*) FROM synthetic_notification_capture),'receipts',(SELECT count(*) FROM offline_private.note_receipts)+(SELECT count(*) FROM offline_private.record_receipts));",
         ),
       );
       writeFileSync(join(dir, "result.json"), JSON.stringify(report, null, 2));

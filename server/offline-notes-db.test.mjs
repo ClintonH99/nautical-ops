@@ -1,3 +1,4 @@
+import { installMaintenance } from "./offline-maintenance-fixture.mjs";
 import { installYard } from "./offline-yard-fixture.mjs";
 import test from "node:test";
 import { installTrips } from "./offline-trips-fixture.mjs";
@@ -481,6 +482,24 @@ test("real isolated PostgreSQL offline note protocol", async (t) => {
       }
       assert.equal(sql("SELECT count(*) FROM offline_private.record_receipts WHERE feature='yardJobs';"),'3');
       assert.equal(sql('SELECT count(*) FROM yard_period_jobs;'),'1');
+    });
+    installMaintenance(sql,baseline,migration);
+    await t.test('maintenance edits clear fields and retries cannot duplicate notifications',()=>{
+      const value={id:crypto.randomUUID(),vessel_id:vessel,equipment:'Generator',serial_number:'synthetic-01',hours_of_service:'100',hours_at_next_service:'200',what_service_done:'Filter change',notes:'Before',service_done_by:'Synthetic crew',created_at:new Date().toISOString(),updated_at:new Date().toISOString(),port_starboard_na:'Port'};
+      const op={id:crypto.randomUUID(),recordId:value.id,feature:'maintenanceLogs',kind:'create',value,baseRevision:null};
+      const call=op=>JSON.parse(run(`SELECT sync_web_offline_maintenance_log('${vessel}','${device}','${JSON.stringify(op).replaceAll("'","''")}'::jsonb);`));
+      const first=call(op);assert.equal(first.status,'applied');assert.deepEqual(call(op),first);
+      const edit={...op,id:crypto.randomUUID(),kind:'update',baseRevision:first.revision,value:{...first.value,notes:null,serial_number:null}};
+      const second=call(edit);assert.equal(second.status,'applied');assert.equal(second.value.notes,null);assert.equal(second.value.serial_number,null);assert.deepEqual(call(edit),second);
+      assert.equal(call({...edit,id:crypto.randomUUID()}).status,'conflict');
+      assert.throws(()=>call({...edit,value:{...edit.value,equipment:'Changed reused id'}}));
+      sql(`DROP POLICY "Active vessel members can manage maintenance_logs" ON maintenance_logs;
+        CREATE POLICY maintenance_read ON maintenance_logs FOR SELECT TO authenticated USING(public.current_user_can_access_vessel(vessel_id));`);
+      assert.equal(call({...edit,id:crypto.randomUUID(),baseRevision:second.revision}).status,'forbidden');
+      assert.equal(sql("SELECT count(*) FROM offline_private.record_receipts WHERE feature='maintenanceLogs';"),'2');
+      assert.equal(sql('SELECT count(*) FROM synthetic_notification_capture;'),'2');
+      assert.equal(sql('SELECT count(*) FROM maintenance_logs;'),'1');
+      assert.throws(()=>call({...op,id:crypto.randomUUID(),recordId:crypto.randomUUID(),value:{...value,vessel_id:crypto.randomUUID()}}));
     });
     let first;
     await t.test("grant binds session and caps access at seven days", () => {
