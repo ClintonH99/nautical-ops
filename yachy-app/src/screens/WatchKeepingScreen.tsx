@@ -4,7 +4,7 @@ import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinne
  * Watch Keeping Rules (view / HOD edit), then Watch Schedule and Create buttons
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
@@ -49,8 +49,12 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
   const isHOD = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
   const { canCreate } = useWatchScheduleCreationAccess();
   const actionColor = themeColors.isDark ? COLORS.white : COLORS.primary;
-  const hasCachedRules = vesselId ? watchKeepingRulesCache.has(vesselId) : false;
-  const cachedRules = vesselId ? watchKeepingRulesCache.get(vesselId) : undefined;
+  const hasCachedRules =
+    !watchKeepingService.offlineEnabled() && !!vesselId && watchKeepingRulesCache.has(vesselId);
+  const cachedRules = hasCachedRules && vesselId ? watchKeepingRulesCache.get(vesselId) : undefined;
+  const rulesVersion = useRef<number | undefined>(undefined);
+  const savingRef = useRef(false);
+  const rulesLoaded = useRef(false);
 
   const [rules, setRules] = useState<WatchKeepingRules | null>(cachedRules ?? null);
   const [loadingRules, setLoadingRules] = useState(!hasCachedRules);
@@ -62,6 +66,19 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
 
   const loadRules = useCallback(async () => {
     if (!vesselId) return;
+    if (watchKeepingService.offlineEnabled()) {
+      try {
+        const data = await watchKeepingService.getRules(vesselId);
+        setRules(data);
+        rulesLoaded.current = true;
+      } catch (e) {
+        rulesLoaded.current = false;
+        console.warn('Watch rules are not available', e);
+      } finally {
+        setLoadingRules(false);
+      }
+      return;
+    }
     const hasCachedValue = watchKeepingRulesCache.has(vesselId);
     let immediateRules = hasCachedValue ? watchKeepingRulesCache.get(vesselId) : undefined;
     if (hasCachedValue) {
@@ -112,27 +129,50 @@ export const WatchKeepingScreen = ({ navigation }: any) => {
     }, [vesselId, loadRules])
   );
 
+  useEffect(() => watchKeepingService.subscribe(() => void loadRules()), [loadRules]);
   const handleSaveRules = async () => {
-    if (!vesselId) return;
+    if (!vesselId || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
-      const updated = await watchKeepingService.upsertRules(vesselId, editContent, user?.id);
-      watchKeepingRulesCache.set(vesselId, updated);
-      await AsyncStorage.setItem(rulesStorageKey(vesselId), JSON.stringify(updated));
+      const updated = await watchKeepingService.upsertRules(
+        vesselId,
+        editContent,
+        user?.id,
+        rulesVersion.current
+      );
+      if (!watchKeepingService.offlineEnabled()) {
+        watchKeepingRulesCache.set(vesselId, updated);
+        await AsyncStorage.setItem(rulesStorageKey(vesselId), JSON.stringify(updated));
+      }
       setRules(updated);
       setRulesExpanded(false);
       setRulesHasOverflow(false);
       setEditModalOpen(false);
-      Alert.alert('Saved', 'Watch Keeping Rules have been updated.');
+      Alert.alert(
+        'Saved',
+        watchKeepingService.offlineEnabled()
+          ? 'Saved on this device. Crew receive the rules after sync.'
+          : 'Watch Keeping Rules have been updated.'
+      );
     } catch (e) {
       console.error('Save rules error:', e);
-      Alert.alert('Error', 'Could not save rules.');
+      Alert.alert(
+        'Could not save',
+        e instanceof Error ? e.message : 'Your edits are still here. Please retry.'
+      );
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
 
   const openEditModal = () => {
+    if (watchKeepingService.offlineEnabled() && !rulesLoaded.current) {
+      Alert.alert('Not ready', 'Reconnect to download the watch rules first.');
+      return;
+    }
+    rulesVersion.current = rules?.offlineLocalVersion;
     setEditContent(rules?.content ?? '');
     setEditModalOpen(true);
   };

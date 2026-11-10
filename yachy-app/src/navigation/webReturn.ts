@@ -7,6 +7,8 @@ const parents: Readonly<Record<string, string>> = {
   AddEditInventoryItem: 'Inventory',
   AddEditPreDepartureChecklist: 'PreDepartureChecklist',
   AddEditCrewLeave: 'CrewLeave',
+  CreateWatchTimetable: 'WatchSchedule',
+  WatchSchedule: 'WatchKeeping',
   ViewPreDepartureChecklist: 'PreDepartureChecklist',
   AddEditShoppingList: 'ShoppingListCategory',
   AddEditTask: 'Tasks',

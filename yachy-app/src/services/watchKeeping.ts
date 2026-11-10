@@ -3,6 +3,9 @@
  * Publish and fetch watch keeping timetables for crew to view
  */
 
+import { offlineWatch } from '../offline/watchKeepingService';
+import userService from './user';
+import type { User } from '../types';
 import { supabase } from './supabase';
 import { requireAffectedRows } from './mutationResult';
 
@@ -27,6 +30,7 @@ export interface WatchWorkPeriod {
 }
 
 export interface PublishedWatchTimetable {
+  offlineLocalVersion?: number;
   id: string;
   vesselId: string;
   watchTitle: string;
@@ -190,6 +194,7 @@ export function getRestWatchConflicts(
 }
 
 export interface WatchKeepingRules {
+  offlineLocalVersion?: number;
   id: string;
   vesselId: string;
   content: string;
@@ -197,8 +202,26 @@ export interface WatchKeepingRules {
   updatedBy?: string;
 }
 
+export type WatchCrewMember = Pick<User, 'id' | 'name' | 'position' | 'role'>;
 class WatchKeepingService {
+  subscribe = offlineWatch.subscribe;
+  offlineEnabled = offlineWatch.enabled;
+  offlineCanCreate = offlineWatch.canCreate;
+  async getCrew(vesselId: string): Promise<WatchCrewMember[]> {
+    if (!offlineWatch.enabled()) return userService.getVesselCrew(vesselId);
+    return (await offlineWatch.roster(vesselId)).map((m) => ({
+      id: String(m.id),
+      name: String(m.name),
+      position: String(m.position),
+      role: m.role as User['role'],
+    }));
+  }
+
   async getRules(vesselId: string): Promise<WatchKeepingRules | null> {
+    if (offlineWatch.enabled()) {
+      const rows = await offlineWatch.list('watchKeepingRules', vesselId);
+      return rows[0] ? this.mapRulesRow(rows[0]) : null;
+    }
     try {
       const { data, error } = await supabase
         .from('watch_keeping_rules')
@@ -217,8 +240,22 @@ class WatchKeepingService {
   async upsertRules(
     vesselId: string,
     content: string,
-    updatedBy?: string
+    updatedBy?: string,
+    version?: number
   ): Promise<WatchKeepingRules> {
+    if (offlineWatch.enabled()) {
+      const rows = await offlineWatch.list('watchKeepingRules', vesselId);
+      const value = { vessel_id: vesselId, content: content.trim() };
+      if (rows[0] && version === undefined)
+        throw new Error('Rules changed. Reopen the editor before saving.');
+      if (!rows[0] && version !== undefined)
+        throw new Error('Rules changed. Reopen the editor before saving.');
+      return this.mapRulesRow(
+        rows[0]
+          ? await offlineWatch.update('watchKeepingRules', String(rows[0].id), value, version)
+          : await offlineWatch.create('watchKeepingRules', value)
+      );
+    }
     const { data, error } = await supabase
       .from('watch_keeping_rules')
       .upsert(
@@ -239,6 +276,7 @@ class WatchKeepingService {
 
   private mapRulesRow(row: Record<string, unknown>): WatchKeepingRules {
     return {
+      offlineLocalVersion: row.offlineLocalVersion as number | undefined,
       id: row.id as string,
       vesselId: row.vessel_id as string,
       content: (row.content as string) ?? '',
@@ -248,6 +286,10 @@ class WatchKeepingService {
   }
 
   async getByVessel(vesselId: string): Promise<PublishedWatchTimetable[]> {
+    if (offlineWatch.enabled())
+      return (await offlineWatch.list('watchKeeping', vesselId))
+        .map(this.mapRow)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     try {
       const { data, error } = await supabase
         .from('watch_keeping_timetables')
@@ -268,6 +310,10 @@ class WatchKeepingService {
     startDate: string,
     endDate: string
   ): Promise<PublishedWatchTimetable[]> {
+    if (offlineWatch.enabled())
+      return (await this.getByVessel(vesselId))
+        .filter((t) => t.forDate !== null && t.forDate >= startDate && t.forDate <= endDate)
+        .sort((a, b) => String(a.forDate).localeCompare(String(b.forDate)));
     try {
       const { data, error } = await supabase
         .from('watch_keeping_timetables')
@@ -285,7 +331,23 @@ class WatchKeepingService {
     }
   }
 
+  private offlineValue(input: PublishTimetableData) {
+    return {
+      vessel_id: input.vesselId,
+      watch_title: input.watchTitle.trim(),
+      start_time: input.startTime,
+      start_location: input.startLocation?.trim() || null,
+      destination: input.destination?.trim() || null,
+      notes: input.notes?.trim() || null,
+      for_date: input.forDate,
+      slots: JSON.parse(JSON.stringify(input.slots)),
+    };
+  }
   async publish(input: PublishTimetableData, requestId: string): Promise<PublishedWatchTimetable> {
+    if (offlineWatch.enabled())
+      return this.mapRow(
+        await offlineWatch.create('watchKeeping', this.offlineValue(input), requestId)
+      );
     const { data, error } = await supabase.rpc('publish_watch_schedule', {
       p_request_id: requestId,
       p_data: {
@@ -304,7 +366,15 @@ class WatchKeepingService {
     return this.mapRow(data);
   }
 
-  async update(id: string, input: PublishTimetableData): Promise<PublishedWatchTimetable> {
+  async update(
+    id: string,
+    input: PublishTimetableData,
+    version?: number
+  ): Promise<PublishedWatchTimetable> {
+    if (offlineWatch.enabled())
+      return this.mapRow(
+        await offlineWatch.update('watchKeeping', id, this.offlineValue(input), version)
+      );
     const { data, error } = await supabase
       .from('watch_keeping_timetables')
       .update({
@@ -326,15 +396,21 @@ class WatchKeepingService {
   }
 
   async delete(id: string): Promise<void> {
+    if (offlineWatch.enabled()) await offlineWatch.beforeDelete(id);
     const { data, error } = await supabase
       .from('watch_keeping_timetables')
       .delete()
       .eq('id', id)
       .select('id');
     requireAffectedRows(data, error, 'Deleting the watch timetable');
+    if (offlineWatch.enabled()) await offlineWatch.refresh();
   }
 
   async getById(id: string): Promise<PublishedWatchTimetable | null> {
+    if (offlineWatch.enabled()) {
+      const row = await offlineWatch.read('watchKeeping', id);
+      return row ? this.mapRow(row) : null;
+    }
     try {
       const { data, error } = await supabase
         .from('watch_keeping_timetables')
@@ -362,6 +438,7 @@ class WatchKeepingService {
 
   private mapRow(row: Record<string, unknown>): PublishedWatchTimetable {
     return {
+      offlineLocalVersion: row.offlineLocalVersion as number | undefined,
       id: row.id as string,
       vesselId: row.vessel_id as string,
       watchTitle: row.watch_title as string,

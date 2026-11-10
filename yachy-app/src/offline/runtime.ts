@@ -10,7 +10,7 @@ export type OfflineStatus = {
   pending: number;
   issue: string | null;
   expiresAt: number | null;
-  conflicts: { id: string; title: string }[];
+  conflicts: { id: string; title: string; canFork?: boolean }[];
   recoverable: number;
 };
 export const useOfflineStatus = create<OfflineStatus>(() => ({

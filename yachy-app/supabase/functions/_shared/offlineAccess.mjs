@@ -85,6 +85,8 @@ export function createOfflineAccessHandler({ getEnv, createClient }) {
         'inventory',
         'preDepartureChecklists',
         'crewLeave',
+        'watchKeeping',
+        'watchKeepingRules',
         'maintenanceLogs',
         'yardJobs',
         'shipyardRecords',

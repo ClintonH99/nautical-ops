@@ -57,6 +57,8 @@ self.addEventListener('fetch', (event) => {
       '/uniforms/edit': 'uniformId',
       '/inventory/edit': 'itemId',
       '/crew-leave/edit': 'leaveId',
+      '/watch-schedule/create': 'timetableId',
+      '/watch-schedule': 'timetableId',
       '/pre-departure/edit': 'checklistId',
       '/pre-departure/view': 'checklistId',
       '/safety/equipment/create': 'equipmentId',

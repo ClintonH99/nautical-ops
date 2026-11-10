@@ -7,6 +7,7 @@ export const OFFLINE_FEATURES = [
   'shoppingLists',
   'trips',
   'watchKeeping',
+  'watchKeepingRules',
   'watchDuties',
   'restEntries',
   'maintenanceLogs',

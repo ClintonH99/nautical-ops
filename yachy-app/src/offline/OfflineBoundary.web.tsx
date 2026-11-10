@@ -131,18 +131,21 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
           {state.conflicts.map((conflict) => (
             <View key={conflict.id} style={{ gap: 4 }}>
               <Text style={{ color: colors.textPrimary }}>
-                {conflict.title}: changed on another device. Keep the online record and save your
-                edits as a separate device copy.
+                {conflict.canFork === false
+                  ? 'Watch rules changed on another device. Your edits are kept here until the rules can be reconciled.'
+                  : `${conflict.title}: changed on another device. Keep the online record and save your edits as a separate device copy.`}
               </Text>
-              <TouchableOpacity
-                accessibilityRole="button"
-                disabled={resolving !== null}
-                onPress={() => void keepBoth(conflict.id)}
-              >
-                <Text style={{ color: colors.textPrimary, textDecorationLine: 'underline' }}>
-                  {resolving === conflict.id ? 'Saving copy…' : 'Keep both copies'}
-                </Text>
-              </TouchableOpacity>
+              {conflict.canFork !== false && (
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  disabled={resolving !== null}
+                  onPress={() => void keepBoth(conflict.id)}
+                >
+                  <Text style={{ color: colors.textPrimary, textDecorationLine: 'underline' }}>
+                    {resolving === conflict.id ? 'Saving copy…' : 'Keep both copies'}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           ))}
           {state.recoverable > 0 && (

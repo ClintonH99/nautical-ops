@@ -23,14 +23,19 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useWatchScheduleCreationAccess } from '../hooks/useWatchScheduleCreationAccess';
-import userService from '../services/user';
-import watchKeepingService, { getWatchDateTime, TimetableSlot } from '../services/watchKeeping';
-import { User } from '../types';
+import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
+import watchKeepingService, {
+  getWatchDateTime,
+  TimetableSlot,
+  WatchCrewMember,
+} from '../services/watchKeeping';
+type User = WatchCrewMember;
 import { formatLocalDateString, toYYYYMMDD } from '../utils';
 import {
   calculateWatchRotationPlan,
   formatWatchHours,
   getWatchSlotDurations,
+  getPublishedWatchDurations,
 } from '../utils/watchTimetable';
 import {
   DateOnlyPicker,
@@ -144,6 +149,8 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
   const [restConflict, setRestConflict] = useState<RestConflict | null>(null);
   const [publishing, setPublishing] = useState(false);
   const publishingRef = useRef(false);
+  const loadedVersion = useRef<number | undefined>(undefined);
+  const loadedTimetable = useRef<string | null>(null);
   // Preserve the identity after an uncertain response; never duplicate a retry.
   const publishRequestId = useRef<string | null>(null);
   const vesselId = user?.vesselId ?? null;
@@ -156,7 +163,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
   const loadCrew = useCallback(async (): Promise<User[]> => {
     if (!vesselId) return [];
     try {
-      const data = await userService.getVesselCrew(vesselId);
+      const data = await watchKeepingService.getCrew(vesselId);
       setCrew(data);
       return data;
     } catch (e) {
@@ -174,9 +181,11 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
         const timetable = await watchKeepingService.getById(timetableId);
         if (!timetable) {
           Alert.alert('Error', 'Timetable not found.');
-          navigation.goBack();
+          returnToPreviousPage(navigation);
           return;
         }
+        loadedVersion.current = timetable.offlineLocalVersion;
+        loadedTimetable.current = timetableId;
         setEditingTimetableId(timetableId);
         setWatchTitle(timetable.watchTitle);
         setForDate(timetable.forDate || '');
@@ -216,7 +225,9 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
 
         // Set selected crew from slots
         const uniqueCrewIds = new Set(timetable.slots.map((s) => s.crewId));
-        const selectedCrewMembers = crewList.filter((c) => uniqueCrewIds.has(c.id));
+        const selectedCrewMembers = [...uniqueCrewIds]
+          .map((id) => crewMap.get(id))
+          .filter((member): member is User => !!member);
         setSelectedCrew(selectedCrewMembers);
 
         // Calculate watch hours (average duration)
@@ -224,6 +235,8 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
           const avgDuration =
             convertedSlots.reduce((sum, s) => sum + s.durationHours, 0) / convertedSlots.length;
           setCalculatedWatchHours(Math.round(avgDuration * 10) / 10);
+          const publishedDuration = getPublishedWatchDurations(timetable.slots).watchDurationHours;
+          setMaximumWatchDuration(publishedDuration === null ? '' : String(publishedDuration));
 
           const totalDuration = convertedSlots.reduce((sum, slot) => sum + slot.durationHours, 0);
           setTotalRunningTime(String(Math.round(totalDuration * 10) / 10));
@@ -241,7 +254,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
             lastCrewEnd.set(slot.crew.id, elapsedHours);
           });
           const inferredRest = restGaps.length > 0 ? Math.min(...restGaps) : 8;
-          setHoursOfRest(String(Math.round(inferredRest * 10) / 10));
+          setHoursOfRest(inferredRest > 0 ? String(Math.round(inferredRest * 10) / 10) : '');
         }
 
         setTimetableSlots(convertedSlots);
@@ -251,7 +264,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
       } catch (e) {
         console.error('Load timetable error:', e);
         Alert.alert('Error', 'Could not load timetable.');
-        navigation.goBack();
+        returnToPreviousPage(navigation);
       }
     },
     [navigation]
@@ -405,6 +418,10 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
   const handlePublish = async (slotsOverride?: NonNullable<typeof timetableSlots>) => {
     const slotsToSave = slotsOverride ?? timetableSlots;
     if (!vesselId || !slotsToSave || publishingRef.current || !canUseForm) return;
+    if (route?.params?.timetableId && loadedTimetable.current !== route.params.timetableId) {
+      Alert.alert('Not ready', 'Wait for the existing timetable to finish loading.');
+      return;
+    }
     publishingRef.current = true;
     const wasEditing = Boolean(editingTimetableId);
     setPublishing(true);
@@ -423,12 +440,26 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
 
       let savedTimetable;
       if (editingTimetableId) {
-        savedTimetable = await watchKeepingService.update(editingTimetableId, timetableData);
-        Alert.alert('Updated', 'Watch Schedule has been updated.');
+        savedTimetable = await watchKeepingService.update(
+          editingTimetableId,
+          timetableData,
+          loadedVersion.current
+        );
+        Alert.alert(
+          'Saved',
+          watchKeepingService.offlineEnabled()
+            ? 'Saved on this device. Crew receive the update after sync.'
+            : 'Watch Schedule has been updated.'
+        );
       } else {
         publishRequestId.current ??= Crypto.randomUUID();
         savedTimetable = await watchKeepingService.publish(timetableData, publishRequestId.current);
-        Alert.alert('Published', 'Timetable is now available in Watch Schedule.');
+        Alert.alert(
+          'Saved',
+          watchKeepingService.offlineEnabled()
+            ? 'Saved on this device. Crew receive the schedule after sync.'
+            : 'Timetable is now available in Watch Schedule.'
+        );
       }
 
       setTimetableSlots(null);
@@ -437,7 +468,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
       setEditingTimetableId(null);
       publishRequestId.current = null;
       if (wasEditing) {
-        navigation.goBack();
+        returnToPreviousPage(navigation);
       } else {
         navigation.replace('WatchSchedule', { timetableId: savedTimetable.id });
       }
@@ -734,7 +765,7 @@ export const CreateWatchTimetableScreen = ({ navigation, route }: any) => {
               />
               <Button
                 title="Cancel"
-                onPress={() => navigation.goBack()}
+                onPress={() => returnToPreviousPage(navigation)}
                 variant="outline"
                 disabled={publishing}
                 style={styles.editActionButton}

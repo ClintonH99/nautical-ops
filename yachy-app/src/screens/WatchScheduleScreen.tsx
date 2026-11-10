@@ -7,7 +7,7 @@ import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
  * Published watch timetables - view and export as PDF
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { printStandardPdf } from '../utils/standardPdf';
 import { sharePdfFile } from '../utils/sharePdfFile';
@@ -87,6 +87,8 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
       });
     }, [vesselId, loadPublished, route?.params?.timetableId, navigation])
   );
+
+  useEffect(() => watchKeepingService.subscribe(() => void loadPublished()), [loadPublished]);
 
   const handleDelete = async (timetable: PublishedWatchTimetable) => {
     Alert.alert(

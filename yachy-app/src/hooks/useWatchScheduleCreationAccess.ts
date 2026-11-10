@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '../store';
+import watchKeepingService from '../services/watchKeeping';
 import vesselService from '../services/vessel';
 import { useScreenState } from './useScreenState';
 
@@ -15,11 +16,21 @@ export function useWatchScheduleCreationAccess() {
     useCallback(() => {
       if (!vesselId || !isCrew) return;
       let active = true;
-      void vesselService.getVessel(vesselId).then((vessel) => {
-        if (active) setIsSolo(vessel?.isSolo === true);
-      });
+      const check = async () => {
+        try {
+          const allowed = watchKeepingService.offlineEnabled()
+            ? await watchKeepingService.offlineCanCreate()
+            : (await vesselService.getVessel(vesselId))?.isSolo === true;
+          if (active) setIsSolo(allowed);
+        } catch {
+          if (active) setIsSolo(false);
+        }
+      };
+      void check();
+      const unsubscribe = watchKeepingService.subscribe(() => void check());
       return () => {
         active = false;
+        unsubscribe();
       };
     }, [vesselId, isCrew, setIsSolo])
   );

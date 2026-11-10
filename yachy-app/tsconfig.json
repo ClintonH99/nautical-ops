@@ -5,5 +5,5 @@
     "allowImportingTsExtensions": true,
     "types": ["jest"]
   },
-  "exclude": ["supabase/functions"]
+  "exclude": ["supabase/functions", "dist"]
 }

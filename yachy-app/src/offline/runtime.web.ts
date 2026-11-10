@@ -1,3 +1,4 @@
+import { watchKeepingAdapter, watchRulesAdapter, watchDeviceCopy } from './watchKeepingAdapter';
 import { crewLeaveAdapter, crewLeaveDeviceCopy } from './crewLeaveAdapter';
 import { checklistsAdapter, checklistDeviceCopy } from './checklistsAdapter';
 import { inventoryAdapter, inventoryDeviceCopy } from './inventoryAdapter';
@@ -31,6 +32,8 @@ import { yardJobsAdapter, yardJobDeviceCopy } from './yardJobsAdapter';
 import { tripsAdapter, tripDeviceCopy } from './tripsAdapter';
 import { contractorsAdapter, contractorDeviceCopy } from './contractorsAdapter';
 const adapters = {
+  watchKeeping: watchKeepingAdapter,
+  watchKeepingRules: watchRulesAdapter,
   crewLeave: crewLeaveAdapter,
   preDepartureChecklists: checklistsAdapter,
   inventory: inventoryAdapter,
@@ -50,6 +53,8 @@ const adapters = {
   musterStations: publicationsAdapter,
 };
 const readFunctions = {
+  watchKeeping: 'read_web_offline_watch_keeping',
+  watchKeepingRules: 'read_web_offline_watch_rules',
   crewLeave: 'read_web_offline_crew_leave',
   preDepartureChecklists: 'read_web_offline_checklists',
   inventory: 'read_web_offline_inventory_items',
@@ -69,6 +74,8 @@ const readFunctions = {
   rules: 'read_web_offline_rules',
 };
 const syncFunctions = {
+  watchKeeping: 'sync_web_offline_watch_keeping',
+  watchKeepingRules: 'sync_web_offline_watch_rules',
   crewLeave: 'sync_web_offline_crew_leave',
   preDepartureChecklists: 'sync_web_offline_checklist',
   inventory: 'sync_web_offline_inventory_item',
@@ -201,8 +208,10 @@ export async function checkOfflineAccess(): Promise<boolean> {
         .filter((change) => change.state === 'conflict')
         .map((change) => ({
           id: change.id,
+          canFork: change.feature !== 'watchKeepingRules',
           title: String(
             change.value.title ??
+              change.value.watch_title ??
               change.value.company_name ??
               change.value.job_title ??
               change.value.equipment ??
@@ -542,6 +551,7 @@ export async function keepBothNoteCopies(operationId: string): Promise<void> {
     (item) => item.id === operationId && item.state === 'conflict'
   );
   if (!change) throw new OfflineError('CONFLICT_CHANGED');
+  if (change.feature === 'watchKeepingRules') throw new OfflineError('RECONCILE_FIRST');
   const latest = await a.box.read(change.feature, change.recordId);
   if (!latest) throw new OfflineError('CONFLICT_CHANGED');
   const id = crypto.randomUUID(),
@@ -555,35 +565,37 @@ export async function keepBothNoteCopies(operationId: string): Promise<void> {
           created_at: now,
           updated_at: now,
         }
-      : change.feature === 'crewLeave'
-        ? crewLeaveDeviceCopy(latest.value, id, a.scope.userId)
-        : change.feature === 'preDepartureChecklists'
-          ? checklistDeviceCopy(latest.value, id, a.scope.userId)
-          : change.feature === 'inventory'
-            ? inventoryDeviceCopy(latest.value, id)
-            : change.feature === 'uniforms' ||
-                change.feature === 'pumpOutLogs' ||
-                change.feature === 'generalWasteLogs'
-              ? vesselRecordDeviceCopy(
-                  change.feature,
-                  latest.value,
-                  id,
-                  a.scope.userId,
-                  useAuthStore.getState().user?.name ?? ''
-                )
-              : change.feature === 'maintenanceLogs'
-                ? maintenanceDeviceCopy(latest.value, id)
-                : change.feature === 'tasks'
-                  ? taskDeviceCopy(latest.value, id, a.scope.userId)
-                  : change.feature === 'yardJobs'
-                    ? yardJobDeviceCopy(latest.value, id, a.scope.userId)
-                    : change.feature === 'trips'
-                      ? tripDeviceCopy(latest.value, id, a.scope.userId)
-                      : change.feature === 'contractors'
-                        ? contractorDeviceCopy(latest.value, id, a.scope.userId)
-                        : change.feature === 'shoppingLists'
-                          ? shoppingDeviceCopy(latest.value, id, a.scope.userId)
-                          : publicationDeviceCopy(latest.value, id, a.scope.userId);
+      : change.feature === 'watchKeeping'
+        ? watchDeviceCopy(latest.value, id, a.scope.userId)
+        : change.feature === 'crewLeave'
+          ? crewLeaveDeviceCopy(latest.value, id, a.scope.userId)
+          : change.feature === 'preDepartureChecklists'
+            ? checklistDeviceCopy(latest.value, id, a.scope.userId)
+            : change.feature === 'inventory'
+              ? inventoryDeviceCopy(latest.value, id)
+              : change.feature === 'uniforms' ||
+                  change.feature === 'pumpOutLogs' ||
+                  change.feature === 'generalWasteLogs'
+                ? vesselRecordDeviceCopy(
+                    change.feature,
+                    latest.value,
+                    id,
+                    a.scope.userId,
+                    useAuthStore.getState().user?.name ?? ''
+                  )
+                : change.feature === 'maintenanceLogs'
+                  ? maintenanceDeviceCopy(latest.value, id)
+                  : change.feature === 'tasks'
+                    ? taskDeviceCopy(latest.value, id, a.scope.userId)
+                    : change.feature === 'yardJobs'
+                      ? yardJobDeviceCopy(latest.value, id, a.scope.userId)
+                      : change.feature === 'trips'
+                        ? tripDeviceCopy(latest.value, id, a.scope.userId)
+                        : change.feature === 'contractors'
+                          ? contractorDeviceCopy(latest.value, id, a.scope.userId)
+                          : change.feature === 'shoppingLists'
+                            ? shoppingDeviceCopy(latest.value, id, a.scope.userId)
+                            : publicationDeviceCopy(latest.value, id, a.scope.userId);
   await a.box.forkConflict(operationId, id, copy);
   notifyNotes();
   await checkOfflineAccess();

@@ -143,3 +143,21 @@ background sync after closing the browser. Paddle Sandbox remains deferred.
   assignment, downgrade, date validation and retry effects tested in PostgreSQL.
   Roster snapshot includes only IDs, vessel, name, position, role and departments.
   TypeScript, full web export and scoped ESLint pass (3 existing any warnings).
+
+- Watch Keeping schedules and rules integrated locally. Browser :55901 created
+  rules and a six-slot overnight schedule while server stopped; reload, edit,
+  clear notes, reconnect + Retry Sync produced one schedule, one rules row,
+  two receipts, one notification enqueue. Evidence nautical-offline-app-WkQ8Lh.
+  Fresh final build :55902 verified an existing 4/4/1-hour rotation retained
+  crew order after title-only offline edit/reload/sync (one update receipt).
+  Evidence nautical-offline-app-uyaujH/result.json and
+  /private/tmp/nautical-offline-watch-rotation-preserved.png.
+  Original RLS and rest-reconfirmation trigger used in 36 passing PostgreSQL
+  checks; shared-crew downgrade, personal-create-only exception, singleton rules,
+  stale revisions, malformed slots, foreign crew and retries covered.
+  194 combined Node checks, 11 watch-rotation Jest tests, TypeScript, full web
+  export and scoped lint pass (3 existing any warnings). Generated dist is now
+  excluded from typechecking to avoid an export deleting files during the check.
+  Watch rule conflicts retain pending text; singleton manual reconciliation UI
+  is still required before activation. Hours of Rest and remaining areas follow.
+  No hosted migration, signing key, push, deployment or activation performed.
