@@ -1,0 +1,129 @@
+OFFLINE PAGE AND ACTION AUDIT — 10 November 2026
+Local branch: feature/web-offline-seven-days. No production changes.
+
+Coverage and limits
+- Every linked route is explicitly classified as offline-supported or online-only;
+  the automated route test fails when an unclassified linked route is added.
+- 64 distinct paths were opened with the local HTTP server stopped, including
+  lists, editors, calendars, history, Settings, Help, legal and import screens.
+  Initial async loading states were revisited for Sea Miles and Fuel transfers.
+- This is not a claim that every combination of button, browser and user role
+  was manually exercised. The per-feature protocol/permission/database tests
+  supplement the browser runs. Hosted role/schema verification is still a
+  release requirement; these checks used only synthetic local data.
+
+Verified action flows
+- Safety hub -> equipment; Fuel history -> year -> month -> full reload offline.
+- Theme saved and reloaded; department colour saved and reloaded offline.
+- Cached FAQ opens; support submission gives connection-required feedback and
+  preserves the question; cached future updates and bundled legal pages open.
+- Settings online-only navigation and record deletion show connection-required
+  feedback without removing saved work. Final build maintenance notification
+  recipient settings have the same guard, before load and before save.
+- Four XLSX files imported offline: Tasks, Maintenance, Yard and Inventory.
+  Each reported one imported record. The records reappeared after navigation/
+  refresh. Reconnection gave one row per feature and exactly four sync receipts.
+  Browser file import now reads the selected File directly, without fetch.
+- Discharge: create offline -> reload -> select/export PDF -> reconnect. One
+  persisted row and one receipt. Maintenance PDF action completed offline too.
+  No error appeared; these two downloads were not retrieved from the browser's
+  download store. Prior retrieved/rendered PDF evidence is in OFFLINE_CHECKPOINT.
+- Final build Fuel transfer: offline Port -> Starboard, 20 L; reload preserved
+  the record; reconnection cleared pending state and produced one sync receipt.
+- Existing downloaded media remains partitioned by account/vessel/session.
+  Home and Settings use a scope-keyed cached-image hook. Synthetic Settings has
+  no profile photo, so initials are the expected fallback; Home banner was
+  verified embedded in the preceding Fuel/media checkpoint.
+
+Changes completed by this audit
+- Added offline Safety menu, historical log navigation, Help, updates, legal,
+  Settings/appearance and spreadsheet imports.
+- All existing PDF generators use local rendering in an offline-enabled build;
+  remaining list PDF buttons use downloaded vessel identity instead of a request.
+- Online-only action guard checks both device connectivity and server reachability,
+  including after a sync. Destructive/setup actions are never queued for replay.
+- Saved-image lookups cannot flash the previous account's cached image and refresh
+  when new downloaded data arrives. Storage failures are surfaced for preferences.
+- Fixed date-only task labels showing the previous day west of UTC.
+
+Checks
+- 256 offline Node checks and 59 isolated PostgreSQL checks passed.
+- 13 spreadsheet Jest tests passed, including all four parsers with fetch rejected.
+- 87 affected Node checks rerun after final changes: passed (subset, not extra count).
+- TypeScript passed; scoped ESLint: zero errors, 108 warnings, predominantly
+  existing any/unused declarations. Final isolated production-style web export passed.
+- git diff whitespace check passed.
+
+Online-only by design
+Payments/plans/invitations; account, vessel, role and device management; new
+uploads/signature setup; tank setup/opening balances/voiding; deletion and folder
+management; notification-recipient changes; shared vessel colour setup; sending
+support requests. These require a connection and are not billed or replayed offline.
+Existing app attachments are downloaded vessel/avatar images and saved signatures;
+there is no general arbitrary-record attachment upload feature to extend.
+
+Browser route observations (the service tests cover record-specific view/edit IDs)
+- /categories
+- /contractors
+- /contractors/edit
+- /crew-leave
+- /crew-leave/edit
+- /crew/sea-miles
+- /department-colors
+- /hours-of-rest
+- /hours-of-rest/entry?date=2026-11-10
+- /hours-of-rest/review
+- /import-export
+- /inventory
+- /inventory/edit
+- /logs
+- /logs/fuel
+- /logs/fuel/edit
+- /logs/fuel/history
+- /logs/fuel/inventory
+- /logs/fuel/transfers
+- /logs/fuel/transfers/edit
+- /logs/general-waste
+- /logs/general-waste/edit
+- /logs/pump-out
+- /logs/pump-out/edit
+- /maintenance
+- /maintenance/edit
+- /maintenance/log
+- /notepad
+- /notepad/edit
+- /pre-departure
+- /pre-departure/edit
+- /privacy
+- /refund-policy
+- /rules
+- /rules/create
+- /safety/equipment/create
+- /safety/muster
+- /safety/muster/create
+- /safety/sea-miles
+- /safety/sea-miles/edit
+- /shopping
+- /shopping/edit?listType=general
+- /shopping/list?listType=general
+- /tasks
+- /tasks/calendar
+- /tasks/completed
+- /tasks/edit?category=DAILY
+- /tasks/list?category=DAILY
+- /tasks/overdue
+- /tasks/upcoming
+- /terms
+- /trips/boss
+- /trips/delivery
+- /trips/edit?type=GUEST
+- /trips/guest
+- /trips/upcoming
+- /uniforms
+- /uniforms/edit
+- /watch-duties
+- /watch-keeping
+- /watch-schedule
+- /watch-schedule/create
+- /yard-period
+- /yard-period/edit

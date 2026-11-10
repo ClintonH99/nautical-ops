@@ -1,3 +1,6 @@
+import { useOfflineImage } from '../hooks/useOfflineImage';
+import { allowOnlineAction, isOfflineConnection } from '../offline/onlineActions';
+import { supportsOfflineRoute } from '../offline/routes';
 /**
  * Settings Screen
  * Main hub for profile and vessel management
@@ -49,6 +52,10 @@ type SettingsSection = {
 
 export const SettingsScreen = ({ navigation }: any) => {
   const { user, logout, setUser } = useAuthStore();
+  const openPage = (name: string) => {
+    if (supportsOfflineRoute(name, '') || allowOnlineAction('Opening this page'))
+      navigation.navigate(name);
+  };
   const backgroundTheme = useThemeStore((s) => s.backgroundTheme);
   const themeColors = BACKGROUND_THEMES[backgroundTheme];
   const canDeptColors = canAccessDepartmentColorSettings(user);
@@ -60,6 +67,8 @@ export const SettingsScreen = ({ navigation }: any) => {
   const profilePhotoUrl =
     user?.profilePhoto || (user?.id ? userService.getProfilePhotoUrl(user.id) : null);
 
+  const cachedPhoto = useOfflineImage(profilePhotoUrl);
+
   useEffect(() => {
     if (user?.profilePhoto) setPhotoLoadFailed(false);
   }, [user?.profilePhoto]);
@@ -67,7 +76,7 @@ export const SettingsScreen = ({ navigation }: any) => {
   useFocusEffect(
     React.useCallback(() => {
       if (user?.profilePhoto) setPhotoLoadFailed(false);
-      if (user?.id) {
+      if (user?.id && !isOfflineConnection()) {
         authService.getUserProfile(user.id).then((fresh) => {
           if (fresh) setUser(fresh);
         });
@@ -76,6 +85,7 @@ export const SettingsScreen = ({ navigation }: any) => {
   );
 
   const handleDeleteAccount = () => {
+    if (!allowOnlineAction('Deleting your account')) return;
     Alert.alert(
       'Delete Account',
       "This permanently deletes your account and removes you from your vessel. It does not cancel an Apple App Store or Google Play subscription; cancel that in your device's subscription settings first. This cannot be undone.",
@@ -104,7 +114,7 @@ export const SettingsScreen = ({ navigation }: any) => {
                     { text: 'Cancel', style: 'cancel' },
                     {
                       text: 'Go to Crew Management',
-                      onPress: () => navigation.navigate('CrewManagement'),
+                      onPress: () => openPage('CrewManagement'),
                     },
                   ]);
                 } else {
@@ -136,14 +146,14 @@ export const SettingsScreen = ({ navigation }: any) => {
           icon: 'person-outline',
           label: 'My Profile',
           description: 'Edit your personal information, join another vessel here',
-          onPress: () => navigation.navigate('AccountProfile'),
+          onPress: () => openPage('AccountProfile'),
           disabled: false,
         },
         {
           icon: 'phone-portrait-outline',
           label: 'Manage Devices',
           description: 'View saved devices and free a slot for a replacement',
-          onPress: () => navigation.navigate('ManageDevices'),
+          onPress: () => openPage('ManageDevices'),
           disabled: false,
         },
       ],
@@ -157,21 +167,21 @@ export const SettingsScreen = ({ navigation }: any) => {
                 icon: 'card-outline',
                 label: 'Vessel Plans',
                 description: 'Subscription plans and payment options',
-                onPress: () => navigation.navigate('VesselPlans'),
+                onPress: () => openPage('VesselPlans'),
                 disabled: false,
               },
               {
                 icon: 'boat-outline',
                 label: 'Vessel Settings',
                 description: 'Vessel name, invite code, change photo',
-                onPress: () => navigation.navigate('VesselSettings'),
+                onPress: () => openPage('VesselSettings'),
                 disabled: false,
               },
               {
                 icon: 'people-outline',
                 label: 'Crew Management',
                 description: 'View and manage crew members',
-                onPress: () => navigation.navigate('CrewManagement'),
+                onPress: () => openPage('CrewManagement'),
                 disabled: false,
               },
             ],
@@ -185,7 +195,7 @@ export const SettingsScreen = ({ navigation }: any) => {
           icon: 'moon-outline',
           label: 'Appearance',
           description: 'Background theme: Day or Night Mode',
-          onPress: () => navigation.navigate('ThemeSettings'),
+          onPress: () => openPage('ThemeSettings'),
           disabled: false,
         },
         ...(canDeptColors
@@ -194,7 +204,7 @@ export const SettingsScreen = ({ navigation }: any) => {
                 icon: 'color-palette-outline',
                 label: 'Department colors',
                 description: 'Choose color scheme or no color per crew department',
-                onPress: () => navigation.navigate('DepartmentColorSettings'),
+                onPress: () => openPage('DepartmentColorSettings'),
                 disabled: false,
               },
             ]
@@ -205,7 +215,7 @@ export const SettingsScreen = ({ navigation }: any) => {
                 icon: 'notifications-outline',
                 label: 'Notifications',
                 description: 'Manage notification preferences',
-                onPress: () => navigation.navigate('NotificationSettings'),
+                onPress: () => openPage('NotificationSettings'),
                 disabled: false,
               },
             ]
@@ -214,7 +224,7 @@ export const SettingsScreen = ({ navigation }: any) => {
           icon: 'sparkles-outline',
           label: 'Future Updates & Features',
           description: "See what's coming next to Nautical Ops",
-          onPress: () => navigation.navigate('FutureUpdates'),
+          onPress: () => openPage('FutureUpdates'),
           disabled: false,
         },
         ...(Platform.OS !== 'web'
@@ -245,7 +255,7 @@ export const SettingsScreen = ({ navigation }: any) => {
           icon: 'help-circle-outline',
           label: 'FAQ & Help',
           description: 'Frequently asked questions and guides',
-          onPress: () => navigation.navigate('FAQHelp'),
+          onPress: () => openPage('FAQHelp'),
           disabled: false,
         },
         {
@@ -269,21 +279,21 @@ export const SettingsScreen = ({ navigation }: any) => {
           icon: 'document-text-outline',
           label: 'Terms & Conditions',
           description: 'Terms of use for Nautical Ops',
-          onPress: () => navigation.navigate('TermsConditions'),
+          onPress: () => openPage('TermsConditions'),
           disabled: false,
         },
         {
           icon: 'shield-checkmark-outline',
           label: 'Privacy Policy',
           description: 'How we collect and protect your data',
-          onPress: () => navigation.navigate('PrivacyPolicy'),
+          onPress: () => openPage('PrivacyPolicy'),
           disabled: false,
         },
         {
           icon: 'receipt-outline',
           label: 'Refund Policy',
           description: 'Subscription refund terms and conditions',
-          onPress: () => navigation.navigate('RefundPolicy'),
+          onPress: () => openPage('RefundPolicy'),
           disabled: false,
         },
       ],
@@ -320,15 +330,15 @@ export const SettingsScreen = ({ navigation }: any) => {
               borderColor: themeColors.border,
             },
           ]}
-          onPress={() => navigation.navigate('AccountProfile')}
+          onPress={() => openPage('AccountProfile')}
           activeOpacity={0.75}
           accessibilityRole="button"
           accessibilityLabel="Open my profile"
         >
           <View style={styles.avatarContainer}>
-            {profilePhotoUrl && !photoLoadFailed ? (
+            {cachedPhoto || (profilePhotoUrl && !photoLoadFailed) ? (
               <Image
-                source={{ uri: profilePhotoUrl }}
+                source={{ uri: cachedPhoto || profilePhotoUrl! }}
                 style={styles.avatar}
                 onError={() => setPhotoLoadFailed(true)}
               />
@@ -435,7 +445,7 @@ export const SettingsScreen = ({ navigation }: any) => {
           loading={signingOut}
           disabled={signingOut}
           onPress={async () => {
-            if (signingOut) return;
+            if (signingOut || !allowOnlineAction('Signing out')) return;
             setSigningOut(true);
             try {
               await authService.signOut();

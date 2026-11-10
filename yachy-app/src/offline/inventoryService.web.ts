@@ -1,3 +1,4 @@
+import { requireOnlineAction } from './onlineActions';
 import type { OfflineInventoryService } from './inventoryService';
 import { OfflineError } from './access';
 import { sameInventoryContents } from './inventoryAdapter';
@@ -66,8 +67,9 @@ export const offlineInventory: OfflineInventoryService = {
     }
   },
   async beforeDelete(id) {
-    if (!navigator.onLine) throw new OfflineError('ONLINE_ONLY');
+    requireOnlineAction();
     await syncOffline();
+    requireOnlineAction();
     const a = await offlineNotesContext();
     if (
       (await a.store.read(a.scope)).changes.some(

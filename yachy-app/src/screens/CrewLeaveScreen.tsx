@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
 import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 /**
@@ -207,6 +208,7 @@ export const CrewLeaveScreen = ({ navigation }: any) => {
   );
 
   const handleDelete = (item: CrewLeave) => {
+    if (!allowOnlineAction('Deleting records')) return;
     Alert.alert(
       'Delete crew leave',
       `Delete ${CREW_LEAVE_LABELS[item.leaveType].toLowerCase()} for ${item.crewMemberName}?`,

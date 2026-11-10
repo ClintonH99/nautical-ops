@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { offlineMaintenance } from '../offline/maintenanceService';
 import { optimisticDelete } from '../utils/optimisticDelete';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
@@ -30,7 +31,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import maintenanceLogsService from '../services/maintenanceLogs';
 import { canManageMaintenanceNotifications } from '../services/maintenanceNotifications';
 import { MaintenanceNotificationRecipients } from '../components/MaintenanceNotificationRecipients';
-import vesselService from '../services/vessel';
+import { getDocumentVesselName } from '../services/documentVessel';
 import { MaintenanceLog } from '../types';
 import {
   Button,
@@ -166,6 +167,7 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
   };
 
   const onDelete = (log: MaintenanceLog) => {
+    if (!allowOnlineAction('Deleting records')) return;
     Alert.alert('Delete log', `Delete maintenance log for "${log.equipment}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -195,7 +197,7 @@ export const MaintenanceLogScreen = ({ navigation }: any) => {
       let vesselName = 'Vessel';
       if (vesselId) {
         try {
-          const vessel = await vesselService.getVessel(vesselId);
+          const vessel = { name: await getDocumentVesselName(vesselId) };
           if (vessel?.name) {
             // Sanitize vessel name for filename (remove invalid chars)
             vesselName =

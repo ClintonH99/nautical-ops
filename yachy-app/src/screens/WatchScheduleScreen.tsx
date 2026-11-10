@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { optimisticDelete } from '../utils/optimisticDelete';
 import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
@@ -91,6 +92,7 @@ export const WatchScheduleScreen = ({ navigation, route }: any) => {
   useEffect(() => watchKeepingService.subscribe(() => void loadPublished()), [loadPublished]);
 
   const handleDelete = async (timetable: PublishedWatchTimetable) => {
+    if (!allowOnlineAction('Deleting records')) return;
     Alert.alert(
       'Delete Watch Schedule',
       `Are you sure you want to delete the schedule for ${formatLocalDateString(getWatchScheduleDate(timetable), { month: 'short', day: 'numeric' })}?`,

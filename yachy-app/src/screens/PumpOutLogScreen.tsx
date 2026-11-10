@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { optimisticDelete } from '../utils/optimisticDelete';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
 import { useMonthlyVesselLogs } from '../hooks/useMonthlyVesselLogs';
@@ -15,7 +16,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import pumpOutLogsService from '../services/pumpOutLogs';
-import vesselService from '../services/vessel';
+import { getDocumentVesselName } from '../services/documentVessel';
 import { PumpOutLog, DischargeType } from '../types';
 import {
   Button,
@@ -101,6 +102,7 @@ export const PumpOutLogScreen = ({ navigation, route }: any) => {
   const onEdit = (log: PumpOutLog) => navigation.navigate('AddEditPumpOutLog', { logId: log.id });
 
   const onDelete = (log: PumpOutLog) => {
+    if (!allowOnlineAction('Deleting records')) return;
     Alert.alert('Delete entry', 'Delete this discharge log entry?', [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -127,7 +129,7 @@ export const PumpOutLogScreen = ({ navigation, route }: any) => {
     try {
       let vesselName = 'Vessel';
       if (vesselId) {
-        const vessel = await vesselService.getVessel(vesselId);
+        const vessel = { name: await getDocumentVesselName(vesselId) };
         if (vessel?.name) vesselName = vessel.name;
       }
       await exportPumpOutLogPdf(toExport, vesselName);

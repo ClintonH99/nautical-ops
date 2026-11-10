@@ -94,7 +94,7 @@ test("stale screen cannot complete a task changed by another local tab", async (
         value,
         expectedLocalVersion: 1,
       }),
-    /LOCAL_CONFLICT/,
+    (error) => error.code === "LOCAL_CONFLICT",
   );
 });
 test("offline task permissions reject another vessel, creator, completion actor and unmarking", () => {

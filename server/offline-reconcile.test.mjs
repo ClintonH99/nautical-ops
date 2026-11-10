@@ -64,7 +64,7 @@ test("another tab editing or switching ownership cannot be overwritten by stale 
   const { box, store, input } = await conflict();
   await assert.rejects(
     box.useOnlineVersion({ ...input, expectedLocalVersion: 1 }),
-    /LOCAL_CONFLICT/,
+    (error) => error.code === "LOCAL_CONFLICT",
   );
   await assert.rejects(
     box.useOnlineVersion({

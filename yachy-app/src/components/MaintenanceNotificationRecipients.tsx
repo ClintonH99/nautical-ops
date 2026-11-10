@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -41,6 +42,7 @@ export function MaintenanceNotificationRecipients({ vesselId }: { vesselId: stri
   );
 
   const load = async () => {
+    if (!allowOnlineAction('Changing notification recipients')) return;
     const current = ++request.current;
     setOpen(true);
     setLoading(true);
@@ -66,6 +68,7 @@ export function MaintenanceNotificationRecipients({ vesselId }: { vesselId: stri
     setOpen(false);
   };
   const save = async () => {
+    if (!allowOnlineAction('Changing notification recipients')) return;
     if (!snapshot || savingRef.current) return;
     const current = request.current;
     savingRef.current = true;

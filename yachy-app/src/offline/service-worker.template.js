@@ -4,7 +4,7 @@ const ASSETS = __OFFLINE_ASSETS__;
 const CACHE = 'nautical-ops-shell-' + BUILD;
 const ALLOWED_ASSETS = new Set(ASSETS);
 const OFFLINE_ROUTES =
-  /^\/(?:app|categories|notepad(?:\/edit)?|notes(?:\/edit)?|trips(?:\/.*)?|crew-leave(?:\/.*)?|safety(?:\/.*)?|rules(?:\/.*)?|pre-departure(?:\/.*)?|tasks(?:\/.*)?|yard-period(?:\/.*)?|maintenance(?:\/.*)?|crew\/sea-miles|watch-keeping|hours-of-rest(?:\/.*)?|watch-duties|watch-schedule(?:\/.*)?|shopping(?:\/.*)?|inventory(?:\/.*)?|uniforms(?:\/.*)?|logs(?:\/.*)?|contractors(?:\/edit)?)\/?$/;
+  /^\/(?:app|settings|theme|department-colors|help|future-updates|terms|privacy|refund-policy|import-export|categories|notepad(?:\/edit)?|notes(?:\/edit)?|trips(?:\/.*)?|crew-leave(?:\/.*)?|safety(?:\/.*)?|rules(?:\/.*)?|pre-departure(?:\/.*)?|tasks(?:\/.*)?|yard-period(?:\/.*)?|maintenance(?:\/.*)?|crew\/sea-miles|watch-keeping|hours-of-rest(?:\/.*)?|watch-duties|watch-schedule(?:\/.*)?|shopping(?:\/.*)?|inventory(?:\/.*)?|uniforms(?:\/.*)?|logs(?:\/.*)?|contractors(?:\/edit)?)\/?$/;
 self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
@@ -30,6 +30,29 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;
   if (request.mode === 'navigate') {
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const historyQuery =
+      url.pathname === '/logs/history' &&
+      ['fuel', 'discharge', 'waste'].includes(url.searchParams.get('kind')) &&
+      uuid.test(url.searchParams.get('vesselId') || '') &&
+      [...url.searchParams.keys()].every(
+        (key, index, keys) =>
+          keys.indexOf(key) === index &&
+          (['kind', 'vesselId'].includes(key) ||
+            (key === 'year' && /^\d{4}$/.test(url.searchParams.get(key) || '')))
+      );
+    const historyMonthQuery =
+      ['/logs/fuel', '/logs/pump-out', '/logs/general-waste'].includes(url.pathname) &&
+      /^\d{4}-(?:0[1-9]|1[0-2])$/.test(url.searchParams.get('historyMonth') || '') &&
+      uuid.test(url.searchParams.get('historyVesselId') || '') &&
+      [...url.searchParams.keys()].length === 2;
+    const fuelCorrectionQuery =
+      ['/logs/fuel/edit', '/logs/fuel/transfers/edit'].includes(url.pathname) &&
+      uuid.test(
+        url.searchParams.get(url.pathname === '/logs/fuel/edit' ? 'logId' : 'transferId') || ''
+      ) &&
+      uuid.test(url.searchParams.get('correctionOperationId') || '') &&
+      [...url.searchParams.keys()].length === 2;
     const noteEditQuery =
       url.pathname === '/notepad/edit' &&
       [...url.searchParams.keys()].length === 1 &&
@@ -103,7 +126,17 @@ self.addEventListener('fetch', (event) => {
                 url.searchParams.get(key) || ''
               )))
       );
-    const seaQuery=url.pathname==='/safety/sea-miles/edit'&&[...url.searchParams.keys()].every((key,index,keys)=>keys.indexOf(key)===index&&((key==='entryId'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(url.searchParams.get(key)||''))||(key==='reviewMode'&&['true','false'].includes(url.searchParams.get(key)))));
+    const seaQuery =
+      url.pathname === '/safety/sea-miles/edit' &&
+      [...url.searchParams.keys()].every(
+        (key, index, keys) =>
+          keys.indexOf(key) === index &&
+          ((key === 'entryId' &&
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+              url.searchParams.get(key) || ''
+            )) ||
+            (key === 'reviewMode' && ['true', 'false'].includes(url.searchParams.get(key))))
+      );
     const restQuery =
       url.pathname === '/hours-of-rest/entry' &&
       /^\d{4}-\d{2}-\d{2}$/.test(url.searchParams.get('date') || '') &&
@@ -131,6 +164,9 @@ self.addEventListener('fetch', (event) => {
       (url.pathname !== '/' && !OFFLINE_ROUTES.test(url.pathname)) ||
       (url.search &&
         !noteEditQuery &&
+        !historyQuery &&
+        !historyMonthQuery &&
+        !fuelCorrectionQuery &&
         !shoppingQuery &&
         !taskQuery &&
         !restQuery &&

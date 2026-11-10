@@ -1,3 +1,4 @@
+import { requireOnlineAction } from '../offline/onlineActions';
 /**
  * Trip Colors Service
  * Vessel-specific colors for trip types (Guest, Boss, Delivery, Yard Period). HOD can edit.
@@ -65,6 +66,7 @@ class TripColorsService {
     vesselId: string,
     updates: Partial<Pick<VesselTripColors, 'guest' | 'boss' | 'delivery' | 'yardPeriod'>>
   ): Promise<VesselTripColors> {
+    requireOnlineAction();
     try {
       const payload: any = {
         vessel_id: vesselId,

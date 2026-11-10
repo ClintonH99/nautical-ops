@@ -13,9 +13,9 @@ import {
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 const root = resolve(import.meta.dirname, "..");
-const stateDir = join(tmpdir(), "nautical-offline-fuel-pdf-test");
+const stateDir = join(tmpdir(), "nautical-offline-complete-test");
 mkdirSync(stateDir, { recursive: true, mode: 0o700 });
-const origin = "http://127.0.0.1:55913";
+const origin = "http://127.0.0.1:55916";
 try {
   const response = await fetch(origin + "/state", {
     signal: AbortSignal.timeout(2000),
@@ -62,7 +62,7 @@ try {
       env: {
         ...process.env,
         OFFLINE_APP_CHECK_PORT: String(port),
-        OFFLINE_TEST_CONTROLS_PORT: "55913",
+        OFFLINE_TEST_CONTROLS_PORT: "55916",
       },
     },
   );

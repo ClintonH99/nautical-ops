@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 /**
  * Add / Edit Shopping List Screen
@@ -176,6 +177,7 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
   };
 
   const handleDelete = () => {
+    if (!allowOnlineAction('Deleting records')) return;
     if (isMaster || !listId) return;
     Alert.alert('Delete Shopping List', `Delete "${title.trim()}"?`, [
       { text: 'Cancel', style: 'cancel' },

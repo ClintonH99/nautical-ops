@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { optimisticDelete } from '../utils/optimisticDelete';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
 import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
@@ -14,7 +15,7 @@ import { useAuthStore } from '../store';
 import { useThemeColors } from '../hooks/useThemeColors';
 import vesselTasksService from '../services/vesselTasks';
 import { VesselTask, TaskCategory, Department } from '../types';
-import { toYYYYMMDD } from '../utils';
+import { toYYYYMMDD, formatLocalDateString } from '../utils';
 import { DepartmentSelector, LoadingSpinner, PageHeader, TaskPreviewCard } from '../components';
 
 const CATEGORY_LABELS: Record<TaskCategory, string> = {
@@ -70,14 +71,14 @@ export const TasksListScreen = ({ navigation, route }: any) => {
     loadTasks();
   };
 
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  const formatDate = formatLocalDateString;
 
   const onEdit = (task: VesselTask) => {
     navigation.navigate('AddEditTask', { category, taskId: task.id });
   };
 
   const onDelete = (task: VesselTask) => {
+    if (!allowOnlineAction('Deleting records')) return;
     Alert.alert('Delete task', `Delete "${task.title}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {

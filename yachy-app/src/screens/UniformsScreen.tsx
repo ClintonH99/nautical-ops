@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
 import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
@@ -113,6 +114,7 @@ export const UniformsScreen = ({ navigation }: any) => {
   };
 
   const handleDelete = (u: Uniform) => {
+    if (!allowOnlineAction('Deleting records')) return;
     Alert.alert('Delete Uniform Label', `Delete "${u.label}" and all its entries?`, [
       { text: 'Cancel', style: 'cancel' },
       {

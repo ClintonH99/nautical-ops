@@ -1,3 +1,4 @@
+import { requireOnlineAction } from './onlineActions';
 import type { OfflineFuelService } from './fuelService';
 import { fuelFeatures, fuelFields } from './fuelAdapter';
 import type { RecordValue } from './outbox';
@@ -75,8 +76,9 @@ export const offlineFuel: OfflineFuelService = {
     return { ...saved, offlinePending: true };
   },
   async beforeOnline(feature, id) {
-    if (!navigator.onLine) throw new OfflineError('ONLINE_ONLY');
+    requireOnlineAction();
     await syncOffline();
+    requireOnlineAction();
     const a = await offlineNotesContext();
     await a.box.list('fuelLogs');
     if (

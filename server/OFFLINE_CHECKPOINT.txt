@@ -318,3 +318,21 @@ FUEL / MEDIA / PDF checkpoint — 10 November 2026 (local only)
   configure the server signing key privately, stage and verify real roles,
   then deploy/enable only on the user's instruction. Test success is not a
   claim that these migrations have run in production.
+
+WHOLE-APP OFFLINE AUDIT — 10 November 2026 (local only)
+- Completed the remaining supporting pages, history routes, cached Help/updates,
+  Settings/preferences, scoped images and PDF vessel metadata.
+- Browser sweep covered 64 distinct paths with HTTP server stopped; subsequent
+  import, reload, guards, appearance and Fuel action checks passed. Exact scope
+  and verification limits are in server/OFFLINE_PAGE_AUDIT.txt.
+- Fixed offline XLSX import by reading the selected browser File directly. All
+  four domains imported offline and synced exactly once (4 rows, 4 receipts).
+- 256 Node, 59 isolated PG and 13 spreadsheet Jest tests pass. Final typecheck,
+  scoped lint (0 errors, 108 warnings) and web export pass. 87 affected Node
+  checks rerun successfully after final changes.
+- Current user test: controls http://127.0.0.1:55916; app port 61374. Earlier
+  test origins are preserved. Launcher now uses the complete-test state folder.
+- Final browser LPVG0V: Fuel transfer 20 L Port -> Starboard saved offline,
+  persisted through refresh, then synced once. Maintenance-recipient guard and
+  department-colour reload verified. Production is unchanged; hosted backend
+  compatibility, staging roles and explicit live activation remain release steps.

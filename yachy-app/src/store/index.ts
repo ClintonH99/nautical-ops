@@ -154,12 +154,8 @@ export const useDepartmentColorStore = create<DepartmentColorState>((set, get) =
   },
   setOverride: async (department, color) => {
     const next = { ...get().overrides, [department]: color };
+    await AsyncStorage.setItem(DEPARTMENT_COLOR_STORAGE_KEY, JSON.stringify(next));
     set({ overrides: next });
-    try {
-      await AsyncStorage.setItem(DEPARTMENT_COLOR_STORAGE_KEY, JSON.stringify(next));
-    } catch (e) {
-      console.error('Save department color override:', e);
-    }
   },
 }));
 
@@ -262,11 +258,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     }
   },
   setBackgroundTheme: async (id) => {
+    await AsyncStorage.setItem(BACKGROUND_THEME_STORAGE_KEY, id);
     set({ backgroundTheme: id });
-    try {
-      await AsyncStorage.setItem(BACKGROUND_THEME_STORAGE_KEY, id);
-    } catch (e) {
-      console.error('Save background theme:', e);
-    }
   },
 }));

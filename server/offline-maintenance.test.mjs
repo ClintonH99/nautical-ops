@@ -101,6 +101,6 @@ test("offline maintenance create/edit/clear and reopen preserve one final operat
         value,
         expectedLocalVersion: 1,
       }),
-    /LOCAL_CONFLICT/,
+    (error) => error.code === "LOCAL_CONFLICT",
   );
 });

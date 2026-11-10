@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 import { ScreenLoading } from '../components/ScreenLoading';
 /**
@@ -155,6 +156,7 @@ export const AddEditUniformScreen = ({ navigation, route }: any) => {
   };
 
   const handleDelete = () => {
+    if (!allowOnlineAction('Deleting records')) return;
     if (!uniformId) return;
     Alert.alert('Delete Uniform Label', `Delete "${label.trim()}" and all its entries?`, [
       { text: 'Cancel', style: 'cancel' },

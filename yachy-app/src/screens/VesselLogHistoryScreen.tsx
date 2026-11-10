@@ -1,3 +1,4 @@
+import { offlineDocuments } from '../offline/documentService';
 import React, { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -36,8 +37,13 @@ export const VesselLogHistoryScreen = ({ navigation, route }: any) => {
       if (!allowed || !vesselId) return;
       let active = true;
       setError(false);
-      vesselService
-        .getVessel(vesselId)
+      (offlineDocuments.enabled()
+        ? offlineDocuments.context().then((context) => {
+            const vessel = context.vessel as { id?: string; created_at?: string } | undefined;
+            return vessel?.id === vesselId ? { createdAt: vessel.created_at ?? '' } : null;
+          })
+        : vesselService.getVessel(vesselId)
+      )
         .then((vessel) => {
           if (!active) return;
           if (!vessel || !Number.isFinite(new Date(vessel.createdAt).getTime())) {

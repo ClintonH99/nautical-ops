@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { ScreenLoading } from '../components/ScreenLoading';
 import { optimisticDelete } from '../utils/optimisticDelete';
 import { canEditSafetyEquipment } from '../utils/access';
@@ -174,6 +175,7 @@ export const SafetyEquipmentScreen = ({ navigation }: any) => {
   };
 
   const onDelete = (item: SafetyEquipment) => {
+    if (!allowOnlineAction('Deleting records')) return;
     if (!canManage) return;
     Alert.alert('Delete safety equipment', `Delete "${item.title}"?`, [
       { text: 'Cancel', style: 'cancel' },

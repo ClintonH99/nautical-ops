@@ -17,7 +17,7 @@ test('crew leave changes survive reopen and read-only grants block edits',async(
  const save=(v,kind,version)=>box().save({feature:'crewLeave',recordId:value.id,kind,value:v,expectedLocalVersion:version});
  await save(value,'create',0);await save({...value,notes:'',leave_type:'ROTATION'},'update',1);
  assert.equal((await box().read('crewLeave',value.id)).value.notes,'');assert.equal((await store.read(scope)).changes.length,1);
- await assert.rejects(save(value,'update',1),/LOCAL_CONFLICT/);
+ await assert.rejects(save(value,'update',1),(error) => error.code === 'LOCAL_CONFLICT');
  ctx.permit=await permit({permissions:{crewLeave:['read']}});await assert.rejects(save(value,'update',2),/ACTION_NOT_ALLOWED/);
 });
 test('offline leave paging applies status/type/department filters before slicing',()=>{

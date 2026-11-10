@@ -733,6 +733,27 @@ try {
           ),
         ),
       );
+    if (path === "/rest/v1/app_updates" && req.method === "GET")
+      return json([
+        {
+          id: "offline-update",
+          title: "Synthetic update",
+          description: "Saved for reading offline.",
+          category: null,
+          status: "released",
+          created_at: stamp,
+        },
+      ]);
+    if (path === "/rest/v1/faqs" && req.method === "GET")
+      return json([
+        {
+          id: "offline-help",
+          question: "How do offline changes sync?",
+          answer:
+            "Keep this device's saved changes and reconnect. Retry Sync uploads them after access is verified.",
+          display_order: 1,
+        },
+      ]);
     if (path === "/rest/v1/vessel_trip_colors") return json(null);
     if (path === "/rest/v1/users")
       return json(url.searchParams.has("id") ? profile : [profile]);

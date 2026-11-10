@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { offlineFuel } from '../offline/fuelService';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -470,6 +471,7 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
   };
 
   const confirmDelete = async () => {
+    if (!allowOnlineAction('Deleting records')) return;
     if (
       !deleteTarget ||
       !vesselId ||

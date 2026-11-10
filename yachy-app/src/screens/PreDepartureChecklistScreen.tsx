@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { ScreenLoading } from '../components/ScreenLoading';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
 import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
@@ -15,7 +16,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import preDepartureChecklistsService from '../services/preDepartureChecklists';
-import vesselService from '../services/vessel';
+import { getDocumentVesselName } from '../services/documentVessel';
 import { PreDepartureChecklist, Department } from '../types';
 import {
   Button,
@@ -156,6 +157,7 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
   };
 
   const onDelete = (checklist: PreDepartureChecklist) => {
+    if (!allowOnlineAction('Deleting records')) return;
     if (!canEditChecklist(checklist)) return;
     Alert.alert('Delete checklist', `Delete "${checklist.title}"?`, [
       { text: 'Cancel', style: 'cancel' },
@@ -186,7 +188,7 @@ export const PreDepartureChecklistScreen = ({ navigation }: any) => {
     }
     setExportingPdf(true);
     try {
-      const vessel = await vesselService.getVessel(vesselId);
+      const vessel = { name: await getDocumentVesselName(vesselId) };
       const vesselName = vessel?.name || 'Vessel';
       const safeName =
         vesselName

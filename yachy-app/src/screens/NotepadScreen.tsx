@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
 import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
 import { optimisticDelete } from '../utils/optimisticDelete';
@@ -74,6 +75,7 @@ export const NotepadScreen = ({ navigation }: any) => {
   );
 
   const handleDelete = (note: Note) => {
+    if (!allowOnlineAction('Deleting records')) return;
     Alert.alert('Delete Note', `Delete "${note.title}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {

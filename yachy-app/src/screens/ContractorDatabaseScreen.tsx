@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { optimisticDelete } from '../utils/optimisticDelete';
 import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
@@ -158,6 +159,7 @@ export const ContractorDatabaseScreen = ({ navigation }: any) => {
   };
 
   const onDelete = (contractor: Contractor) => {
+    if (!allowOnlineAction('Deleting records')) return;
     Alert.alert('Delete contractor', `Delete "${contractor.companyName}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {

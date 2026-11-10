@@ -64,7 +64,18 @@ const identifiers = ['origin', 'projectId', 'userId', 'vesselId', 'deviceId', 's
 export class OfflineError extends Error {
   readonly code: string;
   constructor(code: string) {
-    super(code);
+    super(
+      {
+        ONLINE_ONLY:
+          'This action needs a connection. Your saved offline changes are kept on this device.',
+        RECONCILE_FIRST:
+          'Sync your saved changes and resolve any conflicts before using this action.',
+        LOCAL_CONFLICT:
+          'This record changed while you were editing. Your form is still open. Reopen the saved record before trying again.',
+        NOT_DOWNLOADED:
+          'This information has not been downloaded yet. Reconnect and use Retry Sync.',
+      }[code] ?? code
+    );
     this.code = code;
     this.name = 'OfflineError';
   }

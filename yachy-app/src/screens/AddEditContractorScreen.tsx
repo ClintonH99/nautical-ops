@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 import { ScreenLoading } from '../components/ScreenLoading';
 /**
@@ -39,8 +40,8 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
   const contractorId = route?.params?.contractorId as string | undefined;
   const isEdit = !!contractorId;
 
-  const [offlineLocalVersion,setOfflineLocalVersion] = useState<number | undefined>();
-  const [loadFailed,setLoadFailed] = useState(false);
+  const [offlineLocalVersion, setOfflineLocalVersion] = useState<number | undefined>();
+  const [loadFailed, setLoadFailed] = useState(false);
   const [companyName, setCompanyName] = useState('');
   const [companyAddress, setCompanyAddress] = useState('');
   const [department, setDepartment] = useState<Department>(user?.department ?? 'INTERIOR');
@@ -107,7 +108,10 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
 
   const handleSave = async () => {
     if (saving || deleting || activeOperationRef.current) return;
-    if (loadFailed) { Alert.alert('Not saved','Reopen this contractor after it has downloaded.'); return; }
+    if (loadFailed) {
+      Alert.alert('Not saved', 'Reopen this contractor after it has downloaded.');
+      return;
+    }
     if (!companyName.trim()) {
       Alert.alert('Missing company name', 'Please enter the company name.');
       return;
@@ -158,6 +162,7 @@ export const AddEditContractorScreen = ({ navigation, route }: any) => {
   };
 
   const handleDelete = () => {
+    if (!allowOnlineAction('Deleting records')) return;
     if (!isEdit || !contractorId || saving || deleting || activeOperationRef.current) return;
     Alert.alert('Delete contractor', `Delete "${companyName.trim()}"?`, [
       { text: 'Cancel', style: 'cancel' },

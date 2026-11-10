@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { ScreenLoading } from '../components/ScreenLoading';
 import { optimisticDelete } from '../utils/optimisticDelete';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
@@ -139,6 +140,7 @@ export const RulesScreen = ({ navigation }: any) => {
   };
 
   const onDelete = (item: Rule) => {
+    if (!allowOnlineAction('Deleting records')) return;
     if (!isHOD) return;
     const displayTitle = item.data?.title || item.title;
     Alert.alert('Delete rules', `Delete "${displayTitle}"?`, [

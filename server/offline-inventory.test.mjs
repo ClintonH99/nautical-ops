@@ -106,7 +106,7 @@ test("inventory device edits collapse before upload and reject stale editors", a
       value,
       expectedLocalVersion: 1,
     }),
-    /LOCAL_CONFLICT/,
+    (error) => error.code === "LOCAL_CONFLICT",
   );
 });
 test("draft CAS survives reopen and refuses another tab overwriting its newer contents", async () => {
@@ -122,7 +122,7 @@ test("draft CAS survives reopen and refuses another tab overwriting its newer co
   );
   await assert.rejects(
     box().writeDraft("inventory", { entries: { b: { title: "Stale" } } }, 0),
-    /LOCAL_CONFLICT/,
+    (error) => error.code === "LOCAL_CONFLICT",
   );
   assert.deepEqual((await box().readDraft("inventory")).value, {
     entries: { a: { title: "First" } },

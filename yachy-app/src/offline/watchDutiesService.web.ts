@@ -1,3 +1,4 @@
+import { requireOnlineAction } from './onlineActions';
 import type { OfflineDutiesService } from './watchDutiesService';
 import type { RecordValue } from './outbox';
 import { OfflineError } from './access';
@@ -84,8 +85,9 @@ export const offlineDuties: OfflineDutiesService = {
     await saveOfflineRecord('watchDutyChecks', v, r ? 'update' : 'create', r?.localVersion ?? 0);
   },
   async beforeDelete() {
-    if (!navigator.onLine) throw new OfflineError('ONLINE_ONLY');
+    requireOnlineAction();
     await syncOffline();
+    requireOnlineAction();
     const a = await offlineNotesContext();
     await a.box.list('watchDuties');
     if (

@@ -45,6 +45,6 @@ test('crew can check only own items and cannot edit shared duties; stale tab can
  await assert.rejects(save('watchDuties',group,'create',0),/ACTION_NOT_ALLOWED/);
  await assert.rejects(save('watchDutyChecks',{...check,user_id:'other'},'create',0),/ACTION_NOT_ALLOWED/);
  await save('watchDutyChecks',check,'create',0);await save('watchDutyChecks',{...check,checked:false},'update',1);
- await assert.rejects(save('watchDutyChecks',check,'update',1),/LOCAL_CONFLICT/);
+ await assert.rejects(save('watchDutyChecks',check,'update',1),(error) => error.code === 'LOCAL_CONFLICT');
  assert.equal((await box.list('watchDutyChecks'))[0].value.checked,false);
 });

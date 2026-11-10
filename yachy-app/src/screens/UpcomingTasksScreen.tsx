@@ -1,3 +1,5 @@
+import { formatLocalDateString } from '../utils';
+import { allowOnlineAction } from '../offline/onlineActions';
 import { optimisticDelete } from '../utils/optimisticDelete';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
 import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
@@ -64,14 +66,14 @@ export const UpcomingTasksScreen = ({ navigation }: any) => {
     loadTasks();
   };
 
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  const formatDate = formatLocalDateString;
 
   const onEdit = (task: VesselTask) => {
     navigation.navigate('AddEditTask', { category: task.category, taskId: task.id });
   };
 
   const onDelete = (task: VesselTask) => {
+    if (!allowOnlineAction('Deleting records')) return;
     Alert.alert('Delete task', `Delete "${task.title}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {

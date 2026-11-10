@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { ScreenLoading } from '../components/ScreenLoading';
 import { optimisticDelete } from '../utils/optimisticDelete';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
@@ -204,17 +205,20 @@ export const MySeaMilesScreen = ({ navigation }: any) => {
   };
 
   const openCreateFolder = () => {
+    if (!allowOnlineAction('Changing saved folders or removing records')) return;
     setFolderName('');
     setFolderEditorMode('create');
   };
 
   const openRenameFolder = () => {
+    if (!allowOnlineAction('Changing saved folders or removing records')) return;
     if (!selectedFolder) return;
     setFolderName(selectedFolder.name);
     setFolderEditorMode('rename');
   };
 
   const saveFolder = async () => {
+    if (!allowOnlineAction('Changing saved folders or removing records')) return;
     if (!user?.id || !folderEditorMode) return;
     const cleanName = folderName.trim();
     if (!cleanName) {
@@ -262,6 +266,7 @@ export const MySeaMilesScreen = ({ navigation }: any) => {
   };
 
   const deleteSelectedFolder = () => {
+    if (!allowOnlineAction('Changing saved folders or removing records')) return;
     if (!selectedFolder) return;
     Alert.alert(
       'Delete folder?',
@@ -296,6 +301,7 @@ export const MySeaMilesScreen = ({ navigation }: any) => {
   };
 
   const moveEntryToFolder = async (folderId: string | null) => {
+    if (!allowOnlineAction('Changing saved folders or removing records')) return;
     if (!movingEntry) return;
     const currentFolderId = folderAssignments[movingEntry.id] ?? null;
     if (folderId === currentFolderId) {
@@ -322,6 +328,7 @@ export const MySeaMilesScreen = ({ navigation }: any) => {
   };
 
   const handleDelete = (entry: SeaMileEntry) => {
+    if (!allowOnlineAction('Deleting records')) return;
     Alert.alert('Delete sea-mile entry', 'This draft will be permanently deleted.', [
       { text: 'Cancel', style: 'cancel' },
       {

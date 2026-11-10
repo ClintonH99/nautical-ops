@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { ScreenLoading } from '../components/ScreenLoading';
 import { optimisticDelete } from '../utils/optimisticDelete';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
@@ -172,6 +173,7 @@ export const MusterStationScreen = ({ navigation }: any) => {
   };
 
   const onDelete = (item: MusterStation) => {
+    if (!allowOnlineAction('Deleting records')) return;
     if (!isHOD) return;
     Alert.alert('Delete muster station', `Delete "${item.title}"?`, [
       { text: 'Cancel', style: 'cancel' },

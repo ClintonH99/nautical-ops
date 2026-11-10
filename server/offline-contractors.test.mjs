@@ -64,7 +64,7 @@ test("contractor offline edits coalesce and reject stale local versions", async 
         value,
         expectedLocalVersion: 1,
       }),
-    /LOCAL_CONFLICT/,
+    (error) => error.code === "LOCAL_CONFLICT",
   );
 });
 test("contractor fields and contact payloads cannot expand the permitted record shape", () => {

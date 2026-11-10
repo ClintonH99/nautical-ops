@@ -184,3 +184,60 @@ test("implemented screen names and reopened paths share one offline route map", 
     assert.equal(supportsOfflineRoute(null, path), false);
   }
 });
+
+test("every linked page explicitly declares offline support or its online requirement", async () => {
+  const { OFFLINE_ROUTE_PATHS, ONLINE_ONLY_ROUTES } =
+    await import("../yachy-app/src/offline/routes.ts");
+  const linking = await readFile(
+    new URL("../yachy-app/src/navigation/webLinking.ts", import.meta.url),
+    "utf8",
+  );
+  const entries = [...linking.matchAll(/^\s+(\w+): '([^']+)',/gm)];
+  for (const [, name, path] of entries) {
+    assert.ok(
+      OFFLINE_ROUTE_PATHS[name] || ONLINE_ONLY_ROUTES[name],
+      `${name} needs an explicit policy`,
+    );
+    assert.ok(
+      !(OFFLINE_ROUTE_PATHS[name] && ONLINE_ONLY_ROUTES[name]),
+      `${name} has conflicting policies`,
+    );
+    if (OFFLINE_ROUTE_PATHS[name]) {
+      assert.equal(OFFLINE_ROUTE_PATHS[name], "/" + path);
+      assert.equal(
+        await (await fixture().request("/" + path)).text(),
+        "synthetic app shell",
+        `${name} must reopen offline`,
+      );
+    }
+  }
+  assert.ok(entries.length > 80, "audit the complete route map");
+});
+
+for (const path of [
+  "/logs/history?kind=fuel&vesselId=00000000-0000-0000-0000-000000000002",
+  "/logs/history?kind=waste&vesselId=00000000-0000-0000-0000-000000000002&year=2026",
+  "/logs/history?kind=discharge&vesselId=00000000-0000-0000-0000-000000000002",
+  "/logs/pump-out?historyMonth=2026-10&historyVesselId=00000000-0000-0000-0000-000000000002",
+  "/logs/general-waste?historyMonth=2026-10&historyVesselId=00000000-0000-0000-0000-000000000002",
+  "/logs/fuel?historyMonth=2026-10&historyVesselId=00000000-0000-0000-0000-000000000002",
+  "/logs/fuel/edit?logId=00000000-0000-0000-0000-000000000001&correctionOperationId=00000000-0000-0000-0000-000000000003",
+  "/logs/fuel/transfers/edit?transferId=00000000-0000-0000-0000-000000000001&correctionOperationId=00000000-0000-0000-0000-000000000003",
+])
+  test("offline history/correction survives reopen: " + path, async () => {
+    assert.equal(
+      await (await fixture().request(path)).text(),
+      "synthetic app shell",
+    );
+    assert.equal(fixture().request(path + "&token=private"), null);
+  });
+for (const path of [
+  "/logs/history?kind=fuel&vesselId=invalid",
+  "/logs/history?kind=unknown&vesselId=00000000-0000-0000-0000-000000000002",
+  "/logs/fuel?historyMonth=2026-13&historyVesselId=00000000-0000-0000-0000-000000000002",
+  "/logs/fuel?historyMonth=2026-10&historyMonth=2026-10",
+  "/logs/fuel/edit?logId=00000000-0000-0000-0000-000000000001&correctionOperationId=invalid",
+])
+  test("invalid history/correction does not intercept: " + path, () =>
+    assert.equal(fixture().request(path), null),
+  );

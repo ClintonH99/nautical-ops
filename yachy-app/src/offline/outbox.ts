@@ -42,6 +42,8 @@ export type Partition = {
   seaMileContext?: RecordValue;
   fuelContext?: RecordValue;
   documentContext?: RecordValue;
+  helpFaqs?: { id: string; question: string; answer: string; display_order: number }[];
+  appUpdates?: RecordValue[];
   media?: Record<string, string>;
   tripColors?: RecordValue | null;
   shipyardFolders?: { folders: RecordValue[]; assignments: RecordValue[] };

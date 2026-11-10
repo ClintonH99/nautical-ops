@@ -64,7 +64,7 @@ export const AddEditSeaMileScreen = ({ navigation, route }: any) => {
   const themeColors = useThemeColors();
   const { user } = useAuthStore();
   const entryId = route.params?.entryId as string | undefined;
-  const reviewMode = route.params?.reviewMode === true;
+  const reviewMode = route.params?.reviewMode === true || route.params?.reviewMode === 'true';
 
   const savingRef = useRef(false);
   const [loadFailed, setLoadFailed] = useState(false);

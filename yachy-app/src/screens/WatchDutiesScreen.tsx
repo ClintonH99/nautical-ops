@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 /**
  * Watch Duties Screen
  * Rules (Captain/HOD editable, everyone can view/export), the week-ahead
@@ -402,6 +403,7 @@ export const WatchDutiesScreen = () => {
   };
 
   const handleRemoveAssignment = (assignmentId: string) => {
+    if (!allowOnlineAction('Removing watch records')) return;
     Alert.alert('Delete Watch Assignment', 'Delete this watch assignment?', [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -420,6 +422,7 @@ export const WatchDutiesScreen = () => {
   };
 
   const handleResetWeek = () => {
+    if (!allowOnlineAction('Removing watch records')) return;
     if (!user?.vesselId || !canManage || resettingWeek) return;
 
     Alert.alert(
@@ -540,6 +543,7 @@ export const WatchDutiesScreen = () => {
   };
 
   const handleDeleteGroup = (groupId: string, title: string) => {
+    if (!allowOnlineAction('Removing watch records')) return;
     Alert.alert('Delete Duty Group', `Delete "${title}" and all its items?`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -604,6 +608,7 @@ export const WatchDutiesScreen = () => {
   };
 
   const handleDeleteItem = (groupId: string, itemId: string) => {
+    if (!allowOnlineAction('Removing watch records')) return;
     Alert.alert('Delete Duty Item', 'Delete this duty item?', [
       { text: 'Cancel', style: 'cancel' },
       {

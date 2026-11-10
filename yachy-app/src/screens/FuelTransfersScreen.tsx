@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { offlineFuel } from '../offline/fuelService';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
 import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
@@ -175,6 +176,7 @@ export const FuelTransfersScreen = ({ navigation }: any) => {
   };
 
   const confirmDelete = (target: FuelTransfer) => {
+    if (!allowOnlineAction('Deleting records')) return;
     Alert.alert('Delete fuel transfer?', 'This will remove the transfer from the vessel records.', [
       { text: 'Cancel', style: 'cancel' },
       {

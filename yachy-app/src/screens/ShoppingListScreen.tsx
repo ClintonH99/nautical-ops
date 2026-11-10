@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { beginDeviceSave } from '../offline/runtime';
 import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
@@ -222,6 +223,7 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
   };
 
   const onDelete = (list: ShoppingList) => {
+    if (!allowOnlineAction('Deleting records')) return;
     Alert.alert('Delete list', `Delete "${list.title}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {

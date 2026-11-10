@@ -1,3 +1,4 @@
+import { requireOnlineAction } from './onlineActions';
 import type { OfflineNotesService } from './notesService';
 import type { Note } from '../services/notes';
 import { OfflineError } from './access';
@@ -58,8 +59,9 @@ export const offlineNotes: OfflineNotesService = {
     )) as unknown as Note;
   },
   async beforeDelete(id) {
-    if (!navigator.onLine) throw new OfflineError('ONLINE_ONLY');
+    requireOnlineAction();
     await syncOffline();
+    requireOnlineAction();
     const a = await offlineNotesContext();
     if ((await a.store.read(a.scope)).changes.some((change) => change.recordId === id))
       throw new OfflineError('RECONCILE_FIRST');

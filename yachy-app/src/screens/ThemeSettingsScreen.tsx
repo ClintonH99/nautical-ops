@@ -4,7 +4,7 @@
  */
 
 import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme';
@@ -60,7 +60,14 @@ export const ThemeSettingsScreen = () => {
                   isLast && styles.rowLast,
                   { borderBottomColor: themeColors.border },
                 ]}
-                onPress={() => setBackgroundTheme(theme.id)}
+                onPress={() =>
+                  void setBackgroundTheme(theme.id).catch(() =>
+                    Alert.alert(
+                      'Not saved',
+                      'Device storage is unavailable. Free space and try again.'
+                    )
+                  )
+                }
                 activeOpacity={0.7}
               >
                 <View

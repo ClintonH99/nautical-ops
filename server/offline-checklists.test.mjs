@@ -88,7 +88,10 @@ test("checklist create and item edits survive reopen as one pending aggregate", 
     edited,
   );
   assert.equal((await f.store.read(scope)).changes.length, 1);
-  await assert.rejects(f.save(value, "update", 1), /LOCAL_CONFLICT/);
+  await assert.rejects(
+    f.save(value, "update", 1),
+    (error) => error.code === "LOCAL_CONFLICT",
+  );
   f.c.permit = await permit({
     permissions: { preDepartureChecklists: ["read"] },
   });

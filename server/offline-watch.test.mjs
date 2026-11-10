@@ -82,7 +82,10 @@ test("watch offline edit survives reopen and preserves assigned dates without du
   );
   assert.equal((await box().read("watchKeeping", value.id)).value.notes, null);
   assert.equal((await store.read(scope)).changes.length, 1);
-  await assert.rejects(save(value, "update", 1), /LOCAL_CONFLICT/);
+  await assert.rejects(
+    save(value, "update", 1),
+    (error) => error.code === "LOCAL_CONFLICT",
+  );
   ctx.permit = await permit({
     permissions: { watchKeeping: ["read", "create"] },
   });

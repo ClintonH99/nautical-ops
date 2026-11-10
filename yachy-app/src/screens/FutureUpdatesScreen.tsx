@@ -1,4 +1,6 @@
 import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
+import { offlineDocuments } from '../offline/documentService';
+import { offlineNotes } from '../offline/notesService';
 /**
  * Future Updates & Features Screen
  * Shows what's coming next in Nautical Ops — pulled live from the admin-managed
@@ -38,9 +40,22 @@ export const FutureUpdatesScreen = () => {
 
   const [updates, setUpdates] = useState<AppUpdate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [unavailable, setUnavailable] = useState(false);
 
   useEffect(() => {
     const loadUpdates = async () => {
+      if (offlineDocuments.enabled()) {
+        try {
+          const cached = await offlineDocuments.updates();
+          setUpdates((cached ?? []) as unknown as AppUpdate[]);
+          setUnavailable(cached === null);
+        } catch {
+          setUnavailable(true);
+        } finally {
+          setLoading(false);
+        }
+        return;
+      }
       const { data, error } = await supabase
         .from('app_updates')
         .select('*')
@@ -53,6 +68,7 @@ export const FutureUpdatesScreen = () => {
     };
 
     loadUpdates();
+    return offlineNotes.subscribe(() => void loadUpdates());
   }, []);
 
   const renderCard = (item: AppUpdate) => (
@@ -101,7 +117,9 @@ export const FutureUpdatesScreen = () => {
           <ActivityIndicator color={COLORS.primary} style={{ marginTop: SPACING.xl }} />
         ) : updates.length === 0 ? (
           <Text style={[styles.cardDesc, { color: themeColors.textSecondary }]}>
-            No updates posted yet — check back soon.
+            {unavailable
+              ? 'Updates have not been downloaded. Reconnect and use Retry Sync.'
+              : 'No updates posted yet — check back soon.'}
           </Text>
         ) : (
           STATUS_ORDER.map((statusKey) => {
@@ -159,7 +177,11 @@ export const FutureUpdatesScreen = () => {
           </Text>
           <TouchableOpacity
             style={styles.emailRow}
-            onPress={() => Linking.openURL('mailto:support@nautical-ops.com')}
+            onPress={() =>
+              void Linking.openURL('mailto:support@nautical-ops.com').catch(() =>
+                Alert.alert('Contact Support', 'Email support@nautical-ops.com when connected.')
+              )
+            }
             onLongPress={async () => {
               await Clipboard.setStringAsync('support@nautical-ops.com');
               Alert.alert('Copied', 'Email address copied to clipboard.');

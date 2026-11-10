@@ -1,3 +1,4 @@
+import { requireOnlineAction } from './onlineActions';
 import type { OfflineTripsService } from './tripsService';
 import { OfflineError } from './access';
 import {
@@ -53,8 +54,9 @@ export const offlineTrips: OfflineTripsService = {
     return saveOfflineRecord('trips', { ...row.value, ...value }, 'update', version);
   },
   async beforeDelete(id) {
-    if (!navigator.onLine) throw new OfflineError('ONLINE_ONLY');
+    requireOnlineAction();
     await syncOffline();
+    requireOnlineAction();
     const a = await offlineNotesContext();
     if (
       (await a.store.read(a.scope)).changes.some(

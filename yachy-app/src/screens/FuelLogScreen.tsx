@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { offlineDocuments } from '../offline/documentService';
 import { offlineFuel } from '../offline/fuelService';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
@@ -181,7 +182,9 @@ export const FuelLogScreen = ({ navigation, route }: any) => {
       setStoredAllocationSnapshot(nextAllocationSnapshot);
       setLoadedVesselId(vesselId);
       setLoadError(null);
-      setSelectedIds(new Set());
+      setSelectedIds(
+        (previous) => new Set([...previous].filter((id) => data.some((log) => log.id === id)))
+      );
     } catch (e) {
       if (generation !== loadGeneration.current) return;
       console.error('Load fuel logs error:', e);
@@ -269,6 +272,7 @@ export const FuelLogScreen = ({ navigation, route }: any) => {
   };
 
   const confirmDelete = (target: FuelLog) => {
+    if (!allowOnlineAction('Deleting records')) return;
     Alert.alert('Delete this fuel receipt?', 'This will remove the receipt from the app.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => deleteReceipt(target) },

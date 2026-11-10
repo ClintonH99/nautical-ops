@@ -1,4 +1,4 @@
-import { supportsOfflineRoute } from './routes';
+import { supportsOfflineRoute, ONLINE_ONLY_ROUTES } from './routes';
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useAuthStore } from '../store';
@@ -333,11 +333,11 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
           <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>
             Your pending edits remain saved on this device.
             {state.ready
-              ? ' Open a downloaded vessel page such as Notepad. Account changes, billing, invitations and vessel setup need a connection.'
+              ? ` ${ONLINE_ONLY_ROUTES[route ?? ''] ?? 'This page requires a connection.'} Return home to use your downloaded vessel records.`
               : ` ${state.issue ?? 'Connect to the internet to verify your access.'}`}
           </Text>
           {state.ready && (
-            <TouchableOpacity accessibilityRole="link" onPress={() => location.assign('/notepad')}>
+            <TouchableOpacity accessibilityRole="link" onPress={() => location.assign('/app')}>
               <Text
                 style={{
                   color: colors.textPrimary,
@@ -345,7 +345,7 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
                   marginTop: 20,
                 }}
               >
-                Open Notepad
+                Return to Home
               </Text>
             </TouchableOpacity>
           )}

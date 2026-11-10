@@ -11,6 +11,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Modal,
+  Alert,
   Pressable,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -52,8 +53,12 @@ export const DepartmentColorSettingsScreen = () => {
   );
 
   const handleSelectColor = async (dept: Department, color: string | null) => {
-    await setOverride(dept, color);
-    setPickingDepartment(null);
+    try {
+      await setOverride(dept, color);
+      setPickingDepartment(null);
+    } catch {
+      Alert.alert('Not saved', 'Device storage is unavailable. Free space and try again.');
+    }
   };
 
   if (!loaded) {

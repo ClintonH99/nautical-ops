@@ -1,3 +1,4 @@
+import { requireOnlineAction } from './onlineActions';
 import type { OfflineChecklistsService } from './checklistsService';
 import type { RecordValue, LocalRecord } from './outbox';
 import { OfflineError } from './access';
@@ -109,8 +110,9 @@ export const offlineChecklists: OfflineChecklistsService = {
     );
   },
   async beforeDelete(id, isItem) {
-    if (!navigator.onLine) throw new OfflineError('ONLINE_ONLY');
+    requireOnlineAction();
     await syncOffline();
+    requireOnlineAction();
     const a = await offlineNotesContext();
     const rowId = isItem
       ? (await a.box.list('preDepartureChecklists')).find((r) =>

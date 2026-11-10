@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { optimisticDelete } from '../utils/optimisticDelete';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
 import { useMonthlyVesselLogs } from '../hooks/useMonthlyVesselLogs';
@@ -15,7 +16,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import generalWasteLogsService from '../services/generalWasteLogs';
-import vesselService from '../services/vessel';
+import { getDocumentVesselName } from '../services/documentVessel';
 import { GeneralWasteLog } from '../types';
 import {
   Button,
@@ -92,6 +93,7 @@ export const GeneralWasteLogScreen = ({ navigation, route }: any) => {
     navigation.navigate('AddEditGeneralWasteLog', { logId: log.id });
 
   const onDelete = (log: GeneralWasteLog) => {
+    if (!allowOnlineAction('Deleting records')) return;
     Alert.alert('Delete entry', 'Delete this waste log entry?', [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -118,7 +120,7 @@ export const GeneralWasteLogScreen = ({ navigation, route }: any) => {
     try {
       let vesselName = 'Vessel';
       if (vesselId) {
-        const vessel = await vesselService.getVessel(vesselId);
+        const vessel = { name: await getDocumentVesselName(vesselId) };
         if (vessel?.name) vesselName = vessel.name;
       }
       await exportGeneralWasteLogPdf(toExport, vesselName);

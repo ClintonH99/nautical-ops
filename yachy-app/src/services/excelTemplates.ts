@@ -334,7 +334,7 @@ export interface ParseResult<T> {
   errors: { row: number; message: string }[];
 }
 
-export function parseTasksFile(uri: string): Promise<ParseResult<ParsedTask>> {
+export function parseTasksFile(uri: string | Blob): Promise<ParseResult<ParsedTask>> {
   return parseFile(uri, 'tasks', (row, rowNum, headerMap) => {
     const deptRaw = (
       headerMap['Department (BRIDGE/ENGINEERING/EXTERIOR/INTERIOR/GALLEY)'] ??
@@ -390,7 +390,7 @@ export function parseTasksFile(uri: string): Promise<ParseResult<ParsedTask>> {
   });
 }
 
-export function parseMaintenanceFile(uri: string): Promise<ParseResult<ParsedMaintenance>> {
+export function parseMaintenanceFile(uri: string | Blob): Promise<ParseResult<ParsedMaintenance>> {
   return parseFile(uri, 'maintenance', (row, rowNum, headerMap) => {
     const equipment = (headerMap['Equipment'] ?? '').trim();
     const serviceDoneBy = (headerMap['Service Done By'] ?? '').trim();
@@ -409,7 +409,7 @@ export function parseMaintenanceFile(uri: string): Promise<ParseResult<ParsedMai
   });
 }
 
-export function parseYardFile(uri: string): Promise<ParseResult<ParsedYardJob>> {
+export function parseYardFile(uri: string | Blob): Promise<ParseResult<ParsedYardJob>> {
   return parseFile(uri, 'yard', (row, rowNum, headerMap) => {
     const jobTitle = (headerMap['Job Title'] ?? '').trim();
     if (!jobTitle) throw new Error('Job Title is required.');
@@ -465,7 +465,7 @@ export interface ParsedInventoryItem {
   items: { amount: string; item: string }[];
 }
 
-export function parseInventoryFile(uri: string): Promise<ParseResult<ParsedInventoryItem>> {
+export function parseInventoryFile(uri: string | Blob): Promise<ParseResult<ParsedInventoryItem>> {
   return parseFile(uri, 'inventory', (_row, _rowNum, headerMap, sheetName) => {
     const title = (headerMap['Title'] ?? '').trim();
     if (!title) return null;
@@ -505,7 +505,7 @@ function getDataSheetNames(type: TemplateType): string[] {
 }
 
 async function parseFile<T>(
-  uri: string,
+  uri: string | Blob,
   type: TemplateType,
   mapRow: (
     row: string[],
@@ -520,15 +520,24 @@ async function parseFile<T>(
   try {
     let base64: string;
     if (Platform?.OS === 'web') {
-      // DocumentPicker supplies a browser object URL, not a native file path.
-      const response = await fetch(uri);
-      if (!response.ok) throw new Error('Could not read the selected spreadsheet.');
-      const bytes = new Uint8Array(await response.arrayBuffer());
+      // Read the selected File directly: this works without an HTTP server or blob URL fetch.
+      let data: ArrayBuffer;
+      if (typeof uri !== 'string') {
+        if (uri.size > MAX_IMPORT_FILE_BYTES)
+          throw new Error('The spreadsheet is larger than the 10 MB import limit.');
+        data = await uri.arrayBuffer();
+      } else {
+        const response = await fetch(uri);
+        if (!response.ok) throw new Error('Could not read the selected spreadsheet.');
+        data = await response.arrayBuffer();
+      }
+      const bytes = new Uint8Array(data);
       if (bytes.byteLength > MAX_IMPORT_FILE_BYTES) {
         throw new Error('The spreadsheet is larger than the 10 MB import limit.');
       }
       base64 = bytesToBase64(bytes);
     } else {
+      if (typeof uri !== 'string') throw new Error('Expected a native file path.');
       base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
     }
     const maximumBase64Length = Math.ceil(MAX_IMPORT_FILE_BYTES / 3) * 4 + 4;

@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { optimisticDelete } from '../utils/optimisticDelete';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
 import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
@@ -96,6 +97,7 @@ export const CompletedTasksScreen = ({ navigation }: any) => {
   };
 
   const onDelete = (task: VesselTask) => {
+    if (!allowOnlineAction('Deleting records')) return;
     Alert.alert('Delete task', `Delete "${task.title}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {

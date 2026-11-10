@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { optimisticDelete } from '../utils/optimisticDelete';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
 import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
@@ -65,7 +66,9 @@ export const BossTripsScreen = ({ navigation }: any) => {
   useFocusEffect(
     useCallback(() => {
       loadTrips();
-      return tripsService.subscribe(() => { void loadTrips(); });
+      return tripsService.subscribe(() => {
+        void loadTrips();
+      });
     }, [loadTrips])
   );
 
@@ -86,6 +89,7 @@ export const BossTripsScreen = ({ navigation }: any) => {
   };
 
   const onDelete = (trip: Trip) => {
+    if (!allowOnlineAction('Deleting records')) return;
     if (!canManageTrips) return;
     Alert.alert('Delete trip', `Delete "${trip.title}"?`, [
       { text: 'Cancel', style: 'cancel' },

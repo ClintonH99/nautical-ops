@@ -14,7 +14,7 @@ for (const feature of ['rules','safetyEquipment','musterStations']) {
     assert.equal((await store.read(scope)).changes.length,1);
     const reopened = new OfflineOutbox({store,context:()=>context,adapters:{[feature]:publicationsAdapter}});
     assert.deepEqual((await reopened.read(feature,value.id)).value.data.locations,['Bridge','Deck']);
-    await assert.rejects(()=>box.save({feature,recordId:value.id,kind:'update',value,expectedLocalVersion:1}), /LOCAL_CONFLICT/);
+    await assert.rejects(()=>box.save({feature,recordId:value.id,kind:'update',value,expectedLocalVersion:1}), (error) => error.code === 'LOCAL_CONFLICT');
     context.permit = await permit({permissions:{[feature]:['read']}});
     await assert.rejects(()=>box.save({feature,recordId:value.id,kind:'update',value,expectedLocalVersion:2}));
     assert.deepEqual((await reopened.read(feature,value.id)).value.data.locations,['Bridge','Deck']);

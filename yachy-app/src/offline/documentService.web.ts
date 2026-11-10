@@ -19,4 +19,12 @@ export const offlineDocuments: OfflineDocuments = {
     key.search = '';
     return (await a.store.read(a.scope)).media?.[key.href] ?? null;
   },
+  async help() {
+    const a = await offlineNotesContext();
+    return (await a.store.read(a.scope)).helpFaqs ?? null;
+  },
+  async updates() {
+    const a = await offlineNotesContext();
+    return (await a.store.read(a.scope)).appUpdates ?? null;
+  },
 };

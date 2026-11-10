@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
 /**
@@ -90,6 +91,7 @@ export const AddEditNoteScreen = ({ navigation, route }: any) => {
   };
 
   const handleDelete = () => {
+    if (!allowOnlineAction('Deleting records')) return;
     Alert.alert('Delete Note', 'Are you sure you want to delete this note?', [
       { text: 'Cancel', style: 'cancel' },
       {

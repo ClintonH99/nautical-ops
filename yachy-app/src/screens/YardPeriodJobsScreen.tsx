@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { optimisticDelete } from '../utils/optimisticDelete';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
 import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
@@ -287,6 +288,7 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
   };
 
   const deleteJob = (job: YardPeriodJob) => {
+    if (!allowOnlineAction('Changing saved folders or removing records')) return;
     const isRecord = job.status === 'COMPLETED';
     Alert.alert(
       isRecord ? 'Permanently delete record?' : 'Delete job?',
@@ -311,12 +313,14 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
   };
 
   const openCreateFolder = () => {
+    if (!allowOnlineAction('Changing saved folders or removing records')) return;
     setFolderName('');
     setFolderActionsOpen(false);
     setFolderEditorMode('create');
   };
 
   const openRenameFolder = () => {
+    if (!allowOnlineAction('Changing saved folders or removing records')) return;
     if (!selectedFolder) return;
     setFolderName(selectedFolder.name);
     setFolderActionsOpen(false);
@@ -324,6 +328,7 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
   };
 
   const saveFolder = async () => {
+    if (!allowOnlineAction('Changing saved folders or removing records')) return;
     if (!vesselId || !folderEditorMode) return;
     const cleanName = folderName.trim();
     if (!cleanName) {
@@ -375,6 +380,7 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
   };
 
   const deleteSelectedFolder = () => {
+    if (!allowOnlineAction('Changing saved folders or removing records')) return;
     if (!selectedFolder) return;
     setFolderActionsOpen(false);
     Alert.alert(
@@ -409,6 +415,7 @@ export const YardPeriodJobsScreen = ({ navigation }: any) => {
   };
 
   const moveRecordToFolder = async (folderId: string | null) => {
+    if (!allowOnlineAction('Changing saved folders or removing records')) return;
     if (!movingRecord) return;
     const currentFolderId = folderAssignments[movingRecord.id] ?? null;
     if (currentFolderId === folderId) {

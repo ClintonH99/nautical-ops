@@ -20,7 +20,7 @@ test('offline trip edits preserve identity and clearing notes survives reopening
  const reopened=new OfflineOutbox({store,context:()=>context,adapters:{trips:tripsAdapter}});
  assert.equal((await reopened.read('trips',value.id)).value.notes,null);
  assert.equal((await store.read(scope)).changes.length,1);
- await assert.rejects(()=>box.save({feature:'trips',recordId:value.id,kind:'update',value,expectedLocalVersion:1}),/LOCAL_CONFLICT/);
+ await assert.rejects(()=>box.save({feature:'trips',recordId:value.id,kind:'update',value,expectedLocalVersion:1}),(error) => error.code === 'LOCAL_CONFLICT');
  assert.equal(tripsAdapter.authorize(scope,'update',{...value,type:'BOSS'},{value}),false);
  assert.equal(tripsAdapter.authorizeRead(scope,{...value,vessel_id:'other'}),false);
  assert.equal(tripsAdapter.validate(tripDeviceCopy(value,'copy',scope.userId)),true);

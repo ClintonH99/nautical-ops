@@ -1121,6 +1121,8 @@ test("real isolated PostgreSQL offline note protocol", async (t) => {
           ),
         );
         assert.equal(d.vessel.id, vessel);
+        assert.ok(Number.isFinite(Date.parse(d.vessel.created_at)));
+        assert.equal(d.vessel.invite_code, undefined);
         assert.ok(d.profiles.every((p) => p.vessel_id === vessel));
         assert.ok(d.signatures.some((s) => s.user_id === user));
         assert.throws(() =>

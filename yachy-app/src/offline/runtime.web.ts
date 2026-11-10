@@ -486,6 +486,61 @@ async function refreshNotes(a: Active) {
       data.map((row) => ({ recordId: row.value.id, value: row.value, revision: row.revision }))
     );
   }
+  // Help content is optional; failed refreshes retain the last downloaded copy.
+  try {
+    const help = await supabase
+      .from('faqs')
+      .select('id,question,answer,display_order')
+      .order('display_order', { ascending: true })
+      .limit(500)
+      .abortSignal(AbortSignal.timeout(5000));
+    sameActive(a);
+    if (
+      !help.error &&
+      Array.isArray(help.data) &&
+      help.data.every(
+        (row) =>
+          typeof row.id === 'string' &&
+          typeof row.question === 'string' &&
+          typeof row.answer === 'string' &&
+          typeof row.display_order === 'number'
+      )
+    ) {
+      await a.store.update(a.scope, (s) => {
+        sameActive(a);
+        s.helpFaqs = help.data!;
+      });
+    }
+  } catch {
+    sameActive(a);
+  }
+  try {
+    const updates = await supabase
+      .from('app_updates')
+      .select('id,title,description,category,status,created_at')
+      .order('created_at', { ascending: false })
+      .limit(500)
+      .abortSignal(AbortSignal.timeout(5000));
+    sameActive(a);
+    if (
+      !updates.error &&
+      Array.isArray(updates.data) &&
+      updates.data.every(
+        (row) =>
+          (['id', 'title', 'description', 'status', 'created_at'] as const).every(
+            (key) => typeof row[key] === 'string'
+          ) &&
+          (row.category === null || typeof row.category === 'string')
+      )
+    ) {
+      await a.store.update(a.scope, (s) => {
+        sameActive(a);
+        s.appUpdates = updates.data!;
+      });
+    }
+  } catch {
+    sameActive(a);
+  }
   // Optional photos must never prevent records from finishing their download.
   for (const path of [
     `vessel-banners/${a.scope.vesselId}/banner.jpg`,

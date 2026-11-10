@@ -1,4 +1,7 @@
 import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
+import { offlineDocuments } from '../offline/documentService';
+import { offlineNotes } from '../offline/notesService';
+import { allowOnlineAction } from '../offline/onlineActions';
 /**
  * FAQ Screen
  * Displays FAQs from Supabase and allows users to submit questions
@@ -37,13 +40,21 @@ export const FAQScreen = () => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [question, setQuestion] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [unavailable, setUnavailable] = useState(false);
 
   useEffect(() => {
     loadFAQs();
+    return offlineNotes.subscribe(() => void loadFAQs());
   }, []);
 
   const loadFAQs = async () => {
     try {
+      if (offlineDocuments.enabled()) {
+        const downloaded = await offlineDocuments.help();
+        setFaqs(downloaded ?? []);
+        setUnavailable(downloaded === null);
+        return;
+      }
       const { data, error } = await supabase
         .from('faqs')
         .select('*')
@@ -51,6 +62,7 @@ export const FAQScreen = () => {
       if (error) throw error;
       setFaqs(data || []);
     } catch (e) {
+      setUnavailable(true);
       console.error('FAQ load error:', e);
     } finally {
       setLoading(false);
@@ -58,6 +70,7 @@ export const FAQScreen = () => {
   };
 
   const handleSubmit = async () => {
+    if (!allowOnlineAction('Sending a support question')) return;
     if (!question.trim()) {
       Alert.alert('Please enter a question');
       return;
@@ -101,6 +114,12 @@ export const FAQScreen = () => {
           <ActivityIndicator color={themeColors.accent} style={{ marginTop: SPACING.xl }} />
         ) : (
           <View style={styles.faqList}>
+            {unavailable && (
+              <Text style={{ color: themeColors.textSecondary }}>
+                Help articles have not been downloaded. Reconnect and use Retry Sync. You can
+                contact support@nautical-ops.com when connected.
+              </Text>
+            )}
             {faqs.map((faq) => {
               const isOpen = expandedId === faq.id;
               return (
@@ -187,7 +206,12 @@ export const FAQScreen = () => {
               styles.websiteButton,
               { borderColor: themeColors.isDark ? COLORS.white : COLORS.primary },
             ]}
-            onPress={() => Linking.openURL('https://www.nautical-ops.com/support').catch(() => {})}
+            onPress={() => {
+              if (allowOnlineAction('Opening the support website'))
+                void Linking.openURL('https://www.nautical-ops.com/support').catch(() =>
+                  Alert.alert('Support', 'Contact support@nautical-ops.com for help.')
+                );
+            }}
             activeOpacity={0.8}
           >
             <Text

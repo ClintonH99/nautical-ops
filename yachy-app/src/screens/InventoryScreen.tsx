@@ -1,3 +1,4 @@
+import { allowOnlineAction } from '../offline/onlineActions';
 import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
 import { useScreenState, useScreenLoading } from '../hooks/useScreenState';
@@ -126,6 +127,7 @@ export const InventoryScreen = ({ navigation }: any) => {
   };
 
   const handleDelete = (item: InventoryItem) => {
+    if (!allowOnlineAction('Deleting records')) return;
     Alert.alert('Delete Inventory Item', `Delete "${item.title}" from inventory?`, [
       { text: 'Cancel', style: 'cancel' },
       {

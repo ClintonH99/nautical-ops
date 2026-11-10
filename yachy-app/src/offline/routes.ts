@@ -1,6 +1,17 @@
 /** Only integrated and tested device-storage routes are available offline. */
 export const OFFLINE_ROUTE_PATHS: Readonly<Record<string, string>> = {
   Home: '/app',
+  VesselCrewSafety: '/safety',
+  VesselLogHistory: '/logs/history',
+  Settings: '/settings',
+  ThemeSettings: '/theme',
+  DepartmentColorSettings: '/department-colors',
+  FAQHelp: '/help',
+  FutureUpdates: '/future-updates',
+  TermsConditions: '/terms',
+  PrivacyPolicy: '/privacy',
+  RefundPolicy: '/refund-policy',
+  ImportExport: '/import-export',
   FuelLog: '/logs/fuel',
   AddEditFuelLog: '/logs/fuel/edit',
   FuelInventory: '/logs/fuel/inventory',
@@ -62,6 +73,33 @@ export const OFFLINE_ROUTE_PATHS: Readonly<Record<string, string>> = {
   YardPeriodJobs: '/yard-period',
   AddEditYardJob: '/yard-period/edit',
   TasksCalendar: '/tasks/calendar',
+};
+/** Every remaining linked route has an explicit connection requirement. */
+export const ONLINE_ONLY_ROUTES: Readonly<Record<string, string>> = {
+  Welcome: 'Signing in requires a connection.',
+  Login: 'Signing in requires a connection.',
+  ForgotPassword: 'Password recovery requires a connection.',
+  LostDevice: 'Device recovery requires a connection.',
+  CreateAccountChoice: 'Creating an account requires a connection.',
+  Register: 'Creating an account requires a connection.',
+  RegisterCaptain: 'Creating an account requires a connection.',
+  RegisterCrew: 'Creating an account requires a connection.',
+  CaptainWelcome: 'Initial vessel setup requires a connection.',
+  Profile: 'Account changes require a connection.',
+  AccountProfile: 'Account changes require a connection.',
+  JoinVessel: 'Joining a vessel requires a connection.',
+  CreateVessel: 'Creating a vessel requires a connection.',
+  ManageDevices: 'Managing devices requires a connection.',
+  VesselPlans: 'Plans and payments require a connection.',
+  VesselAccess: 'Access verification requires a connection.',
+  VesselSettings: 'Vessel setup and invite codes require a connection.',
+  CrewManagement: 'Membership and permission changes require a connection.',
+  RotationalGroups: 'Crew group management requires a connection.',
+  TripColorSettings: 'Changing shared vessel colors requires a connection.',
+  SignatureSetup: 'Setting up a signature requires a connection.',
+  NotificationSettings: 'Notification registration requires a connection.',
+  FuelSetup: 'Tank setup requires a connection.',
+  FuelOpeningBalances: 'Starting tank balances require a connection.',
 };
 const paths = new Set(['/', ...Object.values(OFFLINE_ROUTE_PATHS)]);
 export function supportsOfflineRoute(name: string | null | undefined, path: string): boolean {

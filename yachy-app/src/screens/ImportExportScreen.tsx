@@ -33,6 +33,7 @@ import {
 } from '../services/excelTemplates';
 import { PageHeader } from '../components';
 import inventoryService from '../services/inventory';
+import { beginDeviceSave } from '../offline/runtime';
 
 const IMPORT_EXPORT_INFO = {
   title: 'Import / Export',
@@ -68,6 +69,15 @@ export const ImportExportScreen = ({ navigation }: any) => {
 
   const handleImport = async (type: TemplateType) => {
     let selectedUri: string | undefined;
+    let finishSaving: (() => void) | undefined;
+    const importUserId = user?.id;
+    const checkImportScope = () => {
+      const current = useAuthStore.getState().user;
+      if (current?.id !== importUserId || current?.vesselId !== vesselId)
+        throw new Error(
+          'Your account or vessel changed. Import stopped. Rows already saved are kept; do not import those rows again.'
+        );
+    };
     if (!vesselId) {
       Alert.alert('No vessel', 'Join a vessel to import data.');
       return;
@@ -88,16 +98,20 @@ export const ImportExportScreen = ({ navigation }: any) => {
 
       const uri = selectedFile.uri;
       selectedUri = uri;
+      const input = Platform.OS === 'web' && selectedFile.file ? selectedFile.file : uri;
+      checkImportScope();
+      finishSaving = beginDeviceSave();
       setImporting(type);
 
       if (type === 'tasks') {
-        const { success, errors } = await parseTasksFile(uri);
+        const { success, errors } = await parseTasksFile(input);
         if (success.length === 0 && errors.length > 0) {
           Alert.alert('Import failed', errors.map((e) => `Row ${e.row}: ${e.message}`).join('\n'));
           return;
         }
         let imported = 0;
         for (const row of success) {
+          checkImportScope();
           try {
             await vesselTasksService.create({
               vesselId,
@@ -122,13 +136,14 @@ export const ImportExportScreen = ({ navigation }: any) => {
         const errMsg = errors.length > 0 ? `\n\n${errors.length} row(s) had errors.` : '';
         Alert.alert('Import complete', `Imported ${imported} task(s).${errMsg}`);
       } else if (type === 'maintenance') {
-        const { success, errors } = await parseMaintenanceFile(uri);
+        const { success, errors } = await parseMaintenanceFile(input);
         if (success.length === 0 && errors.length > 0) {
           Alert.alert('Import failed', errors.map((e) => `Row ${e.row}: ${e.message}`).join('\n'));
           return;
         }
         let imported = 0;
         for (const row of success) {
+          checkImportScope();
           try {
             await maintenanceLogsService.create({
               vesselId,
@@ -150,13 +165,14 @@ export const ImportExportScreen = ({ navigation }: any) => {
         const errMsg = errors.length > 0 ? `\n\n${errors.length} row(s) had errors.` : '';
         Alert.alert('Import complete', `Imported ${imported} maintenance log(s).${errMsg}`);
       } else if (type === 'yard') {
-        const { success, errors } = await parseYardFile(uri);
+        const { success, errors } = await parseYardFile(input);
         if (success.length === 0 && errors.length > 0) {
           Alert.alert('Import failed', errors.map((e) => `Row ${e.row}: ${e.message}`).join('\n'));
           return;
         }
         let imported = 0;
         for (const row of success) {
+          checkImportScope();
           try {
             if (!vesselId) throw new Error('No vessel selected.');
             await yardJobsService.create({
@@ -188,7 +204,7 @@ export const ImportExportScreen = ({ navigation }: any) => {
         const errMsg = errors.length > 0 ? `\n\n${errors.length} row(s) had errors.` : '';
         Alert.alert('Import complete', `Imported ${imported} shipyard job(s).${errMsg}`);
       } else if (type === 'inventory') {
-        const { success, errors } = await parseInventoryFile(uri);
+        const { success, errors } = await parseInventoryFile(input);
         if (success.length === 0 && errors.length > 0) {
           Alert.alert('Import failed', errors.map((e) => `Row ${e.row}: ${e.message}`).join('\n'));
           return;
@@ -196,6 +212,7 @@ export const ImportExportScreen = ({ navigation }: any) => {
         const VALID_DEPTS = ['BRIDGE', 'ENGINEERING', 'EXTERIOR', 'INTERIOR', 'GALLEY'];
         let imported = 0;
         for (const row of success) {
+          checkImportScope();
           const safeDept = VALID_DEPTS.includes((row.department ?? '').toUpperCase())
             ? row.department.toUpperCase()
             : 'INTERIOR';
@@ -239,8 +256,9 @@ export const ImportExportScreen = ({ navigation }: any) => {
       }
     } catch (e) {
       console.error('Import error:', e);
-      Alert.alert('Error', 'Could not import file.');
+      Alert.alert('Import stopped', e instanceof Error ? e.message : 'Could not import file.');
     } finally {
+      finishSaving?.();
       setImporting(null);
       if (Platform.OS === 'web' && selectedUri?.startsWith('blob:')) {
         URL.revokeObjectURL(selectedUri);

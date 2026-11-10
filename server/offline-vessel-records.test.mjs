@@ -145,7 +145,7 @@ for (const [feature, value] of Object.entries(vesselRecordValues)) {
           value,
           expectedLocalVersion: 1,
         }),
-        /LOCAL_CONFLICT/,
+        (error) => error.code === "LOCAL_CONFLICT",
       );
     },
   );

@@ -1,3 +1,4 @@
+import { requireOnlineAction } from './onlineActions';
 import type { OfflineSeaMilesService } from './seaMilesService';
 import type { RecordValue } from './outbox';
 import { seaServerFields } from './seaMilesAdapter';
@@ -87,8 +88,9 @@ export const offlineSeaMiles: OfflineSeaMilesService = {
     );
   },
   async beforeOnline() {
-    if (!navigator.onLine) throw new OfflineError('ONLINE_ONLY');
+    requireOnlineAction();
     await syncOffline();
+    requireOnlineAction();
     const a = await offlineNotesContext();
     await a.box.list('seaMiles');
     if (

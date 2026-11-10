@@ -56,6 +56,12 @@ describe('web spreadsheet file reading', () => {
     expect(result.errors).toEqual([]);
     expect(result.success.length).toBeGreaterThan(0);
     expect(mockNativeRead).not.toHaveBeenCalled();
+    global.fetch = jest.fn().mockRejectedValue(new Error('Server disconnected'));
+    const selectedFile = { size: bytes.byteLength, arrayBuffer: async () => bytes } as Blob;
+    const offline = await parser(selectedFile);
+    expect(offline.errors).toEqual([]);
+    expect(offline.success).toEqual(result.success);
+    expect(global.fetch).not.toHaveBeenCalled();
   });
   it('reports an unreadable browser file instead of succeeding silently', async () => {
     global.fetch = jest.fn().mockResolvedValue({ ok: false });
