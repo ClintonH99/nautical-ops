@@ -466,6 +466,7 @@ export const HomeScreen = ({ navigation, route }: any) => {
             <View
               style={[
                 styles.bannerWrap,
+                Platform.OS === 'web' && styles.webBannerWrap,
                 {
                   backgroundColor: themeColors.surface,
                   borderColor: themeColors.border,
@@ -757,6 +758,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.3,
     textAlign: 'center',
+  },
+  webBannerWrap: {
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
   },
   bannerWrap: {
     marginBottom: SPACING.lg,

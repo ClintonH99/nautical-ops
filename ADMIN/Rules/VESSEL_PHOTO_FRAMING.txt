@@ -1,0 +1,21 @@
+Vessel photo framing — 11 November 2026
+
+The Home web vessel photo keeps a centred 4:3 crop at every screen width.
+Limit the photo and its outer card to 720 CSS pixels and centre the card.
+Do not change aspect ratio or object position at tablet/laptop breakpoints.
+The existing mobile crop is the reference. This preserves the same visible
+region; it does not promise to show every edge of arbitrary portrait photos.
+Keep uploaded photos and their storage unchanged. Preserve offline image sources.
+
+Before releasing changes to Home/banner layout:
+1. Run node server/vessel-banner-browser-check.mjs from the repository root.
+2. Open its localhost URL in a browser and require PASS for all 54 checks.
+   The check renders the actual component, uses three image shapes and sweeps
+   nine widths (including both sides of former 768/1200 breakpoints) in both
+   directions. It checks rendered ratio, crop position and size limits.
+3. Check the real Home card and its wrapper on the staged/live app, including
+   refresh/update behaviour. The fixture alone does not verify the Home wrapper.
+4. Record the release commit and deployment. Confirm the live served bundle
+   contains the new rule; retained old browser builds must be refreshed online.
+
+This browser check is a repeatable release check, not an automatic CI gate.
