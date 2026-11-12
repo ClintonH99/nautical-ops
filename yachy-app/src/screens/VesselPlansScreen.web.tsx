@@ -35,9 +35,11 @@ import {
 } from '../services/paddleBilling';
 import {
   previewPaddlePrices,
+  previewPaddlePromo,
   usd,
   type BillingLocation,
   type PaddlePricePreview,
+  type PaddlePromoPreview,
 } from '../services/paddlePricing';
 import {
   PADDLE_PLAN_TIERS,
@@ -83,6 +85,50 @@ export const VesselPlansScreen = () => {
   const [newTrialStep, setNewTrialStep] = useState(false);
   const [paymentNotice, setPaymentNotice] = useState('');
   const [promoCode, setPromoCode] = useState('');
+  const [promoResult, setPromoResult] = useState<{ key: string; data: PaddlePromoPreview } | null>(
+    null
+  );
+  const [promoBusy, setPromoBusy] = useState(false);
+  const [promoError, setPromoError] = useState('');
+  const promoRequest = useRef(0);
+  const promoContext = JSON.stringify([
+    owner,
+    subscription?.id,
+    subscription?.currentPeriodEnd,
+    subscription?.status,
+    accessState,
+    tier,
+    period,
+    location?.countryCode,
+    location?.postalCode,
+    promoCode.trim().toUpperCase(),
+  ]);
+  const latestPromoContext = useRef(promoContext);
+  latestPromoContext.current = promoContext;
+  const appliedPromo =
+    promoResult?.key === promoContext && Date.parse(promoResult.data.expiresAt) > Date.now()
+      ? promoResult.data
+      : null;
+  useEffect(() => {
+    promoRequest.current += 1;
+    setPromoResult(null);
+    setPromoBusy(false);
+    setPromoError('');
+    return () => {
+      promoRequest.current += 1;
+    };
+  }, [promoContext]);
+  useEffect(() => {
+    if (!promoResult) return;
+    const timer = setTimeout(
+      () => {
+        setPromoResult(null);
+        setPromoError('This preview has expired. Apply the code again to check the latest total.');
+      },
+      Math.max(0, Date.parse(promoResult.data.expiresAt) - Date.now())
+    );
+    return () => clearTimeout(timer);
+  }, [promoResult]);
   const [management, setManagement] = useState<PaddleManagementStatus | null>(null);
   const [managementOwner, setManagementOwner] = useState('');
   const [confirmCancellation, setConfirmCancellation] = useState(false);
@@ -347,6 +393,10 @@ export const VesselPlansScreen = () => {
       !confirmedTrial
     )
       return;
+    if (promoCode.trim() && (!appliedPromo || Date.parse(appliedPromo.expiresAt) <= Date.now())) {
+      setPromoError('Apply your promo code to verify the discounted total before continuing.');
+      return;
+    }
     starting.current = true;
     setBusy(true);
     setPaymentNotice('');
@@ -356,7 +406,7 @@ export const VesselPlansScreen = () => {
         vesselId,
         window.location.origin,
         subscription.currentPeriodEnd,
-        promoCode.trim() || undefined
+        appliedPromo?.promo.code || undefined
       );
       const current = useAuthStore.getState().user;
       if (current?.id !== userId || current.vesselId !== vesselId) return;
@@ -385,6 +435,46 @@ export const VesselPlansScreen = () => {
     } finally {
       starting.current = false;
       setBusy(false);
+    }
+  };
+  const applyPromoCode = async () => {
+    if (busy || promoBusy || !confirmedTrial || !user?.vesselId || !subscription) return;
+    if (!location || !quote) {
+      setPromoError(
+        'Choose your billing country and wait for the tax total before applying a code.'
+      );
+      return;
+    }
+    const code = promoCode.trim();
+    if (!/^[a-zA-Z0-9]{1,32}$/.test(code)) {
+      setPromoError('Enter a valid promo code.');
+      return;
+    }
+    const key = promoContext;
+    const request = ++promoRequest.current;
+    setPromoBusy(true);
+    setPromoResult(null);
+    setPromoError('');
+    try {
+      const data = await previewPaddlePromo(
+        user.vesselId,
+        tier,
+        period,
+        location,
+        code,
+        subscription.currentPeriodEnd
+      );
+      if (request === promoRequest.current && key === latestPromoContext.current)
+        setPromoResult({ key, data });
+    } catch (error) {
+      if (request === promoRequest.current && key === latestPromoContext.current)
+        setPromoError(
+          error instanceof Error
+            ? error.message
+            : 'The code could not be checked. Please try again.'
+        );
+    } finally {
+      if (request === promoRequest.current) setPromoBusy(false);
     }
   };
   const recoverPayment = async () => {
@@ -584,15 +674,35 @@ export const VesselPlansScreen = () => {
         , if you add payment details.
       </Text>
       <View style={[styles.total, { borderColor: theme.border }]}>
-        <Text style={muted}>Recurring total after your trial</Text>
+        <Text style={muted}>
+          {appliedPromo &&
+          (!appliedPromo.promo.recur || appliedPromo.promo.maximumRecurringIntervals !== null)
+            ? 'Discounted payment after your trial'
+            : 'Recurring total after your trial'}
+        </Text>
         <Text style={heading}>
-          {quote ? `${usd(quote.totalCents)} ${price.suffix}` : 'Awaiting tax total'}
+          {appliedPromo
+            ? `${usd(appliedPromo.quote.totalCents)} ${price.suffix}`
+            : quote
+              ? `${usd(quote.totalCents)} ${price.suffix}`
+              : 'Awaiting tax total'}
         </Text>
         <Text style={muted}>
-          {quote
-            ? `${usd(quote.baseCents)} base + ${usd(quote.taxCents)} VAT / sales tax`
-            : `${usd(price.totalCents)} ${price.suffix} before tax`}
+          {appliedPromo
+            ? `${usd(appliedPromo.quote.baseCents)} base − ${usd(appliedPromo.quote.discountCents)} discount + ${usd(appliedPromo.quote.taxCents)} VAT / sales tax`
+            : quote
+              ? `${usd(quote.baseCents)} base + ${usd(quote.taxCents)} VAT / sales tax`
+              : `${usd(price.totalCents)} ${price.suffix} before tax`}
         </Text>
+        {appliedPromo && (
+          <Text style={text}>
+            {!appliedPromo.promo.recur
+              ? 'Discount applies to the first payment only. Later payments use the standard plan price plus applicable tax.'
+              : appliedPromo.promo.maximumRecurringIntervals !== null
+                ? `Discount applies to the first ${appliedPromo.promo.maximumRecurringIntervals} payment(s). Later payments use the standard plan price plus applicable tax.`
+                : 'Discount applies to each recurring payment on this plan.'}
+          </Text>
+        )}
       </View>
       <Button
         title={
@@ -646,12 +756,40 @@ export const VesselPlansScreen = () => {
           borderRadius: 12,
           padding: 14,
           color: theme.textPrimary,
+          backgroundColor: theme.surface,
         }}
       />
+      <Button
+        title={promoBusy ? 'Checking promo code…' : 'Apply Promo Code'}
+        variant="outline"
+        onPress={applyPromoCode}
+        disabled={
+          busy || promoBusy || !confirmedTrial || !promoCode.trim() || !quote || previewBusy
+        }
+      />
+      {appliedPromo && (
+        <Text accessibilityRole="alert" style={text}>
+          Promo code {appliedPromo.promo.code} applied to this preview. Your discounted total is
+          shown above.
+        </Text>
+      )}
+      {!!promoError && (
+        <Text accessibilityRole="alert" style={text}>
+          {promoError}
+        </Text>
+      )}
+      {!!promoCode.trim() && !appliedPromo && !promoBusy && !promoError && (
+        <Text style={muted}>
+          {quote
+            ? 'Select Apply promo code to check your discount before continuing.'
+            : 'Choose your billing country first, then apply your promo code.'}
+        </Text>
+      )}
       <Text style={muted}>
-        Selecting Set up billing details applies your code to this trial if eligible, then opens
-        Paddle. The trial end date stays unchanged. Review the discounted recurring total there
-        before confirming. A code remains attached even if you close checkout.
+        Applying a code here only checks the discount; it does not reserve or redeem it. Selecting
+        Set up billing details rechecks and attaches your code to this trial, then opens Paddle. The
+        trial end date stays unchanged. Confirm the final amount there. Once attached during billing
+        setup, a code remains on the trial even if you close checkout.
       </Text>
       {!!paymentNotice && (
         <Text accessibilityRole="alert" style={text}>
@@ -666,7 +804,14 @@ export const VesselPlansScreen = () => {
       <Button
         title={busy ? 'Preparing secure checkout…' : 'Set up billing details'}
         onPress={addTrialPaymentDetails}
-        disabled={busy || !confirmedTrial || !quote || previewBusy}
+        disabled={
+          busy ||
+          promoBusy ||
+          !confirmedTrial ||
+          !quote ||
+          previewBusy ||
+          (!!promoCode.trim() && !appliedPromo)
+        }
       />
       <Button
         title="Continue without payment details"

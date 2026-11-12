@@ -5,6 +5,8 @@ import {
   paddleRequest,
   validatePrice,
 } from './paddle.mjs';
+import { previewTrialPromo } from './paddlePromoPreview.mjs';
+import { requirePaddleBilling, requirePaddleTester } from './paddleRollout.mjs';
 
 const tiers = ['1_5', '6_10', '11_15', '16_25', '26_40', '40_plus'];
 export function billingLocation(value) {
@@ -68,7 +70,12 @@ export async function previewPaddlePrices(config, period, address, fetcher = fet
   });
 }
 
-export function createPaddlePricingHandler({ getEnv, createClient, fetcher = fetch }) {
+export function createPaddlePricingHandler({
+  getEnv,
+  createClient,
+  fetcher = fetch,
+  now = Date.now,
+}) {
   return async (request) => {
     if (request.method !== 'POST')
       return Response.json({ error: 'Method not allowed' }, { status: 405 });
@@ -101,6 +108,13 @@ export function createPaddlePricingHandler({ getEnv, createClient, fetcher = fet
       approvedPrice('1_5', body.billingPeriod);
       const address = billingLocation(body);
       const config = paddleConfig(getEnv);
+      if (Object.prototype.hasOwnProperty.call(body, 'promoCode')) {
+        requirePaddleBilling(getEnv);
+        requirePaddleTester(getEnv, auth.user.id);
+        return Response.json(await previewTrialPromo(config, client, body, address, fetcher, now), {
+          headers: { 'Cache-Control': 'no-store' },
+        });
+      }
       const quotes = await previewPaddlePrices(config, body.billingPeriod, address, fetcher);
       return Response.json(
         {

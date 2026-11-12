@@ -8,6 +8,7 @@ let mockWidth = 390;
 let mockSubscription: any = null;
 const mockRefetch = jest.fn();
 const mockPreview = jest.fn();
+const mockPromoPreview = jest.fn();
 const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
 let mockCanGoBack = false;
@@ -82,6 +83,7 @@ jest.mock('../../src/services/paddleBilling', () => ({
   preparePaddleReactivation: (...args: any[]) => mockReactivate(...args),
 }));
 jest.mock('../../src/services/paddlePricing', () => ({
+  previewPaddlePromo: (...args: any[]) => mockPromoPreview(...args),
   previewPaddlePrices: (...args: any[]) => mockPreview(...args),
   usd: (n: number) => 'US$' + (n / 100).toFixed(2),
 }));
@@ -208,6 +210,24 @@ beforeEach(() => {
   mockPreview
     .mockReset()
     .mockImplementation((_v, p, l) => Promise.resolve(result(p, l.countryCode)));
+  mockPromoPreview
+    .mockReset()
+    .mockImplementation((_v, tier, billingPeriod, location, code, trialEnd) =>
+      Promise.resolve({
+        ...location,
+        billingPeriod,
+        trialEnd,
+        expiresAt: new Date(Date.now() + 240000).toISOString(),
+        promo: { code, recur: true, maximumRecurringIntervals: null },
+        quote: {
+          tier,
+          baseCents: getPaddlePrice(tier, billingPeriod).totalCents,
+          discountCents: 2000,
+          taxCents: 1400,
+          totalCents: 8399,
+        },
+      })
+    );
 });
 test('expired-trial payment stays on Vessel Plans on failure and cannot start another trial or unlock access', async () => {
   Object.defineProperty(window, 'location', {
@@ -816,6 +836,93 @@ const trial = () => ({
   billingPeriod: 'monthly',
   currentPeriodEnd: new Date(Date.now() + 30 * 86400000).toISOString(),
 });
+async function openPromoStep() {
+  mockSandboxTrials = true;
+  mockSubscription = trial();
+  const screen = render(<VesselPlansScreen />);
+  choose(screen);
+  await waitFor(() => expect(screen.getByText('US$95.99 / month')).toBeTruthy());
+  fireEvent.press(screen.getByText('Set up new billing details'));
+  await waitFor(() => expect(screen.getByText('US$107.99 / month')).toBeTruthy());
+  return screen;
+}
+test('Apply previews a discount without opening checkout; editing requires reapplication', async () => {
+  const screen = await openPromoStep();
+  fireEvent.changeText(screen.getByLabelText('Promo code (optional)'), 'DEMO25');
+  expect(mockPromoPreview).not.toHaveBeenCalled();
+  expect(
+    screen.getByRole('button', { name: 'Set up billing details' }).props.accessibilityState.disabled
+  ).toBe(true);
+  fireEvent.press(screen.getByText('Apply Promo Code'));
+  await waitFor(() => expect(screen.getByText('US$83.99 / month')).toBeTruthy());
+  expect(screen.getByText(/Promo code DEMO25 applied to this preview/)).toBeTruthy();
+  expect(
+    screen.getByRole('button', { name: 'Set up billing details' }).props.accessibilityState.disabled
+  ).toBe(false);
+  expect(mockPreparePayment).not.toHaveBeenCalled();
+  expect(mockStartTrial).not.toHaveBeenCalled();
+  fireEvent.changeText(screen.getByLabelText('Promo code (optional)'), 'DIFFERENT');
+  expect(screen.queryByText('US$83.99 / month')).toBeNull();
+  expect(
+    screen.getByRole('button', { name: 'Set up billing details' }).props.accessibilityState.disabled
+  ).toBe(true);
+  fireEvent.changeText(screen.getByLabelText('Promo code (optional)'), '');
+  expect(
+    screen.getByRole('button', { name: 'Set up billing details' }).props.accessibilityState.disabled
+  ).toBe(false);
+});
+test('invalid or unavailable promo leaves setup blocked and never claims a discount', async () => {
+  const screen = await openPromoStep();
+  mockPromoPreview.mockRejectedValue(
+    new Error('This promo code is unavailable for this plan. No payment was taken.')
+  );
+  fireEvent.changeText(screen.getByLabelText('Promo code (optional)'), 'EXPIRED');
+  fireEvent.press(screen.getByText('Apply Promo Code'));
+  await waitFor(() => expect(screen.getByText(/This promo code is unavailable/)).toBeTruthy());
+  expect(screen.queryByText(/applied to this preview/)).toBeNull();
+  expect(
+    screen.getByRole('button', { name: 'Set up billing details' }).props.accessibilityState.disabled
+  ).toBe(true);
+  expect(mockPreparePayment).not.toHaveBeenCalled();
+});
+test('an old promo response cannot overwrite a changed billing country', async () => {
+  const screen = await openPromoStep();
+  let resolve!: (v: any) => void;
+  mockPromoPreview.mockImplementation(
+    () =>
+      new Promise((r) => {
+        resolve = r;
+      })
+  );
+  fireEvent.changeText(screen.getByLabelText('Promo code (optional)'), 'DEMO25');
+  fireEvent.press(screen.getByText('Apply Promo Code'));
+  fireEvent.press(screen.getByText(/Billing country:.*Change/));
+  fireEvent.press(screen.getByText('Choose Germany'));
+  await act(async () =>
+    resolve({
+      expiresAt: new Date(Date.now() + 240000).toISOString(),
+      promo: { code: 'DEMO25', recur: true, maximumRecurringIntervals: null },
+      quote: { baseCents: 8999, discountCents: 8999, taxCents: 0, totalCents: 0 },
+    })
+  );
+  expect(screen.queryByText(/applied to this preview/)).toBeNull();
+  expect(
+    screen.getByRole('button', { name: 'Set up billing details' }).props.accessibilityState.disabled
+  ).toBe(true);
+});
+test('100 percent one-payment promo displays zero and explains subsequent standard pricing', async () => {
+  const screen = await openPromoStep();
+  mockPromoPreview.mockResolvedValue({
+    expiresAt: new Date(Date.now() + 240000).toISOString(),
+    promo: { code: 'DEMOFREE', recur: false, maximumRecurringIntervals: null },
+    quote: { baseCents: 8999, discountCents: 8999, taxCents: 0, totalCents: 0 },
+  });
+  fireEvent.changeText(screen.getByLabelText('Promo code (optional)'), 'DEMOFREE');
+  fireEvent.press(screen.getByText('Apply Promo Code'));
+  await waitFor(() => expect(screen.getByText('US$0.00 / month')).toBeTruthy());
+  expect(screen.getByText(/Discount applies to the first payment only/)).toBeTruthy();
+  expect(mockPreparePayment).not.toHaveBeenCalled();
+});
 test('optional billing appears only after server confirmation; skip goes Home without payment setup', async () => {
   mockSandboxTrials = true;
   const screen = render(<VesselPlansScreen />);
@@ -857,6 +964,8 @@ test('existing trial opens the same optional step and payment errors stay beside
     expect(screen.getByText('Set up your billing details')).toBeTruthy();
     expect(screen.getByText('US$107.99 / month')).toBeTruthy();
     fireEvent.changeText(screen.getByLabelText('Promo code (optional)'), 'VQ72100');
+    fireEvent.press(screen.getByText('Apply Promo Code'));
+    await waitFor(() => expect(screen.getByText('US$83.99 / month')).toBeTruthy());
     fireEvent.press(screen.getByText('Set up billing details'));
     await waitFor(() =>
       expect(screen.getByText('Payment setup could not be confirmed.')).toBeTruthy()

@@ -1,5 +1,24 @@
 # Subscription Packages
 
+## Approved 12 November 2026 — promo preview during an existing trial
+
+The optional billing step includes **Apply Promo Code** before **Set up billing
+details**. Applying previews the eligible code using Paddle-calculated totals;
+it must not redeem the code, PATCH the subscription, create a transaction,
+change trial dates or take payment. Show the discount, tax, resulting full
+billing-period amount and whether it covers one payment, a limited number of
+payments or ongoing renewals. Never infer the discount from the code's name.
+
+Bind each result to the current captain/vessel/trial, plan, period, code and
+billing country/postcode. Discard stale responses after any change; expire
+previews after five minutes or earlier at trial/code expiry. A typed code must
+have a current successful preview before billing setup can proceed. Empty
+codes preserve the existing no-promo path. Errors must remain visible and
+must not become a zero-tax/zero-price success. Billing setup still revalidates
+and attaches the eligible promotion through the existing server flow; Paddle
+confirms the final amount. A preview reserves neither eligibility nor usage.
+VQ72100 is a real-user promotion and must not be redeemed for development tests.
+
 ## Rule
 
 1. **Captain pays, crew joins free:** The Captain/MOV is liable for subscription fees. Crew members and HODs join under the captain's vessel subscription at no additional cost.

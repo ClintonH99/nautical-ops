@@ -22,6 +22,14 @@ export interface PaddlePricePreview extends BillingLocation {
   currency: 'USD';
   quotes: PaddleTaxQuote[];
 }
+export interface PaddlePromoPreview extends BillingLocation {
+  billingPeriod: PaddleBillingPeriod;
+  currency: 'USD';
+  trialEnd: string;
+  expiresAt: string;
+  promo: { code: string; recur: boolean; maximumRecurringIntervals: number | null };
+  quote: PaddleTaxQuote & { discountCents: number };
+}
 export const usd = (cents: number) => `US$${(cents / 100).toFixed(2)}`;
 
 export function validatePricePreview(
@@ -73,4 +81,93 @@ export async function previewPaddlePrices(
       'Regional tax totals are unavailable. Please retry; checkout is paused until they can be confirmed.'
     );
   return validatePricePreview(data, period, location);
+}
+
+export function validatePromoPreview(
+  data: any,
+  tier: PaddlePlanTier,
+  period: PaddleBillingPeriod,
+  location: BillingLocation,
+  code: string,
+  trialEnd: string,
+  now = Date.now()
+): PaddlePromoPreview {
+  const q = data?.quote;
+  const promo = data?.promo;
+  if (
+    !data ||
+    !['sandbox', 'live'].includes(paddleEnvironment ?? '') ||
+    data.environment !== paddleEnvironment ||
+    data.currency !== 'USD' ||
+    data.billingPeriod !== period ||
+    data.countryCode !== location.countryCode ||
+    data.postalCode !== location.postalCode.trim() ||
+    !Number.isFinite(Date.parse(data.trialEnd)) ||
+    Date.parse(data.trialEnd) !== Date.parse(trialEnd) ||
+    Date.parse(data.trialEnd) <= now ||
+    !Number.isFinite(Date.parse(data.expiresAt)) ||
+    Date.parse(data.expiresAt) <= now ||
+    Date.parse(data.expiresAt) > now + 5 * 60 * 1000 ||
+    typeof promo?.code !== 'string' ||
+    promo.code.toLowerCase() !== code.trim().toLowerCase() ||
+    typeof promo.recur !== 'boolean' ||
+    (promo.maximumRecurringIntervals !== null &&
+      (!Number.isSafeInteger(promo.maximumRecurringIntervals) ||
+        promo.maximumRecurringIntervals < 1)) ||
+    !q ||
+    q.tier !== tier ||
+    ![q.baseCents, q.discountCents, q.taxCents, q.totalCents].every(
+      (n) => Number.isSafeInteger(n) && n >= 0
+    ) ||
+    q.baseCents !== getPaddlePrice(tier, period).totalCents ||
+    q.discountCents <= 0 ||
+    q.discountCents > q.baseCents ||
+    q.totalCents !== q.baseCents - q.discountCents + q.taxCents
+  )
+    throw new Error('The discounted total could not be verified. Apply the code again.');
+  return data;
+}
+
+export async function previewPaddlePromo(
+  vesselId: string,
+  tier: PaddlePlanTier,
+  period: PaddleBillingPeriod,
+  location: BillingLocation,
+  code: string,
+  trialEnd: string
+): Promise<PaddlePromoPreview> {
+  const { data, error } = await supabase.functions.invoke('preview-paddle-prices', {
+    body: {
+      vesselId,
+      tier,
+      billingPeriod: period,
+      countryCode: location.countryCode,
+      postalCode: location.postalCode.trim(),
+      promoCode: code.trim(),
+      trialEnd,
+    },
+  });
+  if (error || data?.error) {
+    // Function errors may carry a JSON Response. Surface only server-owned,
+    // expected billing messages; never stringify a raw transport exception.
+    let message = data?.error;
+    if (!message && typeof Response !== 'undefined' && error?.context instanceof Response) {
+      try {
+        message = (await error.context.clone().json()).error;
+      } catch {
+        /* generic below */
+      }
+    }
+    const allowed = [
+      'Enter a valid promo code.',
+      'This promo code is unavailable for this plan. No payment was taken.',
+      'A promotion is already attached to this trial. Contact support before changing it.',
+      'Refresh your current trial before checking a promo code.',
+      'The trial has changed. Refresh your plan before checking the code.',
+    ];
+    throw new Error(
+      allowed.includes(message) ? message : 'The promo code could not be checked. Please try again.'
+    );
+  }
+  return validatePromoPreview(data, tier, period, location, code, trialEnd);
 }

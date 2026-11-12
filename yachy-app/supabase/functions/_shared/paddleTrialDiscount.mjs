@@ -2,8 +2,7 @@ import { BillingError, paddleRequest } from './paddle.mjs';
 
 // A payment-method transaction cannot redeem a promotion. Apply it to the
 // authenticated vessel's existing trial, never to a browser-supplied ID.
-export async function applyTrialDiscount(config, subscription, code, fetcher, now) {
-  if (code === undefined || code === '') return subscription;
+export async function findTrialDiscount(config, subscription, code, fetcher, now) {
   if (typeof code !== 'string' || !/^[a-zA-Z0-9]{1,32}$/.test(code))
     throw new BillingError('Enter a valid promo code.', 400);
   const matches = await paddleRequest(
@@ -40,7 +39,14 @@ export async function applyTrialDiscount(config, subscription, code, fetcher, no
       'A promotion is already attached to this trial. Contact support before changing it.',
       409
     );
-  if (alreadyApplied) return subscription;
+  return discount;
+}
+
+export async function applyTrialDiscount(config, subscription, code, fetcher, now) {
+  if (code === undefined || code === '') return subscription;
+  const discount = await findTrialDiscount(config, subscription, code, fetcher, now);
+  if (subscription.discount?.id === discount.id) return subscription;
+  const item = subscription.items[0];
   const updated = await paddleRequest(
     config,
     `/subscriptions/${subscription.id}`,
