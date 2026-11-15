@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import {
+  PADDLE_PRICE_CENTS,
+  PADDLE_PLAN_TIERS,
+} from "../yachy-app/src/constants/paddlePlans.ts";
 import { createRequire } from "node:module";
 
 const require = createRequire(
@@ -11,7 +15,10 @@ const { JSDOM } = require("jsdom");
 const config = JSON.parse(
   fs.readFileSync(new URL("../vercel.json", import.meta.url), "utf8"),
 );
-const policy = config.routes[0];
+const policy = config.routes.find(
+  (rule) =>
+    rule.src === "/(.*)" && rule.continue && rule.headers?.["X-Frame-Options"],
+);
 test("security headers cover all routes before filesystem and SPA rewrites", () => {
   assert.equal(policy.src, "/(.*)");
   assert.equal(policy.continue, true);
@@ -26,12 +33,25 @@ test("security headers cover all routes before filesystem and SPA rewrites", () 
   ]) {
     assert.ok(new RegExp(`^${policy.src}$`).test(route));
   }
-  assert.equal(config.routes[2].dest, "/landing.html");
-  assert.equal(config.routes[3].handle, "filesystem");
+  const filesystemIndex = config.routes.findIndex(
+    (rule) => rule.handle === "filesystem",
+  );
+  assert.ok(config.routes.indexOf(policy) < filesystemIndex);
+  assert.ok(
+    config.routes.findIndex(
+      (rule) => rule.src === "/" && rule.dest === "/landing.html",
+    ) < filesystemIndex,
+  );
   assert.equal(config.routes.at(-1).dest, "/index.html");
 });
 test("strict resource policy covers only public pages, including direct HTML URLs", () => {
-  const rule = config.routes[1];
+  const rule = config.routes.find((rule) =>
+    rule.headers?.["Content-Security-Policy"]?.includes("default-src 'none'"),
+  );
+  assert.ok(
+    config.routes.indexOf(rule) <
+      config.routes.findIndex((route) => route.handle === "filesystem"),
+  );
   const matches = new RegExp(`^${rule.src}$`);
   for (const route of [
     "/",
@@ -118,14 +138,13 @@ test("external pricing script retains all 24 approved plan prices and active but
   const dom = new JSDOM(html, { runScripts: "outside-only" });
   dom.window.eval(script);
   const tiers = ["1-5", "6-10", "11-15", "16-25", "26-40", "40plus"];
-  const monthly = [7999, 8999, 11999, 14999, 19999, 24999];
   const periods = [
-    ["monthly", 1, 100, "per month"],
-    ["3months", 3, 95, "per 3 months"],
-    ["6months", 6, 92, "per 6 months"],
-    ["yearly", 12, 90, "per year"],
+    ["monthly", "monthly", "per month"],
+    ["3months", "3_months", "per 3 months"],
+    ["6months", "6_months", "per 6 months"],
+    ["yearly", "12_months", "per year"],
   ];
-  for (const [key, months, percent, label] of periods) {
+  for (const [key, period, label] of periods) {
     const button = dom.window.document.querySelector(`[data-billing="${key}"]`);
     button.click();
     assert.equal(
@@ -135,7 +154,7 @@ test("external pricing script retains all 24 approved plan prices and active but
     assert.ok(button.classList.contains("active"));
     tiers.forEach((tier, index) => {
       const expected = (
-        Math.round((monthly[index] * months * percent) / 100) / 100
+        PADDLE_PRICE_CENTS[PADDLE_PLAN_TIERS[index].id][period] / 100
       ).toFixed(2);
       assert.equal(
         dom.window.document.getElementById("price-" + tier).textContent,

@@ -3,8 +3,13 @@ export type OfflineShoppingService = {
   enabled(): boolean;
   list(vesselId: string): Promise<RecordValue[]>;
   create(value: RecordValue): Promise<RecordValue>;
-  update(id: string, value: RecordValue, version?: number): Promise<RecordValue>;
-  beforeDelete(id: string): Promise<void>;
+  update(
+    id: string,
+    value: RecordValue,
+    version?: number,
+    base?: RecordValue
+  ): Promise<RecordValue>;
+  delete(id: string, remove: () => Promise<void>): Promise<void>;
   subscribe(listener: () => void): () => void;
 };
 const unavailable = async (): Promise<never> => {
@@ -15,6 +20,6 @@ export const offlineShopping: OfflineShoppingService = {
   list: unavailable,
   create: unavailable,
   update: unavailable,
-  beforeDelete: async () => {},
+  delete: async (_id, remove) => remove(),
   subscribe: () => () => {},
 };

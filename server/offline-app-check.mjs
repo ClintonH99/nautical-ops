@@ -754,6 +754,23 @@ try {
           display_order: 1,
         },
       ]);
+    // Exercise the shipped online-delete path against the disposable RLS database.
+    const deleteTable = {
+      "/rest/v1/shopping_lists": "shopping_lists",
+      "/rest/v1/inventory_items": "inventory_items",
+    }[path];
+    if (req.method === "DELETE" && deleteTable) {
+      const filter = url.searchParams.get("id") ?? "";
+      if (!/^eq\.[0-9a-f-]{36}$/i.test(filter))
+        return json({ message: "Exact test ID required" }, 400);
+      return json(
+        JSON.parse(
+          run(
+            `WITH removed AS (DELETE FROM ${deleteTable} WHERE id=${quote(filter.slice(3))}::uuid RETURNING id) SELECT coalesce(json_agg(removed),'[]'::json) FROM removed;`,
+          ),
+        ),
+      );
+    }
     if (path === "/rest/v1/vessel_trip_colors") return json(null);
     if (path === "/rest/v1/users")
       return json(url.searchParams.has("id") ? profile : [profile]);

@@ -82,7 +82,10 @@ export const InventoryScreen = ({ navigation }: any) => {
 
   const displayedItems = new Map(items.map((item) => [item.id, item]));
   Object.values(autoSave.entries).forEach((entry) => {
-    if (entry.deleting) return;
+    if (entry.deleting) {
+      displayedItems.delete(entry.id);
+      return;
+    }
     if (entry.version !== entry.savedVersion && entry.values.title.trim()) {
       displayedItems.set(entry.id, {
         ...entry.base,

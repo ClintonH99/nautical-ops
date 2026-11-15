@@ -1,3 +1,5 @@
+import { runBoundedTasks } from './boundedTasks';
+import { requireOnlineAction } from './onlineActions';
 import { offlineRecordsReady, isOfflineStorageFailure, OFFLINE_STORAGE_MESSAGE } from './readiness';
 import { downloadOfflineImage } from './mediaCache.web';
 import { fuelAdapter } from './fuelAdapter';
@@ -341,151 +343,184 @@ async function refreshPermit(a: Active) {
 }
 async function refreshNotes(a: Active) {
   sameActive(a);
-  // Only the display name is cached. Invite codes and vessel administration stay online.
-  const label = await supabase
-    .from('vessels')
-    .select('id,name')
-    .eq('id', a.scope.vesselId)
-    .single();
-  sameActive(a);
-  if (label.error) throw label.error;
-  if (label.data?.id !== a.scope.vesselId || typeof label.data.name !== 'string')
-    throw new OfflineError('INVALID_SNAPSHOT');
-  await a.store.update(a.scope, (state) => {
-    sameActive(a);
-    state.vesselLabel = label.data.name;
-  });
-  const colours = await supabase
-    .from('vessel_trip_colors')
-    .select('guest_trip_color,boss_trip_color,delivery_trip_color,yard_period_color')
-    .eq('vessel_id', a.scope.vesselId)
-    .maybeSingle();
-  sameActive(a);
-  if (colours.error) throw colours.error;
-  await a.store.update(a.scope, (state) => {
-    sameActive(a);
-    state.tripColors = colours.data;
-  });
-  const folders = await supabase.rpc('read_web_offline_shipyard_folders', {
-    p_vessel_id: a.scope.vesselId,
-    p_device_id: a.scope.deviceId,
-  });
-  sameActive(a);
-  if (folders.error) throw folders.error;
-  if (
-    !Array.isArray(folders.data?.folders) ||
-    !Array.isArray(folders.data?.assignments) ||
-    folders.data.folders.some((folder: RecordValue) => folder.vessel_id !== a.scope.vesselId)
-  )
-    throw new OfflineError('INVALID_SNAPSHOT');
-  await a.store.update(a.scope, (state) => {
-    sameActive(a);
-    state.shipyardFolders = folders.data;
-  });
-  const roster = await supabase.rpc('read_web_offline_crew_roster', {
-    p_vessel_id: a.scope.vesselId,
-    p_device_id: a.scope.deviceId,
-  });
-  sameActive(a);
-  if (roster.error) throw roster.error;
-  if (
-    !Array.isArray(roster.data) ||
-    roster.data.some(
-      (m: RecordValue) =>
-        m.vessel_id !== a.scope.vesselId ||
-        typeof m.id !== 'string' ||
-        typeof m.name !== 'string' ||
-        typeof m.position !== 'string'
-    )
-  )
-    throw new OfflineError('INVALID_SNAPSHOT');
-  await a.store.update(a.scope, (state) => {
-    sameActive(a);
-    state.crewRoster = roster.data;
-  });
-  const restContext = await supabase.rpc('read_web_offline_rest_context', {
-    p_vessel_id: a.scope.vesselId,
-    p_device_id: a.scope.deviceId,
-  });
-  sameActive(a);
-  if (restContext.error) throw restContext.error;
-  if (typeof restContext.data?.hasSignature !== 'boolean')
-    throw new OfflineError('INVALID_SNAPSHOT');
-  await a.store.update(a.scope, (state) => {
-    sameActive(a);
-    state.restSignature = restContext.data.hasSignature;
-  });
-  const seaContext = await supabase.rpc('read_web_offline_sea_context', {
-    p_vessel_id: a.scope.vesselId,
-    p_device_id: a.scope.deviceId,
-  });
-  sameActive(a);
-  if (seaContext.error) throw seaContext.error;
-  const sc = seaContext.data;
-  if (
-    !sc ||
-    !Array.isArray(sc.folders) ||
-    !Array.isArray(sc.assignments) ||
-    typeof sc.canSubmit !== 'boolean' ||
-    typeof sc.hasSignature !== 'boolean' ||
-    typeof sc.reviewRevision !== 'string'
-  )
-    throw new OfflineError('INVALID_SNAPSHOT');
-  await a.store.update(a.scope, (state) => {
-    sameActive(a);
-    state.seaMileContext = sc;
-  });
-  const documents = await supabase.rpc('read_web_offline_document_context', {
-    p_vessel_id: a.scope.vesselId,
-    p_device_id: a.scope.deviceId,
-  });
-  sameActive(a);
-  if (documents.error) throw documents.error;
-  if (
-    documents.data?.vessel_id !== a.scope.vesselId ||
-    !Array.isArray(documents.data.signatures) ||
-    !Array.isArray(documents.data.profiles)
-  )
-    throw new OfflineError('INVALID_SNAPSHOT');
-  await a.store.update(a.scope, (s) => {
-    sameActive(a);
-    s.documentContext = documents.data;
-  });
-  const fuel = await supabase.rpc('read_web_offline_fuel_context', {
-    p_vessel_id: a.scope.vesselId,
-    p_device_id: a.scope.deviceId,
-  });
-  sameActive(a);
-  if (fuel.error) throw fuel.error;
-  if (
-    fuel.data?.vessel_id !== a.scope.vesselId ||
-    !Array.isArray(fuel.data.operations) ||
-    !Array.isArray(fuel.data.tanks)
-  )
-    throw new OfflineError('INVALID_SNAPSHOT');
-  await a.store.update(a.scope, (s) => {
-    sameActive(a);
-    s.fuelContext = fuel.data;
-  });
+  // Fetch independent sections in parallel without unbounded request bursts.
+  const tasks: Array<() => Promise<void>> = [
+    async () => {
+      const label = await supabase
+        .from('vessels')
+        .select('id,name')
+        .eq('id', a.scope.vesselId)
+        .single();
+      sameActive(a);
+      if (label.error) throw label.error;
+      if (label.data?.id !== a.scope.vesselId || typeof label.data.name !== 'string')
+        throw new OfflineError('INVALID_SNAPSHOT');
+      await a.store.update(a.scope, (state) => {
+        sameActive(a);
+        state.vesselLabel = label.data.name;
+      });
+    },
+    async () => {
+      const colours = await supabase
+        .from('vessel_trip_colors')
+        .select('guest_trip_color,boss_trip_color,delivery_trip_color,yard_period_color')
+        .eq('vessel_id', a.scope.vesselId)
+        .maybeSingle();
+      sameActive(a);
+      if (colours.error) throw colours.error;
+      await a.store.update(a.scope, (state) => {
+        sameActive(a);
+        state.tripColors = colours.data;
+      });
+    },
+    async () => {
+      const folders = await supabase.rpc('read_web_offline_shipyard_folders', {
+        p_vessel_id: a.scope.vesselId,
+        p_device_id: a.scope.deviceId,
+      });
+      sameActive(a);
+      if (folders.error) throw folders.error;
+      if (
+        !Array.isArray(folders.data?.folders) ||
+        !Array.isArray(folders.data?.assignments) ||
+        folders.data.folders.some((folder: RecordValue) => folder.vessel_id !== a.scope.vesselId)
+      )
+        throw new OfflineError('INVALID_SNAPSHOT');
+      await a.store.update(a.scope, (state) => {
+        sameActive(a);
+        state.shipyardFolders = folders.data;
+      });
+    },
+    async () => {
+      const roster = await supabase.rpc('read_web_offline_crew_roster', {
+        p_vessel_id: a.scope.vesselId,
+        p_device_id: a.scope.deviceId,
+      });
+      sameActive(a);
+      if (roster.error) throw roster.error;
+      if (
+        !Array.isArray(roster.data) ||
+        roster.data.some(
+          (m: RecordValue) =>
+            m.vessel_id !== a.scope.vesselId ||
+            typeof m.id !== 'string' ||
+            typeof m.name !== 'string' ||
+            typeof m.position !== 'string'
+        )
+      )
+        throw new OfflineError('INVALID_SNAPSHOT');
+      await a.store.update(a.scope, (state) => {
+        sameActive(a);
+        state.crewRoster = roster.data;
+      });
+    },
+    async () => {
+      const restContext = await supabase.rpc('read_web_offline_rest_context', {
+        p_vessel_id: a.scope.vesselId,
+        p_device_id: a.scope.deviceId,
+      });
+      sameActive(a);
+      if (restContext.error) throw restContext.error;
+      if (typeof restContext.data?.hasSignature !== 'boolean')
+        throw new OfflineError('INVALID_SNAPSHOT');
+      await a.store.update(a.scope, (state) => {
+        sameActive(a);
+        state.restSignature = restContext.data.hasSignature;
+      });
+    },
+    async () => {
+      const seaContext = await supabase.rpc('read_web_offline_sea_context', {
+        p_vessel_id: a.scope.vesselId,
+        p_device_id: a.scope.deviceId,
+      });
+      sameActive(a);
+      if (seaContext.error) throw seaContext.error;
+      const sc = seaContext.data;
+      if (
+        !sc ||
+        !Array.isArray(sc.folders) ||
+        !Array.isArray(sc.assignments) ||
+        typeof sc.canSubmit !== 'boolean' ||
+        typeof sc.hasSignature !== 'boolean' ||
+        typeof sc.reviewRevision !== 'string'
+      )
+        throw new OfflineError('INVALID_SNAPSHOT');
+      await a.store.update(a.scope, (state) => {
+        sameActive(a);
+        state.seaMileContext = sc;
+      });
+    },
+    async () => {
+      const documents = await supabase.rpc('read_web_offline_document_context', {
+        p_vessel_id: a.scope.vesselId,
+        p_device_id: a.scope.deviceId,
+      });
+      sameActive(a);
+      if (documents.error) throw documents.error;
+      if (
+        documents.data?.vessel_id !== a.scope.vesselId ||
+        !Array.isArray(documents.data.signatures) ||
+        !Array.isArray(documents.data.profiles)
+      )
+        throw new OfflineError('INVALID_SNAPSHOT');
+      await a.store.update(a.scope, (s) => {
+        sameActive(a);
+        s.documentContext = documents.data;
+      });
+    },
+    async () => {
+      const fuel = await supabase.rpc('read_web_offline_fuel_context', {
+        p_vessel_id: a.scope.vesselId,
+        p_device_id: a.scope.deviceId,
+      });
+      sameActive(a);
+      if (fuel.error) throw fuel.error;
+      if (
+        fuel.data?.vessel_id !== a.scope.vesselId ||
+        !Array.isArray(fuel.data.operations) ||
+        !Array.isArray(fuel.data.tanks)
+      )
+        throw new OfflineError('INVALID_SNAPSHOT');
+      await a.store.update(a.scope, (s) => {
+        sameActive(a);
+        s.fuelContext = fuel.data;
+      });
+    },
+  ];
   for (const feature of Object.keys(adapters) as SupportedFeature[]) {
     if (!a.permit?.claims.permissions[feature]?.includes('read')) continue;
-    sameActive(a);
-    const { data, error } = await supabase.rpc(readFunctions[feature], {
-      ...(feature.startsWith('fuel') ? { p_feature: feature } : {}),
-      p_vessel_id: a.scope.vesselId,
-      p_device_id: a.scope.deviceId,
+    tasks.push(async () => {
+      sameActive(a);
+      const { data, error } = await supabase.rpc(readFunctions[feature], {
+        ...(feature.startsWith('fuel') ? { p_feature: feature } : {}),
+        p_vessel_id: a.scope.vesselId,
+        p_device_id: a.scope.deviceId,
+      });
+      sameActive(a);
+      if (error) {
+        if (error.code === '42501') a.revoked = true;
+        throw error;
+      }
+      if (!Array.isArray(data)) throw new OfflineError('INVALID_SNAPSHOT');
+      await a.box.replaceSnapshot(
+        feature,
+        data.map((row) => ({ recordId: row.value.id, value: row.value, revision: row.revision }))
+      );
     });
-    sameActive(a);
-    if (error) {
-      if (error.code === '42501') a.revoked = true;
-      throw error;
-    }
-    if (!Array.isArray(data)) throw new OfflineError('INVALID_SNAPSHOT');
-    await a.box.replaceSnapshot(
-      feature,
-      data.map((row) => ({ recordId: row.value.id, value: row.value, revision: row.revision }))
-    );
   }
+  await runBoundedTasks(tasks);
+  sameActive(a);
+  notifyNotes();
+  // Optional help and photos must not hold up opening a vessel on a new device.
+  if (!optionalRefreshes.has(a)) {
+    const flight = refreshOptionalContent(a)
+      .catch(() => {})
+      .finally(() => optionalRefreshes.delete(a));
+    optionalRefreshes.set(a, flight);
+  }
+}
+const optionalRefreshes = new WeakMap<Active, Promise<void>>();
+async function refreshOptionalContent(a: Active) {
   // Help content is optional; failed refreshes retain the last downloaded copy.
   try {
     const help = await supabase
@@ -562,6 +597,49 @@ async function refreshNotes(a: Active) {
   }
   sameActive(a);
   notifyNotes();
+}
+const deletingRecords = new Set<string>();
+export async function deleteSyncedOfflineRecord(
+  feature: SupportedFeature,
+  id: string,
+  remove: () => Promise<void>
+): Promise<void> {
+  requireOnlineAction();
+  const finish = beginDeviceSave();
+  try {
+    const a = await offlineNotesContext();
+    await syncOffline();
+    // Serialize with snapshots so a response started before deletion cannot resurrect it.
+    while (syncFlight) await syncFlight;
+    const key = JSON.stringify([a.scope, feature, id]);
+    const flight = Promise.resolve().then(async () => {
+      sameActive(a);
+      requireOnlineAction();
+      deletingRecords.add(key);
+      try {
+        if (
+          (await a.store.read(a.scope)).changes.some(
+            (c) => c.feature === feature && c.recordId === id
+          )
+        )
+          throw new OfflineError('RECONCILE_FIRST');
+        await remove();
+        sameActive(a);
+        await a.box.forgetDeletedRecord(feature, id);
+        notifyNotes();
+      } finally {
+        deletingRecords.delete(key);
+      }
+    });
+    syncFlight = flight;
+    try {
+      await flight;
+    } finally {
+      if (syncFlight === flight) syncFlight = null;
+    }
+  } finally {
+    finish();
+  }
 }
 export async function syncOffline(): Promise<void> {
   if (syncFlight) return syncFlight;
@@ -743,6 +821,8 @@ export async function saveOfflineRecord(
   const finish = beginDeviceSave();
   try {
     const a = await offlineNotesContext();
+    if (deletingRecords.has(JSON.stringify([a.scope, feature, value.id])))
+      throw new OfflineError('RECONCILE_FIRST');
     const result = await a.box.save({
       feature,
       recordId: value.id as string,

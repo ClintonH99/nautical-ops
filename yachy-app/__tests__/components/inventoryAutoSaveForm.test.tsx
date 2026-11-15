@@ -110,3 +110,34 @@ it('offers manual saving when disabled and resumes auto saving when enabled', as
   await act(async () => {});
   expect(ui.getByText('Saved')).toBeTruthy();
 });
+
+it('keeps the composer at the top, removes every added row, and can add again', async () => {
+  const ui = render(<AddEditInventoryItemScreen navigation={{ goBack: jest.fn() }} route={{}} />);
+  await act(async () => {});
+  fireEvent.changeText(ui.getByLabelText('Title'), 'Top-entry test');
+  fireEvent.changeText(ui.getAllByPlaceholderText('Inventory item')[0], 'Rope');
+  fireEvent.press(ui.getByText('Add Item'));
+  expect(ui.getAllByPlaceholderText('Inventory item').map((input) => input.props.value)).toEqual([
+    '',
+    'Rope',
+  ]);
+  fireEvent.changeText(ui.getAllByPlaceholderText('Inventory item')[0], 'Brush');
+  fireEvent.press(ui.getByText('Add Item'));
+  expect(ui.getAllByPlaceholderText('Inventory item').map((input) => input.props.value)).toEqual([
+    '',
+    'Brush',
+    'Rope',
+  ]);
+  fireEvent.press(ui.getByLabelText('Remove item 3'));
+  fireEvent.press(ui.getByLabelText('Remove item 2'));
+  expect(ui.getAllByPlaceholderText('Inventory item').map((input) => input.props.value)).toEqual([
+    '',
+  ]);
+  fireEvent.changeText(ui.getByPlaceholderText('Inventory item'), 'New rope');
+  await act(async () => {
+    await jest.advanceTimersByTimeAsync(700);
+  });
+  expect(mockQueue.getSnapshot().entries['stable-id'].base?.items).toEqual([
+    { amount: '', item: 'New rope' },
+  ]);
+});

@@ -104,8 +104,19 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
     }
     try {
       const data = await shoppingListsService.getByVessel(vesselId);
-      data.forEach((list) => confirmedItemsRef.current.set(list.id, list.items));
-      replaceLists(data);
+      // A refresh that started before a click must not replace in-flight edits.
+      const busy = (id: string) =>
+        pendingItemsRef.current.has(id) || savingListIdsRef.current.has(id);
+      data.forEach((list) => {
+        if (!busy(list.id)) confirmedItemsRef.current.set(list.id, list.items);
+      });
+      replaceLists(
+        data.map((list) =>
+          busy(list.id)
+            ? (listsRef.current.find((current) => current.id === list.id) ?? list)
+            : list
+        )
+      );
     } catch (e) {
       console.error('Load shopping lists error:', e);
     } finally {
@@ -153,7 +164,11 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
             const savedList = await shoppingListsService.update(
               listId,
               { items: itemsToSave },
-              version
+              version,
+              {
+                title: listsRef.current.find((list) => list.id === listId)?.title ?? '',
+                items: confirmedItemsRef.current.get(listId) ?? [],
+              }
             );
             replaceLists(
               listsRef.current.map((list) =>
@@ -178,9 +193,10 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
       } finally {
         savingListIdsRef.current.delete(listId);
         finishDeviceSave();
+        if (mountedRef.current && pendingItemsRef.current.size === 0) void loadLists();
       }
     },
-    [updateListItemsLocally, replaceLists]
+    [updateListItemsLocally, replaceLists, loadLists]
   );
 
   const saveItemsInBackground = useCallback(

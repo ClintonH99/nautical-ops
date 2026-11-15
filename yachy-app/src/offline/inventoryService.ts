@@ -11,7 +11,7 @@ export interface OfflineInventoryService {
     value: RecordValue,
     base: RecordValue | null
   ): Promise<RecordValue>;
-  beforeDelete(id: string): Promise<void>;
+  delete(id: string, remove: () => Promise<void>): Promise<void>;
 }
 const unavailable = async (): Promise<never> => {
   throw new Error('Web only');
@@ -23,5 +23,5 @@ export const offlineInventory: OfflineInventoryService = {
   read: unavailable,
   list: unavailable,
   save: unavailable,
-  beforeDelete: async () => {},
+  delete: async (_id, remove) => remove(),
 };

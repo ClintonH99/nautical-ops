@@ -72,11 +72,7 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
           const item = await inventoryService.getFreshById(itemId, vesselId);
           if (!active) return;
           if (!item) throw new Error('Inventory item not found.');
-          queue.open(
-            id,
-            { ...item, items: item.items.length ? item.items : [{ ...defaultRow }] },
-            item
-          );
+          queue.open(id, { ...item, items: [{ ...defaultRow }, ...item.items] }, item);
           openedId = id;
         } else {
           queue.open(
@@ -114,20 +110,36 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
     queue.change(editingId, { ...queue.getSnapshot().entries[editingId].values, ...patch });
   };
 
+  const rowKeys = useRef<string[]>(['new-item']);
+  const nextRowKey = useRef(0);
+  while (rowKeys.current.length < rows.length) rowKeys.current.push(`item-${++nextRowKey.current}`);
   const amountInputRefs = useRef<Array<TextInput | null>>([]);
   const itemInputRefs = useRef<Array<TextInput | null>>([]);
 
+  const currentRows = () =>
+    editingId ? (queue.getSnapshot().entries[editingId]?.values.items ?? []) : [];
   const addRow = () => {
-    const newIndex = rows.length;
-    change({ items: [...rows, { ...defaultRow }] });
-    setTimeout(() => amountInputRefs.current[newIndex]?.focus(), 50);
+    const latest = currentRows();
+    if (!latest[0]?.item.trim() && !latest[0]?.amount.trim()) {
+      itemInputRefs.current[0]?.focus();
+      return;
+    }
+    rowKeys.current.splice(1, 0, `item-${++nextRowKey.current}`);
+    change({ items: [{ ...defaultRow }, ...latest] });
+    setTimeout(() => amountInputRefs.current[0]?.focus(), 0);
   };
   const removeRow = (index: number) => {
-    if (rows.length <= 1) return;
-    change({ items: rows.filter((_, i) => i !== index) });
+    const latest = currentRows();
+    if (index === 0) change({ items: [{ ...defaultRow }, ...latest.slice(1)] });
+    else {
+      rowKeys.current.splice(index, 1);
+      change({ items: latest.filter((_, i) => i !== index) });
+    }
   };
   const setRowAt = (index: number, field: 'amount' | 'item', value: string) => {
-    change({ items: rows.map((row, i) => (i === index ? { ...row, [field]: value } : row)) });
+    const latest = currentRows();
+    const editable = latest.length ? latest : [{ ...defaultRow }];
+    change({ items: editable.map((row, i) => (i === index ? { ...row, [field]: value } : row)) });
   };
 
   const handleSave = async () => {
@@ -326,7 +338,7 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
           </Text>
           {rows.map((row, index) => (
             <View
-              key={index}
+              key={rowKeys.current[index]}
               style={[
                 styles.itemCard,
                 { backgroundColor: themeColors.surfaceAlt, borderColor: themeColors.border },
@@ -339,31 +351,16 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
                     { color: themeColors.isDark ? themeColors.textPrimary : COLORS.primary },
                   ]}
                 >
-                  Item {index + 1}
+                  {index === 0 ? 'New Item' : `Item ${index}`}
                 </Text>
                 <TouchableOpacity
                   onPress={() => removeRow(index)}
-                  style={[
-                    styles.removeBtn,
-                    { borderColor: rows.length <= 1 ? themeColors.textMuted : COLORS.danger },
-                  ]}
-                  disabled={rows.length <= 1}
+                  style={[styles.removeBtn, { borderColor: COLORS.danger }]}
                   accessibilityRole="button"
-                  accessibilityLabel={`Delete item ${index + 1}`}
+                  accessibilityLabel={`Remove item ${index + 1}`}
                 >
-                  <Ionicons
-                    name="trash-outline"
-                    size={17}
-                    color={rows.length <= 1 ? themeColors.textMuted : COLORS.danger}
-                  />
-                  <Text
-                    style={[
-                      styles.removeBtnText,
-                      { color: rows.length <= 1 ? themeColors.textMuted : COLORS.danger },
-                    ]}
-                  >
-                    Delete
-                  </Text>
+                  <Ionicons name="trash-outline" size={17} color={COLORS.danger} />
+                  <Text style={[styles.removeBtnText, { color: COLORS.danger }]}>Remove</Text>
                 </TouchableOpacity>
               </View>
               <View style={styles.itemFieldsRow}>
@@ -415,12 +412,13 @@ export const AddEditInventoryItemScreen = ({ navigation, route }: any) => {
                     returnKeyType="default"
                     submitBehavior="submit"
                     onSubmitEditing={() => {
-                      if (index === rows.length - 1) addRow();
+                      if (index === 0) addRow();
                       else amountInputRefs.current[index + 1]?.focus();
                     }}
                   />
                 </View>
               </View>
+              {index === 0 && <Button title="Add Item" variant="outline" onPress={addRow} />}
             </View>
           ))}
           <EnterToAddHint style={styles.enterHint} />

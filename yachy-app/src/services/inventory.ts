@@ -268,14 +268,16 @@ class InventoryService {
   }
 
   async delete(id: string): Promise<void> {
-    if (offlineInventory.enabled()) await offlineInventory.beforeDelete(id);
-    const { data, error } = await supabase
-      .from('inventory_items')
-      .delete()
-      .eq('id', id)
-      .select('id');
-    requireAffectedRows(data, error, 'Deleting the inventory item');
-    if (offlineInventory.enabled()) await offlineInventory.refresh();
+    const remove = async () => {
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .delete()
+        .eq('id', id)
+        .select('id');
+      requireAffectedRows(data, error, 'Deleting the inventory item');
+    };
+    if (offlineInventory.enabled()) await offlineInventory.delete(id, remove);
+    else await remove();
   }
 
   private mapRow(row: Record<string, unknown>): InventoryItem {

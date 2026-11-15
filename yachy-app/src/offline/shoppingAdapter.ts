@@ -52,3 +52,29 @@ export function shoppingDeviceCopy(value: RecordValue, id: string, userId: strin
     is_master: false,
   };
 }
+
+/** Compare edited fields, ignoring JSON key order and absent optional quantities. */
+export function sameShoppingFields(a: RecordValue, b: RecordValue, fields: string[]): boolean {
+  return fields.every((key) => {
+    if (key === 'title') return a.title === b.title;
+    if (key !== 'items' || !Array.isArray(a.items) || !Array.isArray(b.items)) return false;
+    const other = b.items;
+    return (
+      a.items.length === other.length &&
+      a.items.every((row, index) => {
+        const next = other[index];
+        return (
+          row &&
+          next &&
+          typeof row === 'object' &&
+          typeof next === 'object' &&
+          !Array.isArray(row) &&
+          !Array.isArray(next) &&
+          row.text === next.text &&
+          row.checked === next.checked &&
+          (row.amount ?? '') === (next.amount ?? '')
+        );
+      })
+    );
+  });
+}

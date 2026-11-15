@@ -273,6 +273,17 @@ export class OfflineOutbox {
       state.snapshots = { ...state.snapshots, [feature]: true };
     });
   }
+  /** Called only after an online delete was confirmed by the server. */
+  async forgetDeletedRecord(feature: OfflineFeature, recordId: string): Promise<void> {
+    const scope = { ...this.context().scope };
+    await this.checkpoint(scope);
+    await this.store.update(scope, (state) => {
+      this.check(scope, state, feature, 'read');
+      if (state.changes.some((c) => c.feature === feature && c.recordId === recordId))
+        throw new OfflineError('RECONCILE_FIRST');
+      delete state.records[keyFor(feature, recordId)];
+    });
+  }
   private store: OfflineStore;
   private context: () => OfflineContext;
   private adapters: Partial<Record<OfflineFeature, OfflineAdapter>>;

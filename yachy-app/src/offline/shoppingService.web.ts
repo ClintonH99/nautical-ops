@@ -1,11 +1,11 @@
-import { requireOnlineAction } from './onlineActions';
 import type { OfflineShoppingService } from './shoppingService';
 import { OfflineError } from './access';
+import { sameShoppingFields } from './shoppingAdapter';
 import {
   webOfflineEnabled,
   offlineNotesContext,
   saveOfflineRecord,
-  syncOffline,
+  deleteSyncedOfflineRecord,
   subscribeOfflineNotes,
 } from './runtime.web';
 export const offlineShopping: OfflineShoppingService = {
@@ -34,23 +34,31 @@ export const offlineShopping: OfflineShoppingService = {
       0
     );
   },
-  async update(id, value, version) {
+  async update(id, value, version, base) {
     const a = await offlineNotesContext();
-    const row = await a.box.read('shoppingLists', id);
-    if (!row || version === undefined || row.localVersion !== version)
-      throw new OfflineError('LOCAL_CONFLICT');
-    return saveOfflineRecord('shoppingLists', { ...row.value, ...value }, 'update', version);
+    const fields = Object.keys(value);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const row = await a.box.read('shoppingLists', id);
+      if (!row) throw new OfflineError('LOCAL_CONFLICT');
+      if (sameShoppingFields(row.value, value, fields))
+        return { ...row.value, offlineLocalVersion: row.localVersion };
+      // An upload acknowledgement can advance the version without an actual edit.
+      // A changed base still requires the user to reconcile; never overwrite it.
+      if (base ? !sameShoppingFields(row.value, base, fields) : row.localVersion !== version)
+        throw new OfflineError('LOCAL_CONFLICT');
+      try {
+        return await saveOfflineRecord(
+          'shoppingLists',
+          { ...row.value, ...value },
+          'update',
+          row.localVersion
+        );
+      } catch (error) {
+        if (!(error instanceof OfflineError) || error.code !== 'LOCAL_CONFLICT' || attempt === 2)
+          throw error;
+      }
+    }
+    throw new OfflineError('LOCAL_CONFLICT');
   },
-  async beforeDelete(id) {
-    requireOnlineAction();
-    await syncOffline();
-    requireOnlineAction();
-    const a = await offlineNotesContext();
-    if (
-      (await a.store.read(a.scope)).changes.some(
-        (change) => change.feature === 'shoppingLists' && change.recordId === id
-      )
-    )
-      throw new OfflineError('RECONCILE_FIRST');
-  },
+  delete: (id, remove) => deleteSyncedOfflineRecord('shoppingLists', id, remove),
 };

@@ -1,3 +1,4 @@
+import { OfflineError } from '../offline/access';
 import { allowOnlineAction } from '../offline/onlineActions';
 import { returnToPreviousPage } from '../navigation/returnToPreviousPage';
 /**
@@ -23,6 +24,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SIZES } from '../constants/theme
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAuthStore } from '../store';
 import shoppingListsService, {
+  ShoppingList,
   ShoppingListItem,
   ShoppingListType,
 } from '../services/shoppingLists';
@@ -55,6 +57,9 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
   const [isMaster, setIsMaster] = useState(false);
   const [offlineLocalVersion, setOfflineLocalVersion] = useState<number | undefined>();
 
+  const baseRef = useRef<Pick<ShoppingList, 'title' | 'items'> | undefined>(undefined);
+  const rowKeys = useRef<string[]>(['new-item']);
+  const nextRowKey = useRef(0);
   const vesselId = user?.vesselId ?? null;
 
   const loadList = useCallback(async () => {
@@ -66,10 +71,12 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
       const lists = await shoppingListsService.getByVessel(vesselId!);
       const list = lists.find((l) => l.id === listId);
       if (list) {
+        baseRef.current = { title: list.title, items: list.items };
+        rowKeys.current = ['new-item', ...list.items.map(() => `item-${++nextRowKey.current}`)];
         setOfflineLocalVersion(list.offlineLocalVersion);
         setTitle(list.title);
         setDepartment(list.department);
-        setItems(list.items.length > 0 ? list.items : [{ text: '', checked: false }]);
+        setItems([{ text: '', checked: false }, ...list.items]);
         setIsMaster(!!list.isMaster);
       } else {
         Alert.alert('Error', 'Shopping list not found.');
@@ -98,21 +105,21 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
 
   const quantityInputRefs = useRef<Array<TextInput | null>>([]);
   const itemInputRefs = useRef<Array<TextInput | null>>([]);
-  const nextItemIndexRef = useRef(items.length);
-
-  useEffect(() => {
-    nextItemIndexRef.current = items.length;
-  }, [items.length]);
-
   const addItem = () => {
-    const newIndex = nextItemIndexRef.current;
-    nextItemIndexRef.current += 1;
-    setItems((prev) => [...prev, { text: '', checked: false }]);
-    setTimeout(() => quantityInputRefs.current[newIndex]?.focus(), 50);
+    if (!items[0]?.text.trim()) {
+      itemInputRefs.current[0]?.focus();
+      return;
+    }
+    rowKeys.current.splice(1, 0, `item-${++nextRowKey.current}`);
+    setItems((prev) => [{ text: '', checked: false }, ...prev]);
+    setTimeout(() => quantityInputRefs.current[0]?.focus(), 0);
   };
   const removeItem = (index: number) => {
-    if (items.length <= 1) return;
-    setItems((prev) => prev.filter((_, i) => i !== index));
+    if (index === 0) setItems((prev) => [{ text: '', checked: false }, ...prev.slice(1)]);
+    else {
+      rowKeys.current.splice(index, 1);
+      setItems((prev) => prev.filter((_, i) => i !== index));
+    }
   };
   const setItemAt = (index: number, field: 'amount' | 'text', value: string) => {
     setItems((prev) => {
@@ -131,7 +138,7 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
       .map((item) => ({
         text: item.text.trim(),
         amount: item.amount?.trim() || undefined,
-        checked: false,
+        checked: item.checked,
       }))
       .filter((item) => item.text.length > 0);
     if (!vesselId) return;
@@ -141,8 +148,10 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
         const saved = await shoppingListsService.update(
           listId,
           { title: trimmedTitle, items: trimmedItems },
-          offlineLocalVersion
+          offlineLocalVersion,
+          baseRef.current
         );
+        baseRef.current = { title: saved.title, items: saved.items };
         setOfflineLocalVersion(saved.offlineLocalVersion);
         Alert.alert(
           'Saved',
@@ -170,7 +179,12 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
       returnToPreviousPage(navigation);
     } catch (e) {
       console.error('Save shopping list error:', e);
-      Alert.alert('Error', 'Could not save shopping list.');
+      Alert.alert(
+        'Could not save shopping list',
+        e instanceof OfflineError && e.code === 'LOCAL_CONFLICT'
+          ? 'This list changed elsewhere. Your edits are still here. Reopen the list to review the latest version before editing again.'
+          : 'Your edits are still here. Please try again.'
+      );
     } finally {
       setSaving(false);
     }
@@ -310,68 +324,66 @@ export const AddEditShoppingListScreen = ({ navigation, route }: any) => {
             <View style={styles.removeColumnSpacer} />
           </View>
           {items.map((item, index) => (
-            <View key={index} style={styles.itemRow}>
-              <TextInput
-                ref={(element) => {
-                  quantityInputRefs.current[index] = element;
-                }}
-                style={[
-                  styles.quantityInput,
-                  {
-                    backgroundColor: themeColors.control,
-                    borderColor: themeColors.border,
-                    color: themeColors.textPrimary,
-                  },
-                ]}
-                value={item.amount ?? ''}
-                onChangeText={(value) => setItemAt(index, 'amount', value.replace(/[^0-9]/g, ''))}
-                placeholder="0"
-                placeholderTextColor={themeColors.textMuted}
-                keyboardType="number-pad"
-                returnKeyType="default"
-                submitBehavior="submit"
-                autoFocus={!isEdit && index === 0}
-                selectTextOnFocus
-                onSubmitEditing={() => itemInputRefs.current[index]?.focus()}
-                accessibilityLabel={`Quantity for item ${index + 1}`}
-              />
-              <TextInput
-                ref={(el) => {
-                  itemInputRefs.current[index] = el;
-                }}
-                style={[
-                  styles.itemInput,
-                  {
-                    backgroundColor: themeColors.control,
-                    borderColor: themeColors.border,
-                    color: themeColors.textPrimary,
-                  },
-                ]}
-                value={item.text}
-                onChangeText={(value) => setItemAt(index, 'text', value)}
-                placeholder="Shopping item"
-                placeholderTextColor={themeColors.textMuted}
-                returnKeyType="default"
-                submitBehavior="submit"
-                onSubmitEditing={() => {
-                  if (index === items.length - 1) addItem();
-                  else quantityInputRefs.current[index + 1]?.focus();
-                }}
-                accessibilityLabel={`Item name ${index + 1}`}
-              />
-              <TouchableOpacity
-                onPress={() => removeItem(index)}
-                style={styles.removeBtn}
-                disabled={items.length <= 1}
-                accessibilityRole="button"
-                accessibilityLabel={`Remove item ${index + 1}`}
-              >
-                <Ionicons
-                  name="close"
-                  size={20}
-                  color={items.length <= 1 ? themeColors.textMuted : COLORS.danger}
+            <View key={rowKeys.current[index]}>
+              <View style={styles.itemRow}>
+                <TextInput
+                  ref={(element) => {
+                    quantityInputRefs.current[index] = element;
+                  }}
+                  style={[
+                    styles.quantityInput,
+                    {
+                      backgroundColor: themeColors.control,
+                      borderColor: themeColors.border,
+                      color: themeColors.textPrimary,
+                    },
+                  ]}
+                  value={item.amount ?? ''}
+                  onChangeText={(value) => setItemAt(index, 'amount', value.replace(/[^0-9]/g, ''))}
+                  placeholder="0"
+                  placeholderTextColor={themeColors.textMuted}
+                  keyboardType="number-pad"
+                  returnKeyType="default"
+                  submitBehavior="submit"
+                  autoFocus={!isEdit && index === 0}
+                  selectTextOnFocus
+                  onSubmitEditing={() => itemInputRefs.current[index]?.focus()}
+                  accessibilityLabel={`Quantity for item ${index + 1}`}
                 />
-              </TouchableOpacity>
+                <TextInput
+                  ref={(el) => {
+                    itemInputRefs.current[index] = el;
+                  }}
+                  style={[
+                    styles.itemInput,
+                    {
+                      backgroundColor: themeColors.control,
+                      borderColor: themeColors.border,
+                      color: themeColors.textPrimary,
+                    },
+                  ]}
+                  value={item.text}
+                  onChangeText={(value) => setItemAt(index, 'text', value)}
+                  placeholder="Shopping item"
+                  placeholderTextColor={themeColors.textMuted}
+                  returnKeyType="default"
+                  submitBehavior="submit"
+                  onSubmitEditing={() => {
+                    if (index === 0) addItem();
+                    else quantityInputRefs.current[index + 1]?.focus();
+                  }}
+                  accessibilityLabel={`Item name ${index + 1}`}
+                />
+                <TouchableOpacity
+                  onPress={() => removeItem(index)}
+                  style={styles.removeBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove item ${index + 1}`}
+                >
+                  <Ionicons name="close" size={20} color={COLORS.danger} />
+                </TouchableOpacity>
+              </View>
+              {index === 0 && <Button title="Add Item" variant="outline" onPress={addItem} />}
             </View>
           ))}
           <EnterToAddHint style={styles.enterHint} />
