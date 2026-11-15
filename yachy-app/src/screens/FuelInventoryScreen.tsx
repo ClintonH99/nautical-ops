@@ -1,7 +1,7 @@
 import { allowOnlineAction } from '../offline/onlineActions';
 import { offlineFuel } from '../offline/fuelService';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Modal,
@@ -370,15 +370,7 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
   const waitingForCurrentVessel = loadedVesselId !== vesselId && !currentLoadError;
 
   const unit = snapshot?.displayUnit ?? 'LITRES';
-  const inventoryReady = !!snapshot?.allTanksInitialized;
   const reportOnlyMode = snapshot?.status === 'NOT_ACTIVATED';
-  const totalPercentage = useMemo(() => {
-    if (!snapshot || !inventoryReady || snapshot.totalCapacityLitres <= 0) return 0;
-    return Math.max(
-      0,
-      Math.min(100, ((snapshot.totalBalanceLitres ?? 0) / snapshot.totalCapacityLitres) * 100)
-    );
-  }, [inventoryReady, snapshot]);
 
   const usableTankCount = snapshot?.tanks.filter((item) => item.initialized).length ?? 0;
 
@@ -637,41 +629,12 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
           ) : null}
-          {snapshot.offlineDownloadedAt ? (
-            <Text style={{ color: themeColors.textSecondary }}>
-              Confirmed levels downloaded {new Date(snapshot.offlineDownloadedAt).toLocaleString()}.
-              Pending edits are excluded until synced.
-            </Text>
-          ) : null}
-          <View style={[styles.totalCard, { backgroundColor: themeColors.surface }]}>
-            <Text style={[styles.eyebrow, { color: themeColors.textSecondary }]}>
-              Calculated fuel on board
-            </Text>
-            <Text style={[styles.totalValue, { color: themeColors.textPrimary }]}>
-              {inventoryReady
-                ? `${formatVolume(fromLitres(snapshot.totalBalanceLitres ?? 0, unit))} ${unitLabel(unit)}`
-                : 'Not available'}
-            </Text>
-            <Text style={[styles.totalCapacity, { color: themeColors.textSecondary }]}>
-              {inventoryReady
-                ? `of ${formatVolume(fromLitres(snapshot.totalCapacityLitres, unit))} ${unitLabel(unit)} capacity`
-                : 'Current fuel quantities are unavailable.'}
-            </Text>
-            <View style={[styles.progressTrack, { backgroundColor: themeColors.surfaceAlt }]}>
-              <View
-                style={[
-                  styles.progressFill,
-                  { width: `${totalPercentage}%`, backgroundColor: themeColors.controlSelected },
-                ]}
-              />
-            </View>
-          </View>
-
           <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Tank levels</Text>
           <View style={styles.tankList}>
             {snapshot.tanks.map((item) => {
               const balance = item.balanceLitres;
               const capacity = item.tank.capacityLitres;
+              const hasBalance = item.initialized && balance != null;
               const percentage =
                 item.initialized && balance != null && capacity > 0
                   ? Math.max(0, Math.min(100, (balance / capacity) * 100))
@@ -695,20 +658,24 @@ export const FuelInventoryScreen = ({ navigation }: any) => {
                         </Text>
                       ) : null}
                     </View>
-                    <Text style={[styles.tankBalance, { color: themeColors.textPrimary }]}>
-                      {item.initialized && balance != null
-                        ? `${formatVolume(fromLitres(balance, unit))} ${unitLabel(unit)}`
-                        : 'Unknown'}
-                    </Text>
+                    {hasBalance ? (
+                      <Text style={[styles.tankBalance, { color: themeColors.textPrimary }]}>
+                        {formatVolume(fromLitres(balance, unit))} {unitLabel(unit)}
+                      </Text>
+                    ) : null}
                   </View>
-                  <View style={[styles.progressTrack, { backgroundColor: themeColors.surfaceAlt }]}>
+                  {hasBalance ? (
                     <View
-                      style={[
-                        styles.progressFill,
-                        { width: `${percentage}%`, backgroundColor: themeColors.controlSelected },
-                      ]}
-                    />
-                  </View>
+                      style={[styles.progressTrack, { backgroundColor: themeColors.surfaceAlt }]}
+                    >
+                      <View
+                        style={[
+                          styles.progressFill,
+                          { width: `${percentage}%`, backgroundColor: themeColors.controlSelected },
+                        ]}
+                      />
+                    </View>
+                  ) : null}
                   <View style={styles.tankMetaRow}>
                     <Text style={[styles.tankMeta, { color: themeColors.textSecondary }]}>
                       Capacity {formatVolume(fromLitres(capacity, unit))} {unitLabel(unit)}
@@ -881,24 +848,6 @@ const styles = StyleSheet.create({
   warningAction: { flexDirection: 'row', alignItems: 'center', marginTop: SPACING.sm },
   warningActionText: { fontSize: FONTS.sm, fontWeight: '700' },
   managerHint: { fontSize: FONTS.xs, marginTop: SPACING.sm, lineHeight: 18 },
-  totalCard: {
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.lg,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  eyebrow: {
-    fontSize: FONTS.sm,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  totalValue: { fontSize: 34, fontWeight: '800', marginTop: SPACING.xs },
-  totalCapacity: { fontSize: FONTS.sm, marginTop: 2, marginBottom: SPACING.md },
   progressTrack: { height: 8, borderRadius: 999, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 999 },
   sectionTitle: { fontSize: FONTS.xl, fontWeight: '700', marginBottom: SPACING.md },
