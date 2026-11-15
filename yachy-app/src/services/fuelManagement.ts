@@ -1528,18 +1528,21 @@ class FuelManagementService {
       p_expected_revision: expectedRevision,
       p_reason: reason,
     };
-    await idempotentFuelWrite(
-      `receipt:void:${id}`,
-      payload,
-      options.idempotencyKey,
-      async (requestId) => {
-        const { error } = await supabase.rpc('void_fuel_log', {
-          ...payload,
-          p_client_request_id: requestId,
-        });
-        if (error) throw error;
-      }
-    );
+    const remove = () =>
+      idempotentFuelWrite(
+        `receipt:void:${id}`,
+        payload,
+        options.idempotencyKey,
+        async (requestId) => {
+          const { error } = await supabase.rpc('void_fuel_log', {
+            ...payload,
+            p_client_request_id: requestId,
+          });
+          if (error) throw error;
+        }
+      );
+    if (offlineFuel.enabled()) await offlineFuel.deleteReceipt(id, remove);
+    else await remove();
   }
 
   async getTransfersByVessel(vesselId: string): Promise<FuelTransfer[]> {

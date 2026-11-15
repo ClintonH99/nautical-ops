@@ -261,3 +261,40 @@ test("fuel: server rejection preserves the device receipt and stops replay", asy
   assert.equal(state.changes[0].state, "conflict");
   assert.deepEqual((await box.list("fuelLogs"))[0].value, value);
 });
+
+test("confirmed receipt deletion removes its local wrapper immediately and after reopening", async () => {
+  const { box, store, ctx } = await fixture();
+  const receipt = { ...value, source_id: "server-receipt" };
+  await box.replaceSnapshot("fuelLogs", [
+    { recordId: receipt.id, value: receipt, revision: "r1" },
+  ]);
+  await box.forgetDeletedRecord("fuelLogs", receipt.id);
+  assert.deepEqual(await box.list("fuelLogs"), []);
+  const reopened = new OfflineOutbox({
+    store,
+    context: () => ctx,
+    adapters: { fuelLogs: fuelAdapter("fuelLogs") },
+  });
+  assert.deepEqual(await reopened.list("fuelLogs"), []);
+});
+
+test("receipt deletion cannot discard a pending offline correction", async () => {
+  const { box } = await fixture();
+  await box.replaceSnapshot("fuelLogs", [
+    { recordId: value.id, value, revision: "r1" },
+  ]);
+  await box.save({
+    feature: "fuelLogs",
+    recordId: value.id,
+    value: { ...value, fields: { ...fields, comment: "Unsynced correction" } },
+    kind: "update",
+    expectedLocalVersion: 1,
+  });
+  await assert.rejects(box.forgetDeletedRecord("fuelLogs", value.id), {
+    code: "RECONCILE_FIRST",
+  });
+  assert.equal(
+    (await box.read("fuelLogs", value.id)).value.fields.comment,
+    "Unsynced correction",
+  );
+});

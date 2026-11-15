@@ -29,6 +29,7 @@ jest.mock('../../src/services/supabase', () => ({
   },
 }));
 
+import { offlineFuel } from '../../src/offline/fuelService';
 import { fuelManagementService } from '../../src/services/fuelManagement';
 import {
   acquireFuelRequest,
@@ -1380,5 +1381,43 @@ describe('FuelManagementService', () => {
       p_reason: 'Wrong tanks selected',
       p_client_request_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     });
+  });
+});
+
+describe('web fuel receipt deletion', () => {
+  afterEach(() => jest.restoreAllMocks());
+  it('waits for the cache-safe deletion and uses the resolved server ID', async () => {
+    jest.spyOn(offlineFuel, 'enabled').mockReturnValue(true);
+    jest.spyOn(offlineFuel, 'beforeOnline').mockResolvedValue('server-receipt');
+    let finish!: () => void;
+    const cacheFinished = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    const cleanup = jest
+      .spyOn(offlineFuel, 'deleteReceipt')
+      .mockImplementation(async (_id, remove) => {
+        await remove();
+        await cacheFinished;
+      });
+    mockRpc.mockResolvedValue({ error: null });
+    let done = false;
+    const deletion = fuelManagementService
+      .voidFuelLog('local-wrapper', {
+        expectedRevision: 0,
+        reason: 'Deleted by user',
+      })
+      .then(() => {
+        done = true;
+      });
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(cleanup).toHaveBeenCalledWith('server-receipt', expect.any(Function));
+    expect(mockRpc).toHaveBeenLastCalledWith(
+      'void_fuel_log',
+      expect.objectContaining({ p_fuel_log_id: 'server-receipt' })
+    );
+    expect(done).toBe(false);
+    finish();
+    await deletion;
+    expect(done).toBe(true);
   });
 });

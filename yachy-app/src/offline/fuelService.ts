@@ -15,6 +15,7 @@ export type OfflineFuelService = {
     version?: number,
     reason?: string
   ): Promise<RecordValue>;
+  deleteReceipt(id: string, remove: () => Promise<void>): Promise<void>;
   beforeOnline(feature?: FuelFeature, id?: string): Promise<string | undefined>;
 };
 const unavailable = async (): Promise<never> => {
@@ -28,4 +29,5 @@ export const offlineFuel: OfflineFuelService = {
   read: unavailable,
   save: unavailable,
   beforeOnline: unavailable,
+  deleteReceipt: unavailable,
 };

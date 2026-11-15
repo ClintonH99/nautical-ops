@@ -94,6 +94,7 @@ export const FuelLogScreen = ({ navigation, route }: any) => {
     );
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const loadGeneration = useRef(0);
+  const deletionInFlight = useRef(false);
   const requestedVesselId = useRef<string | null>(user?.vesselId ?? null);
 
   const canManageSetup = user?.role === 'HOD' || user?.role === 'CAPTAIN_MOV';
@@ -243,13 +244,14 @@ export const FuelLogScreen = ({ navigation, route }: any) => {
   const deleteReceipt = async (target: FuelLog) => {
     if (
       !vesselId ||
-      deletingId ||
+      deletionInFlight.current ||
       !canManageSetup ||
       currentLoadError ||
       target.vesselId !== vesselId
     )
       return;
     const targetVesselId = vesselId;
+    deletionInFlight.current = true;
     setDeletingId(target.id);
     try {
       await fuelManagementService.voidFuelLog(target.id, {
@@ -257,8 +259,16 @@ export const FuelLogScreen = ({ navigation, route }: any) => {
         reason: 'Deleted by user',
       });
       if (requestedVesselId.current !== targetVesselId) return;
-      await loadLogs();
+      // Invalidate older reads and remove the confirmed deletion before reporting success.
+      loadGeneration.current += 1;
+      setStoredLogs((previous) => previous.filter((log) => log.id !== target.id));
+      setSelectedIds((previous) => {
+        const next = new Set(previous);
+        next.delete(target.id);
+        return next;
+      });
       Alert.alert('Fuel receipt deleted.');
+      void loadLogs();
     } catch (error) {
       if (requestedVesselId.current !== targetVesselId) return;
       if (__DEV__) console.warn('Delete fuel receipt warning:', error);
@@ -267,12 +277,13 @@ export const FuelLogScreen = ({ navigation, route }: any) => {
         error instanceof Error ? error.message : 'Refresh the receipts and try again.'
       );
     } finally {
+      deletionInFlight.current = false;
       if (requestedVesselId.current === targetVesselId) setDeletingId(null);
     }
   };
 
   const confirmDelete = (target: FuelLog) => {
-    if (!allowOnlineAction('Deleting records')) return;
+    if (deletionInFlight.current || !allowOnlineAction('Deleting records')) return;
     Alert.alert('Delete this fuel receipt?', 'This will remove the receipt from the app.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => deleteReceipt(target) },
@@ -510,7 +521,7 @@ export const FuelLogScreen = ({ navigation, route }: any) => {
                     selected={exportMode && selected}
                     onEdit={canManageSetup && !currentLoadError ? () => onEdit(log) : undefined}
                     onDelete={
-                      canManageSetup && !exportMode && !currentLoadError
+                      canManageSetup && !exportMode && !currentLoadError && !deletingId
                         ? () => confirmDelete(log)
                         : undefined
                     }

@@ -5,6 +5,7 @@ import type { RecordValue } from './outbox';
 import { OfflineError } from './access';
 import {
   offlineNotesContext,
+  deleteSyncedOfflineRecord,
   subscribeOfflineNotes,
   saveOfflineRecord,
   syncOffline,
@@ -74,6 +75,11 @@ export const offlineFuel: OfflineFuelService = {
     }
     const saved = await saveOfflineRecord(feature, value, id ? 'update' : 'create', version ?? 0);
     return { ...saved, offlinePending: true };
+  },
+  async deleteReceipt(id, remove) {
+    // Fuel projections expose the server ID; the offline wrapper can use another ID.
+    const row = await this.read('fuelLogs', id);
+    await deleteSyncedOfflineRecord('fuelLogs', String(row?.id ?? id), remove);
   },
   async beforeOnline(feature, id) {
     requireOnlineAction();
