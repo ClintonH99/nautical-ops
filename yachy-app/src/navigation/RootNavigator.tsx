@@ -99,7 +99,6 @@ import {
   FuelInventoryScreen,
   FuelHistoryScreen,
   FuelSetupScreen,
-  FuelOpeningBalancesScreen,
   FuelTransfersScreen,
   FuelTransferScreen,
   PumpOutLogScreen,
@@ -1345,11 +1344,6 @@ export const RootNavigator = () => {
                 options={{
                   headerShown: false,
                 }}
-              />
-              <Stack.Screen
-                name="FuelOpeningBalances"
-                component={FuelOpeningBalancesScreen}
-                options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="FuelTransfers"

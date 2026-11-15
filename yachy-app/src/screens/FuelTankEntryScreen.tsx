@@ -553,18 +553,11 @@ export const FuelTankEntryScreen = ({ navigation, route }: any) => {
         <View style={styles.center}>
           <Ionicons name="alert-circle-outline" size={44} color={COLORS.warning} />
           <Text style={[styles.emptyTitle, { color: themeColors.textPrimary }]}>
-            Opening levels required
+            Tank quantities unavailable
           </Text>
           <Text style={[styles.message, { color: themeColors.textSecondary }]}>
-            Every selected tank needs an explicit opening level before activity can be recorded.
+            Current tank quantities are unavailable for this activity.
           </Text>
-          {canManage ? (
-            <Button
-              title="Set Opening Levels"
-              onPress={() => navigation.navigate('FuelOpeningBalances')}
-              style={styles.centerAction}
-            />
-          ) : null}
         </View>
       ) : (
         <ScrollView

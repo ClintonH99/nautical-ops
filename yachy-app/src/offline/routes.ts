@@ -99,7 +99,6 @@ export const ONLINE_ONLY_ROUTES: Readonly<Record<string, string>> = {
   SignatureSetup: 'Setting up a signature requires a connection.',
   NotificationSettings: 'Notification registration requires a connection.',
   FuelSetup: 'Tank setup requires a connection.',
-  FuelOpeningBalances: 'Starting tank balances require a connection.',
 };
 const paths = new Set(['/', ...Object.values(OFFLINE_ROUTE_PATHS)]);
 export function supportsOfflineRoute(name: string | null | undefined, path: string): boolean {

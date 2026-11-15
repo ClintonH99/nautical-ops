@@ -68,7 +68,6 @@ export { FuelLogScreen } from './FuelLogScreen';
 export { AddEditFuelLogScreen } from './AddEditFuelLogScreen';
 export { FuelInventoryScreen } from './FuelInventoryScreen';
 export { FuelHistoryScreen } from './FuelHistoryScreen';
-export { FuelOpeningBalancesScreen } from './FuelOpeningBalancesScreen';
 export { FuelTankEntryScreen } from './FuelTankEntryScreen';
 export { FuelSetupScreen } from './FuelSetupScreen';
 export { FuelTransfersScreen } from './FuelTransfersScreen';
