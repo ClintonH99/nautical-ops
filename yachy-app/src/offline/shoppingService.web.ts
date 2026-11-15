@@ -6,11 +6,13 @@ import {
   offlineNotesContext,
   saveOfflineRecord,
   deleteSyncedOfflineRecord,
+  refreshOfflineFeature,
   subscribeOfflineNotes,
 } from './runtime.web';
 export const offlineShopping: OfflineShoppingService = {
   enabled: () => webOfflineEnabled,
   subscribe: subscribeOfflineNotes,
+  refresh: () => refreshOfflineFeature('shoppingLists'),
   async list(vesselId) {
     const a = await offlineNotesContext();
     if (a.scope.vesselId !== vesselId) throw new OfflineError('SCOPE_CHANGED');

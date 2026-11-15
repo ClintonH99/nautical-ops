@@ -1,6 +1,7 @@
 import type { RecordValue } from './outbox';
 export type OfflineShoppingService = {
   enabled(): boolean;
+  refresh(): Promise<void>;
   list(vesselId: string): Promise<RecordValue[]>;
   create(value: RecordValue): Promise<RecordValue>;
   update(
@@ -17,6 +18,7 @@ const unavailable = async (): Promise<never> => {
 };
 export const offlineShopping: OfflineShoppingService = {
   enabled: () => false,
+  refresh: async () => {},
   list: unavailable,
   create: unavailable,
   update: unavailable,

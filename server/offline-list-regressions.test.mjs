@@ -114,3 +114,33 @@ test("a failed download settles started writes and does not schedule remaining w
   await assert.rejects(work, failure);
   assert.equal(settled, true);
 });
+
+test("a second device removes a remotely deleted list after a fresh snapshot and restart", async () => {
+  const laptop = await fixture();
+  const phone = await fixture();
+  await laptop.box.forgetDeletedRecord("shoppingLists", value.id);
+  assert.equal((await phone.box.list("shoppingLists")).length, 1);
+  await phone.box.replaceSnapshot("shoppingLists", []);
+  const reopened = new OfflineOutbox({
+    store: phone.store,
+    context: () => phone.context,
+    adapters: { shoppingLists: shoppingAdapter },
+  });
+  assert.deepEqual(await reopened.list("shoppingLists"), []);
+});
+test("remote deletion refresh preserves unsynced phone edits for review", async () => {
+  const { box, store } = await fixture();
+  await box.save({
+    feature: "shoppingLists",
+    recordId: value.id,
+    value: { ...value, title: "Unsynced phone changes" },
+    kind: "update",
+    expectedLocalVersion: 1,
+  });
+  await box.replaceSnapshot("shoppingLists", []);
+  assert.equal(
+    (await box.read("shoppingLists", value.id)).value.title,
+    "Unsynced phone changes",
+  );
+  assert.equal((await store.read(scope)).changes.length, 1);
+});

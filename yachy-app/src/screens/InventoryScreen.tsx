@@ -1,3 +1,4 @@
+import { offlineInventory } from '../offline/inventoryService';
 import { allowOnlineAction } from '../offline/onlineActions';
 import { LoadingSpinner as ActivityIndicator } from '../components/LoadingSpinner';
 import { QuietRefreshControl as RefreshControl } from '../components/QuietRefreshControl';
@@ -181,9 +182,26 @@ export const InventoryScreen = ({ navigation }: any) => {
     });
   }, [isFocused, loadItems, syncRevision]);
 
-  const onRefresh = () => {
+  useEffect(() => {
+    if (isFocused)
+      void offlineInventory
+        .refresh()
+        .then(loadItems)
+        .catch(() => {});
+  }, [isFocused, loadItems]);
+
+  const onRefresh = async () => {
     setRefreshing(true);
-    loadItems();
+    try {
+      await offlineInventory.refresh();
+    } catch {
+      Alert.alert(
+        'Could not refresh',
+        'The latest inventory could not be downloaded. Your saved items are still on this device. Try again when connected.'
+      );
+    } finally {
+      await loadItems();
+    }
   };
 
   if (!vesselId) {

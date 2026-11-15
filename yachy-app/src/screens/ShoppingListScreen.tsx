@@ -127,7 +127,11 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
 
   useFocusEffect(
     useCallback(() => {
-      loadLists();
+      void loadLists();
+      void offlineShopping
+        .refresh()
+        .then(loadLists)
+        .catch(() => {});
     }, [loadLists])
   );
 
@@ -140,9 +144,18 @@ export const ShoppingListScreen = ({ navigation, route }: any) => {
     [loadLists]
   );
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    loadLists();
+    try {
+      await offlineShopping.refresh();
+    } catch {
+      Alert.alert(
+        'Could not refresh',
+        'The latest lists could not be downloaded. Your saved items are still on this device. Try again when connected.'
+      );
+    } finally {
+      await loadLists();
+    }
   };
 
   const persistPendingItems = useCallback(

@@ -5,7 +5,7 @@ import {
   webOfflineEnabled,
   offlineNotesContext,
   saveOfflineRecord,
-  syncOffline,
+  refreshOfflineFeature,
   deleteSyncedOfflineRecord,
   subscribeOfflineNotes,
 } from './runtime.web';
@@ -17,7 +17,7 @@ const conflict = () => {
 export const offlineInventory: OfflineInventoryService = {
   enabled: () => webOfflineEnabled,
   subscribe: subscribeOfflineNotes,
-  refresh: syncOffline,
+  refresh: () => refreshOfflineFeature('inventory'),
   async read(id, vesselId) {
     const a = await offlineNotesContext();
     if (vesselId && vesselId !== a.scope.vesselId) throw new OfflineError('SCOPE_CHANGED');

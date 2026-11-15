@@ -489,24 +489,7 @@ async function refreshNotes(a: Active) {
   ];
   for (const feature of Object.keys(adapters) as SupportedFeature[]) {
     if (!a.permit?.claims.permissions[feature]?.includes('read')) continue;
-    tasks.push(async () => {
-      sameActive(a);
-      const { data, error } = await supabase.rpc(readFunctions[feature], {
-        ...(feature.startsWith('fuel') ? { p_feature: feature } : {}),
-        p_vessel_id: a.scope.vesselId,
-        p_device_id: a.scope.deviceId,
-      });
-      sameActive(a);
-      if (error) {
-        if (error.code === '42501') a.revoked = true;
-        throw error;
-      }
-      if (!Array.isArray(data)) throw new OfflineError('INVALID_SNAPSHOT');
-      await a.box.replaceSnapshot(
-        feature,
-        data.map((row) => ({ recordId: row.value.id, value: row.value, revision: row.revision }))
-      );
-    });
+    tasks.push(() => refreshFeatureSnapshot(a, feature));
   }
   await runBoundedTasks(tasks);
   sameActive(a);
@@ -597,6 +580,54 @@ async function refreshOptionalContent(a: Active) {
   }
   sameActive(a);
   notifyNotes();
+}
+async function refreshFeatureSnapshot(a: Active, feature: SupportedFeature): Promise<void> {
+  sameActive(a);
+  requireOfflineAccess(context(a), feature, 'read');
+  const { data, error } = await boundedCheck(
+    supabase.rpc(readFunctions[feature], {
+      ...(feature.startsWith('fuel') ? { p_feature: feature } : {}),
+      p_vessel_id: a.scope.vesselId,
+      p_device_id: a.scope.deviceId,
+    })
+  );
+  sameActive(a);
+  if (error) {
+    if (error.code === '42501') a.revoked = true;
+    throw error;
+  }
+  if (!Array.isArray(data)) throw new OfflineError('INVALID_SNAPSHOT');
+  await a.box.replaceSnapshot(
+    feature,
+    data.map((row) => ({
+      recordId: row.value.id,
+      value: row.value,
+      revision: row.revision,
+    }))
+  );
+}
+/** Refresh a visible list from the server, not just the device cache. */
+export async function refreshOfflineFeature(feature: SupportedFeature): Promise<void> {
+  if (!navigator.onLine) return;
+  const a = await offlineNotesContext();
+  // Share the snapshot/delete lock so an older read cannot undo a deletion.
+  while (syncFlight) await syncFlight;
+  const flight = Promise.resolve().then(async () => {
+    sameActive(a);
+    if (!navigator.onLine) return;
+    try {
+      await refreshFeatureSnapshot(a, feature);
+      notifyNotes();
+    } finally {
+      if (active === a) await checkOfflineAccess();
+    }
+  });
+  syncFlight = flight;
+  try {
+    await flight;
+  } finally {
+    if (syncFlight === flight) syncFlight = null;
+  }
 }
 const deletingRecords = new Set<string>();
 export async function deleteSyncedOfflineRecord(

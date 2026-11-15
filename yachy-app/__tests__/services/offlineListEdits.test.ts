@@ -2,6 +2,7 @@
 const mockRead = jest.fn();
 const mockSave = jest.fn();
 const mockDelete = jest.fn();
+const mockRefresh = jest.fn();
 jest.mock('../../src/offline/runtime.web', () => ({
   webOfflineEnabled: true,
   offlineNotesContext: async () => ({
@@ -11,7 +12,7 @@ jest.mock('../../src/offline/runtime.web', () => ({
   saveOfflineRecord: (...args: unknown[]) => mockSave(...args),
   deleteSyncedOfflineRecord: (...args: unknown[]) => mockDelete(...args),
   subscribeOfflineNotes: () => () => {},
-  syncOffline: async () => {},
+  refreshOfflineFeature: (...args: unknown[]) => mockRefresh(...args),
 }));
 import { offlineShopping } from '../../src/offline/shoppingService.web';
 import { offlineInventory } from '../../src/offline/inventoryService.web';
@@ -76,12 +77,10 @@ it('inventory removes its last line despite an acknowledgement racing the save',
     location: '',
     items: [{ amount: '1', item: 'Rope' }],
   };
-  mockRead
-    .mockResolvedValueOnce({ localVersion: 2, value: inventory })
-    .mockResolvedValueOnce({
-      localVersion: 3,
-      value: { ...inventory, last_edited_at: 'new timestamp' },
-    });
+  mockRead.mockResolvedValueOnce({ localVersion: 2, value: inventory }).mockResolvedValueOnce({
+    localVersion: 3,
+    value: { ...inventory, last_edited_at: 'new timestamp' },
+  });
   mockSave.mockRejectedValueOnce(new OfflineError('LOCAL_CONFLICT'));
   const result = await offlineInventory.save('i1', 'v1', { ...inventory, items: [] }, inventory);
   expect(result.items).toEqual([]);
@@ -93,5 +92,17 @@ it('inventory rejects a real concurrent edit', async () => {
   await expect(
     offlineInventory.save('i1', 'v1', { ...inventory, title: 'My edit' }, inventory)
   ).rejects.toMatchObject({ name: 'InventoryConflictError' });
+  expect(mockSave).not.toHaveBeenCalled();
+});
+
+it('refresh requests a fresh server snapshot for the visible feature', async () => {
+  await offlineShopping.refresh();
+  await offlineInventory.refresh();
+  expect(mockRefresh.mock.calls).toEqual([['shoppingLists'], ['inventory']]);
+});
+it('a failed server refresh is reported without deleting local records', async () => {
+  mockRefresh.mockRejectedValueOnce(new Error('Network unavailable'));
+  await expect(offlineShopping.refresh()).rejects.toThrow('Network unavailable');
+  expect(mockDelete).not.toHaveBeenCalled();
   expect(mockSave).not.toHaveBeenCalled();
 });
