@@ -4,6 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Hard rules
 
+- **Never change a feature design without Clinton's explicit permission.** A bug fix is not permission to redesign. Render a mockup and obtain approval before implementing any design change. See `ADMIN/Rules/DESIGN_CHANGE_APPROVAL.md`.
+
 - **`CAPTAIN_MOV` and `HOD` are separate, distinct roles — never conflate them.** Check which role(s) each feature actually needs. A grep for `CAPTAIN_MOV` shows where role variables are _declared_, not where they are _enforced_; several screens declare `isHOD` and no longer use it. Verify actual usage in the render/guard path before making any claim about permissions.
 - **The only correct project root is `~/Desktop/Nautical Ops/nautical-ops/`.** Never read from or write to the sibling `~/Desktop/Nautical Ops/Yachy App/` — a stale copy and a recurring source of errors. Both now live under the same parent, so a relative search from `~/Desktop/Nautical Ops/` returns `yachy-app/` twice; always confirm which one you are in.
 - **`.DS_Store` is deliberately left unstaged.** Never commit it, and never `git add -A` / `git add .` without checking what it sweeps in.
