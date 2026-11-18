@@ -148,3 +148,46 @@ it('keeps a parent-controlled month stable without duplicate initial or change c
   expect(ui.getByLabelText('Choose year, 2026')).toBeOnTheScreen();
   expect(onMonthChange).toHaveBeenCalledTimes(1);
 });
+
+it.each(['2024-02-29', '1999-12-31', '2031-01-01'])(
+  'allows entering an exact date %s without a timezone shift',
+  (date) => {
+    const onChange = jest.fn();
+    const ui = render(<DateOnlyPicker label="Date" value="2026-11-18" onChange={onChange} />);
+    fireEvent.press(ui.getByRole('button', { name: /^Date:/ }));
+    fireEvent.press(ui.getByText('Type a date'));
+    fireEvent.changeText(ui.getByLabelText('Date (YYYY-MM-DD)'), date);
+    expect(onChange).not.toHaveBeenCalled();
+    fireEvent.press(ui.getByText('Use date'));
+    expect(onChange).toHaveBeenCalledWith(date);
+    expect(ui.queryByTestId('date-picker-popover')).toBeNull();
+  }
+);
+it.each(['2025-02-29', '2026-04-31', '18/11/2026', ''])(
+  'rejects invalid date %s without modifying the saved value',
+  (date) => {
+    const onChange = jest.fn();
+    const ui = render(<DateOnlyPicker label="Date" value="2026-11-18" onChange={onChange} />);
+    fireEvent.press(ui.getByRole('button', { name: /^Date:/ }));
+    fireEvent.press(ui.getByText('Type a date'));
+    fireEvent.changeText(ui.getByLabelText('Date (YYYY-MM-DD)'), date);
+    fireEvent.press(ui.getByText('Use date'));
+    expect(ui.getByRole('alert')).toBeTruthy();
+    expect(onChange).not.toHaveBeenCalled();
+  }
+);
+it('manual dates respect explicit record bounds and dismissal discards only the picker draft', () => {
+  const onChange = jest.fn();
+  const ui = render(
+    <DateOnlyPicker label="Date" value="2026-11-18" minimumDate="2026-11-01" onChange={onChange} />
+  );
+  fireEvent.press(ui.getByRole('button', { name: /^Date:/ }));
+  fireEvent.press(ui.getByText('Type a date'));
+  fireEvent.changeText(ui.getByLabelText('Date (YYYY-MM-DD)'), '2026-10-31');
+  fireEvent.press(ui.getByText('Use date'));
+  expect(onChange).not.toHaveBeenCalled();
+  fireEvent.press(ui.getByLabelText('Dismiss date selector'));
+  fireEvent.press(ui.getByRole('button', { name: /^Date:/ }));
+  fireEvent.press(ui.getByText('Type a date'));
+  expect(ui.getByLabelText('Date (YYYY-MM-DD)').props.value).toBe('2026-11-18');
+});

@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   useWindowDimensions,
   View,
@@ -15,7 +16,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BORDER_RADIUS, COLORS, FONTS, SPACING } from '../constants/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { formatLocalDateString } from '../utils';
-import { clampDateOnly, localToday, parseDateOnly } from '../utils/dateOnlyPicker';
+import {
+  clampDateOnly,
+  isDateWithinBounds,
+  localToday,
+  parseDateOnly,
+} from '../utils/dateOnlyPicker';
 import { AppCalendar } from './AppCalendar';
 
 export interface DateOnlyPickerProps {
@@ -46,6 +52,9 @@ export const DateOnlyPicker = ({
   const window = useWindowDimensions();
   const fieldRef = useRef<View>(null);
   const [visible, setVisible] = useState(false);
+  const [manual, setManual] = useState(false);
+  const [draftDate, setDraftDate] = useState('');
+  const [error, setError] = useState('');
   const [openingDate, setOpeningDate] = useState(localToday);
   const [anchor, setAnchor] = useState({ x: 16, y: 100, height: 48 });
   const [cardHeight, setCardHeight] = useState(420);
@@ -66,11 +75,31 @@ export const DateOnlyPicker = ({
 
   const open = () => {
     Keyboard.dismiss();
+    setManual(false);
+    setError('');
+    setDraftDate(hasValue ? value! : localToday());
     setOpeningDate(clampDateOnly(hasValue ? value! : localToday(), minimumDate, maximumDate));
     fieldRef.current?.measureInWindow((x, y, _width, fieldHeight) =>
       setAnchor({ x, y, height: fieldHeight })
     );
     setVisible(true);
+  };
+
+  const applyTypedDate = () => {
+    const next = draftDate.trim();
+    if (!parseDateOnly(next)) {
+      setError('Enter a valid date as YYYY-MM-DD, for example 2026-11-18.');
+      return;
+    }
+    if (!isDateWithinBounds(next, minimumDate, maximumDate)) {
+      setError(
+        `Choose a date${minimumDate ? ` on or after ${minimumDate}` : ''}${maximumDate ? ` on or before ${maximumDate}` : ''}.`
+      );
+      return;
+    }
+    onChange(next);
+    Keyboard.dismiss();
+    setVisible(false);
   };
 
   return (
@@ -125,7 +154,7 @@ export const DateOnlyPicker = ({
             style={[
               styles.card,
               {
-                top,
+                top: manual ? Math.min(top, insets.top + 24) : top,
                 left,
                 width,
                 maxHeight,
@@ -140,19 +169,81 @@ export const DateOnlyPicker = ({
               onContentSizeChange={(_width, contentHeight) => setCardHeight(contentHeight + 24)}
             >
               <Text style={[styles.title, { color: colors.textPrimary }]}>{title ?? label}</Text>
-              <AppCalendar
-                current={openingDate}
-                minDate={minimumDate}
-                maxDate={maximumDate}
-                hideArrows
-                hideExtraDays
-                inlineMenus
-                markedDates={hasValue ? { [value!]: { selected: true } } : {}}
-                onDayPress={({ dateString }) => {
-                  onChange(dateString);
-                  setVisible(false);
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={() => {
+                  setManual(!manual);
+                  setError('');
                 }}
-              />
+                style={styles.modeButton}
+              >
+                <Text style={{ color: colors.textPrimary, textDecorationLine: 'underline' }}>
+                  {manual ? 'Use calendar' : 'Type a date'}
+                </Text>
+              </TouchableOpacity>
+              {manual ? (
+                <View>
+                  <Text style={[styles.label, { color: colors.textPrimary }]}>
+                    Date (YYYY-MM-DD)
+                  </Text>
+                  <TextInput
+                    accessibilityLabel="Date (YYYY-MM-DD)"
+                    value={draftDate}
+                    onChangeText={(text) => {
+                      setDraftDate(text);
+                      setError('');
+                    }}
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor={colors.textSecondary}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    selectTextOnFocus
+                    maxLength={10}
+                    onSubmitEditing={applyTypedDate}
+                    style={[
+                      styles.manualInput,
+                      {
+                        color: colors.textPrimary,
+                        backgroundColor: colors.control,
+                        borderColor: colors.border,
+                      },
+                    ]}
+                  />
+                  {error ? (
+                    <Text accessibilityRole="alert" style={{ color: colors.textPrimary }}>
+                      {error}
+                    </Text>
+                  ) : null}
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    onPress={applyTypedDate}
+                    style={[
+                      styles.applyButton,
+                      { backgroundColor: colors.isDark ? '#B5D5FF' : colors.accent },
+                    ]}
+                  >
+                    <Text
+                      style={{ color: colors.isDark ? '#10213B' : '#FFFFFF', fontWeight: '700' }}
+                    >
+                      Use date
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <AppCalendar
+                  current={openingDate}
+                  minDate={minimumDate}
+                  maxDate={maximumDate}
+                  hideArrows
+                  hideExtraDays
+                  inlineMenus
+                  markedDates={hasValue ? { [value!]: { selected: true } } : {}}
+                  onDayPress={({ dateString }) => {
+                    onChange(dateString);
+                    setVisible(false);
+                  }}
+                />
+              )}
             </ScrollView>
           </View>
         </Modal>
@@ -162,6 +253,21 @@ export const DateOnlyPicker = ({
 };
 
 const styles = StyleSheet.create({
+  modeButton: { alignSelf: 'flex-start', paddingVertical: 12 },
+  manualInput: {
+    minHeight: 48,
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    fontSize: FONTS.base,
+  },
+  applyButton: {
+    minHeight: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: BORDER_RADIUS.md,
+    marginTop: SPACING.sm,
+  },
   field: { marginBottom: SPACING.md },
   label: { fontSize: FONTS.sm, fontWeight: '600', marginBottom: SPACING.xs },
   trigger: {

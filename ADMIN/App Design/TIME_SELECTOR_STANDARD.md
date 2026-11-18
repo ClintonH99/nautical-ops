@@ -18,7 +18,8 @@ Use this standard for every time-selection feature in Nautical Ops.
 ## Open Selector
 
 - Open the shared bottom sheet with a dimmed backdrop.
-- Show a 24-hour hour-and-minute wheel.
+- Show editable 24-hour hour and minute fields (00–23 and 00–59). This replaces the unreliable scrolling wheel under the user's 18 November 2026 editable-selector request.
+- Open with the saved time, validate input without rolling invalid values into a different time, and preserve the selected day.
 - Use `Cancel` to close without changing the stored time.
 - Use `Done` to apply the selected time.
 - Do not add quick-time shortcuts, presets, a separate Next button, or other unapproved actions.

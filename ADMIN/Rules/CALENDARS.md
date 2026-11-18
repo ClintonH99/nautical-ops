@@ -32,3 +32,4 @@ Applies to: HomeScreen, UpcomingTripsScreen, YardPeriodJobsScreen, AddEditYardJo
 - The selected single date is navy with white text in day mode and light blue with dark text in night mode. Today has a separate subtle highlight. Disabled dates have muted text.
 - Keep existing range-selection workflows, event/department colours, date bounds, callbacks and permissions unchanged. Display calendars are not converted into single-date forms.
 - Keep all date-only values in local YYYY-MM-DD form; never shift the selected day through UTC conversion.
+- Under the user's 18 November 2026 editable-selector request, `DateOnlyPicker` also offers Type a date. Typed YYYY-MM-DD input is validated and committed with Use date; calendar day selection still commits immediately. Invalid dates and existing bounds are enforced in both modes, and dismissal discards uncommitted edits.

@@ -61,3 +61,57 @@ describe('TimePickerField', () => {
     dismiss.mockRestore();
   });
 });
+
+it.each([
+  [0, 0],
+  [0, 59],
+  [23, 59],
+  [9, 7],
+  [15, 39],
+])('saves the manually entered time %s:%s without changing the selected day', (hour, minute) => {
+  const onChange = jest.fn();
+  const original = createTime(14, 30);
+  const ui = render(<TimePickerField label="Time" value={original} onChange={onChange} />);
+  fireEvent.press(ui.getByLabelText('Time, 14:30'));
+  expect(ui.getByLabelText('Hour (00–23)').props.value).toBe('14');
+  expect(ui.getByLabelText('Minute (00–59)').props.value).toBe('30');
+  fireEvent.changeText(ui.getByLabelText('Hour (00–23)'), String(hour));
+  fireEvent.changeText(ui.getByLabelText('Minute (00–59)'), String(minute));
+  expect(onChange).not.toHaveBeenCalled();
+  fireEvent.press(ui.getByText('Done'));
+  const result: Date = onChange.mock.calls[0][0];
+  expect([result.getHours(), result.getMinutes()]).toEqual([hour, minute]);
+  expect([result.getFullYear(), result.getMonth(), result.getDate()]).toEqual([2026, 8, 25]);
+  expect(formatTimePickerValue(original)).toBe('14:30');
+});
+
+it.each([
+  ['24', '00'],
+  ['12', '60'],
+  ['', '30'],
+  ['no', '30'],
+])('rejects invalid input %s:%s instead of silently changing it', (hour, minute) => {
+  const onChange = jest.fn();
+  const ui = render(
+    <TimePickerField label="Time" value={createTime(14, 30)} onChange={onChange} />
+  );
+  fireEvent.press(ui.getByLabelText('Time, 14:30'));
+  fireEvent.changeText(ui.getByLabelText('Hour (00–23)'), hour);
+  fireEvent.changeText(ui.getByLabelText('Minute (00–59)'), minute);
+  fireEvent.press(ui.getByText('Done'));
+  expect(onChange).not.toHaveBeenCalled();
+  expect(ui.getByRole('alert')).toBeTruthy();
+});
+
+it('cancels typed edits and reopens with the actual saved time', () => {
+  const onChange = jest.fn();
+  const ui = render(
+    <TimePickerField label="Time" value={createTime(15, 39)} onChange={onChange} />
+  );
+  fireEvent.press(ui.getByLabelText('Time, 15:39'));
+  fireEvent.changeText(ui.getByLabelText('Hour (00–23)'), '3');
+  fireEvent.press(ui.getByText('Cancel'));
+  fireEvent.press(ui.getByLabelText('Time, 15:39'));
+  expect(ui.getByLabelText('Hour (00–23)').props.value).toBe('15');
+  expect(onChange).not.toHaveBeenCalled();
+});
