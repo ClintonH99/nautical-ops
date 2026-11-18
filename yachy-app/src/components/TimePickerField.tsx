@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Modal,
   Keyboard,
   Pressable,
-  TextInput,
-  KeyboardAvoidingView,
+  ScrollView,
   Platform,
   StyleProp,
   StyleSheet,
@@ -25,6 +24,130 @@ function formatPart(value: number): string {
 export function formatTimePickerValue(value: Date): string {
   return `${formatPart(value.getHours())}:${formatPart(value.getMinutes())}`;
 }
+
+const ROW_HEIGHT = 44;
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const MINUTES = Array.from({ length: 60 }, (_, i) => i);
+
+/** Shared wheel: ordinary scroll events work on web as well as native momentum. */
+const TimeWheel = ({
+  values,
+  selected,
+  onSelect,
+  label,
+}: {
+  values: number[];
+  selected: number;
+  onSelect: (value: number) => void;
+  label: string;
+}) => {
+  const colors = useThemeColors();
+  const scroll = useRef<ScrollView>(null);
+  const initialOffset = useRef({ x: 0, y: selected * ROW_HEIGHT }).current;
+  const latestOffset = useRef(initialOffset.y);
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearSettle = () => {
+    if (settleTimer.current !== null) clearTimeout(settleTimer.current);
+    settleTimer.current = null;
+  };
+  useEffect(
+    () => () => {
+      if (settleTimer.current !== null) clearTimeout(settleTimer.current);
+    },
+    []
+  );
+  const indexAt = (offset: number) =>
+    Math.max(0, Math.min(values.length - 1, Math.round(offset / ROW_HEIGHT)));
+  const align = (index: number) => {
+    clearSettle();
+    latestOffset.current = index * ROW_HEIGHT;
+    scroll.current?.scrollTo({ y: latestOffset.current, animated: false });
+  };
+  const select = (index: number) => {
+    const bounded = Math.max(0, Math.min(values.length - 1, index));
+    onSelect(values[bounded]);
+    align(bounded);
+  };
+
+  return (
+    <View
+      style={styles.wheelColumn}
+      accessibilityRole="adjustable"
+      accessibilityLabel={label}
+      accessibilityValue={{
+        min: 0,
+        max: values.length - 1,
+        now: selected,
+        text: formatPart(selected),
+      }}
+      accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+      onAccessibilityAction={({ nativeEvent }) => {
+        if (nativeEvent.actionName === 'increment') select(selected + 1);
+        if (nativeEvent.actionName === 'decrement') select(selected - 1);
+      }}
+    >
+      <ScrollView
+        ref={scroll}
+        testID={`time-wheel-${label.toLowerCase()}`}
+        style={styles.wheelScroll}
+        contentContainerStyle={styles.wheelContent}
+        contentOffset={initialOffset}
+        onContentSizeChange={() => align(selected)}
+        onLayout={() => align(selected)}
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
+        bounces={false}
+        snapToInterval={ROW_HEIGHT}
+        decelerationRate="fast"
+        scrollEventThrottle={16}
+        onScroll={({ nativeEvent }) => {
+          const offset = nativeEvent.contentOffset.y;
+          if (!Number.isFinite(offset)) return;
+          latestOffset.current = offset;
+          onSelect(values[indexAt(offset)]);
+          // React Native Web does not reliably emit native drag/momentum-end events.
+          // Record the selection during scrolling, then align when scrolling is idle.
+          if (Platform.OS === 'web') {
+            clearSettle();
+            settleTimer.current = setTimeout(() => {
+              const index = indexAt(latestOffset.current);
+              if (Math.abs(latestOffset.current - index * ROW_HEIGHT) > 0.5) align(index);
+            }, 180);
+          }
+        }}
+        onMomentumScrollEnd={({ nativeEvent }) => select(indexAt(nativeEvent.contentOffset.y))}
+      >
+        {values.map((item) => {
+          const distance = Math.abs(item - selected);
+          return (
+            <TouchableOpacity
+              key={item}
+              onPress={() => select(item)}
+              style={styles.wheelRow}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={`${label} ${formatPart(item)}`}
+              accessibilityState={{ selected: item === selected }}
+            >
+              <Text
+                style={[
+                  styles.wheelNumber,
+                  {
+                    color: colors.textPrimary,
+                    opacity: distance === 0 ? 1 : distance === 1 ? 0.55 : 0.22,
+                    transform: [{ scaleY: distance === 0 ? 1 : distance === 1 ? 0.9 : 0.72 }],
+                  },
+                ]}
+              >
+                {formatPart(item)}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+};
 
 export type TimePickerTriggerProps = {
   label: string;
@@ -91,21 +214,11 @@ export const TimePickerSheetContent = ({
   onDone,
 }: TimePickerSheetContentProps) => {
   const themeColors = useThemeColors();
-  const [hour, setHour] = useState(formatPart(value.getHours()));
-  const [minute, setMinute] = useState(formatPart(value.getMinutes()));
-  const [error, setError] = useState('');
+  const [hour, setHour] = useState(value.getHours());
+  const [minute, setMinute] = useState(value.getMinutes());
   const done = () => {
-    if (
-      !/^\d{1,2}$/.test(hour) ||
-      !/^\d{1,2}$/.test(minute) ||
-      Number(hour) > 23 ||
-      Number(minute) > 59
-    ) {
-      setError('Enter an hour from 00 to 23 and minutes from 00 to 59.');
-      return;
-    }
     const next = new Date(value);
-    next.setHours(Number(hour), Number(minute), 0, 0);
+    next.setHours(hour, minute, 0, 0);
     onDone(next);
   };
 
@@ -114,42 +227,15 @@ export const TimePickerSheetContent = ({
       <View style={[styles.grabber, { backgroundColor: themeColors.border }]} />
       <Text style={[styles.sheetTitle, { color: themeColors.textPrimary }]}>{title}</Text>
 
-      <View style={styles.timeInputs}>
-        {[
-          { label: 'Hour (00–23)', text: hour, setText: setHour },
-          { label: 'Minute (00–59)', text: minute, setText: setMinute },
-        ].map(({ label, text, setText }) => (
-          <View key={label} style={styles.timeInputColumn}>
-            <Text style={[styles.label, { color: themeColors.textPrimary }]}>{label}</Text>
-            <TextInput
-              accessibilityLabel={label}
-              value={text}
-              onChangeText={(draft) => {
-                setText(draft);
-                setError('');
-              }}
-              keyboardType="number-pad"
-              inputMode="numeric"
-              maxLength={2}
-              selectTextOnFocus
-              onSubmitEditing={done}
-              style={[
-                styles.timeInput,
-                {
-                  color: themeColors.textPrimary,
-                  backgroundColor: themeColors.control,
-                  borderColor: themeColors.borderStrong,
-                },
-              ]}
-            />
-          </View>
-        ))}
+      <View style={styles.wheelWrap}>
+        <View
+          pointerEvents="none"
+          style={[styles.selectionBand, { backgroundColor: themeColors.surfaceAlt }]}
+        />
+        <TimeWheel values={HOURS} selected={hour} onSelect={setHour} label="Hour" />
+        <Text style={[styles.colon, { color: themeColors.textPrimary }]}>:</Text>
+        <TimeWheel values={MINUTES} selected={minute} onSelect={setMinute} label="Minute" />
       </View>
-      {error ? (
-        <Text accessibilityRole="alert" style={{ color: themeColors.textPrimary }}>
-          {error}
-        </Text>
-      ) : null}
 
       <View style={styles.actions}>
         <TouchableOpacity
@@ -224,8 +310,7 @@ export const TimePickerField = ({
         presentationStyle="overFullScreen"
         onRequestClose={() => setVisible(false)}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        <View
           style={[
             styles.overlay,
             {
@@ -255,7 +340,7 @@ export const TimePickerField = ({
               }}
             />
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
     </>
   );
@@ -302,16 +387,29 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: SPACING.sm,
   },
-  timeInputs: { flexDirection: 'row', gap: SPACING.md, marginVertical: SPACING.md },
-  timeInputColumn: { flex: 1 },
-  timeInput: {
-    minHeight: 52,
-    borderWidth: 1,
-    borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.sm,
-    textAlign: 'center',
-    fontSize: FONTS.xl,
+  wheelWrap: {
+    height: ROW_HEIGHT * 5,
+    width: '100%',
+    maxWidth: 320,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: SPACING.lg,
   },
+  selectionBand: {
+    position: 'absolute',
+    top: ROW_HEIGHT * 2,
+    left: 0,
+    right: 0,
+    height: ROW_HEIGHT,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  wheelColumn: { flex: 1, height: ROW_HEIGHT * 5, overflow: 'hidden' },
+  wheelScroll: { height: ROW_HEIGHT * 5 },
+  wheelContent: { paddingVertical: ROW_HEIGHT * 2 },
+  wheelRow: { height: ROW_HEIGHT, justifyContent: 'center', alignItems: 'center' },
+  wheelNumber: { fontSize: 28, fontWeight: '400', fontVariant: ['tabular-nums'] },
+  colon: { width: 24, textAlign: 'center', fontSize: 28 },
   actions: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm },
   actionButton: {
     flex: 1,

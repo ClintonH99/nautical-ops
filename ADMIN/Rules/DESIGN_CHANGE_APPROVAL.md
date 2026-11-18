@@ -8,4 +8,4 @@ User instruction — 18 November 2026:
 - Broad instructions such as "proceed", "fix everything" or "no need for approval" do not authorize an unrequested redesign.
 - If a fix appears to require a design change, explain it and show a rendered mockup for approval BEFORE implementing or deploying that design.
 - Never amend design standards to label an unapproved redesign as approved.
-- For the time selector, the requested direction is Apple-style hour/minute spinner wheels. The replacement mockup requires Clinton's confirmation before app changes. The text-field replacement was not approved.
+- The Apple-style hour/minute spinner mockup was explicitly approved on 18 November 2026 and is the app-wide time-selection standard. See `ADMIN/App Design/TIME_SELECTOR_STANDARD.md` and its saved reference image. Do not change this design without Clinton's explicit approval. The text-field replacement was not approved.

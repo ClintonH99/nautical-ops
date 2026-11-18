@@ -1,6 +1,6 @@
 import React from 'react';
-import { Keyboard } from 'react-native';
-import { fireEvent, render } from '@testing-library/react-native';
+import { Keyboard, Platform, TextInput } from 'react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import { TimePickerField, formatTimePickerValue } from '../../src/components/TimePickerField';
 
 jest.mock('../../src/hooks/useThemeColors', () => ({
@@ -68,15 +68,20 @@ it.each([
   [23, 59],
   [9, 7],
   [15, 39],
-])('saves the manually entered time %s:%s without changing the selected day', (hour, minute) => {
+])('applies scrolled time %s:%s without drag-end events or changing the day', (hour, minute) => {
   const onChange = jest.fn();
   const original = createTime(14, 30);
   const ui = render(<TimePickerField label="Time" value={original} onChange={onChange} />);
   fireEvent.press(ui.getByLabelText('Time, 14:30'));
-  expect(ui.getByLabelText('Hour (00–23)').props.value).toBe('14');
-  expect(ui.getByLabelText('Minute (00–59)').props.value).toBe('30');
-  fireEvent.changeText(ui.getByLabelText('Hour (00–23)'), String(hour));
-  fireEvent.changeText(ui.getByLabelText('Minute (00–59)'), String(minute));
+  expect(ui.getByTestId('time-wheel-hour').props.contentOffset.y).toBe(14 * 44);
+  expect(ui.getByTestId('time-wheel-minute').props.contentOffset.y).toBe(30 * 44);
+  expect(ui.UNSAFE_queryAllByType(TextInput)).toHaveLength(0);
+  fireEvent.scroll(ui.getByTestId('time-wheel-hour'), {
+    nativeEvent: { contentOffset: { y: hour * 44 } },
+  });
+  fireEvent.scroll(ui.getByTestId('time-wheel-minute'), {
+    nativeEvent: { contentOffset: { y: minute * 44 } },
+  });
   expect(onChange).not.toHaveBeenCalled();
   fireEvent.press(ui.getByText('Done'));
   const result: Date = onChange.mock.calls[0][0];
@@ -85,33 +90,60 @@ it.each([
   expect(formatTimePickerValue(original)).toBe('14:30');
 });
 
-it.each([
-  ['24', '00'],
-  ['12', '60'],
-  ['', '30'],
-  ['no', '30'],
-])('rejects invalid input %s:%s instead of silently changing it', (hour, minute) => {
-  const onChange = jest.fn();
-  const ui = render(
-    <TimePickerField label="Time" value={createTime(14, 30)} onChange={onChange} />
-  );
-  fireEvent.press(ui.getByLabelText('Time, 14:30'));
-  fireEvent.changeText(ui.getByLabelText('Hour (00–23)'), hour);
-  fireEvent.changeText(ui.getByLabelText('Minute (00–59)'), minute);
-  fireEvent.press(ui.getByText('Done'));
-  expect(onChange).not.toHaveBeenCalled();
-  expect(ui.getByRole('alert')).toBeTruthy();
-});
-
-it('cancels typed edits and reopens with the actual saved time', () => {
+it('cancels wheel edits and reopens centered on the saved time', () => {
   const onChange = jest.fn();
   const ui = render(
     <TimePickerField label="Time" value={createTime(15, 39)} onChange={onChange} />
   );
   fireEvent.press(ui.getByLabelText('Time, 15:39'));
-  fireEvent.changeText(ui.getByLabelText('Hour (00–23)'), '3');
+  fireEvent.scroll(ui.getByTestId('time-wheel-hour'), {
+    nativeEvent: { contentOffset: { y: 3 * 44 } },
+  });
   fireEvent.press(ui.getByText('Cancel'));
   fireEvent.press(ui.getByLabelText('Time, 15:39'));
-  expect(ui.getByLabelText('Hour (00–23)').props.value).toBe('15');
+  expect(ui.getByTestId('time-wheel-hour').props.contentOffset.y).toBe(15 * 44);
+  expect(ui.getByLabelText('Hour').props.accessibilityValue.now).toBe(15);
   expect(onChange).not.toHaveBeenCalled();
+});
+
+it('uses the nearest row on web, even without momentum or drag events', () => {
+  const originalOS = Platform.OS;
+  Platform.OS = 'web';
+  jest.useFakeTimers();
+  try {
+    const onChange = jest.fn();
+    const ui = render(
+      <TimePickerField label="Time" value={createTime(16, 15)} onChange={onChange} />
+    );
+    fireEvent.press(ui.getByLabelText('Time, 16:15'));
+    fireEvent.scroll(ui.getByTestId('time-wheel-hour'), {
+      nativeEvent: { contentOffset: { y: 17 * 44 + 14 } },
+    });
+    fireEvent.scroll(ui.getByTestId('time-wheel-minute'), {
+      nativeEvent: { contentOffset: { y: 16 * 44 + 28 } },
+    });
+    act(() => jest.advanceTimersByTime(200));
+    fireEvent.press(ui.getByText('Done'));
+    expect(formatTimePickerValue(onChange.mock.calls[0][0])).toBe('17:17');
+    ui.unmount();
+  } finally {
+    Platform.OS = originalOS;
+    jest.useRealTimers();
+  }
+});
+
+it('clamps overscroll at midnight and 23:59', () => {
+  const onChange = jest.fn();
+  const ui = render(
+    <TimePickerField label="Time" value={createTime(16, 15)} onChange={onChange} />
+  );
+  fireEvent.press(ui.getByLabelText('Time, 16:15'));
+  fireEvent.scroll(ui.getByTestId('time-wheel-hour'), {
+    nativeEvent: { contentOffset: { y: -44 } },
+  });
+  fireEvent.scroll(ui.getByTestId('time-wheel-minute'), {
+    nativeEvent: { contentOffset: { y: 99999 } },
+  });
+  fireEvent.press(ui.getByText('Done'));
+  expect(formatTimePickerValue(onChange.mock.calls[0][0])).toBe('00:59');
 });
