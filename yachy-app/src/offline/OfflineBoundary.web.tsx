@@ -1,12 +1,13 @@
 import { supportsOfflineRoute, ONLINE_ONLY_ROUTES } from './routes';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useAuthStore } from '../store';
+import { useBrowserSessionLease } from '../services/browserSessionLease';
 import { useThemeColors } from '../hooks/useThemeColors';
 import {
   prepareOffline,
   checkOfflineAccess,
-  syncOffline,
+  retryOfflineAccess,
   useOfflineStatus,
   useOfflineRoute,
   webOfflineEnabled,
@@ -23,6 +24,25 @@ import { registerOfflineShell } from './registerShell.web';
 export function OfflineBoundary({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((state) => state.user);
   const state = useOfflineStatus();
+  const paymentRequired = useAuthStore((s) => s.captainPaymentRequired || s.crewPaymentRequired);
+  const lease = useBrowserSessionLease();
+  const retrying = useRef(false);
+  const [checking, setChecking] = useState(false);
+  const retry = async () => {
+    if (retrying.current) return;
+    retrying.current = true;
+    setChecking(true);
+    try {
+      await retryOfflineAccess();
+    } catch {
+      useOfflineStatus.setState({
+        issue: 'Could not reconnect. Your saved edits are still on this device.',
+      });
+    } finally {
+      retrying.current = false;
+      setChecking(false);
+    }
+  };
   const colors = useThemeColors();
   const route = useOfflineRoute((state) => state.name);
   const [resolving, setResolving] = useState<string | null>(null);
@@ -124,7 +144,7 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
       update();
     };
     const online = () => {
-      void syncOffline();
+      void retryOfflineAccess().catch(() => {});
     };
     const visibility = () => {
       if (document.visibilityState === 'visible') {
@@ -158,7 +178,22 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
   }, [user?.id]);
   if (!webOfflineEnabled || !user?.vesselId) return children;
   const supported = supportsOfflineRoute(route, location.pathname);
-  const blocked = state.disconnected && (!state.ready || !supported);
+  // Let the normal account/device gates recover online, even when offline access was denied.
+  // These gates still enforce payment, membership and browser limits themselves.
+  const accountRecovery =
+    navigator.onLine &&
+    (paymentRequired ||
+      (lease.userId === user.id && lease.status !== 'allowed') ||
+      [
+        'Login',
+        'Welcome',
+        'ForgotPassword',
+        'LostDevice',
+        'ManageDevices',
+        'VesselPlans',
+        'VesselAccess',
+      ].includes(route ?? ''));
+  const blocked = state.disconnected && (!state.ready || !supported) && !accountRecovery;
   return (
     <View style={styles.root}>
       {(state.conflicts.length > 0 ||
@@ -301,6 +336,16 @@ export function OfflineBoundary({ children }: { children: React.ReactNode }) {
               ? ` ${ONLINE_ONLY_ROUTES[route ?? ''] ?? 'This page requires a connection.'} Return home to use your downloaded vessel records.`
               : ` ${state.issue ?? 'Connect to the internet to verify your access.'}`}
           </Text>
+          <TouchableOpacity
+            accessibilityRole="button"
+            disabled={checking}
+            onPress={() => void retry()}
+            style={{ marginTop: 20 }}
+          >
+            <Text style={{ color: colors.textPrimary, textDecorationLine: 'underline' }}>
+              {checking ? 'Checking connection…' : 'Retry connection'}
+            </Text>
+          </TouchableOpacity>
           {state.ready && (
             <TouchableOpacity accessibilityRole="link" onPress={() => location.assign('/app')}>
               <Text

@@ -12,6 +12,7 @@ import { checklistsAdapter, checklistDeviceCopy } from './checklistsAdapter';
 import { inventoryAdapter, inventoryDeviceCopy } from './inventoryAdapter';
 import { vesselRecordAdapter, vesselRecordDeviceCopy } from './vesselRecordAdapter';
 import { boundedCheck } from './boundedCheck';
+import { isOfflineConnectionFailure } from './connectionFailure';
 import { maintenanceAdapter, maintenanceDeviceCopy } from './maintenanceAdapter';
 import { create } from 'zustand';
 import type { User } from '../types';
@@ -202,11 +203,11 @@ const keys = (): Record<string, JsonWebKey> => {
   return parsed;
 };
 const grantKey = (scope: OfflineScope) => 'nautical-offline-permit:' + scopeKey(scope);
-function blocked(a: Active): boolean {
+function blocked(a: Active, renewingPermit = false): boolean {
   const auth = useAuthStore.getState();
   const lease = useBrowserSessionLease.getState();
   return (
-    a.revoked ||
+    (a.revoked && !renewingPermit) ||
     auth.user?.id !== a.scope.userId ||
     auth.user?.vesselId !== a.scope.vesselId ||
     auth.captainPaymentRequired ||
@@ -223,8 +224,8 @@ function context(a: Active) {
     blocked: active !== a || blocked(a),
   };
 }
-function sameActive(a: Active) {
-  if (active !== a || blocked(a)) throw new OfflineError('SCOPE_CHANGED');
+function sameActive(a: Active, renewingPermit = false) {
+  if (active !== a || blocked(a, renewingPermit)) throw new OfflineError('SCOPE_CHANGED');
 }
 export async function checkOfflineAccess(): Promise<boolean> {
   const a = active;
@@ -306,12 +307,12 @@ export async function checkOfflineAccess(): Promise<boolean> {
   }
 }
 async function refreshPermit(a: Active) {
-  sameActive(a);
+  sameActive(a, true);
   const { data, error } = await boundedCheck(supabase.auth.getSession());
-  sameActive(a);
+  sameActive(a, true);
   if (error || !data.session?.access_token) throw new OfflineError('ONLINE_CHECK_REQUIRED');
   const device = await boundedCheck(registerCurrentDevice());
-  sameActive(a);
+  sameActive(a, true);
   if (device.state === 'session_revoked' || device.state === 'limit_reached') {
     a.revoked = true;
     localStorage.removeItem(grantKey(a.scope));
@@ -328,7 +329,7 @@ async function refreshPermit(a: Active) {
     body: JSON.stringify({ vesselId: a.scope.vesselId, deviceId: a.scope.deviceId }),
     signal: AbortSignal.timeout(15000),
   });
-  sameActive(a);
+  sameActive(a, true);
   if ([401, 403].includes(response.status)) {
     a.revoked = true;
     localStorage.removeItem(grantKey(a.scope));
@@ -337,7 +338,9 @@ async function refreshPermit(a: Active) {
   if (!response.ok) throw new OfflineError('ONLINE_CHECK_UNAVAILABLE');
   const { token } = await response.json();
   const permit = await verifyOfflinePermit(token, keys(), a.scope);
-  sameActive(a);
+  sameActive(a, true);
+  // A previous denial stays locked until a fresh server check and signed grant succeed.
+  a.revoked = false;
   a.permit = permit;
   localStorage.setItem(grantKey(a.scope), token);
 }
@@ -679,6 +682,9 @@ export async function syncOffline(): Promise<void> {
   const flight = (async () => {
     try {
       await refreshPermit(a);
+      // Access is verified independently of downloading every section.
+      useOfflineStatus.setState({ disconnected: false });
+      await checkOfflineAccess();
       const outcome = await a.box.sync({
         protocol: 'offline-mutation-v1',
         revalidate: async () => {
@@ -710,14 +716,16 @@ export async function syncOffline(): Promise<void> {
     } catch (error) {
       if (active === a)
         useOfflineStatus.setState({
-          disconnected: true,
+          disconnected: isOfflineConnectionFailure(error, navigator.onLine),
           issue: isOfflineStorageFailure(error)
             ? OFFLINE_STORAGE_MESSAGE
             : a.revoked
               ? 'Access could not be verified. Reconnect and sign in again.'
               : error instanceof OfflineError && error.code === 'INVALID_PUBLIC_KEYS'
                 ? 'Offline configuration is unavailable.'
-                : 'Offline. Changes stay on this device until they can sync.',
+                : isOfflineConnectionFailure(error, navigator.onLine)
+                  ? 'Offline. Changes stay on this device until they can sync.'
+                  : 'Access or sync could not be confirmed. Your saved edits are kept on this device.',
         });
     } finally {
       if (active === a) await checkOfflineAccess();
@@ -818,6 +826,13 @@ export function prepareOffline(user: User | null): Promise<void> {
     if (preparing === flight) preparing = null;
   });
   return flight;
+}
+/** Retry in the existing partition; never clear records, edits, or the signed-in session. */
+export async function retryOfflineAccess(): Promise<void> {
+  useOfflineStatus.setState({ disconnected: !navigator.onLine });
+  await prepareOffline(useAuthStore.getState().user);
+  if (navigator.onLine) await syncOffline();
+  else await checkOfflineAccess();
 }
 export async function offlineNotesContext(): Promise<Active> {
   // A screen may mount before the parent boundary effect. Join initialization
