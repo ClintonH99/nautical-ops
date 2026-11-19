@@ -37,6 +37,7 @@ import { fuelManagementService } from '../services/fuelManagement';
 import { useAuthStore } from '../store';
 import { FuelInventoryOperation, FuelLog, FuelTank, FuelVolumeUnit } from '../types';
 import { fuelEventDateTime, fuelEventFields } from '../utils/fuelDateTime';
+import { fuelReceiptTotals, validFuelTaxPercentage } from '../utils/fuelTax';
 import { canPreserveUnknownReceiptTime } from '../utils/fuelHistoricalTime';
 import { mergeFuelCorrectionTanks } from '../utils/fuelTankSelection';
 import { convertFuelVolume, fromLitres, storedFuelVolumeUnit, toLitres } from '../utils/fuelUnits';
@@ -163,6 +164,7 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
   const [utcOffsetMinutes, setUtcOffsetMinutes] = useState(-new Date().getTimezoneOffset());
   const [location, setLocation] = useState('');
   const [pricePerUnit, setPricePerUnit] = useState('');
+  const [taxPercentageText, setTaxPercentageText] = useState('');
   const [currencyCode, setCurrencyCode] = useState('USD');
   const [comment, setComment] = useState('');
   const [legacyAllocationRequired, setLegacyAllocationRequired] = useState(false);
@@ -347,6 +349,7 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
         setLocation(log.locationOfRefueling);
         setPricePerUnit(String(Number(log.pricePerVolumeUnit.toFixed(4))));
         setPriceUnit(log.priceVolumeUnit);
+        setTaxPercentageText(log.taxPercentage == null ? '' : String(log.taxPercentage));
         setCurrencyCode(log.currencyCode || 'USD');
         setComment(log.comment || '');
         setAllocations(
@@ -586,10 +589,21 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
   const pricedAmount = preservingLegacyUnallocatedAmount
     ? fromLitres(toLitres(receiptAmount, unit), priceUnit)
     : fromLitres(canonicalDeliveredLitres, priceUnit);
-  const totalPrice =
-    preservingLegacyUnallocatedAmount && originalLog && originalPriceUnchanged
-      ? originalLog.totalPrice
+  const taxPercentage =
+    taxPercentageText.trim() === '' ? null : Number(taxPercentageText.trim().replace(',', '.'));
+  const taxValid = validFuelTaxPercentage(taxPercentage);
+  const netPrice =
+    originalLog &&
+    originalPriceUnchanged &&
+    (preservingLegacyUnallocatedAmount ||
+      (receiptAmount === originalLog.amountOfFuel &&
+        unit === storedFuelVolumeUnit(originalLog.volumeUnit)))
+      ? originalLog.totalPrice - (originalLog.taxAmount ?? 0)
       : pricedAmount * (normalizedPrice > 0 ? normalizedPrice : 0);
+  const { subtotal, taxAmount, totalPrice } = fuelReceiptTotals(
+    Number.isFinite(netPrice) && netPrice >= 0 ? netPrice : 0,
+    taxValid ? taxPercentage : null
+  );
   const currencyOptions = useMemo(
     () =>
       CURRENCY_OPTIONS.some((option) => option.value === currencyCode)
@@ -736,6 +750,17 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
       return;
     }
 
+    if (!Number.isFinite(netPrice) || netPrice < 0) {
+      Alert.alert('Invalid price', 'Enter a valid quantity and price before saving.');
+      return;
+    }
+    if (!taxValid) {
+      Alert.alert(
+        'Invalid tax percentage',
+        'Enter a percentage from 0 to 100 with up to four decimal places, or leave it blank.'
+      );
+      return;
+    }
     const normalizedTotalPrice = roundDecimal(totalPrice, 2);
     const log = {
       vesselId,
@@ -748,6 +773,8 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
       pricePerGallon: normalizedPrice,
       priceVolumeUnit: priceUnit,
       totalPrice: normalizedTotalPrice,
+      taxPercentage,
+      taxAmount,
       createdByName: user?.name ?? '',
       volumeUnit: preserveLegacyWithoutAllocation ? (originalLog?.volumeUnit ?? null) : unit,
       currencyCode,
@@ -776,6 +803,8 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
               pricePerGallon: normalizedPrice,
               priceVolumeUnit: priceUnit,
               totalPrice: normalizedTotalPrice,
+              taxPercentage,
+              taxAmount,
               currencyCode,
               comment: comment.trim(),
             },
@@ -1190,6 +1219,33 @@ export const AddEditFuelLogScreen = ({ navigation, route }: any) => {
               onChange={setCurrencyCode}
               title="Select currency"
             />
+            <Input
+              label="Tax (%) — optional"
+              value={taxPercentageText}
+              onChangeText={setTaxPercentageText}
+              placeholder="e.g. 6"
+              keyboardType="decimal-pad"
+            />
+            {taxPercentageText.trim() !== '' && taxValid ? (
+              <>
+                <View style={styles.totalPriceRow}>
+                  <Text style={[styles.totalPriceLabel, { color: themeColors.textSecondary }]}>
+                    Subtotal before tax
+                  </Text>
+                  <Text style={[styles.totalPriceLabel, { color: themeColors.textPrimary }]}>
+                    {currencyTotal(currencyCode, subtotal)}
+                  </Text>
+                </View>
+                <View style={styles.totalPriceRow}>
+                  <Text style={[styles.totalPriceLabel, { color: themeColors.textSecondary }]}>
+                    Tax ({taxPercentage}%)
+                  </Text>
+                  <Text style={[styles.totalPriceLabel, { color: themeColors.textPrimary }]}>
+                    {currencyTotal(currencyCode, taxAmount)}
+                  </Text>
+                </View>
+              </>
+            ) : null}
             <View style={styles.totalPriceRow}>
               <Text style={[styles.totalPriceLabel, { color: themeColors.textSecondary }]}>
                 Total Price

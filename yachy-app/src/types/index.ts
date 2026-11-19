@@ -551,6 +551,10 @@ export interface FuelLog {
    * US gallons for pre-foundation records).
    */
   priceVolumeUnit: FuelVolumeUnit;
+  /** Manually entered percentage; absent/null on historical receipts. */
+  taxPercentage?: number | null;
+  taxAmount?: number;
+  /** Tax-inclusive receipt total. */
   totalPrice: number;
   /** NULL identifies a pre-migration record; the legacy UI stored US gallons. */
   volumeUnit: FuelVolumeUnit | null;

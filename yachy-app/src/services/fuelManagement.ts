@@ -1,3 +1,4 @@
+import { fuelReceiptTotals, validFuelTaxPercentage } from '../utils/fuelTax';
 import { offlineFuel } from '../offline/fuelService';
 import { flattenFuel, entryProjection } from '../offline/fuelProjection';
 import { fuelSnapshot } from '../offline/fuelSnapshot';
@@ -400,6 +401,8 @@ function mapFuelLog(row: DatabaseRow): FuelLog {
     priceVolumeUnit:
       (row.price_volume_unit as FuelVolumeUnit | null | undefined) ?? volumeUnit ?? 'US_GALLONS',
     totalPrice: asNumber(row.total_price),
+    taxPercentage: asNullableNumber(row.tax_percentage),
+    taxAmount: asNumber(row.tax_amount),
     volumeUnit,
     currencyCode: asString(row.currency_code) || 'USD',
     comment: asString(row.comment),
@@ -1347,7 +1350,11 @@ class FuelManagementService {
     if (unitPrice <= 0) {
       throw new Error('Fuel receipt unit price must be greater than zero.');
     }
-    const totalPrice = roundDecimal(fromLitres(deliveredLitres, priceVolumeUnit) * unitPrice, 2);
+    const taxPercentage = input.log.taxPercentage ?? null;
+    const { totalPrice, taxAmount } = fuelReceiptTotals(
+      fromLitres(deliveredLitres, priceVolumeUnit) * unitPrice,
+      taxPercentage
+    );
     const newTanks = (input.newTanks ?? []).map((tank) => {
       if (!tank.id) throw new Error('Each new fuel tank requires an ID.');
       assertTankInput(tank);
@@ -1388,6 +1395,8 @@ class FuelManagementService {
         amount_of_fuel: receiptAmount,
         price_per_gallon: unitPrice,
         total_price: totalPrice,
+        tax_percentage: taxPercentage,
+        tax_amount: taxAmount,
         volume_unit: input.log.volumeUnit,
         price_volume_unit: priceVolumeUnit,
         currency_code: normalizeCurrencyCode(input.log.currencyCode),
@@ -1454,6 +1463,12 @@ class FuelManagementService {
     }
     if (input.log.pricePerGallon !== undefined) patch.price_per_gallon = input.log.pricePerGallon;
     if (input.log.totalPrice !== undefined) patch.total_price = input.log.totalPrice;
+    if (input.log.taxPercentage !== undefined) {
+      if (!validFuelTaxPercentage(input.log.taxPercentage))
+        throw new Error('Enter a tax percentage from 0 to 100 with up to four decimal places.');
+      patch.tax_percentage = input.log.taxPercentage;
+    }
+    if (input.log.taxAmount !== undefined) patch.tax_amount = input.log.taxAmount;
     if (input.log.volumeUnit !== undefined) patch.volume_unit = input.log.volumeUnit;
     if (input.log.priceVolumeUnit !== undefined)
       patch.price_volume_unit = input.log.priceVolumeUnit;

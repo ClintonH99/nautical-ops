@@ -166,6 +166,7 @@ export function buildFuelLogHtml(logs: FuelLog[]): string {
             <div class="stat-value">${escapeHtml(pdfMoney(Number(l.totalPrice), l.currencyCode))}</div>
           </div>
         </section>
+        ${l.taxPercentage != null ? `<section class="comment-panel"><div class="field-label">Subtotal before tax</div><div class="comment-text">${escapeHtml(pdfMoney(l.totalPrice - (l.taxAmount ?? 0), l.currencyCode))}</div><div class="field-label">Tax (${escapeHtml(String(l.taxPercentage))}%)</div><div class="comment-text">${escapeHtml(pdfMoney(l.taxAmount ?? 0, l.currencyCode))}</div></section>` : ''}
         <section class="comment-panel"><div class="field-label">Comment</div><div class="comment-text">${escapeHtml(l.comment) || '—'}</div></section>
       </article>`
         )

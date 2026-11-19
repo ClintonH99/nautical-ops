@@ -18,6 +18,8 @@ export interface CreateFuelLogData {
   amountOfFuel: number;
   pricePerGallon: number;
   totalPrice: number;
+  taxPercentage?: number | null;
+  taxAmount?: number;
   createdByName: string;
   /** Omit only for legacy callers; new fuel flows should always supply a unit. */
   volumeUnit?: FuelVolumeUnit | null;
@@ -35,6 +37,8 @@ export interface UpdateFuelLogData {
   amountOfFuel?: number;
   pricePerGallon?: number;
   totalPrice?: number;
+  taxPercentage?: number | null;
+  taxAmount?: number;
   volumeUnit?: FuelVolumeUnit | null;
   priceVolumeUnit?: FuelVolumeUnit | null;
   currencyCode?: string;
@@ -70,6 +74,8 @@ class FuelLogsService {
       pricePerVolumeUnit: parseFloat(row.price_per_gallon) || 0,
       priceVolumeUnit: row.price_volume_unit ?? row.volume_unit ?? 'US_GALLONS',
       totalPrice: parseFloat(row.total_price) || 0,
+      taxPercentage: row.tax_percentage == null ? null : Number(row.tax_percentage),
+      taxAmount: Number(row.tax_amount) || 0,
       volumeUnit: row.volume_unit ?? null,
       currencyCode: row.currency_code ?? 'USD',
       comment: row.comment ?? '',

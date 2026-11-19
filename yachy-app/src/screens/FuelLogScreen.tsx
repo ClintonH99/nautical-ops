@@ -632,6 +632,21 @@ export const FuelLogScreen = ({ navigation, route }: any) => {
                         </Text>
                       )}
                     </View>
+                    {log.taxPercentage != null ? (
+                      <>
+                        <ButtonTagRow
+                          label="Subtotal before tax"
+                          value={formatCurrency(
+                            log.totalPrice - (log.taxAmount ?? 0),
+                            log.currencyCode
+                          )}
+                        />
+                        <ButtonTagRow
+                          label={`Tax (${log.taxPercentage}%)`}
+                          value={formatCurrency(log.taxAmount ?? 0, log.currencyCode)}
+                        />
+                      </>
+                    ) : null}
                     <ButtonTagRow label="Comment" value={log.comment ?? ''} />
                   </ButtonTagCard>
                 );

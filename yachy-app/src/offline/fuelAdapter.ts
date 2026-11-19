@@ -9,6 +9,8 @@ export const fuelFields = {
     'amount_of_fuel',
     'price_per_gallon',
     'total_price',
+    'tax_percentage',
+    'tax_amount',
     'volume_unit',
     'price_volume_unit',
     'currency_code',
@@ -92,7 +94,7 @@ export function fuelAdapter(feature: FuelFeature): OfflineAdapter {
       const f = v.fields,
         allowed: readonly string[] = fuelFields[feature];
       if (
-        allowed.some((k) => !(k in f)) ||
+        allowed.some((k) => !['tax_percentage', 'tax_amount'].includes(k) && !(k in f)) ||
         Object.keys(f).some((k) => !allowed.includes(k)) ||
         !(
           f.effective_at === null ||
@@ -117,6 +119,16 @@ export function fuelAdapter(feature: FuelFeature): OfflineAdapter {
           Number(f.amount_of_fuel) > 0 &&
           Number(f.price_per_gallon) >= 0 &&
           Number(f.total_price) >= 0 &&
+          (f.tax_percentage == null ||
+            (typeof f.tax_percentage === 'number' &&
+              Number.isFinite(f.tax_percentage) &&
+              f.tax_percentage >= 0 &&
+              f.tax_percentage <= 100)) &&
+          (f.tax_amount == null ||
+            (typeof f.tax_amount === 'number' &&
+              Number.isFinite(f.tax_amount) &&
+              f.tax_amount >= 0 &&
+              f.tax_amount <= Number(f.total_price))) &&
           v.entries.every(
             (e) =>
               object(e) &&

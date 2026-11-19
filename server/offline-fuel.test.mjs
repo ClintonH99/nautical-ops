@@ -298,3 +298,53 @@ test("receipt deletion cannot discard a pending offline correction", async () =>
     "Unsynced correction",
   );
 });
+
+test("fuel tax optional fields accept old queued operations and reject invalid tax", () => {
+  const adapter = fuelAdapter("fuelLogs");
+  assert.equal(adapter.validate(value), true);
+  assert.equal(
+    adapter.validate({
+      ...value,
+      fields: {
+        ...fields,
+        tax_percentage: 6,
+        tax_amount: 1.2,
+        total_price: 21.2,
+      },
+    }),
+    true,
+  );
+  for (const rate of [-1, 101, Infinity, NaN]) {
+    assert.equal(
+      adapter.validate({
+        ...value,
+        fields: { ...fields, tax_percentage: rate, tax_amount: 0 },
+      }),
+      false,
+    );
+  }
+});
+
+test("taxed offline receipt keeps rate and amount across local edit and acknowledgement", async () => {
+  const { box } = await fixture();
+  const taxed = {
+    ...value,
+    fields: {
+      ...fields,
+      tax_percentage: 6,
+      tax_amount: 1.2,
+      total_price: 21.2,
+    },
+  };
+  await box.save({
+    feature: "fuelLogs",
+    recordId: value.id,
+    value: taxed,
+    kind: "create",
+    expectedLocalVersion: 0,
+  });
+  const row = (await box.list("fuelLogs"))[0];
+  assert.equal(row.value.fields.tax_percentage, 6);
+  assert.equal(row.value.fields.tax_amount, 1.2);
+  assert.equal(row.value.fields.total_price, 21.2);
+});

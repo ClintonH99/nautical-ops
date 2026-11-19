@@ -1,6 +1,9 @@
 import { fuelSnapshot } from "../yachy-app/src/offline/fuelSnapshot.ts";
 import assert from "node:assert/strict";
-export async function runFuelChecks(t, { sql, run, user, vessel, device }) {
+export async function runFuelChecks(
+  t,
+  { sql, run, user, vessel, device, migration },
+) {
   const call = (op) =>
     JSON.parse(
       run(
@@ -84,6 +87,21 @@ export async function runFuelChecks(t, { sql, run, user, vessel, device }) {
     },
   );
   await t.test(
+    "fuel tax migration preserves earlier receipt revisions and lost acknowledgements",
+    () => {
+      sql(migration("20261118231947_fuel_receipt_manual_tax_percentage.sql"));
+      assert.deepEqual(call(receipt), saved);
+      const rows = JSON.parse(
+        run(
+          `SELECT read_web_offline_fuel('${vessel}','${device}','fuelLogs');`,
+        ),
+      );
+      assert.deepEqual(rows, [
+        { value: saved.value, revision: saved.revision },
+      ]);
+    },
+  );
+  await t.test(
     "fuel: amendments reject stale revisions and crew role loss",
     () => {
       const amendment = edit(receipt, saved, { comment: "Correction" });
@@ -110,6 +128,87 @@ export async function runFuelChecks(t, { sql, run, user, vessel, device }) {
       );
       assert.equal(c.tanks.length, 2);
       assert.equal(c.snapshot.status.activated, false);
+    },
+  );
+  await t.test(
+    "fuel tax: offline create, replay, edit and old-client correction retain tax exactly once",
+    () => {
+      const taxed = operation(
+        "fuelLogs",
+        {
+          ...receipt.value.fields,
+          tax_percentage: 6,
+          tax_amount: 1.2,
+          total_price: 21.2,
+        },
+        receipt.value.entries,
+      );
+      const result = call(taxed);
+      assert.equal(result.status, "applied");
+      assert.equal(result.value.fields.tax_percentage, 6);
+      assert.equal(result.value.fields.tax_amount, 1.2);
+      assert.equal(result.value.fields.total_price, 21.2);
+      assert.deepEqual(call(taxed), result);
+      const changed = edit(taxed, result, {
+        tax_percentage: 15,
+        tax_amount: 3,
+        total_price: 23,
+      });
+      const changedResult = call(changed);
+      assert.equal(changedResult.status, "applied");
+      assert.equal(changedResult.value.fields.total_price, 23);
+      assert.deepEqual(call(changed), changedResult);
+      const oldClient = edit(taxed, changedResult, {
+        comment: "Older client metadata edit",
+        total_price: 20,
+      });
+      delete oldClient.value.fields.tax_percentage;
+      delete oldClient.value.fields.tax_amount;
+      const preserved = call(oldClient);
+      assert.equal(preserved.status, "applied");
+      assert.equal(preserved.value.fields.tax_percentage, 15);
+      assert.equal(preserved.value.fields.total_price, 23);
+      const cleared = call(
+        edit(taxed, preserved, {
+          tax_percentage: null,
+          tax_amount: 0,
+          total_price: 20,
+        }),
+      );
+      assert.equal(cleared.status, "applied");
+      assert.equal(cleared.value.fields.total_price, 20);
+      assert.equal(cleared.value.fields.tax_percentage, undefined);
+      assert.equal(
+        call(
+          operation(
+            "fuelLogs",
+            {
+              ...receipt.value.fields,
+              tax_percentage: -1,
+              tax_amount: 0,
+              total_price: 20,
+            },
+            receipt.value.entries,
+          ),
+        ).status,
+        "conflict",
+      );
+      assert.equal(
+        call(
+          operation(
+            "fuelLogs",
+            {
+              ...receipt.value.fields,
+              tax_percentage: 6,
+              tax_amount: 0,
+              total_price: 20,
+            },
+            receipt.value.entries,
+          ),
+        ).status,
+        "conflict",
+      );
+      assert.throws(() => run("SELECT public._fuel_receipt_tax_values(100,6)"));
     },
   );
   let sounding;

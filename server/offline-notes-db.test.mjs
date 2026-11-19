@@ -1132,7 +1132,7 @@ test("real isolated PostgreSQL offline note protocol", async (t) => {
         );
       },
     );
-    await runFuelChecks(t, { sql, run, user, vessel, device });
+    await runFuelChecks(t, { sql, run, user, vessel, device, migration });
     let first;
     await t.test("grant binds session and caps access at seven days", () => {
       const c = JSON.parse(

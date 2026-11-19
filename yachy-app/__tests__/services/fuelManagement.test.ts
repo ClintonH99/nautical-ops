@@ -166,6 +166,35 @@ describe('FuelManagementService', () => {
     });
   });
 
+  it('calculates tax on canonical fuel quantity and maps saved tax back to the receipt', async () => {
+    mockRpc.mockImplementation(async (_name: string, args: { p_log: Record<string, unknown> }) => ({
+      data: { ...args.p_log, id: 'taxed-log' },
+      error: null,
+    }));
+    const saved = await fuelManagementService.createFuelLogWithTankEntries({
+      log: {
+        vesselId: 'vessel-1',
+        locationOfRefueling: 'Port',
+        logDate: '2026-09-18',
+        logTime: '10:30',
+        amountOfFuel: 930,
+        pricePerGallon: 6.1564,
+        priceVolumeUnit: 'US_GALLONS',
+        volumeUnit: 'US_GALLONS',
+        totalPrice: 0,
+        taxPercentage: 6,
+        createdByName: 'Captain',
+      },
+      entries: [{ fuelTankId: 'tank-1', amountLitres: 930 * 3.785411784 }],
+    });
+    expect(mockRpc.mock.calls[0][1].p_log).toMatchObject({
+      tax_percentage: 6,
+      tax_amount: 343.53,
+      total_price: 6068.98,
+    });
+    expect(saved).toMatchObject({ taxPercentage: 6, taxAmount: 343.53, totalPrice: 6068.98 });
+  });
+
   it('uses the atomic RPC for a tank-aware fuel log and canonical allocations', async () => {
     const log = {
       id: 'fuel-log-1',
